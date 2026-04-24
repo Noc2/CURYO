@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import { Test } from "forge-std/Test.sol";
 import { DeployCuryo } from "../script/DeployCuryo.s.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { HumanReputation } from "../contracts/HumanReputation.sol";
 import { HumanFaucet } from "../contracts/HumanFaucet.sol";
 import { MockIdentityVerificationHub } from "../contracts/mocks/MockIdentityVerificationHub.sol";
 import { CuryoGovernor } from "../contracts/governance/CuryoGovernor.sol";
@@ -221,8 +221,8 @@ contract DeployCuryoCompilationTest is Test {
     function test_AssertFaucetVerificationConfig_PassesForStoredHubConfig() public {
         DeployCuryoHarness deployScript = new DeployCuryoHarness();
         MockIdentityVerificationHub mockHub = new MockIdentityVerificationHub();
-        CuryoReputation crepToken = new CuryoReputation(address(this), address(this));
-        HumanFaucet faucet = new HumanFaucet(address(crepToken), address(mockHub), address(this));
+        HumanReputation hrepToken = new HumanReputation(address(this), address(this));
+        HumanFaucet faucet = new HumanFaucet(address(hrepToken), address(mockHub), address(this));
         bytes32 configId = mockHub.MOCK_CONFIG_ID();
 
         faucet.setConfigId(configId);
@@ -233,8 +233,8 @@ contract DeployCuryoCompilationTest is Test {
     function test_AssertFaucetVerificationConfig_RevertsWhenFaucetDidNotStoreExpectedConfig() public {
         DeployCuryoHarness deployScript = new DeployCuryoHarness();
         MockIdentityVerificationHub mockHub = new MockIdentityVerificationHub();
-        CuryoReputation crepToken = new CuryoReputation(address(this), address(this));
-        HumanFaucet faucet = new HumanFaucet(address(crepToken), address(mockHub), address(this));
+        HumanReputation hrepToken = new HumanReputation(address(this), address(this));
+        HumanFaucet faucet = new HumanFaucet(address(hrepToken), address(mockHub), address(this));
         bytes32 configId = mockHub.MOCK_CONFIG_ID();
 
         vm.expectRevert(
@@ -247,8 +247,8 @@ contract DeployCuryoCompilationTest is Test {
         DeployCuryoHarness deployScript = new DeployCuryoHarness();
         MockIdentityVerificationHub mockHub = new MockIdentityVerificationHub();
         MissingConfigHub missingConfigHub = new MissingConfigHub();
-        CuryoReputation crepToken = new CuryoReputation(address(this), address(this));
-        HumanFaucet faucet = new HumanFaucet(address(crepToken), address(mockHub), address(this));
+        HumanReputation hrepToken = new HumanReputation(address(this), address(this));
+        HumanFaucet faucet = new HumanFaucet(address(hrepToken), address(mockHub), address(this));
         bytes32 configId = mockHub.MOCK_CONFIG_ID();
 
         faucet.setConfigId(configId);
@@ -317,13 +317,13 @@ contract DeployCuryoCompilationTest is Test {
     }
 
     function _deployGovernorHarness() internal returns (CuryoGovernor governor) {
-        CuryoReputation crepToken = new CuryoReputation(address(this), address(this));
+        HumanReputation hrepToken = new HumanReputation(address(this), address(this));
         address[] memory proposers = new address[](1);
         proposers[0] = address(this);
         address[] memory executors = new address[](1);
         executors[0] = address(0);
         TimelockController timelock = new TimelockController(2 days, proposers, executors, address(this));
-        governor = new CuryoGovernor(IVotes(address(crepToken)), timelock);
+        governor = new CuryoGovernor(IVotes(address(hrepToken)), timelock);
     }
 
     function _expectedFaucetForbiddenCountries() internal pure returns (string[] memory forbiddenCountries) {

@@ -318,7 +318,7 @@ export function useAllClaimableRewards() {
     [claimableItems, participationClaimableItems, frontendClaimableItems, questionRewardPoolClaimableItems],
   );
 
-  const combinedCrepClaimable = useMemo(
+  const combinedHrepClaimable = useMemo(
     () =>
       [...claimableItems, ...participationClaimableItems, ...frontendClaimableItems].reduce(
         (sum, item) => sum + item.reward,
@@ -350,8 +350,8 @@ export function useAllClaimableRewards() {
 
   return {
     claimableItems: combinedClaimableItems,
-    totalClaimable: combinedCrepClaimable,
-    totalCrepClaimable: combinedCrepClaimable,
+    totalClaimable: combinedHrepClaimable,
+    totalHrepClaimable: combinedHrepClaimable,
     totalUsdcClaimable: totalQuestionRewardPoolClaimable,
     activeStake,
     isLoading,

@@ -1,5 +1,5 @@
 import {
-  CuryoReputationAbi,
+  HumanReputationAbi,
   createTlockVoteCommit,
   encodeVoteTransferPayload,
   type VoteCiphertext,
@@ -95,7 +95,7 @@ export function buildVoteTransferAndCallData(params: {
   payload: Hex;
 }): Hex {
   return encodeFunctionData({
-    abi: CuryoReputationAbi,
+    abi: HumanReputationAbi,
     functionName: "transferAndCall",
     args: [params.votingEngineAddress, params.stakeWei, params.payload],
   });

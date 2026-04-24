@@ -19,17 +19,17 @@ library RewardMath {
 
     // Consensus subsidy: payout rate when losingPool == 0 (5% of total round stake)
     uint256 internal constant CONSENSUS_SUBSIDY_RATE = 500; // 5% of totalStake
-    uint256 internal constant MAX_CONSENSUS_SUBSIDY = 50e6; // 50 cREP cap per round (6 decimals)
+    uint256 internal constant MAX_CONSENSUS_SUBSIDY = 50e6; // 50 HREP cap per round (6 decimals)
 
     // Rating calculation parameter (fixed, not configurable)
-    uint256 internal constant RATING_B = 50e6; // Smoothing parameter for rating formula (50 cREP in 6 decimals)
+    uint256 internal constant RATING_B = 50e6; // Smoothing parameter for rating formula (50 HREP in 6 decimals)
 
     /// @notice Calculate live content rating based on revealed stake pools.
     /// @dev rating = 50 + 50 * (qUp - qDown) / (qUp + qDown + b)
-    ///      Clamped to [0, 100]. Uses fixed b=50 cREP for smoothing.
+    ///      Clamped to [0, 100]. Uses fixed b=50 HREP for smoothing.
     ///      Called at settlement with final revealed raw pools.
     ///      AUDIT NOTE (I-2): Integer granularity [0-100] is intentional. The RATING_B smoothing
-    ///      parameter (50 cREP) ensures small-stake rounds stay near 50, preventing manipulation.
+    ///      parameter (50 HREP) ensures small-stake rounds stay near 50, preventing manipulation.
     ///      Higher precision (e.g. 1e18) would add gas cost with no UX benefit since ratings
     ///      are displayed as whole numbers in the frontend.
     /// @param totalUpStake Total revealed UP stake in the current round.
@@ -83,12 +83,7 @@ library RewardMath {
     function splitPool(uint256 losingPool)
         internal
         pure
-        returns (
-            uint256 voterShare,
-            uint256 platformShare,
-            uint256 treasuryShare,
-            uint256 consensusShare
-        )
+        returns (uint256 voterShare, uint256 platformShare, uint256 treasuryShare, uint256 consensusShare)
     {
         platformShare = (losingPool * PLATFORM_BPS) / BPS_TOTAL;
         treasuryShare = (losingPool * TREASURY_BPS) / BPS_TOTAL;

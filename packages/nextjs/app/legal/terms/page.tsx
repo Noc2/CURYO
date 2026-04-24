@@ -76,8 +76,8 @@ const TermsPage: NextPage = () => {
           <strong>You acknowledge and agree that:</strong>
         </p>
         <ul>
-          <li>cREP tokens are reputation tokens used for content curation and governance within the Protocol</li>
-          <li>cREP tokens have no monetary value and are not intended as an investment</li>
+          <li>HREP tokens are reputation tokens used for content curation and governance within the Protocol</li>
+          <li>HREP tokens have no monetary value and are not intended as an investment</li>
           <li>You may lose tokens through normal Protocol operation (e.g., incorrect curation predictions)</li>
           <li>There is no guarantee of any particular outcomes from your participation</li>
           <li>Historical outcomes do not indicate or guarantee future results</li>
@@ -175,7 +175,7 @@ const TermsPage: NextPage = () => {
         </p>
         <ul>
           <li>Submission of content URLs for community curation</li>
-          <li>Staking cREP tokens to vote on content quality (upvote/downvote)</li>
+          <li>Staking HREP tokens to vote on content quality (upvote/downvote)</li>
           <li>Distribution of token rewards based on curation outcomes</li>
           <li>Governance participation through token holding</li>
           <li>
@@ -192,7 +192,7 @@ const TermsPage: NextPage = () => {
         </ul>
         <p>
           Submission and bounty features are question-first: a submission may be text-only or include one image or one
-          YouTube link, and the submission must attach a non-refundable bounty funded in cREP or USDC on Celo. A default
+          YouTube link, and the submission must attach a non-refundable bounty funded in HREP or USDC on Celo. A default
           frontend-operator share may be reserved from qualified claims when the vote was attributed to an eligible
           frontend. The Interface does not impose a hard bounty cap, but it may apply moderation, duplicate-detection,
           media-type, and eligibility checks before a submission is accepted or a claim is processed.
@@ -341,7 +341,7 @@ const TermsPage: NextPage = () => {
         <ul>
           <li>You have read and understood all risks described in these Terms</li>
           <li>You are using the Protocol and this Interface entirely at your own risk</li>
-          <li>You may lose cREP tokens through normal Protocol operation</li>
+          <li>You may lose HREP tokens through normal Protocol operation</li>
           <li>You are legally permitted to use the Service in your jurisdiction</li>
           <li>You have the legal capacity and authority to accept these terms</li>
           <li>You are solely responsible for your own due diligence and decisions</li>

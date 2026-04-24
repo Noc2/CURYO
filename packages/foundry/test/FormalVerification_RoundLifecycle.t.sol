@@ -7,7 +7,7 @@ import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
 import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { HumanReputation } from "../contracts/HumanReputation.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
@@ -17,7 +17,7 @@ import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.so
 /// @notice 12 scenarios verifying epoch boundaries, expiry, concurrent rounds,
 ///         settlement delay, consensus timeout, round transitions, and refund flows.
 contract FormalVerification_RoundLifecycleTest is VotingTestBase {
-    CuryoReputation crepToken;
+    HumanReputation hrepToken;
     ContentRegistry registry;
     RoundVotingEngine engine;
     RoundRewardDistributor distributor;
@@ -40,8 +40,8 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
 
         vm.startPrank(owner);
 
-        crepToken = new CuryoReputation(owner, owner);
-        crepToken.grantRole(crepToken.MINTER_ROLE(), owner);
+        hrepToken = new HumanReputation(owner, owner);
+        hrepToken.grantRole(hrepToken.MINTER_ROLE(), owner);
 
         ContentRegistry regImpl = new ContentRegistry();
         RoundVotingEngine engImpl = new RoundVotingEngine();
@@ -50,7 +50,7 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         registry = ContentRegistry(
             address(
                 new ERC1967Proxy(
-                    address(regImpl), abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(crepToken)))
+                    address(regImpl), abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(hrepToken)))
                 )
             )
         );
@@ -60,7 +60,7 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
                     address(engImpl),
                     abi.encodeCall(
                         RoundVotingEngine.initialize,
-                        (owner, address(crepToken), address(registry), address(_deployProtocolConfig(owner)))
+                        (owner, address(hrepToken), address(registry), address(_deployProtocolConfig(owner)))
                     )
                 )
             )
@@ -71,7 +71,7 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
                     address(distImpl),
                     abi.encodeCall(
                         RoundRewardDistributor.initialize,
-                        (owner, address(crepToken), address(engine), address(registry))
+                        (owner, address(hrepToken), address(engine), address(registry))
                     )
                 )
             )
@@ -87,17 +87,19 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         ProtocolConfig(address(engine.protocolConfig())).setTreasury(treasuryAddr);
 
         // Config: epochDuration=5min, maxDuration=7d, minVoters=2, maxVoters=200
-        _setTlockRoundConfig(ProtocolConfig(address(engine.protocolConfig())), EPOCH_DURATION, MAX_DURATION, MIN_VOTERS, 200);
+        _setTlockRoundConfig(
+            ProtocolConfig(address(engine.protocolConfig())), EPOCH_DURATION, MAX_DURATION, MIN_VOTERS, 200
+        );
 
         // Fund consensus reserve
-        crepToken.mint(owner, 100_000e6);
-        crepToken.approve(address(engine), 100_000e6);
+        hrepToken.mint(owner, 100_000e6);
+        hrepToken.approve(address(engine), 100_000e6);
         engine.addToConsensusReserve(100_000e6);
 
         // Fund submitter and voters
-        crepToken.mint(submitter, 100_000e6);
+        hrepToken.mint(submitter, 100_000e6);
         for (uint256 i = 0; i < 10; i++) {
-            crepToken.mint(v[i], 100_000e6);
+            hrepToken.mint(v[i], 100_000e6);
         }
 
         vm.stopPrank();
@@ -110,7 +112,7 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
     function _submit() internal returns (uint256) {
         contentNonce++;
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         uint256 id = _submitContentWithReservation(
             registry, string(abi.encodePacked("https://t.co/lc", vm.toString(contentNonce))), "Goal", "Goal", "tag", 0
         );
@@ -129,10 +131,17 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
             up, salt, voter, cid, referenceRatingBps, _tlockCommitTargetRound(), _tlockDrandChainHash(), ciphertext
         );
         vm.prank(voter);
-        crepToken.approve(address(engine), stake);
+        hrepToken.approve(address(engine), stake);
         vm.prank(voter);
         engine.commitVote(
-            cid, referenceRatingBps, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, stake, address(0)
+            cid,
+            referenceRatingBps,
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            commitHash,
+            ciphertext,
+            stake,
+            address(0)
         );
         commitKey = keccak256(abi.encodePacked(voter, commitHash));
     }
@@ -459,10 +468,10 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         RoundLib.Round memory failed = RoundEngineReadHelpers.round(engine, cid, rid);
         assertEq(uint256(failed.state), uint256(RoundLib.RoundState.RevealFailed), "RevealFailed finalized");
 
-        uint256 voter0Before = crepToken.balanceOf(v[0]);
+        uint256 voter0Before = hrepToken.balanceOf(v[0]);
         vm.prank(v[0]);
         engine.claimCancelledRoundRefund(cid, rid);
-        assertEq(crepToken.balanceOf(v[0]) - voter0Before, 10e6, "revealed voter refunded");
+        assertEq(hrepToken.balanceOf(v[0]) - voter0Before, 10e6, "revealed voter refunded");
 
         vm.prank(v[1]);
         vm.expectRevert(RoundVotingEngine.VoteNotRevealed.selector);
@@ -511,9 +520,9 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
 
         uint256 cid = _submit();
 
-        uint256 bal0Before = crepToken.balanceOf(v[0]);
-        uint256 bal1Before = crepToken.balanceOf(v[1]);
-        uint256 bal2Before = crepToken.balanceOf(v[2]);
+        uint256 bal0Before = hrepToken.balanceOf(v[0]);
+        uint256 bal1Before = hrepToken.balanceOf(v[1]);
+        uint256 bal2Before = hrepToken.balanceOf(v[2]);
 
         // 3 voters stake different amounts
         _vote(v[0], cid, true, 10e6);
@@ -533,15 +542,15 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         // Each voter claims refund and gets full stake back
         vm.prank(v[0]);
         engine.claimCancelledRoundRefund(cid, rid);
-        assertEq(crepToken.balanceOf(v[0]), bal0Before, "v[0] refunded 10e6");
+        assertEq(hrepToken.balanceOf(v[0]), bal0Before, "v[0] refunded 10e6");
 
         vm.prank(v[1]);
         engine.claimCancelledRoundRefund(cid, rid);
-        assertEq(crepToken.balanceOf(v[1]), bal1Before, "v[1] refunded 20e6");
+        assertEq(hrepToken.balanceOf(v[1]), bal1Before, "v[1] refunded 20e6");
 
         vm.prank(v[2]);
         engine.claimCancelledRoundRefund(cid, rid);
-        assertEq(crepToken.balanceOf(v[2]), bal2Before, "v[2] refunded 30e6");
+        assertEq(hrepToken.balanceOf(v[2]), bal2Before, "v[2] refunded 30e6");
 
         // Double claim should revert
         vm.prank(v[0]);

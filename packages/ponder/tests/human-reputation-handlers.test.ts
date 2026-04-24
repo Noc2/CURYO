@@ -53,13 +53,13 @@ async function loadHandlers(overrides: Record<string, string | undefined> = {}) 
     ...overrides,
   };
 
-  await import("../src/CuryoReputation.js");
+  await import("../src/HumanReputation.js");
   return handlers;
 }
 
 async function runTransfer(to: `0x${string}`) {
   const { db, insertCalls } = createDb();
-  const handler = handlers.get("CuryoReputation:Transfer");
+  const handler = handlers.get("HumanReputation:Transfer");
 
   expect(handler).toBeDefined();
 
@@ -94,17 +94,17 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("CuryoReputation ponder handlers", () => {
+describe("HumanReputation ponder handlers", () => {
   it("excludes shared deployment artifact addresses instead of stale PONDER address env values", async () => {
-    const artifactAddress = getSharedDeploymentAddress(11142220, "CuryoReputation");
+    const artifactAddress = getSharedDeploymentAddress(31337, "HumanReputation");
     const staleEnvAddress = "0x1111111111111111111111111111111111111111";
     const deployerAddress = "0x2222222222222222222222222222222222222222";
 
     expect(artifactAddress).toBeDefined();
 
     await loadHandlers({
-      PONDER_NETWORK: "celoSepolia",
-      PONDER_CREP_ADDRESS: staleEnvAddress,
+      PONDER_NETWORK: "hardhat",
+      PONDER_HREP_ADDRESS: staleEnvAddress,
       PONDER_DEPLOYER_ADDRESS: deployerAddress,
     });
 

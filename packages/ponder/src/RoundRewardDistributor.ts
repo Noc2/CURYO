@@ -24,7 +24,7 @@ ponder.on(
         source: "round",
         voter,
         stakeReturned,
-        crepReward: reward,
+        hrepReward: reward,
         claimedAt: event.block.timestamp,
       })
       .onConflictDoNothing();
@@ -93,7 +93,7 @@ ponder.on(
         source: "participation",
         voter,
         stakeReturned: 0n,
-        crepReward: amount,
+        hrepReward: amount,
         claimedAt: event.block.timestamp,
       })
       .onConflictDoNothing();

@@ -5,8 +5,8 @@ import {
   whitepaperSettlementConfigRows,
 } from "../../lib/docs/protocolFacts";
 import {
-  CREP_MAX_SUPPLY_LABEL,
   FAUCET_POOL_AMOUNT_COMPACT_LABEL,
+  HREP_MAX_SUPPLY_LABEL,
   tokenDistributionWhitepaperRows,
 } from "../../lib/docs/tokenomics";
 import type { Section } from "./types";
@@ -41,9 +41,9 @@ export const SECTIONS: Section[] = [
             type: "bullets",
             items: [
               "Bounded asks -- one question, one context URL, optional preview media, and explicit round terms.",
-              "Paid attention -- every ask carries a non-refundable bounty funded in cREP or Celo USDC.",
+              "Paid attention -- every ask carries a non-refundable bounty funded in HREP or Celo USDC.",
               "Verified humans -- only Voter ID holders can vote or earn voter rewards.",
-              "Skin in the game -- votes are backed by cREP stake rather than passive engagement.",
+              "Skin in the game -- votes are backed by HREP stake rather than passive engagement.",
               "Reusable output -- settled results stay public so later agents can inspect them instead of repeating the same ask.",
             ],
           },
@@ -133,8 +133,8 @@ export const SECTIONS: Section[] = [
             type: "ordered",
             items: [
               "Ask: submit one question-first ask with a required context URL and optional preview media.",
-              "Fund: attach a non-refundable bounty in cREP or USDC on Celo, including x402-paid asks from bot wallets when using the hosted endpoint.",
-              "Vote: verified humans stake cREP on whether the displayed rating should move up or down and may add hidden feedback.",
+              "Fund: attach a non-refundable bounty in HREP or USDC on Celo, including x402-paid asks from bot wallets when using the hosted endpoint.",
+              "Vote: verified humans stake HREP on whether the displayed rating should move up or down and may add hidden feedback.",
               "Settle: the round resolves once the configured reveal and participation conditions are met.",
               "Reuse: any later agent can inspect the same settled result instead of paying to rediscover the same judgment.",
             ],
@@ -161,7 +161,7 @@ export const SECTIONS: Section[] = [
                 ["Submitted", "Question, context, bounty, and round settings are recorded", "Immediate"],
                 [
                   "Blind voting",
-                  "Verified humans commit encrypted up or down votes with 1-100 cREP stake",
+                  "Verified humans commit encrypted up or down votes with 1-100 HREP stake",
                   `First ${protocolDocFacts.blindPhaseDurationLabel} epoch by default`,
                 ],
                 [
@@ -219,7 +219,7 @@ export const SECTIONS: Section[] = [
             items: [
               "One verified claim path per supported document and one claim per wallet.",
               "Voter IDs are soulbound NFTs and cannot be transferred or sold.",
-              "Each Voter ID is capped at 100 cREP per content per round regardless of wallet count.",
+              "Each Voter ID is capped at 100 HREP per content per round regardless of wallet count.",
               "Self.xyz verification proves humanity, age, and sanctions eligibility without putting raw identity data on-chain.",
             ],
           },
@@ -263,22 +263,23 @@ export const SECTIONS: Section[] = [
   },
   {
     title: "Incentives & Token Flows",
-    lead: "cREP aligns attention, bounties fund asks, and rewards flow from observable protocol rules.",
+    lead: "HREP aligns attention, bounties fund asks, and rewards flow from observable protocol rules.",
     subsections: [
       {
-        heading: "Role of cREP",
+        heading: "Role of HREP",
         blocks: [
           {
             type: "paragraph",
-            text: `cREP is a reputation token used to stake judgment, distribute early participation, and govern protocol parameters. It is not sold by the protocol and is not described here as a financial asset. The max supply is ${CREP_MAX_SUPPLY_LABEL}, and launch distribution is routed into protocol-controlled pools rather than to a team or sale.`,
+            text: `HREP is a reputation token used to stake judgment, distribute early participation, and govern protocol parameters. It is not sold by the protocol and is not described here as a financial asset. The max supply is ${HREP_MAX_SUPPLY_LABEL}, and launch distribution is routed into protocol-controlled pools rather than to a team or sale.`,
           },
           {
             type: "table",
             data: {
               headers: ["Property", "Value"],
               rows: [
-                ["Name", "cREP"],
-                ["Max supply", CREP_MAX_SUPPLY_LABEL],
+                ["Name", "Human Reputation"],
+                ["Symbol", "HREP"],
+                ["Max supply", HREP_MAX_SUPPLY_LABEL],
                 ["Decimals", "6"],
                 ["Primary role", "Stake-backed human judgment and governance participation"],
               ],
@@ -286,7 +287,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: `Broad distribution matters because the judgment layer is only credible if many verified humans can participate. The ${FAUCET_POOL_AMOUNT_COMPACT_LABEL} faucet pool is designed to route cREP to eligible humans instead of to buyers.`,
+            text: `Broad distribution matters because the judgment layer is only credible if many verified humans can participate. The ${FAUCET_POOL_AMOUNT_COMPACT_LABEL} faucet pool is designed to route HREP to eligible humans instead of to buyers.`,
           },
         ],
       },
@@ -315,7 +316,7 @@ export const SECTIONS: Section[] = [
           {
             type: "bullets",
             items: [
-              "Every ask attaches a non-refundable bounty in cREP or USDC on Celo.",
+              "Every ask attaches a non-refundable bounty in HREP or USDC on Celo.",
               "Qualified bounty rounds pay eligible revealed voters and reserve 3% for eligible frontend operators.",
               "Optional USDC Feedback Bonuses reward hidden notes by canonical hash after settlement.",
               "Submitters do not earn upside from their own ask; the protocol pays for judgment, not self-rating.",
@@ -340,7 +341,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "The Bootstrap Pool (12M cREP) funds early participation rewards while the network is still cold-starting. The pool is funded with 12M cREP and releases rewards through a halving schedule so the incentive tapers as activity scales. The treasury starts with 32M cREP under the governance timelock, and the bootstrap proposal threshold is 1,000 cREP with a minimum quorum floor of 100,000 cREP.",
+            text: "The Bootstrap Pool (12M HREP) funds early participation rewards while the network is still cold-starting. The pool is funded with 12M HREP and releases rewards through a halving schedule so the incentive tapers as activity scales. The treasury starts with 32M HREP under the governance timelock, and the bootstrap proposal threshold is 1,000 HREP with a minimum quorum floor of 100,000 HREP.",
           },
         ],
       },
@@ -352,13 +353,13 @@ export const SECTIONS: Section[] = [
             data: {
               headers: ["Action", "Requirement", "Notes"],
               rows: [
-                ["Vote on content", "1-100 cREP", "Per vote, per round, capped per Voter ID"],
+                ["Vote on content", "1-100 HREP", "Per vote, per round, capped per Voter ID"],
                 [
                   "Ask a question",
-                  "1 cREP or 1 USDC minimum bounty",
+                  "1 HREP or 1 USDC minimum bounty",
                   "Mandatory and non-refundable; the ask is funded before judgment arrives",
                 ],
-                ["Register as a frontend", "1,000 cREP", "Returned on exit unless governance-defined slashing applies"],
+                ["Register as a frontend", "1,000 HREP", "Returned on exit unless governance-defined slashing applies"],
               ],
             },
           },
@@ -445,7 +446,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Governor and timelock contracts own upgrades, configuration, and treasury routing in finalized deployments. The intent is that the same community that earns cREP by participating in judgment should also be able to tune the rules of the judgment layer in public.",
+            text: "Governor and timelock contracts own upgrades, configuration, and treasury routing in finalized deployments. The intent is that the same community that earns HREP by participating in judgment should also be able to tune the rules of the judgment layer in public.",
           },
         ],
       },

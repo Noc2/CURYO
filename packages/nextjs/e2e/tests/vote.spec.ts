@@ -52,7 +52,7 @@ test.describe("Voting flow — 3-voter threshold", () => {
   // Extend timeout: 3 accounts × ~45s each (load + thumbnail cycling + tx + revert handling)
   test("three accounts can vote on the same content", async ({ browser }) => {
     test.setTimeout(180_000);
-    // Use accounts #8, #9, #10 — these have 1000 cREP + VoterID.
+    // Use accounts #8, #9, #10 — these have 1000 HREP + VoterID.
     // Accounts #3-#7 are reserved for settlement/reward-claim tests to avoid cooldown collisions.
     const voters = [
       { account: ANVIL_ACCOUNTS.account8, direction: "up" as const },

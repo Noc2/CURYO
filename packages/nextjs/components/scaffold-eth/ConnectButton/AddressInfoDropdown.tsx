@@ -36,7 +36,7 @@ const getMenuItemClass = (showText: boolean) =>
     ? "flex items-center justify-start gap-3 px-3 py-2.5 rounded-xl transition-colors text-base-content/60 hover:text-base-content hover:bg-base-200 w-full text-base font-medium"
     : "flex items-center justify-start gap-3 px-4 py-3 rounded-xl transition-colors text-base-content/60 hover:text-base-content hover:bg-base-200 w-full text-base font-medium";
 
-function formatCrepAmount(value: bigint | null | undefined) {
+function formatHrepAmount(value: bigint | null | undefined) {
   if (value == null) return "—";
   return (Number(value) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 });
 }
@@ -108,10 +108,10 @@ function WalletSummaryDetails({
 
   const stakeParts: string[] = [];
   if (submissionStakedMicro > 0n) {
-    stakeParts.push(`${formatCrepAmount(submissionStakedMicro)} cREP submissions`);
+    stakeParts.push(`${formatHrepAmount(submissionStakedMicro)} HREP submissions`);
   }
   if (votingStakedMicro > 0n) {
-    let votingLabel = `${formatCrepAmount(votingStakedMicro)} cREP voting`;
+    let votingLabel = `${formatHrepAmount(votingStakedMicro)} HREP voting`;
     if (earliestReveal) {
       votingLabel += ` · reveals in ${earliestReveal}`;
     } else if (hasPendingReveals) {
@@ -120,19 +120,19 @@ function WalletSummaryDetails({
     stakeParts.push(votingLabel);
   }
   if (frontendStakedMicro > 0n) {
-    stakeParts.push(`${formatCrepAmount(frontendStakedMicro)} cREP frontend`);
+    stakeParts.push(`${formatHrepAmount(frontendStakedMicro)} HREP frontend`);
   }
   const stakeTooltip = stakeParts.join(" · ");
 
   return (
     <>
       <div className={balanceClassName}>
-        <span className="tabular-nums">{formatCrepAmount(liquidBalance)}</span>{" "}
-        <span className="text-base-content/52">cREP</span>
+        <span className="tabular-nums">{formatHrepAmount(liquidBalance)}</span>{" "}
+        <span className="text-base-content/52">HREP</span>
       </div>
       {showStaked ? (
         <div className={stakeClassName}>
-          <span className="tabular-nums">{formatCrepAmount(totalStakedMicro)}</span>
+          <span className="tabular-nums">{formatHrepAmount(totalStakedMicro)}</span>
           <span className="text-base-content/52">Staked</span>
           {stakeTooltip ? <InfoTooltip text={stakeTooltip} position="bottom" /> : null}
         </div>

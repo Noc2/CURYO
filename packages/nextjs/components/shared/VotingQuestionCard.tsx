@@ -17,7 +17,7 @@ import { useRoundSnapshot } from "~~/hooks/useRoundSnapshot";
 import type { VotingConfig } from "~~/lib/contracts/roundVotingEngine";
 import { formatUsdAmount } from "~~/lib/questionRewardPools";
 import { formatVoteCooldownRemaining } from "~~/lib/vote/cooldown";
-import { describeOpenRoundActivity, formatCrepAmount, getRoundProgressMessaging } from "~~/lib/vote/voteIncentives";
+import { describeOpenRoundActivity, formatHrepAmount, getRoundProgressMessaging } from "~~/lib/vote/voteIncentives";
 
 interface VotingQuestionCardProps {
   contentId: bigint;
@@ -102,19 +102,19 @@ function LiveRoundActivity({
   const exampleBonus = calculateBonus(5);
   const blindDetail =
     exampleBonus != null
-      ? `+${exampleBonus.toLocaleString(undefined, { maximumFractionDigits: 1 })} cREP bonus on 5 cREP`
+      ? `+${exampleBonus.toLocaleString(undefined, { maximumFractionDigits: 1 })} HREP bonus on 5 HREP`
       : "Blind-phase bonus loading";
   const detailCopy =
     snapshot.phase !== "voting"
       ? snapshot.hasRound
-        ? `${formatCrepAmount(snapshot.totalStake, 0)} cREP locked in the last round`
+        ? `${formatHrepAmount(snapshot.totalStake, 0)} HREP locked in the last round`
         : "A new round forms with the next vote."
       : snapshot.isEpoch1
         ? condensed
           ? blindDetail
           : `Example bonus: ${blindDetail}.`
         : condensed
-          ? (progress?.detailLabel ?? `${formatCrepAmount(snapshot.totalStake, 0)} cREP active`)
+          ? (progress?.detailLabel ?? `${formatHrepAmount(snapshot.totalStake, 0)} HREP active`)
           : describeOpenRoundActivity(snapshot);
   const supportCopy =
     snapshot.phase !== "voting"
@@ -214,7 +214,7 @@ function LiveRoundActivity({
           <p
             className={`font-semibold tabular-nums text-base-content ${condensed ? "mt-0.5 text-sm" : "mt-1 text-base"}`}
           >
-            {formatCrepAmount(snapshot.totalStake, 0)}
+            {formatHrepAmount(snapshot.totalStake, 0)}
           </p>
         </div>
       </div>

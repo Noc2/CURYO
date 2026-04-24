@@ -57,13 +57,13 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     bytes32 public constant TREASURY_ADMIN_ROLE = keccak256("TREASURY_ADMIN_ROLE");
 
     // --- Constants ---
-    uint256 internal constant REVIVAL_STAKE = 5e6; // 5 cREP (6 decimals)
+    uint256 internal constant REVIVAL_STAKE = 5e6; // 5 HREP (6 decimals)
     uint256 internal constant DORMANCY_PERIOD = 30 days;
     uint256 internal constant SUBMISSION_RESERVATION_PERIOD = 30 minutes;
     uint256 internal constant RESERVED_SUBMISSION_MIN_AGE = 1 seconds;
     uint256 internal constant DORMANT_EXCLUSIVE_REVIVAL_PERIOD = 1 days;
     uint8 internal constant MAX_REVIVALS = 2;
-    uint8 internal constant SUBMISSION_REWARD_ASSET_CREP = 0;
+    uint8 internal constant SUBMISSION_REWARD_ASSET_HREP = 0;
     uint8 internal constant SUBMISSION_REWARD_ASSET_USDC = 1;
     uint256 internal constant DEFAULT_MIN_SUBMISSION_REWARD_POOL = 1e6;
     uint256 internal constant MIN_SUBMISSION_REWARD_REQUIRED_VOTERS = 3;
@@ -147,7 +147,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     }
 
     // --- State ---
-    IERC20 public crepToken;
+    IERC20 public hrepToken;
     address public votingEngine;
     ICategoryRegistry public categoryRegistry;
     address public bonusPool; // Cancellation fee sink (anti-spam), typically the treasury
@@ -270,25 +270,25 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         _disableInitializers();
     }
 
-    function initialize(address _admin, address _governance, address _crepToken) public initializer {
-        _initialize(_admin, _governance, _governance, _crepToken);
+    function initialize(address _admin, address _governance, address _hrepToken) public initializer {
+        _initialize(_admin, _governance, _governance, _hrepToken);
     }
 
-    function initializeWithTreasury(address _admin, address _governance, address _treasuryAuthority, address _crepToken)
+    function initializeWithTreasury(address _admin, address _governance, address _treasuryAuthority, address _hrepToken)
         public
         initializer
     {
-        _initialize(_admin, _governance, _treasuryAuthority, _crepToken);
+        _initialize(_admin, _governance, _treasuryAuthority, _hrepToken);
     }
 
-    function _initialize(address _admin, address _governance, address _treasuryAuthority, address _crepToken) internal {
+    function _initialize(address _admin, address _governance, address _treasuryAuthority, address _hrepToken) internal {
         __AccessControl_init();
         __Pausable_init();
 
         require(_admin != address(0), "Invalid admin");
         require(_governance != address(0), "Invalid governance");
         require(_treasuryAuthority != address(0), "Invalid treasury authority");
-        require(_crepToken != address(0), "Invalid cREP token");
+        require(_hrepToken != address(0), "Invalid HREP token");
 
         // Governance gets all permanent roles
         _grantRole(DEFAULT_ADMIN_ROLE, _governance);
@@ -305,7 +305,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             _grantRole(CONFIG_ROLE, _admin);
         }
 
-        crepToken = IERC20(_crepToken);
+        hrepToken = IERC20(_hrepToken);
         nextContentId = 1;
         nextQuestionBundleId = 1;
         treasury = _treasuryAuthority;
@@ -418,8 +418,9 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         RoundLib.RoundConfig memory roundConfig,
         QuestionSpecCommitment memory spec
     ) public returns (uint256) {
-        SubmissionMetadata memory metadata =
-            _validatedContextSubmissionMetadata(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId);
+        SubmissionMetadata memory metadata = _validatedContextSubmissionMetadata(
+            contextUrl, imageUrls, videoUrl, title, description, tags, categoryId
+        );
         return _submitQuestionWithRewardAndRoundConfig(
             metadata, imageUrls, videoUrl, salt, rewardTerms, _validatedRoundConfig(roundConfig), spec
         );
@@ -433,10 +434,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         SubmissionRewardTerms memory rewardTerms,
         RoundLib.RoundConfig memory roundConfig,
         QuestionSpecCommitment memory spec
-    )
-        private
-        returns (uint256)
-    {
+    ) private returns (uint256) {
         _enterQuestionSubmissionGuard();
         _requireNotPaused();
         uint256 contentId = _submitValidatedQuestionWithMedia(
@@ -458,8 +456,9 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         SubmissionRewardTerms memory rewardTerms,
         RoundLib.RoundConfig memory roundConfig
     ) public returns (uint256) {
-        SubmissionMetadata memory metadata =
-            _validatedContextSubmissionMetadata(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId);
+        SubmissionMetadata memory metadata = _validatedContextSubmissionMetadata(
+            contextUrl, imageUrls, videoUrl, title, description, tags, categoryId
+        );
         return _submitQuestionWithRewardAndRoundConfig(
             metadata, imageUrls, videoUrl, salt, rewardTerms, _validatedRoundConfig(roundConfig), _genericQuestionSpec()
         );
@@ -597,7 +596,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     }
 
     /// @notice Submit a question with a required context link and optional preview media.
-    /// @dev Attaches the governance minimum cREP bounty.
+    /// @dev Attaches the governance minimum HREP bounty.
     function submitQuestion(
         string memory contextUrl,
         string[] memory imageUrls,
@@ -616,7 +615,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             imageUrls,
             videoUrl,
             salt,
-            _defaultSubmissionRewardTerms(SUBMISSION_REWARD_ASSET_CREP),
+            _defaultSubmissionRewardTerms(SUBMISSION_REWARD_ASSET_HREP),
             _defaultRoundConfig(),
             0,
             0,
@@ -637,15 +636,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         bytes32 salt
     ) public returns (uint256) {
         return submitQuestion(
-            contextUrl,
-            imageUrls,
-            videoUrl,
-            title,
-            description,
-            tags,
-            categoryId,
-            salt,
-            _genericQuestionSpec()
+            contextUrl, imageUrls, videoUrl, title, description, tags, categoryId, salt, _genericQuestionSpec()
         );
     }
 
@@ -668,7 +659,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             imageUrls,
             videoUrl,
             salt,
-            _defaultSubmissionRewardTerms(SUBMISSION_REWARD_ASSET_CREP),
+            _defaultSubmissionRewardTerms(SUBMISSION_REWARD_ASSET_HREP),
             _validatedRoundConfig(roundConfig),
             0,
             0,
@@ -1008,7 +999,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         emit ContentDormant(contentId);
     }
 
-    /// @notice Revive dormant content by staking REVIVAL_STAKE cREP tokens.
+    /// @notice Revive dormant content by staking REVIVAL_STAKE HREP tokens.
     /// @dev Resets the activity timer. Max MAX_REVIVALS revivals per content.
     ///      Revival stake is sent to treasury (non-refundable).
     function reviveContent(uint256 contentId) external nonReentrant whenNotPaused {
@@ -1032,7 +1023,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
         // M-1/M-2 fix: send revival stake to treasury instead of leaving it unaccounted
         require(treasury != address(0), "Treasury not set");
-        crepToken.safeTransferFrom(msg.sender, treasury, REVIVAL_STAKE);
+        hrepToken.safeTransferFrom(msg.sender, treasury, REVIVAL_STAKE);
 
         c.status = ContentStatus.Active;
         c.dormantCount++;
@@ -1179,8 +1170,9 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         string calldata tags,
         uint256 categoryId
     ) external view returns (uint256 resolvedCategoryId, bytes32 submissionKey) {
-        SubmissionMetadata memory metadata =
-            _validatedContextSubmissionMetadata(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId);
+        SubmissionMetadata memory metadata = _validatedContextSubmissionMetadata(
+            contextUrl, imageUrls, videoUrl, title, description, tags, categoryId
+        );
         resolvedCategoryId = _resolveQuestionSubmissionCategory(metadata);
         submissionKey = _deriveQuestionMediaSubmissionKey(metadata, resolvedCategoryId);
     }
@@ -1310,7 +1302,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
     function _validateSubmissionReward(SubmissionRewardTerms memory rewardTerms) internal view {
         require(
-            rewardTerms.asset == SUBMISSION_REWARD_ASSET_CREP || rewardTerms.asset == SUBMISSION_REWARD_ASSET_USDC,
+            rewardTerms.asset == SUBMISSION_REWARD_ASSET_HREP || rewardTerms.asset == SUBMISSION_REWARD_ASSET_USDC,
             "Invalid reward asset"
         );
         require(rewardTerms.amount >= _minimumSubmissionReward(rewardTerms.asset), "Reward below minimum");
@@ -1333,8 +1325,8 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
     function _minimumSubmissionReward(uint8 rewardAsset) internal view returns (uint256 minimum) {
         if (address(protocolConfig) != address(0)) {
-            minimum = rewardAsset == SUBMISSION_REWARD_ASSET_CREP
-                ? protocolConfig.minSubmissionCrepPool()
+            minimum = rewardAsset == SUBMISSION_REWARD_ASSET_HREP
+                ? protocolConfig.minSubmissionHrepPool()
                 : protocolConfig.minSubmissionUsdcPool();
         }
         return minimum == 0 ? DEFAULT_MIN_SUBMISSION_REWARD_POOL : minimum;

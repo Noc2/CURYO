@@ -15,7 +15,7 @@ const STEPS = [
     desc: "get your Voter ID to vote, stake, and earn rewards",
   },
   { label: "Vote", desc: "place your prediction while direction stays hidden" },
-  { label: "Stake", desc: "back your prediction with cREP tokens" },
+  { label: "Stake", desc: "back your prediction with HREP tokens" },
   {
     label: "Reveal & Resolve",
     desc: "after the selected blind phase, votes are revealed and rounds settle automatically",

@@ -200,7 +200,7 @@ export const rewardClaim = onchainTable(
     source: t.text().notNull(), // "round", "epoch", or "participation"
     voter: t.hex().notNull(),
     stakeReturned: t.bigint().notNull(),
-    crepReward: t.bigint().notNull(),
+    hrepReward: t.bigint().notNull(),
     claimedAt: t.bigint().notNull(),
   }),
   (table) => ({
@@ -210,7 +210,7 @@ export const rewardClaim = onchainTable(
 );
 
 // ============================================================
-// QUESTION REWARD POOLS (cREP or USDC)
+// QUESTION REWARD POOLS (HREP or USDC)
 // ============================================================
 
 export const questionRewardPool = onchainTable(
@@ -549,7 +549,7 @@ export const voterId = onchainTable(
 );
 
 // ============================================================
-// TOKEN HOLDERS (cREP)
+// TOKEN HOLDERS (HREP)
 // ============================================================
 
 export const tokenHolder = onchainTable("token_holder", (t) => ({
@@ -558,7 +558,7 @@ export const tokenHolder = onchainTable("token_holder", (t) => ({
 }));
 
 // ============================================================
-// TOKEN TRANSFERS (cREP balance history)
+// TOKEN TRANSFERS (HREP balance history)
 // ============================================================
 
 export const tokenTransfer = onchainTable(

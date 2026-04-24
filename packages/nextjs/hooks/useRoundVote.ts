@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { CuryoReputationAbi, encodeVoteTransferPayload } from "@curyo/contracts";
+import { HumanReputationAbi, encodeVoteTransferPayload } from "@curyo/contracts";
 import { buildCommitVoteParams } from "@curyo/sdk/vote";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
@@ -32,7 +32,7 @@ import { getParsedErrorWithAllAbis } from "~~/utils/scaffold-eth/contract";
 interface RoundVoteParams {
   contentId: bigint;
   isUp: boolean;
-  stakeAmount: number; // In whole tokens (e.g., 5 = 5 cREP)
+  stakeAmount: number; // In whole tokens (e.g., 5 = 5 HREP)
   frontendCode?: `0x${string}`; // Optional frontend operator address for fee distribution
   isOwnContent?: boolean;
   roundConfig?: VotingConfig | null;
@@ -40,7 +40,7 @@ interface RoundVoteParams {
 }
 
 /**
- * Hook for tlock commit-reveal round voting using cREP transferAndCall.
+ * Hook for tlock commit-reveal round voting using HREP transferAndCall.
  * Handles: atomic token transfer + vote commit in a single transaction.
  *
  * Vote direction is tlock-encrypted to the current epoch's drand round,
@@ -72,7 +72,7 @@ export function useRoundVote() {
   const { data: votingEngineInfo, isLoading: isVotingEngineLoading } = useDeployedContractInfo({
     contractName: "RoundVotingEngine",
   } as any);
-  const { data: crepInfo, isLoading: isCrepLoading } = useDeployedContractInfo({ contractName: "CuryoReputation" });
+  const { data: hrepInfo, isLoading: isHrepLoading } = useDeployedContractInfo({ contractName: "HumanReputation" });
   const publicClient = usePublicClient();
   const clearError = useCallback(() => setError(null), []);
 
@@ -103,12 +103,12 @@ export function useRoundVote() {
       return false;
     }
 
-    if (isVotingEngineLoading || isCrepLoading) {
+    if (isVotingEngineLoading || isHrepLoading) {
       setError("Preparing vote. Try again in a moment.");
       return false;
     }
 
-    if (!votingEngineInfo?.address || !crepInfo?.address) {
+    if (!votingEngineInfo?.address || !hrepInfo?.address) {
       setError("Voting is unavailable right now.");
       return false;
     }
@@ -183,8 +183,8 @@ export function useRoundVote() {
       });
       const transferAndCallArgs = [votingEngineInfo.address, stakeWei, payload] as const;
       const transferAndCallRequest: any = {
-        abi: CuryoReputationAbi,
-        address: crepInfo.address,
+        abi: HumanReputationAbi,
+        address: hrepInfo.address,
         functionName: "transferAndCall",
         args: transferAndCallArgs,
       };
@@ -193,8 +193,8 @@ export function useRoundVote() {
         await executeSponsoredCalls(
           [
             {
-              abi: CuryoReputationAbi,
-              address: crepInfo.address as `0x${string}`,
+              abi: HumanReputationAbi,
+              address: hrepInfo.address as `0x${string}`,
               args: transferAndCallArgs,
               functionName: "transferAndCall",
             },
@@ -207,8 +207,8 @@ export function useRoundVote() {
       // safely confirm free-transaction reservations with the backend.
       if (!canUseSponsoredSubmitCalls && publicClient) {
         const estimatedGas = await publicClient.estimateContractGas({
-          address: crepInfo.address,
-          abi: CuryoReputationAbi,
+          address: hrepInfo.address,
+          abi: HumanReputationAbi,
           functionName: "transferAndCall",
           args: transferAndCallArgs,
           account: address,

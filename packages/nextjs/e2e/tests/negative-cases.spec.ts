@@ -14,8 +14,8 @@ import { expect, test } from "@playwright/test";
  * Account allocation:
  * - Account #9 (scaffold-eth deployer) — has GOVERNANCE_ROLE
  * - Account #0 (no VoterID) — unauthorized user
- * - Account #2 (1000 cREP + VoterID) — submitter of content #1
- * - Account #3 (1000 cREP + VoterID) — non-submitter
+ * - Account #2 (1000 HREP + VoterID) — submitter of content #1
+ * - Account #3 (1000 HREP + VoterID) — non-submitter
  */
 test.describe("Negative cases", () => {
   test("non-submitter cannot cancel content", async () => {
@@ -70,7 +70,7 @@ test.describe("Negative cases", () => {
   test("double vote on same content shows cooldown", async ({ page }) => {
     test.setTimeout(120_000);
 
-    // Account #6 has VoterID #104 and cREP.
+    // Account #6 has VoterID #104 and HREP.
     await setupWallet(page, ANVIL_ACCOUNTS.account6.privateKey);
 
     await gotoWithRetry(page, "/rate", { ensureWalletConnected: true, timeout: 30_000 });

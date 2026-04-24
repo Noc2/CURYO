@@ -14,8 +14,8 @@ import { notification } from "~~/utils/scaffold-eth";
 // Account index to use from generated hardhat accounts.
 const FAUCET_ACCOUNT_INDEX = 0;
 
-// cREP token has 6 decimals
-const CREP_DECIMALS = 6;
+// HREP token has 6 decimals
+const HREP_DECIMALS = 6;
 const USDC_DECIMALS = 6;
 
 const localWalletClient = createWalletClient({
@@ -126,17 +126,17 @@ export const FaucetTrigger = ({
 };
 
 /**
- * Faucet modal which lets you send ETH and claim cREP tokens on local testnet.
+ * Faucet modal which lets you send ETH and claim HREP tokens on local testnet.
  */
 export const FaucetModal = () => {
   const [loading, setLoading] = useState(false);
-  const [curyoLoading, setCuryoLoading] = useState(false);
+  const [hrepLoading, setHrepLoading] = useState(false);
   const [usdcLoading, setUsdcLoading] = useState(false);
   const [voterIdLoading, setVoterIdLoading] = useState(false);
   const [inputAddress, setInputAddress] = useState<AddressType>();
   const [faucetAddress, setFaucetAddress] = useState<AddressType>();
   const [sendValue, setSendValue] = useState("");
-  const [curyoAmount, setCuryoAmount] = useState("1000");
+  const [hrepAmount, setHrepAmount] = useState("1000");
   const [usdcAmount, setUsdcAmount] = useState("1000");
   const [mockUsdcTokenAddress, setMockUsdcTokenAddress] = useState<AddressType>();
   const [hasVoterId, setHasVoterId] = useState<boolean | null>(null);
@@ -149,7 +149,7 @@ export const FaucetModal = () => {
   const queryClient = useQueryClient();
 
   // Get contract addresses from localhost deployment
-  const crepTokenAddress = (deployedContracts as any)[31337]?.CuryoReputation?.address as AddressType | undefined;
+  const hrepTokenAddress = (deployedContracts as any)[31337]?.HumanReputation?.address as AddressType | undefined;
   const voterIdNFTAddress = (deployedContracts as any)[31337]?.VoterIdNFT?.address as AddressType | undefined;
   const directMockUsdcTokenAddress = (deployedContracts as any)[31337]?.MockERC20?.address as AddressType | undefined;
   const questionRewardPoolEscrowAddress = (deployedContracts as any)[31337]?.QuestionRewardPoolEscrow?.address as
@@ -286,21 +286,21 @@ export const FaucetModal = () => {
     }
   };
 
-  const claimCURYO = async () => {
-    if (!inputAddress || !crepTokenAddress) {
-      notification.error("Missing destination address or CuryoReputation contract");
+  const claimHREP = async () => {
+    if (!inputAddress || !hrepTokenAddress) {
+      notification.error("Missing destination address or HumanReputation contract");
       return;
     }
 
     const humanFaucetAddr = (deployedContracts as any)[31337]?.HumanFaucet?.address as AddressType | undefined;
 
     try {
-      setCuryoLoading(true);
-      const amount = parseUnits(curyoAmount, CREP_DECIMALS);
+      setHrepLoading(true);
+      const amount = parseUnits(hrepAmount, HREP_DECIMALS);
 
       if (humanFaucetAddr) {
         // Deploy script mints 100% of MAX_SUPPLY, so direct mint() reverts.
-        // Instead, impersonate the HumanFaucet contract (holds ~52M cREP) and transfer.
+        // Instead, impersonate the HumanFaucet contract (holds ~52M HREP) and transfer.
         // The impersonated address needs ETH for gas.
         await (localPublicClient as any).request({
           method: "anvil_setBalance",
@@ -311,7 +311,7 @@ export const FaucetModal = () => {
           params: [humanFaucetAddr],
         });
         const txHash = await localWalletClient.writeContract({
-          address: crepTokenAddress,
+          address: hrepTokenAddress,
           abi: localMintableTokenAbi,
           functionName: "transfer",
           args: [inputAddress, amount],
@@ -325,7 +325,7 @@ export const FaucetModal = () => {
       } else if (faucetAddress) {
         // Fallback: try mint (works only if supply allows)
         const txHash = await localWalletClient.writeContract({
-          address: crepTokenAddress,
+          address: hrepTokenAddress,
           abi: localMintableTokenAbi,
           functionName: "mint",
           args: [inputAddress, amount],
@@ -334,16 +334,16 @@ export const FaucetModal = () => {
         await localPublicClient.waitForTransactionReceipt({ hash: txHash });
       } else {
         notification.error("Missing faucet address");
-        setCuryoLoading(false);
+        setHrepLoading(false);
         return;
       }
 
       queryClient.invalidateQueries();
-      notification.success(`Sent ${curyoAmount} cREP to ${inputAddress.slice(0, 6)}...${inputAddress.slice(-4)}`);
-      setCuryoLoading(false);
+      notification.success(`Sent ${hrepAmount} HREP to ${inputAddress.slice(0, 6)}...${inputAddress.slice(-4)}`);
+      setHrepLoading(false);
     } catch (error: any) {
-      notification.error(error?.message || "Failed to claim cREP tokens");
-      setCuryoLoading(false);
+      notification.error(error?.message || "Failed to claim HREP tokens");
+      setHrepLoading(false);
     }
   };
 
@@ -488,32 +488,32 @@ export const FaucetModal = () => {
               </>
             )}
 
-            {/* cREP Faucet Section */}
+            {/* HREP Faucet Section */}
             <div className="bg-primary/10 rounded-xl p-4 space-y-3">
-              <h4 className="font-semibold text-primary">Claim cREP Tokens</h4>
-              <p className="text-base text-base-content/60">Mint cREP tokens directly to your wallet for testing.</p>
+              <h4 className="font-semibold text-primary">Claim HREP Tokens</h4>
+              <p className="text-base text-base-content/60">Mint HREP tokens directly to your wallet for testing.</p>
               <div className="flex gap-2">
                 <input
                   type="number"
                   className="input input-bordered input-sm flex-1"
                   placeholder="Amount"
-                  value={curyoAmount}
-                  onChange={e => setCuryoAmount(e.target.value)}
+                  value={hrepAmount}
+                  onChange={e => setHrepAmount(e.target.value)}
                   min="1"
                 />
-                <span className="self-center text-base font-medium">cREP</span>
+                <span className="self-center text-base font-medium">HREP</span>
               </div>
               <button
                 className="h-10 btn btn-primary btn-sm px-4 rounded-full w-full"
-                onClick={claimCURYO}
-                disabled={curyoLoading || !curyoAmount || !inputAddress}
+                onClick={claimHREP}
+                disabled={hrepLoading || !hrepAmount || !inputAddress}
               >
-                {!curyoLoading ? (
+                {!hrepLoading ? (
                   <GiftIcon className="h-5 w-5" />
                 ) : (
                   <span className="loading loading-spinner loading-sm"></span>
                 )}
-                <span>Claim cREP</span>
+                <span>Claim HREP</span>
               </button>
             </div>
 

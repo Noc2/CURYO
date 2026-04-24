@@ -737,7 +737,7 @@ function validateSponsoredCalls(
     }
 
     switch (contract.name) {
-      case "CuryoReputation": {
+      case "HumanReputation": {
         if (functionName === "transferAndCall") {
           const target = normalizeAddressArg(args[0]);
           if (target && votingEngine && target.toLowerCase() === votingEngine.address.toLowerCase()) {

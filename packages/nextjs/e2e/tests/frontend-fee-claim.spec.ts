@@ -1,6 +1,6 @@
 import "../helpers/fetch-shim";
 import {
-  approveCREP,
+  approveHREP,
   claimFrontendFee,
   claimFrontendFees,
   commitVoteDirect,
@@ -16,7 +16,7 @@ import {
   settleRoundDirect,
   slashFrontend,
   submitContentDirect,
-  transferCREP,
+  transferHREP,
   waitForPonderIndexed,
 } from "../helpers/admin-helpers";
 import { ANVIL_ACCOUNTS, DEPLOYER } from "../helpers/anvil-accounts";
@@ -38,7 +38,7 @@ test.describe("Frontend fee claim lifecycle", () => {
   const REWARD_DISTRIBUTOR = CONTRACT_ADDRESSES.RoundRewardDistributor;
   const FRONTEND_REGISTRY = CONTRACT_ADDRESSES.FrontendRegistry;
   const CONTENT_REGISTRY = CONTRACT_ADDRESSES.ContentRegistry;
-  const CREP_TOKEN = CONTRACT_ADDRESSES.CuryoReputation;
+  const HREP_TOKEN = CONTRACT_ADDRESSES.HumanReputation;
   const VOTER_ID_NFT = CONTRACT_ADDRESSES.VoterIdNFT;
   const STAKE = BigInt(10e6);
   const FRONTEND_STAKE = BigInt(1000e6);
@@ -72,11 +72,11 @@ test.describe("Frontend fee claim lifecycle", () => {
     const minted = await mintVoterId(frontendAddress, nullifier, ANVIL_ACCOUNTS.account0.address, VOTER_ID_NFT);
     expect(minted, `Failed to mint Voter ID for ${frontendAddress}`).toBe(true);
 
-    const funded = await transferCREP(frontendAddress, FRONTEND_STAKE, DEPLOYER.address, CREP_TOKEN);
+    const funded = await transferHREP(frontendAddress, FRONTEND_STAKE, DEPLOYER.address, HREP_TOKEN);
     expect(funded, `Failed to fund frontend ${frontendAddress}`).toBe(true);
 
-    const approved = await approveCREP(FRONTEND_REGISTRY, FRONTEND_STAKE, frontendAddress, CREP_TOKEN);
-    expect(approved, `Failed to approve cREP for frontend ${frontendAddress}`).toBe(true);
+    const approved = await approveHREP(FRONTEND_REGISTRY, FRONTEND_STAKE, frontendAddress, HREP_TOKEN);
+    expect(approved, `Failed to approve HREP for frontend ${frontendAddress}`).toBe(true);
 
     const registered = await registerFrontend(frontendAddress, FRONTEND_REGISTRY);
     expect(registered, `Failed to register frontend ${frontendAddress}`).toBe(true);
@@ -90,7 +90,7 @@ test.describe("Frontend fee claim lifecycle", () => {
     roundId: bigint;
   }> {
     const submitter = ANVIL_ACCOUNTS.account10;
-    const submitApproved = await approveCREP(CONTENT_REGISTRY, BigInt(10e6), submitter.address, CREP_TOKEN);
+    const submitApproved = await approveHREP(CONTENT_REGISTRY, BigInt(10e6), submitter.address, HREP_TOKEN);
     expect(submitApproved, "Content submission approval failed").toBe(true);
 
     const submitted = await submitContentDirect(
@@ -126,7 +126,7 @@ test.describe("Frontend fee claim lifecycle", () => {
     const commits: { commitKey: `0x${string}`; isUp: boolean; salt: `0x${string}` }[] = [];
 
     for (const voter of voters) {
-      const approved = await approveCREP(VOTING_ENGINE, STAKE, voter.account.address, CREP_TOKEN);
+      const approved = await approveHREP(VOTING_ENGINE, STAKE, voter.account.address, HREP_TOKEN);
       expect(approved, `Vote approval failed for ${voter.account.address}`).toBe(true);
 
       const commit = await commitVoteDirect(
@@ -246,7 +246,7 @@ test.describe("Frontend fee claim lifecycle", () => {
     const accumulatedBefore = await getFrontendAccumulatedFees(frontendAddress, FRONTEND_REGISTRY);
     expect(accumulatedBefore, "Frontend should have accumulated fees to withdraw").toBeGreaterThan(0n);
 
-    const walletBefore = await readTokenBalance(frontendAddress, CREP_TOKEN);
+    const walletBefore = await readTokenBalance(frontendAddress, HREP_TOKEN);
 
     const withdrawn = await claimFrontendFees(frontendAddress, FRONTEND_REGISTRY);
     expect(withdrawn, "claimFees() should succeed for eligible frontend with fees").toBe(true);
@@ -255,8 +255,8 @@ test.describe("Frontend fee claim lifecycle", () => {
     const accumulatedAfter = await getFrontendAccumulatedFees(frontendAddress, FRONTEND_REGISTRY);
     expect(accumulatedAfter).toBe(0n);
 
-    // Operator wallet should have received the cREP
-    const walletAfter = await readTokenBalance(frontendAddress, CREP_TOKEN);
+    // Operator wallet should have received the HREP
+    const walletAfter = await readTokenBalance(frontendAddress, HREP_TOKEN);
     expect(walletAfter - walletBefore).toBe(accumulatedBefore);
 
     // Double withdrawal should revert (no fees remaining)

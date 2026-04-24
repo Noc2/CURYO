@@ -1,4 +1,4 @@
-import { approveCREP, commitVoteDirect, submitContentDirect, waitForPonderIndexed } from "./admin-helpers";
+import { approveHREP, commitVoteDirect, submitContentDirect, waitForPonderIndexed } from "./admin-helpers";
 import { ANVIL_ACCOUNTS } from "./anvil-accounts";
 import { CONTRACT_ADDRESSES } from "./contracts";
 import { getContentById, getContentList } from "./ponder-api";
@@ -271,11 +271,11 @@ export async function ensureBaselineSeedData(): Promise<void> {
 
   for (const item of missingContent) {
     const categoryId = await resolveCategoryIdBySlug(item.categorySlug);
-    const approved = await approveCREP(
+    const approved = await approveHREP(
       CONTRACT_ADDRESSES.ContentRegistry,
       SUBMIT_STAKE,
       item.submitter,
-      CONTRACT_ADDRESSES.CuryoReputation,
+      CONTRACT_ADDRESSES.HumanReputation,
     );
     if (!approved) {
       throw new Error(`Failed to approve submit stake for ${item.title}`);
@@ -356,11 +356,11 @@ export async function ensureBaselineSeedData(): Promise<void> {
   }
 
   for (const [voter, allowance] of allowanceByVoter.entries()) {
-    const approved = await approveCREP(
+    const approved = await approveHREP(
       CONTRACT_ADDRESSES.RoundVotingEngine,
       allowance,
       voter,
-      CONTRACT_ADDRESSES.CuryoReputation,
+      CONTRACT_ADDRESSES.HumanReputation,
     );
     if (!approved) {
       throw new Error(`Failed to approve vote stake for ${voter}`);

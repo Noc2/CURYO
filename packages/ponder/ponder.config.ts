@@ -5,7 +5,7 @@ import { http } from "viem";
 import {
   CategoryRegistryAbi,
   ContentRegistryAbi,
-  CuryoReputationAbi,
+  HumanReputationAbi,
   FeedbackBonusEscrowAbi,
   FrontendRegistryAbi,
   HumanFaucetAbi,
@@ -201,7 +201,7 @@ const addresses = {
   profileRegistry: resolveAddress("PONDER_PROFILE_REGISTRY_ADDRESS", "ProfileRegistry"),
   frontendRegistry: resolveAddress("PONDER_FRONTEND_REGISTRY_ADDRESS", "FrontendRegistry"),
   voterIdNFT: resolveAddress("PONDER_VOTER_ID_NFT_ADDRESS", "VoterIdNFT"),
-  curyoReputation: resolveAddress("PONDER_CREP_ADDRESS", "CuryoReputation"),
+  humanReputation: resolveAddress("PONDER_HREP_ADDRESS", "HumanReputation"),
   humanFaucet: resolveAddress("PONDER_HUMAN_FAUCET_ADDRESS", "HumanFaucet"),
   participationPool: resolveAddress("PONDER_PARTICIPATION_POOL_ADDRESS", "ParticipationPool"),
   questionRewardPoolEscrow: resolveAddress("PONDER_QUESTION_REWARD_POOL_ESCROW_ADDRESS", "QuestionRewardPoolEscrow"),
@@ -216,7 +216,7 @@ const startBlocks = {
   profileRegistry: resolveStartBlock("PONDER_PROFILE_REGISTRY_START_BLOCK", "ProfileRegistry"),
   frontendRegistry: resolveStartBlock("PONDER_FRONTEND_REGISTRY_START_BLOCK", "FrontendRegistry"),
   voterIdNFT: resolveStartBlock("PONDER_VOTER_ID_NFT_START_BLOCK", "VoterIdNFT"),
-  curyoReputation: resolveStartBlock("PONDER_CREP_START_BLOCK", "CuryoReputation"),
+  humanReputation: resolveStartBlock("PONDER_HREP_START_BLOCK", "HumanReputation"),
   humanFaucet: resolveStartBlock("PONDER_HUMAN_FAUCET_START_BLOCK", "HumanFaucet"),
   participationPool: resolveStartBlock("PONDER_PARTICIPATION_POOL_START_BLOCK", "ParticipationPool"),
   questionRewardPoolEscrow: resolveStartBlock("PONDER_QUESTION_REWARD_POOL_ESCROW_START_BLOCK", "QuestionRewardPoolEscrow"),
@@ -270,9 +270,9 @@ export default createConfig({
       abi: VoterIdNFTAbi,
       network: contractOnActiveNetwork(addresses.voterIdNFT, startBlocks.voterIdNFT),
     },
-    CuryoReputation: {
-      abi: CuryoReputationAbi,
-      network: contractOnActiveNetwork(addresses.curyoReputation, startBlocks.curyoReputation),
+    HumanReputation: {
+      abi: HumanReputationAbi,
+      network: contractOnActiveNetwork(addresses.humanReputation, startBlocks.humanReputation),
     },
     HumanFaucet: {
       abi: HumanFaucetAbi,

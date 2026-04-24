@@ -13,7 +13,7 @@ import { expect, test } from "@playwright/test";
  * and revokes a VoterID for a dedicated test account (#11).
  *
  * Account allocation:
- * - Account #11 (no cREP, no VoterID from seed) — gets VoterID minted then revoked
+ * - Account #11 (no HREP, no VoterID from seed) — gets VoterID minted then revoked
  * - Account #0 (authorized minter) — mints VoterID
  * - Account #9 (deployer = VoterIdNFT owner in local dev) — revokes VoterID
  *

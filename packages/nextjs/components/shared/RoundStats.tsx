@@ -33,14 +33,14 @@ export function RoundRevealedBreakdown({ snapshot, stacked = false }: RoundRevea
       <div className="flex w-full max-w-full flex-col gap-1.5 text-base-content/60">
         <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-left">
           <span>Up</span>
-          <span className="font-semibold tabular-nums">{upPoolFormatted.toFixed(0)} cREP</span>
+          <span className="font-semibold tabular-nums">{upPoolFormatted.toFixed(0)} HREP</span>
           <span className="text-sm text-base-content/60">
             {upCount} vote{upCount === 1 ? "" : "s"}
           </span>
         </div>
         <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-left">
           <span>Down</span>
-          <span className="font-semibold tabular-nums">{downPoolFormatted.toFixed(0)} cREP</span>
+          <span className="font-semibold tabular-nums">{downPoolFormatted.toFixed(0)} HREP</span>
           <span className="text-sm text-base-content/60">
             {downCount} vote{downCount === 1 ? "" : "s"}
           </span>
@@ -53,7 +53,7 @@ export function RoundRevealedBreakdown({ snapshot, stacked = false }: RoundRevea
     <div className="flex w-full max-w-full items-center gap-3">
       <div className="inline-flex min-w-0 flex-1 items-center justify-start gap-2 whitespace-nowrap text-left text-base-content/60">
         <span className="font-semibold">Up</span>
-        <span className="font-semibold tabular-nums">{upPoolFormatted.toFixed(0)} cREP</span>
+        <span className="font-semibold tabular-nums">{upPoolFormatted.toFixed(0)} HREP</span>
         <span className="text-xs text-base-content/60">
           {upCount} vote{upCount === 1 ? "" : "s"}
         </span>
@@ -61,7 +61,7 @@ export function RoundRevealedBreakdown({ snapshot, stacked = false }: RoundRevea
       <div className="h-4 w-px shrink-0 bg-base-content/10" />
       <div className="inline-flex min-w-0 flex-1 items-center justify-end gap-2 whitespace-nowrap text-right text-base-content/60">
         <span className="font-semibold">Down</span>
-        <span className="font-semibold tabular-nums">{downPoolFormatted.toFixed(0)} cREP</span>
+        <span className="font-semibold tabular-nums">{downPoolFormatted.toFixed(0)} HREP</span>
         <span className="text-xs text-base-content/60">
           {downCount} vote{downCount === 1 ? "" : "s"}
         </span>
@@ -104,7 +104,7 @@ export function RoundStats({ categoryId, snapshot }: RoundStatsProps) {
         <div className="flex items-center gap-2">
           <span className="flex items-center gap-1">
             Staked
-            <InfoTooltip text="Total cREP committed in the current round." position="bottom" />
+            <InfoTooltip text="Total HREP committed in the current round." position="bottom" />
           </span>
           <span className="font-semibold tabular-nums">{totalStakeFormatted.toFixed(0)}</span>
         </div>

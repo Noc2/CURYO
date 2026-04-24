@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import { Test, console } from "forge-std/Test.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { HumanReputation } from "../contracts/HumanReputation.sol";
 import { IFrontendRegistry } from "../contracts/interfaces/IFrontendRegistry.sol";
 import { IRoundVotingEngine } from "../contracts/interfaces/IRoundVotingEngine.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
@@ -55,14 +55,14 @@ contract MockVotingEngine is IRoundVotingEngine {
 
 contract FrontendRegistryHarness is FrontendRegistry {
     function forceSetFees(address frontend, uint128 amount) external {
-        frontends[frontend].crepFees = amount;
+        frontends[frontend].hrepFees = amount;
     }
 }
 
 /// @title FrontendRegistry Test Suite
 contract FrontendRegistryTest is Test {
     FrontendRegistry public registry;
-    CuryoReputation public crepToken;
+    HumanReputation public hrepToken;
     MockVotingEngine public votingEngine;
     MockVoterIdNFT public mockVoterIdNFT;
 
@@ -72,16 +72,16 @@ contract FrontendRegistryTest is Test {
     address public frontend3 = address(6);
     address public feeCreditor = address(5);
 
-    uint256 public constant STAKE = 1000e6; // Fixed 1,000 cREP
+    uint256 public constant STAKE = 1000e6; // Fixed 1,000 HREP
 
     function setUp() public {
         vm.startPrank(admin);
 
-        // Deploy cREP token
-        crepToken = new CuryoReputation(admin, admin);
+        // Deploy HREP token
+        hrepToken = new HumanReputation(admin, admin);
 
         // Grant minter role to admin
-        crepToken.grantRole(crepToken.MINTER_ROLE(), admin);
+        hrepToken.grantRole(hrepToken.MINTER_ROLE(), admin);
 
         // Deploy mock voting engine
         votingEngine = new MockVotingEngine();
@@ -92,7 +92,7 @@ contract FrontendRegistryTest is Test {
         registry = FrontendRegistry(
             address(
                 new ERC1967Proxy(
-                    address(impl), abi.encodeCall(FrontendRegistry.initialize, (admin, admin, address(crepToken)))
+                    address(impl), abi.encodeCall(FrontendRegistry.initialize, (admin, admin, address(hrepToken)))
                 )
             )
         );
@@ -104,16 +104,16 @@ contract FrontendRegistryTest is Test {
         // Grant fee creditor role
         registry.addFeeCreditor(feeCreditor);
 
-        // Mint cREP tokens for frontends (not transfer, to avoid governance lock checks)
-        crepToken.mint(frontend1, 10_000e6);
-        crepToken.mint(frontend2, 10_000e6);
-        crepToken.mint(frontend3, 10_000e6);
+        // Mint HREP tokens for frontends (not transfer, to avoid governance lock checks)
+        hrepToken.mint(frontend1, 10_000e6);
+        hrepToken.mint(frontend2, 10_000e6);
+        hrepToken.mint(frontend3, 10_000e6);
         mockVoterIdNFT.setHolder(frontend1);
         mockVoterIdNFT.setHolder(frontend2);
         mockVoterIdNFT.setHolder(frontend3);
 
-        // Mint cREP for fee crediting (to registry)
-        crepToken.mint(address(registry), 1_000_000e6);
+        // Mint HREP for fee crediting (to registry)
+        hrepToken.mint(address(registry), 1_000_000e6);
 
         vm.stopPrank();
 
@@ -124,7 +124,7 @@ contract FrontendRegistryTest is Test {
     // --- Initialization Tests ---
 
     function test_Initialization() public view {
-        assertEq(address(registry.crepToken()), address(crepToken));
+        assertEq(address(registry.hrepToken()), address(hrepToken));
         assertEq(registry.STAKE_AMOUNT(), 1000e6);
     }
 
@@ -132,7 +132,7 @@ contract FrontendRegistryTest is Test {
 
     function test_Register() public {
         vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         registry.register();
         vm.stopPrank();
 
@@ -150,7 +150,7 @@ contract FrontendRegistryTest is Test {
 
     function test_RevertRegisterAlreadyRegistered() public {
         vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE * 2);
+        hrepToken.approve(address(registry), STAKE * 2);
         registry.register();
 
         vm.expectRevert("Already registered");
@@ -162,7 +162,7 @@ contract FrontendRegistryTest is Test {
 
     function test_Deregister() public {
         vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         registry.register();
         vm.stopPrank();
 
@@ -172,10 +172,10 @@ contract FrontendRegistryTest is Test {
         uint256 availableAt = registry.frontendExitAvailableAt(frontend1);
         assertEq(availableAt, block.timestamp + registry.UNBONDING_PERIOD());
 
-        uint256 balanceBefore = crepToken.balanceOf(frontend1);
+        uint256 balanceBefore = hrepToken.balanceOf(frontend1);
         _completeDeregister(frontend1);
 
-        uint256 balanceAfter = crepToken.balanceOf(frontend1);
+        uint256 balanceAfter = hrepToken.balanceOf(frontend1);
         assertEq(balanceAfter - balanceBefore, STAKE);
 
         (address operator, uint256 stakedAmount, bool eligible,) = registry.getFrontendInfo(frontend1);
@@ -192,7 +192,7 @@ contract FrontendRegistryTest is Test {
 
     function test_RevertDeregisterSlashed() public {
         vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         registry.register();
         vm.stopPrank();
 
@@ -206,7 +206,7 @@ contract FrontendRegistryTest is Test {
 
     function test_DeregisterWithPendingFees() public {
         vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         registry.register();
         vm.stopPrank();
 
@@ -217,11 +217,11 @@ contract FrontendRegistryTest is Test {
         vm.prank(frontend1);
         registry.requestDeregister();
 
-        uint256 balanceBefore = crepToken.balanceOf(frontend1);
+        uint256 balanceBefore = hrepToken.balanceOf(frontend1);
         _completeDeregister(frontend1);
 
         // Should receive stake + pending fees
-        uint256 balanceAfter = crepToken.balanceOf(frontend1);
+        uint256 balanceAfter = hrepToken.balanceOf(frontend1);
         assertEq(balanceAfter - balanceBefore, STAKE + 200e6);
 
         // Fees should be zeroed
@@ -230,7 +230,7 @@ contract FrontendRegistryTest is Test {
 
     function test_RevertClaimFeesWhileExitPending() public {
         vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         registry.register();
         vm.stopPrank();
 
@@ -249,7 +249,7 @@ contract FrontendRegistryTest is Test {
 
     function test_ReregisterAfterDeregister() public {
         vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         registry.register();
         registry.requestDeregister();
         vm.stopPrank();
@@ -258,7 +258,7 @@ contract FrontendRegistryTest is Test {
 
         // Should be able to register again
         vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         registry.register();
         vm.stopPrank();
 
@@ -269,17 +269,17 @@ contract FrontendRegistryTest is Test {
 
     function test_RegisteredFrontendsPagination_RemovesExitedEntriesAndAvoidsDuplicates() public {
         vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         registry.register();
         vm.stopPrank();
 
         vm.startPrank(frontend2);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         registry.register();
         vm.stopPrank();
 
         vm.startPrank(frontend3);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         registry.register();
         vm.stopPrank();
 
@@ -306,7 +306,7 @@ contract FrontendRegistryTest is Test {
         assertEq(frontendsAfterSecondExit[0], frontend2);
 
         vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         registry.register();
         vm.stopPrank();
 
@@ -321,7 +321,7 @@ contract FrontendRegistryTest is Test {
 
     function test_DeregisterAfterUnslash() public {
         vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         registry.register();
         vm.stopPrank();
 
@@ -333,11 +333,11 @@ contract FrontendRegistryTest is Test {
         vm.prank(frontend1);
         registry.requestDeregister();
 
-        uint256 balanceBefore = crepToken.balanceOf(frontend1);
+        uint256 balanceBefore = hrepToken.balanceOf(frontend1);
         _completeDeregister(frontend1);
 
         // Should return remaining 500e6 (half was slashed)
-        uint256 balanceAfter = crepToken.balanceOf(frontend1);
+        uint256 balanceAfter = hrepToken.balanceOf(frontend1);
         assertEq(balanceAfter - balanceBefore, 500e6);
     }
 
@@ -345,7 +345,7 @@ contract FrontendRegistryTest is Test {
 
     function test_RegisterFrontendBecomesEligible() public {
         vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         registry.register();
         vm.stopPrank();
 
@@ -361,7 +361,7 @@ contract FrontendRegistryTest is Test {
 
     function test_SlashedFrontendIsNotEligible() public {
         vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         registry.register();
         vm.stopPrank();
 
@@ -373,7 +373,7 @@ contract FrontendRegistryTest is Test {
 
     function test_ExitPendingFrontendIsNotEligible() public {
         vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         registry.register();
         registry.requestDeregister();
         vm.stopPrank();
@@ -383,7 +383,7 @@ contract FrontendRegistryTest is Test {
 
     function test_RevokedVoterIdFrontendIsNotEligible() public {
         vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         registry.register();
         vm.stopPrank();
 
@@ -396,7 +396,7 @@ contract FrontendRegistryTest is Test {
 
     function test_UnderbondedFrontendIsNotEligibleAfterUnslash() public {
         vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         registry.register();
         vm.stopPrank();
 
@@ -412,7 +412,7 @@ contract FrontendRegistryTest is Test {
 
     function test_SlashFrontend() public {
         vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         registry.register();
         vm.stopPrank();
 
@@ -433,7 +433,7 @@ contract FrontendRegistryTest is Test {
 
     function test_UnslashFrontend() public {
         vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         registry.register();
         vm.stopPrank();
 
@@ -453,7 +453,7 @@ contract FrontendRegistryTest is Test {
 
     function test_RevertUnslashFrontendNotSlashed() public {
         vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         registry.register();
         vm.stopPrank();
 
@@ -466,20 +466,20 @@ contract FrontendRegistryTest is Test {
 
     function test_CreditFees() public {
         vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         registry.register();
         vm.stopPrank();
 
         vm.prank(feeCreditor);
         registry.creditFees(frontend1, 100e6);
 
-        uint256 crepFees = registry.getAccumulatedFees(frontend1);
-        assertEq(crepFees, 100e6);
+        uint256 hrepFees = registry.getAccumulatedFees(frontend1);
+        assertEq(hrepFees, 100e6);
     }
 
     function test_CreditFeesAccumulates() public {
         vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         registry.register();
         vm.stopPrank();
 
@@ -488,8 +488,8 @@ contract FrontendRegistryTest is Test {
         registry.creditFees(frontend1, 100e6);
         vm.stopPrank();
 
-        uint256 crepFees = registry.getAccumulatedFees(frontend1);
-        assertEq(crepFees, 200e6);
+        uint256 hrepFees = registry.getAccumulatedFees(frontend1);
+        assertEq(hrepFees, 200e6);
     }
 
     function test_CreditFeesAccumulatesAboveLegacyUint64Limit() public {
@@ -497,7 +497,7 @@ contract FrontendRegistryTest is Test {
         FrontendRegistryHarness largeFeeRegistry = FrontendRegistryHarness(
             address(
                 new ERC1967Proxy(
-                    address(impl), abi.encodeCall(FrontendRegistry.initialize, (admin, admin, address(crepToken)))
+                    address(impl), abi.encodeCall(FrontendRegistry.initialize, (admin, admin, address(hrepToken)))
                 )
             )
         );
@@ -509,7 +509,7 @@ contract FrontendRegistryTest is Test {
         vm.stopPrank();
 
         vm.startPrank(frontend1);
-        crepToken.approve(address(largeFeeRegistry), STAKE);
+        hrepToken.approve(address(largeFeeRegistry), STAKE);
         largeFeeRegistry.register();
         vm.stopPrank();
 
@@ -530,7 +530,7 @@ contract FrontendRegistryTest is Test {
 
     function test_CreditFeesRevertsAfterVoterIdRevocation() public {
         vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         registry.register();
         vm.stopPrank();
 
@@ -551,28 +551,28 @@ contract FrontendRegistryTest is Test {
 
     function test_ClaimFees() public {
         vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         registry.register();
         vm.stopPrank();
 
         vm.prank(feeCreditor);
         registry.creditFees(frontend1, 100e6);
 
-        uint256 curyoBefore = crepToken.balanceOf(frontend1);
+        uint256 hrepBefore = hrepToken.balanceOf(frontend1);
 
         vm.prank(frontend1);
         registry.claimFees();
 
-        assertEq(crepToken.balanceOf(frontend1) - curyoBefore, 100e6);
+        assertEq(hrepToken.balanceOf(frontend1) - hrepBefore, 100e6);
 
         // Fees should be reset
-        uint256 crepFees = registry.getAccumulatedFees(frontend1);
-        assertEq(crepFees, 0);
+        uint256 hrepFees = registry.getAccumulatedFees(frontend1);
+        assertEq(hrepFees, 0);
     }
 
     function test_RevertClaimFeesWhileSlashed() public {
         vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         registry.register();
         vm.stopPrank();
 
@@ -589,7 +589,7 @@ contract FrontendRegistryTest is Test {
 
     function test_RevertClaimFeesWhileUnderbonded() public {
         vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         registry.register();
         vm.stopPrank();
 
@@ -614,7 +614,7 @@ contract FrontendRegistryTest is Test {
 
     function test_RevertClaimFeesNoFees() public {
         vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         registry.register();
 
         vm.expectRevert("No fees to claim");
@@ -624,7 +624,7 @@ contract FrontendRegistryTest is Test {
 
     function test_ClaimFeesRevertsAfterVoterIdRevocation() public {
         vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         registry.register();
         vm.stopPrank();
 
@@ -640,7 +640,7 @@ contract FrontendRegistryTest is Test {
 
     function test_DeregisterAfterVoterIdRevocationConfiscatesPendingFees() public {
         vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         registry.register();
         vm.stopPrank();
 
@@ -652,11 +652,11 @@ contract FrontendRegistryTest is Test {
         vm.prank(frontend1);
         registry.requestDeregister();
 
-        uint256 balanceBefore = crepToken.balanceOf(frontend1);
+        uint256 balanceBefore = hrepToken.balanceOf(frontend1);
         uint256 reserveBefore = votingEngine.totalAddedToReserve();
         _completeDeregister(frontend1);
 
-        assertEq(crepToken.balanceOf(frontend1) - balanceBefore, STAKE);
+        assertEq(hrepToken.balanceOf(frontend1) - balanceBefore, STAKE);
         assertEq(registry.getAccumulatedFees(frontend1), 0);
         assertEq(votingEngine.totalAddedToReserve(), reserveBefore + 200e6);
     }
@@ -665,7 +665,7 @@ contract FrontendRegistryTest is Test {
 
     function test_TopUpStakeRestoresFullBond() public {
         vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE + 500e6);
+        hrepToken.approve(address(registry), STAKE + 500e6);
         registry.register();
         vm.stopPrank();
 
@@ -686,7 +686,7 @@ contract FrontendRegistryTest is Test {
 
     function test_SlashFrontendConfiscatesAccruedFees() public {
         vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         registry.register();
         vm.stopPrank();
 
@@ -704,7 +704,7 @@ contract FrontendRegistryTest is Test {
 
     function test_SlashFrontendConfiscatesAccruedFeesWhileExitPending() public {
         vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         registry.register();
         registry.requestDeregister();
         vm.stopPrank();
@@ -748,7 +748,7 @@ contract FrontendRegistryTest is Test {
         FrontendRegistry noEngineRegistry = FrontendRegistry(
             address(
                 new ERC1967Proxy(
-                    address(impl2), abi.encodeCall(FrontendRegistry.initialize, (admin, admin, address(crepToken)))
+                    address(impl2), abi.encodeCall(FrontendRegistry.initialize, (admin, admin, address(hrepToken)))
                 )
             )
         );
@@ -756,11 +756,11 @@ contract FrontendRegistryTest is Test {
         noEngineRegistry.setVoterIdNFT(address(mockVoterIdNFT));
 
         // Mint and register a frontend
-        crepToken.mint(frontend1, 10_000e6);
+        hrepToken.mint(frontend1, 10_000e6);
         vm.stopPrank();
 
         vm.startPrank(frontend1);
-        crepToken.approve(address(noEngineRegistry), STAKE);
+        hrepToken.approve(address(noEngineRegistry), STAKE);
         noEngineRegistry.register();
         vm.stopPrank();
 
@@ -779,15 +779,15 @@ contract FrontendRegistryTest is Test {
 
         // New creditor can credit fees
         vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         registry.register();
         vm.stopPrank();
 
         vm.prank(newCreditor);
         registry.creditFees(frontend1, 100e6);
 
-        uint256 crepFees = registry.getAccumulatedFees(frontend1);
-        assertEq(crepFees, 100e6);
+        uint256 hrepFees = registry.getAccumulatedFees(frontend1);
+        assertEq(hrepFees, 100e6);
 
         // Remove creditor
         vm.prank(admin);

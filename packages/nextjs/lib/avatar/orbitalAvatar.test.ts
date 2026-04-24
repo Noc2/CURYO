@@ -107,7 +107,7 @@ test("same avatar accent keeps address-based composition differences", () => {
   assert.equal(modelA.planet?.midColor, modelB.planet?.midColor);
 });
 
-test("orb size saturates at extreme cREP balances", () => {
+test("orb size saturates at extreme HREP balances", () => {
   const capped = buildOrbitalAvatarModel(
     buildPayload({
       balance: "100000000000",
@@ -124,7 +124,7 @@ test("orb size saturates at extreme cREP balances", () => {
   assert.equal(extreme.planet?.radius, capped.planet?.radius);
 });
 
-test("low cREP balances stay visibly smaller", () => {
+test("low HREP balances stay visibly smaller", () => {
   const lowBalance = buildOrbitalAvatarModel(
     buildPayload({
       balance: "10000000",

@@ -3,7 +3,7 @@ export const HumanFaucetAbi = [
     "type": "constructor",
     "inputs": [
       {
-        "name": "_crepToken",
+        "name": "_hrepToken",
         "type": "address",
         "internalType": "address"
       },
@@ -287,7 +287,7 @@ export const HumanFaucetAbi = [
   },
   {
     "type": "function",
-    "name": "crepToken",
+    "name": "hrepToken",
     "inputs": [],
     "outputs": [
       {
@@ -1169,25 +1169,6 @@ export const HumanFaucetAbi = [
         "type": "address",
         "indexed": false,
         "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "VoterIdMintFailed",
-    "inputs": [
-      {
-        "name": "user",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "nullifier",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
       }
     ],
     "anonymous": false

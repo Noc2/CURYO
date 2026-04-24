@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {VotingTestBase} from "./helpers/VotingTestHelpers.sol";
-import {ContentRegistry} from "../contracts/ContentRegistry.sol";
-import {CuryoReputation} from "../contracts/CuryoReputation.sol";
-import {FeedbackBonusEscrow} from "../contracts/FeedbackBonusEscrow.sol";
-import {FrontendRegistry} from "../contracts/FrontendRegistry.sol";
-import {IFrontendRegistry} from "../contracts/interfaces/IFrontendRegistry.sol";
-import {MockCategoryRegistry} from "../contracts/mocks/MockCategoryRegistry.sol";
-import {MockERC20} from "../contracts/mocks/MockERC20.sol";
-import {ProtocolConfig} from "../contracts/ProtocolConfig.sol";
-import {QuestionRewardPoolEscrow} from "../contracts/QuestionRewardPoolEscrow.sol";
-import {RoundRewardDistributor} from "../contracts/RoundRewardDistributor.sol";
-import {RoundVotingEngine} from "../contracts/RoundVotingEngine.sol";
-import {RoundEngineReadHelpers} from "./helpers/RoundEngineReadHelpers.sol";
-import {MockVoterIdNFT} from "./mocks/MockVoterIdNFT.sol";
+import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
+import { ContentRegistry } from "../contracts/ContentRegistry.sol";
+import { HumanReputation } from "../contracts/HumanReputation.sol";
+import { FeedbackBonusEscrow } from "../contracts/FeedbackBonusEscrow.sol";
+import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
+import { IFrontendRegistry } from "../contracts/interfaces/IFrontendRegistry.sol";
+import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
+import { MockERC20 } from "../contracts/mocks/MockERC20.sol";
+import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
+import { QuestionRewardPoolEscrow } from "../contracts/QuestionRewardPoolEscrow.sol";
+import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
+import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
+import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
+import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
 
 contract SlashedFrontendRegistryMock is IFrontendRegistry {
     address public immutable frontend;
@@ -32,9 +32,9 @@ contract SlashedFrontendRegistryMock is IFrontendRegistry {
         return frontend_ == frontend;
     }
 
-    function creditFees(address, uint256) external {}
+    function creditFees(address, uint256) external { }
 
-    function getAccumulatedFees(address) external pure returns (uint256 crepFees) {
+    function getAccumulatedFees(address) external pure returns (uint256 hrepFees) {
         return 0;
     }
 
@@ -51,7 +51,7 @@ contract SlashedFrontendRegistryMock is IFrontendRegistry {
 }
 
 contract FeedbackBonusEscrowTest is VotingTestBase {
-    CuryoReputation public crepToken;
+    HumanReputation public hrepToken;
     ContentRegistry public registry;
     RoundVotingEngine public votingEngine;
     RoundRewardDistributor public rewardDistributor;
@@ -105,8 +105,8 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
 
         vm.startPrank(owner);
 
-        crepToken = new CuryoReputation(owner, owner);
-        crepToken.grantRole(crepToken.MINTER_ROLE(), owner);
+        hrepToken = new HumanReputation(owner, owner);
+        hrepToken.grantRole(hrepToken.MINTER_ROLE(), owner);
 
         ContentRegistry registryImpl = new ContentRegistry();
         RoundVotingEngine engineImpl = new RoundVotingEngine();
@@ -120,7 +120,7 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(registryImpl),
-                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(crepToken)))
+                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(hrepToken)))
                 )
             )
         );
@@ -130,7 +130,7 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
                     address(engineImpl),
                     abi.encodeCall(
                         RoundVotingEngine.initialize,
-                        (owner, address(crepToken), address(registry), address(protocolConfig))
+                        (owner, address(hrepToken), address(registry), address(protocolConfig))
                     )
                 )
             )
@@ -141,7 +141,7 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
                     address(distImpl),
                     abi.encodeCall(
                         RoundRewardDistributor.initialize,
-                        (owner, address(crepToken), address(votingEngine), address(registry))
+                        (owner, address(hrepToken), address(votingEngine), address(registry))
                     )
                 )
             )
@@ -153,7 +153,7 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(frontendRegistryImpl),
-                    abi.encodeCall(FrontendRegistry.initialize, (owner, owner, address(crepToken)))
+                    abi.encodeCall(FrontendRegistry.initialize, (owner, owner, address(hrepToken)))
                 )
             )
         );
@@ -165,7 +165,7 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
                         QuestionRewardPoolEscrow.initialize,
                         (
                             owner,
-                            address(crepToken),
+                            address(hrepToken),
                             address(usdc),
                             address(registry),
                             address(votingEngine),
@@ -208,14 +208,14 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
         _setTlockRoundConfig(protocolConfig, EPOCH_DURATION, 7 days, 3, 200);
 
         uint256 reserveAmount = 1_000_000e6;
-        crepToken.mint(owner, reserveAmount);
-        crepToken.approve(address(votingEngine), reserveAmount);
+        hrepToken.mint(owner, reserveAmount);
+        hrepToken.approve(address(votingEngine), reserveAmount);
         votingEngine.addToConsensusReserve(reserveAmount);
 
         address[7] memory humans = [submitter, funder, voter1, voter2, voter3, voter4, frontend1];
         for (uint256 i = 0; i < humans.length; i++) {
             voterIdNFT.setHolder(humans[i]);
-            crepToken.mint(humans[i], 10_000e6);
+            hrepToken.mint(humans[i], 10_000e6);
             usdc.mint(humans[i], 1_000e6);
         }
 
@@ -396,7 +396,7 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
             commitKeys[i] = _commitTestVote(
                 DirectTestCommitRequest({
                     engine: votingEngine,
-                    crepToken: crepToken,
+                    hrepToken: hrepToken,
                     voter: voters[i],
                     contentId: contentId,
                     isUp: directions[i],
@@ -419,7 +419,7 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
 
     function _registerFrontend(address frontend) internal {
         vm.startPrank(frontend);
-        crepToken.approve(address(frontendRegistry), frontendRegistry.STAKE_AMOUNT());
+        hrepToken.approve(address(frontendRegistry), frontendRegistry.STAKE_AMOUNT());
         frontendRegistry.register();
         vm.stopPrank();
     }

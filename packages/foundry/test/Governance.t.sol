@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {Test} from "forge-std/Test.sol";
-import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
-import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
-import {IGovernor} from "@openzeppelin/contracts/governance/IGovernor.sol";
+import { Test } from "forge-std/Test.sol";
+import { TimelockController } from "@openzeppelin/contracts/governance/TimelockController.sol";
+import { IVotes } from "@openzeppelin/contracts/governance/utils/IVotes.sol";
+import { IGovernor } from "@openzeppelin/contracts/governance/IGovernor.sol";
 
-import {CuryoReputation} from "../contracts/CuryoReputation.sol";
-import {CuryoGovernor} from "../contracts/governance/CuryoGovernor.sol";
-import {VoterIdNFT} from "../contracts/VoterIdNFT.sol";
+import { HumanReputation } from "../contracts/HumanReputation.sol";
+import { CuryoGovernor } from "../contracts/governance/CuryoGovernor.sol";
+import { VoterIdNFT } from "../contracts/VoterIdNFT.sol";
 
 contract GovernanceTest is Test {
-    CuryoReputation public token;
+    HumanReputation public token;
     TimelockController public timelock;
     CuryoGovernor public governor;
 
@@ -49,8 +49,8 @@ contract GovernanceTest is Test {
     function setUp() public {
         vm.startPrank(deployer);
 
-        // Deploy cREP token (now has native ERC20Votes)
-        token = new CuryoReputation(deployer, deployer);
+        // Deploy HREP token (now has native ERC20Votes)
+        token = new HumanReputation(deployer, deployer);
 
         // Grant MINTER_ROLE to deployer for testing
         token.grantRole(token.MINTER_ROLE(), deployer);
@@ -63,7 +63,7 @@ contract GovernanceTest is Test {
 
         timelock = new TimelockController(2 days, proposers, executors, deployer);
 
-        // Deploy Governor with cREP directly (no wrapper needed)
+        // Deploy Governor with HREP directly (no wrapper needed)
         governor = new CuryoGovernor(IVotes(address(token)), timelock);
 
         // Initialize protocol-controlled holders excluded from dynamic quorum
@@ -249,7 +249,7 @@ contract GovernanceTest is Test {
     }
 
     function test_GovernorProposalThreshold() public view {
-        // Bootstrap proposal threshold should be 1K cREP
+        // Bootstrap proposal threshold should be 1K HREP
         assertEq(governor.proposalThreshold(), 1_000e6);
     }
 
@@ -301,7 +301,7 @@ contract GovernanceTest is Test {
 
         // Deploy a fresh governor with almost all tokens locked
         vm.startPrank(deployer);
-        CuryoReputation smallToken = new CuryoReputation(deployer, deployer);
+        HumanReputation smallToken = new HumanReputation(deployer, deployer);
         smallToken.grantRole(smallToken.MINTER_ROLE(), deployer);
 
         TimelockController smallTimelock = new TimelockController(2 days, new address[](0), new address[](0), deployer);
@@ -720,7 +720,7 @@ contract GovernanceTest is Test {
         address governance = address(0xB);
 
         vm.prank(admin);
-        CuryoReputation separateToken = new CuryoReputation(admin, governance);
+        HumanReputation separateToken = new HumanReputation(admin, governance);
 
         // Cache role hashes to avoid nested external calls consuming vm.prank
         bytes32 defaultAdminRole = separateToken.DEFAULT_ADMIN_ROLE();
@@ -747,7 +747,7 @@ contract GovernanceTest is Test {
         address governance = address(0xB);
 
         vm.prank(admin);
-        CuryoReputation separateToken = new CuryoReputation(admin, governance);
+        HumanReputation separateToken = new HumanReputation(admin, governance);
 
         // Admin has only the temporary setup roles.
         assertFalse(separateToken.hasRole(separateToken.DEFAULT_ADMIN_ROLE(), admin));

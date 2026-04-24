@@ -78,7 +78,7 @@ function truncateAddress(address: string) {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
 }
 
-function formatCrepString(value: string | null | undefined) {
+function formatHrepString(value: string | null | undefined) {
   if (!value) return "0";
   return (Number(value) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 });
 }
@@ -325,7 +325,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
   const avatarAccentBusy = avatarAccentPending || clearAvatarAccentPending;
   const hasAvatarAccentChanges = normalizedAvatarAccentInput !== committedAvatarAccentHex;
   const referralCountLabel = Number(referralCount).toLocaleString();
-  const referralTweetText = `Join Curyo, claim cREP, and get verified. Use my referral link so we both receive a cREP bonus: ${referralLink}`;
+  const referralTweetText = `Join Curyo, claim HREP, and get verified. Use my referral link so we both receive a HREP bonus: ${referralLink}`;
   const winRateLabel = stats && stats.totalSettledVotes > 0 ? `${(stats.winRate * 100).toFixed(1)}%` : "—";
   const dailyStreakLabel = (dailyStreak?.currentDailyStreak ?? 0).toLocaleString();
   const resolvedVotesLabel = (stats?.totalSettledVotes ?? 0).toLocaleString();
@@ -965,13 +965,13 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
                     <div className="rounded-2xl bg-base-content/[0.05] px-4 py-3">
                       <div className="text-base text-base-content/45">Stake won</div>
                       <div className="mt-1 text-xl font-semibold text-success">
-                        {formatCrepString(stats.totalStakeWon)} cREP
+                        {formatHrepString(stats.totalStakeWon)} HREP
                       </div>
                     </div>
                     <div className="rounded-2xl bg-base-content/[0.05] px-4 py-3">
                       <div className="text-base text-base-content/45">Stake lost</div>
                       <div className="mt-1 text-xl font-semibold text-error">
-                        {formatCrepString(stats.totalStakeLost)} cREP
+                        {formatHrepString(stats.totalStakeLost)} HREP
                       </div>
                     </div>
                   </div>
@@ -1098,7 +1098,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
                         <td>
                           <span className={`font-medium ${outcome.className}`}>{outcome.label}</span>
                         </td>
-                        <td className="text-right font-mono">{formatCrepString(vote.stake)} cREP</td>
+                        <td className="text-right font-mono">{formatHrepString(vote.stake)} HREP</td>
                         <td className="text-right text-base-content/55">{formatTimestamp(vote.committedAt)}</td>
                       </tr>
                     );
@@ -1243,7 +1243,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
                 <div className="rounded-2xl bg-base-content/[0.04] px-5 py-4">
                   <div className="text-base text-base-content/45">Total received</div>
                   <div className="mt-1 text-3xl font-semibold tabular-nums text-primary">
-                    {formatReferralAmount(totalEarned)} cREP
+                    {formatReferralAmount(totalEarned)} HREP
                   </div>
                 </div>
               </div>
@@ -1252,12 +1252,12 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
                 <div className="text-lg font-semibold">Referral tokens</div>
                 <div className="mt-2 text-base text-base-content/70">
                   You get{" "}
-                  <span className="font-semibold text-primary">{formatReferralAmount(referralReward)} cREP</span> per
+                  <span className="font-semibold text-primary">{formatReferralAmount(referralReward)} HREP</span> per
                   referral
                 </div>
                 <div className="text-base text-base-content/70">
                   Friend gets{" "}
-                  <span className="font-semibold text-primary">{formatReferralAmount(claimantBonus)} cREP</span> bonus
+                  <span className="font-semibold text-primary">{formatReferralAmount(claimantBonus)} HREP</span> bonus
                 </div>
               </div>
 

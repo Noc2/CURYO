@@ -33,7 +33,7 @@ function RevealVoteCard({
           <span className="text-sm text-base-content/60">Round #{vote.roundId.toString()}</span>
         </div>
         <div className="text-sm text-base-content/75">
-          {stake} cREP
+          {stake} HREP
           <span className="mx-2 text-base-content/45">·</span>
           Epoch {vote.epochIndex + 1}
         </div>

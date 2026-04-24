@@ -10,7 +10,7 @@ import { ISelfVerificationRoot } from "@selfxyz/contracts/contracts/interfaces/I
 import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
 
 /// @title HumanFaucet
-/// @notice Allows verified humans with governance-approved Self.xyz credentials to claim cREP tokens once.
+/// @notice Allows verified humans with governance-approved Self.xyz credentials to claim HREP tokens once.
 /// @dev Uses Self.xyz zero-knowledge identity verification for sybil resistance.
 ///      One claim per document nullifier (the same verified identity document can't claim twice).
 ///      This contract holds the 52M faucet allocation minted at launch.
@@ -28,11 +28,11 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     uint256 public constant TIER_3_THRESHOLD = 1_000_000;
 
     /// @notice Claim amounts per tier (6 decimals)
-    uint256 public constant TIER_0_AMOUNT = 10_000e6; // 10,000 cREP (Genesis)
-    uint256 public constant TIER_1_AMOUNT = 1_000e6; // 1,000 cREP (Early Adopter)
-    uint256 public constant TIER_2_AMOUNT = 100e6; // 100 cREP (Pioneer)
-    uint256 public constant TIER_3_AMOUNT = 10e6; // 10 cREP (Explorer)
-    uint256 public constant TIER_4_AMOUNT = 1e6; // 1 cREP (Settler)
+    uint256 public constant TIER_0_AMOUNT = 10_000e6; // 10,000 HREP (Genesis)
+    uint256 public constant TIER_1_AMOUNT = 1_000e6; // 1,000 HREP (Early Adopter)
+    uint256 public constant TIER_2_AMOUNT = 100e6; // 100 HREP (Pioneer)
+    uint256 public constant TIER_3_AMOUNT = 10e6; // 10 HREP (Explorer)
+    uint256 public constant TIER_4_AMOUNT = 1e6; // 1 HREP (Settler)
 
     /// @notice Referral bonus ratio: 50% of claim amount for both claimant bonus and referrer reward
     uint256 public constant REFERRAL_RATIO_BPS = 5000;
@@ -52,8 +52,8 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
 
     // --- State ---
 
-    /// @notice The cREP token contract (faucet holds pre-minted balance)
-    IERC20 public immutable crepToken;
+    /// @notice The HREP token contract (faucet holds pre-minted balance)
+    IERC20 public immutable hrepToken;
 
     /// @notice Verification config ID for the Self.xyz hub
     bytes32 public verificationConfigId;
@@ -64,7 +64,7 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     /// @notice Track which addresses have claimed (enforces one claim per address)
     mapping(address => bool) public addressClaimed;
 
-    /// @notice Total cREP tokens claimed through this faucet
+    /// @notice Total HREP tokens claimed through this faucet
     uint256 public totalClaimed;
 
     /// @notice Total number of unique claimants
@@ -193,15 +193,15 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     address public governance;
 
     /// @notice Deploy the HumanFaucet
-    /// @param _crepToken Address of the cREP token contract
+    /// @param _hrepToken Address of the HREP token contract
     /// @param _identityVerificationHub Address of the Self.xyz IdentityVerificationHub
     /// @param _governance The governance address (timelock) — transferOwnership restricted to this
-    constructor(address _crepToken, address _identityVerificationHub, address _governance)
+    constructor(address _hrepToken, address _identityVerificationHub, address _governance)
         SelfVerificationRoot(_identityVerificationHub, "curyo-faucet")
         Ownable(msg.sender)
     {
         require(_governance != address(0), "Invalid governance");
-        crepToken = IERC20(_crepToken);
+        hrepToken = IERC20(_hrepToken);
         governance = _governance;
 
         _setAttestationPolicy(PASSPORT_ATTESTATION_ID, true, [true, true, true]);
@@ -246,7 +246,7 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
         _setAttestationPolicy(attestationId, enabled, requiredOfac);
     }
 
-    /// @notice Withdraw remaining cREP tokens (e.g., after faucet decommissioning)
+    /// @notice Withdraw remaining HREP tokens (e.g., after faucet decommissioning)
     /// @dev Only available while paused so governance must halt new claims before migration or recovery.
     /// @param to Address to receive the tokens
     /// @param amount Amount to withdraw (use type(uint256).max for full balance)
@@ -255,11 +255,11 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
         require(paused(), "Pause required");
         require(to != address(0), "Invalid address");
 
-        uint256 balance = crepToken.balanceOf(address(this));
+        uint256 balance = hrepToken.balanceOf(address(this));
         uint256 withdrawnAmount = amount > balance ? balance : amount;
         require(withdrawnAmount > 0, "Nothing to withdraw");
 
-        crepToken.safeTransfer(to, withdrawnAmount);
+        hrepToken.safeTransfer(to, withdrawnAmount);
         emit RemainingWithdrawn(to, withdrawnAmount);
     }
 
@@ -354,7 +354,7 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     }
 
     /// @notice Get the current tier based on totalClaimants
-    /// @dev AUDIT NOTE (M-3): Tier transitions are discrete cliffs (e.g., 10,000 → 1,000 cREP at
+    /// @dev AUDIT NOTE (M-3): Tier transitions are discrete cliffs (e.g., 10,000 → 1,000 HREP at
     ///      boundary). This is by design for simplicity and predictability. The UI shows tier info
     ///      so users can anticipate transitions.
     /// @return tier The current tier index (0-4)
@@ -367,7 +367,7 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     }
 
     /// @notice Get the current claim amount based on tier
-    /// @return The claim amount in cREP (6 decimals)
+    /// @return The claim amount in HREP (6 decimals)
     function getCurrentClaimAmount() public view returns (uint256) {
         uint256 tier = getCurrentTier();
         if (tier == 0) return TIER_0_AMOUNT;
@@ -448,17 +448,17 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
         return true;
     }
 
-    /// @notice Get remaining cREP balance in the faucet
+    /// @notice Get remaining HREP balance in the faucet
     /// @return Remaining balance available for claims
     function getRemainingBalance() external view returns (uint256) {
-        return crepToken.balanceOf(address(this));
+        return hrepToken.balanceOf(address(this));
     }
 
     /// @notice Estimate remaining claims at the current tier rate
     /// @dev Approximate — does not account for tier transitions or referral bonuses
     /// @return Number of remaining claims possible at the current claim amount
     function getRemainingClaims() external view returns (uint256) {
-        uint256 balance = crepToken.balanceOf(address(this));
+        uint256 balance = hrepToken.balanceOf(address(this));
         uint256 currentAmount = getCurrentClaimAmount();
         if (currentAmount == 0) return 0;
         return balance / currentAmount;
@@ -492,7 +492,7 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     }
 
     /// @notice Called by the hub after successful verification
-    /// @dev Transfers cREP tokens from faucet balance to the verified user
+    /// @dev Transfers HREP tokens from faucet balance to the verified user
     function customVerificationHook(ISelfVerificationRoot.GenericDiscloseOutputV2 memory output, bytes memory userData)
         internal
         override
@@ -548,7 +548,7 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
 
         // Check faucet has sufficient balance
         uint256 totalRequired = claimAmount + referrerReward;
-        if (crepToken.balanceOf(address(this)) < totalRequired) {
+        if (hrepToken.balanceOf(address(this)) < totalRequired) {
             revert InsufficientFaucetBalance();
         }
 
@@ -578,11 +578,11 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
         }
 
         // Transfer tokens to the verified user
-        crepToken.safeTransfer(user, claimAmount);
+        hrepToken.safeTransfer(user, claimAmount);
 
         // Transfer referrer reward if applicable
         if (referrerReward > 0) {
-            crepToken.safeTransfer(referrer, referrerReward);
+            hrepToken.safeTransfer(referrer, referrerReward);
             emit ReferralRewardPaid(referrer, user, referrerReward, claimantBonus);
         }
 
@@ -631,7 +631,7 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
         }
 
         uint256 totalRequired = amount + referrerReward;
-        if (crepToken.balanceOf(address(this)) < totalRequired) {
+        if (hrepToken.balanceOf(address(this)) < totalRequired) {
             revert InsufficientFaucetBalance();
         }
 
@@ -656,9 +656,9 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
             emit TierChanged(getCurrentTier(), getCurrentClaimAmount(), totalClaimants);
         }
 
-        crepToken.safeTransfer(user, amount);
+        hrepToken.safeTransfer(user, amount);
         if (referrerReward > 0) {
-            crepToken.safeTransfer(referrer, referrerReward);
+            hrepToken.safeTransfer(referrer, referrerReward);
             emit ReferralRewardPaid(referrer, user, referrerReward, claimantBonus);
         }
 

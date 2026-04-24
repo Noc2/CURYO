@@ -166,7 +166,7 @@ export const RoundRewardDistributorAbi = [
   },
   {
     "type": "function",
-    "name": "crepToken",
+    "name": "hrepToken",
     "inputs": [],
     "outputs": [
       {
@@ -359,7 +359,7 @@ export const RoundRewardDistributorAbi = [
         "internalType": "address"
       },
       {
-        "name": "_crepToken",
+        "name": "_hrepToken",
         "type": "address",
         "internalType": "address"
       },
@@ -923,7 +923,7 @@ export const RoundRewardDistributorAbi = [
   },
   {
     "type": "function",
-    "name": "sweepStrandedCrepToTreasury",
+    "name": "sweepStrandedHrepToTreasury",
     "inputs": [],
     "outputs": [
       {
@@ -1439,7 +1439,7 @@ export const RoundRewardDistributorAbi = [
   },
   {
     "type": "event",
-    "name": "StrandedCrepSwept",
+    "name": "StrandedHrepSwept",
     "inputs": [
       {
         "name": "treasury",
@@ -1564,7 +1564,7 @@ export const RoundRewardDistributorAbi = [
   },
   {
     "type": "error",
-    "name": "NoStrandedCrep",
+    "name": "NoStrandedHrep",
     "inputs": []
   },
   {

@@ -57,7 +57,7 @@ import {
   ERC20_APPROVAL_ABI,
   MIN_REWARD_POOL_REQUIRED_VOTERS,
   QUESTION_SUBMISSION_ABI,
-  SUBMISSION_REWARD_ASSET_CREP,
+  SUBMISSION_REWARD_ASSET_HREP,
   SUBMISSION_REWARD_ASSET_USDC,
   type SubmissionRewardAsset,
   formatSubmissionRewardAmount,
@@ -530,12 +530,12 @@ export function ContentSubmissionSection() {
   const { data: registryInfo, isLoading: isRegistryLoading } = useDeployedContractInfo({
     contractName: "ContentRegistry",
   });
-  const { data: crepInfo, isLoading: isCrepLoading } = useDeployedContractInfo({ contractName: "CuryoReputation" });
+  const { data: hrepInfo, isLoading: isHrepLoading } = useDeployedContractInfo({ contractName: "HumanReputation" });
   const { data: rewardEscrowInfo, isLoading: isRewardEscrowLoading } = useDeployedContractInfo({
     contractName: "QuestionRewardPoolEscrow",
   });
   const registryAddress = registryInfo?.address as `0x${string}` | undefined;
-  const crepAddress = crepInfo?.address as `0x${string}` | undefined;
+  const hrepAddress = hrepInfo?.address as `0x${string}` | undefined;
   const rewardEscrowAddress = rewardEscrowInfo?.address as `0x${string}` | undefined;
   const { data: escrowUsdcToken } = useScaffoldReadContract({
     contractName: "QuestionRewardPoolEscrow" as any,
@@ -553,9 +553,9 @@ export function ContentSubmissionSection() {
       staleTime: 300_000,
     },
   } as any);
-  const { data: minSubmissionCrepPool } = useScaffoldReadContract({
+  const { data: minSubmissionHrepPool } = useScaffoldReadContract({
     contractName: "ProtocolConfig" as any,
-    functionName: "minSubmissionCrepPool" as any,
+    functionName: "minSubmissionHrepPool" as any,
     watch: false,
     query: {
       staleTime: 300_000,
@@ -626,7 +626,7 @@ export function ContentSubmissionSection() {
     setRoundMinVoters(String(roundConfigDefaults.minVoters));
     setRoundMaxVoters(String(roundConfigDefaults.maxVoters));
   }, [protocolRoundConfig, roundConfigDefaults, roundConfigTouched]);
-  const selectedRewardAssetId = rewardAsset === "crep" ? SUBMISSION_REWARD_ASSET_CREP : SUBMISSION_REWARD_ASSET_USDC;
+  const selectedRewardAssetId = rewardAsset === "hrep" ? SUBMISSION_REWARD_ASSET_HREP : SUBMISSION_REWARD_ASSET_USDC;
   const selectedRewardAmount = useMemo(() => parseSubmissionRewardAmount(rewardAmount), [rewardAmount]);
   const parsedRoundBlindMinutes = parseIntegerInput(roundBlindMinutes);
   const parsedRoundMaxDurationHours = parseIntegerInput(roundMaxDurationHours);
@@ -672,9 +672,9 @@ export function ContentSubmissionSection() {
   const selectedRequiredSettledRounds = BigInt(BUNDLE_REQUIRED_SETTLED_ROUNDS);
   const bountyMinimumCoverageAmount = selectedRequiredVoters * selectedRequiredSettledRounds;
   const minimumRewardAmount =
-    rewardAsset === "crep"
-      ? typeof minSubmissionCrepPool === "bigint"
-        ? minSubmissionCrepPool
+    rewardAsset === "hrep"
+      ? typeof minSubmissionHrepPool === "bigint"
+        ? minSubmissionHrepPool
         : DEFAULT_SUBMISSION_REWARD_POOL
       : typeof minSubmissionUsdcPool === "bigint"
         ? minSubmissionUsdcPool
@@ -741,12 +741,12 @@ export function ContentSubmissionSection() {
         ? `For a stronger signal, consider ${formatSubmissionRewardAmount(
             oneTokenPerMinimumVoterBounty,
             rewardAsset,
-          )} or more so the minimum cohort earns about 1 ${rewardAsset === "crep" ? "cREP" : "USDC"} each.`
+          )} or more so the minimum cohort earns about 1 ${rewardAsset === "hrep" ? "HREP" : "USDC"} each.`
         : parsedRoundMaxVoters > Math.max(parsedRewardRequiredVoters, 1) * 3
           ? "A wide voter cap can dilute the per-voter payout if participation is high; use it when broader input matters more than payout density."
           : "These settings give a clear payout target for a small qualifying round.";
   const rewardTokenAddress =
-    rewardAsset === "crep" ? crepAddress : ((escrowUsdcToken as `0x${string}` | undefined) ?? undefined);
+    rewardAsset === "hrep" ? hrepAddress : ((escrowUsdcToken as `0x${string}` | undefined) ?? undefined);
   const { refetch: refetchNextContentId } = useScaffoldReadContract({
     contractName: "ContentRegistry",
     functionName: "nextContentId",
@@ -902,18 +902,18 @@ export function ContentSubmissionSection() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (isRegistryLoading || isCrepLoading || isRewardEscrowLoading) {
+    if (isRegistryLoading || isHrepLoading || isRewardEscrowLoading) {
       notification.warning("Submission is still loading. Try again in a moment.");
       return;
     }
 
-    if (!registryInfo || !registryAddress || !crepInfo || !crepAddress || !rewardEscrowInfo || !rewardEscrowAddress) {
+    if (!registryInfo || !registryAddress || !hrepInfo || !hrepAddress || !rewardEscrowInfo || !rewardEscrowAddress) {
       notification.error("Submission is unavailable right now.");
       return;
     }
 
     if (!rewardTokenAddress) {
-      notification.error(`${rewardAsset === "crep" ? "cREP" : "USDC"} funding is unavailable right now.`);
+      notification.error(`${rewardAsset === "hrep" ? "HREP" : "USDC"} funding is unavailable right now.`);
       return;
     }
 
@@ -998,7 +998,7 @@ export function ContentSubmissionSection() {
         const spec = buildQuestionSpecHashes({
           bounty: {
             amount: selectedRewardAmount,
-            asset: rewardAsset === "crep" ? "cREP" : "USDC",
+            asset: rewardAsset === "hrep" ? "HREP" : "USDC",
             requiredSettledRounds: selectedRequiredSettledRounds,
             requiredVoters: selectedRequiredVoters,
           },
@@ -1399,11 +1399,11 @@ export function ContentSubmissionSection() {
         </button>
         <button
           type="button"
-          aria-pressed={rewardAsset === "crep"}
-          onClick={() => setRewardAsset("crep")}
-          className={`btn btn-sm ${rewardAsset === "crep" ? "btn-primary" : "btn-outline"}`}
+          aria-pressed={rewardAsset === "hrep"}
+          onClick={() => setRewardAsset("hrep")}
+          className={`btn btn-sm ${rewardAsset === "hrep" ? "btn-primary" : "btn-outline"}`}
         >
-          cREP
+          HREP
         </button>
       </div>
 
@@ -1420,7 +1420,7 @@ export function ContentSubmissionSection() {
           className="grow bg-transparent"
           aria-label="Bounty amount"
         />
-        <span className="text-sm font-semibold text-base-content/50">{rewardAsset === "crep" ? "cREP" : "USDC"}</span>
+        <span className="text-sm font-semibold text-base-content/50">{rewardAsset === "hrep" ? "HREP" : "USDC"}</span>
       </label>
       {bountyStepAttempted && rewardAmountError ? <p className="text-base text-error">{rewardAmountError}</p> : null}
 

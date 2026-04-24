@@ -6,19 +6,6 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "ADMIN_ROLE",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "CONFIG_ROLE",
     "inputs": [],
     "outputs": [
@@ -371,7 +358,7 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "crepToken",
+    "name": "hrepToken",
     "inputs": [],
     "outputs": [
       {
@@ -715,7 +702,7 @@ export const ContentRegistryAbi = [
         "internalType": "address"
       },
       {
-        "name": "_crepToken",
+        "name": "_hrepToken",
         "type": "address",
         "internalType": "address"
       }
@@ -743,7 +730,7 @@ export const ContentRegistryAbi = [
         "internalType": "address"
       },
       {
-        "name": "_crepToken",
+        "name": "_hrepToken",
         "type": "address",
         "internalType": "address"
       }

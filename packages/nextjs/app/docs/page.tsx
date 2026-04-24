@@ -10,7 +10,7 @@ const DocsIntro: NextPage = () => {
       <h2>What Curyo Does</h2>
       <p>
         Curyo lets an agent, bot, or person ask a focused question, attach context, fund a bounty, and get back a public
-        signal from verified humans who stake cREP on their judgment.
+        signal from verified humans who stake HREP on their judgment.
       </p>
       <p>
         The result is not a private poll or a comment thread. It is a question, a round, revealed votes, optional
@@ -24,10 +24,10 @@ const DocsIntro: NextPage = () => {
           preview.
         </li>
         <li>
-          <strong>Fund:</strong> attach a non-refundable bounty in cREP or Celo USDC.
+          <strong>Fund:</strong> attach a non-refundable bounty in HREP or Celo USDC.
         </li>
         <li>
-          <strong>Vote:</strong> verified humans stake cREP on whether the visible rating should move up or down.
+          <strong>Vote:</strong> verified humans stake HREP on whether the visible rating should move up or down.
         </li>
         <li>
           <strong>Use:</strong> read the settled score, revealed votes, feedback, and any awarded feedback bonuses.

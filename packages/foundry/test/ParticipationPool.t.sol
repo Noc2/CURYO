@@ -3,13 +3,13 @@ pragma solidity 0.8.28;
 
 import { Test, console } from "forge-std/Test.sol";
 import { ParticipationPool } from "../contracts/ParticipationPool.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { HumanReputation } from "../contracts/HumanReputation.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title ParticipationPool Test Suite — Distribution-Based Halving
 contract ParticipationPoolTest is Test {
     ParticipationPool public pool;
-    CuryoReputation public crepToken;
+    HumanReputation public hrepToken;
 
     address public admin = address(1);
     address public governance = address(2);
@@ -19,28 +19,28 @@ contract ParticipationPoolTest is Test {
     address public user2 = address(6);
     address public unauthorized = address(7);
 
-    uint256 public constant POOL_AMOUNT = 12_000_000 * 1e6; // 12M cREP
+    uint256 public constant POOL_AMOUNT = 12_000_000 * 1e6; // 12M HREP
     uint256 public constant INITIAL_RATE_BPS = 9000; // 90%
     uint256 public constant MIN_RATE_BPS = 100; // 1%
-    uint256 public constant INITIAL_TIER_AMOUNT = 1_500_000e6; // 1.5M cREP
+    uint256 public constant INITIAL_TIER_AMOUNT = 1_500_000e6; // 1.5M HREP
 
     function setUp() public {
         vm.startPrank(admin);
 
-        // Deploy cREP token
-        crepToken = new CuryoReputation(admin, admin);
-        crepToken.grantRole(crepToken.MINTER_ROLE(), admin);
+        // Deploy HREP token
+        hrepToken = new HumanReputation(admin, admin);
+        hrepToken.grantRole(hrepToken.MINTER_ROLE(), admin);
 
         // Deploy ParticipationPool
-        pool = new ParticipationPool(address(crepToken), governance);
+        pool = new ParticipationPool(address(hrepToken), governance);
 
         // Authorize callers
         pool.setAuthorizedCaller(votingEngine, true);
         pool.setAuthorizedCaller(contentRegistry, true);
 
         // Fund the pool
-        crepToken.mint(admin, POOL_AMOUNT);
-        crepToken.approve(address(pool), POOL_AMOUNT);
+        hrepToken.mint(admin, POOL_AMOUNT);
+        hrepToken.approve(address(pool), POOL_AMOUNT);
         pool.depositPool(POOL_AMOUNT);
 
         vm.stopPrank();
@@ -49,7 +49,7 @@ contract ParticipationPoolTest is Test {
     // --- Initialization Tests ---
 
     function test_Initialization() public view {
-        assertEq(address(pool.crepToken()), address(crepToken));
+        assertEq(address(pool.hrepToken()), address(hrepToken));
         assertEq(pool.governance(), governance);
         assertEq(pool.totalDistributed(), 0);
         assertEq(pool.poolBalance(), POOL_AMOUNT);
@@ -67,7 +67,7 @@ contract ParticipationPoolTest is Test {
         new ParticipationPool(address(0), governance);
 
         vm.expectRevert("Invalid governance");
-        new ParticipationPool(address(crepToken), address(0));
+        new ParticipationPool(address(hrepToken), address(0));
     }
 
     // --- Rate Halving Schedule Tests (distribution-based) ---
@@ -77,7 +77,7 @@ contract ParticipationPoolTest is Test {
     }
 
     function test_HalvingAtTier0Boundary() public {
-        // After 1.5M cREP distributed: rate halves to 4500 (45%)
+        // After 1.5M HREP distributed: rate halves to 4500 (45%)
         _setTotalDistributed(1_500_000e6);
         assertEq(pool.getCurrentRateBps(), 4500);
     }
@@ -131,59 +131,59 @@ contract ParticipationPoolTest is Test {
     // --- Vote Reward Tests (proportional to stake) ---
 
     function test_RewardVote_Tier0_Stake100() public {
-        uint256 stakeAmount = 100e6; // 100 cREP
-        uint256 expectedReward = stakeAmount * INITIAL_RATE_BPS / 10000; // 90 cREP
+        uint256 stakeAmount = 100e6; // 100 HREP
+        uint256 expectedReward = stakeAmount * INITIAL_RATE_BPS / 10000; // 90 HREP
         assertEq(expectedReward, 90e6);
 
-        uint256 balanceBefore = crepToken.balanceOf(user1);
+        uint256 balanceBefore = hrepToken.balanceOf(user1);
 
         _distributeStakeReward(votingEngine, user1, stakeAmount);
 
-        assertEq(crepToken.balanceOf(user1), balanceBefore + expectedReward);
+        assertEq(hrepToken.balanceOf(user1), balanceBefore + expectedReward);
         assertEq(pool.totalDistributed(), expectedReward);
         assertEq(pool.poolBalance(), POOL_AMOUNT - expectedReward);
     }
 
     function test_RewardVote_Tier0_Stake1() public {
-        uint256 stakeAmount = 1e6; // 1 cREP (min stake)
-        uint256 expectedReward = stakeAmount * INITIAL_RATE_BPS / 10000; // 0.9 cREP = 900000
+        uint256 stakeAmount = 1e6; // 1 HREP (min stake)
+        uint256 expectedReward = stakeAmount * INITIAL_RATE_BPS / 10000; // 0.9 HREP = 900000
         assertEq(expectedReward, 900_000);
 
         _distributeStakeReward(votingEngine, user1, stakeAmount);
 
-        assertEq(crepToken.balanceOf(user1), expectedReward);
+        assertEq(hrepToken.balanceOf(user1), expectedReward);
         assertEq(pool.totalDistributed(), expectedReward);
     }
 
     function test_RewardVote_Tier0_Stake50() public {
         uint256 stakeAmount = 50e6;
-        uint256 expectedReward = stakeAmount * INITIAL_RATE_BPS / 10000; // 45 cREP
+        uint256 expectedReward = stakeAmount * INITIAL_RATE_BPS / 10000; // 45 HREP
 
         _distributeStakeReward(votingEngine, user1, stakeAmount);
 
-        assertEq(crepToken.balanceOf(user1), expectedReward);
+        assertEq(hrepToken.balanceOf(user1), expectedReward);
     }
 
     function test_RewardVote_Tier1_Stake100() public {
         _setTotalDistributed(INITIAL_TIER_AMOUNT); // Enter tier 1 (rate = 4500)
 
         uint256 stakeAmount = 100e6;
-        uint256 expectedReward = stakeAmount * 4500 / 10000; // 45 cREP
+        uint256 expectedReward = stakeAmount * 4500 / 10000; // 45 HREP
 
         _distributeStakeReward(votingEngine, user1, stakeAmount);
 
-        assertEq(crepToken.balanceOf(user1), expectedReward);
+        assertEq(hrepToken.balanceOf(user1), expectedReward);
     }
 
     function test_RewardVote_AtFloor_Stake100() public {
         _setTotalDistributed(190_500_000e6); // At floor rate (100 BPS = 1%)
 
         uint256 stakeAmount = 100e6;
-        uint256 expectedReward = stakeAmount * MIN_RATE_BPS / 10000; // 1 cREP
+        uint256 expectedReward = stakeAmount * MIN_RATE_BPS / 10000; // 1 HREP
 
         _distributeStakeReward(votingEngine, user1, stakeAmount);
 
-        assertEq(crepToken.balanceOf(user1), expectedReward);
+        assertEq(hrepToken.balanceOf(user1), expectedReward);
         assertEq(expectedReward, 1e6);
     }
 
@@ -206,14 +206,14 @@ contract ParticipationPoolTest is Test {
     // --- Authorized ContentRegistry reward tests ---
 
     function test_RewardSubmission_Tier0_Stake10() public {
-        uint256 stakeAmount = 10e6; // MIN_SUBMITTER_STAKE = 10 cREP
-        uint256 expectedReward = stakeAmount * INITIAL_RATE_BPS / 10000; // 9 cREP
+        uint256 stakeAmount = 10e6; // MIN_SUBMITTER_STAKE = 10 HREP
+        uint256 expectedReward = stakeAmount * INITIAL_RATE_BPS / 10000; // 9 HREP
 
-        uint256 balanceBefore = crepToken.balanceOf(user1);
+        uint256 balanceBefore = hrepToken.balanceOf(user1);
 
         _distributeStakeReward(contentRegistry, user1, stakeAmount);
 
-        assertEq(crepToken.balanceOf(user1), balanceBefore + expectedReward);
+        assertEq(hrepToken.balanceOf(user1), balanceBefore + expectedReward);
         assertEq(expectedReward, 9e6);
         assertEq(pool.totalDistributed(), expectedReward);
         assertEq(pool.poolBalance(), POOL_AMOUNT - expectedReward);
@@ -239,11 +239,11 @@ contract ParticipationPoolTest is Test {
         _setTotalDistributed(190_500_000e6); // Floor rate
 
         uint256 stakeAmount = 10e6;
-        uint256 expectedReward = stakeAmount * MIN_RATE_BPS / 10000; // 0.1 cREP = 100_000
+        uint256 expectedReward = stakeAmount * MIN_RATE_BPS / 10000; // 0.1 HREP = 100_000
 
         _distributeStakeReward(contentRegistry, user1, stakeAmount);
 
-        assertEq(crepToken.balanceOf(user1), expectedReward);
+        assertEq(hrepToken.balanceOf(user1), expectedReward);
         assertEq(expectedReward, 100_000);
     }
 
@@ -254,10 +254,10 @@ contract ParticipationPoolTest is Test {
         _setPoolBalance(50e6);
         assertEq(pool.poolBalance(), 50e6);
 
-        // Stake 100, reward would be 90 cREP but only 50 left — cap at 50
+        // Stake 100, reward would be 90 HREP but only 50 left — cap at 50
         _distributeStakeReward(votingEngine, user1, 100e6);
 
-        assertEq(crepToken.balanceOf(user1), 50e6);
+        assertEq(hrepToken.balanceOf(user1), 50e6);
         assertEq(pool.poolBalance(), 0);
         assertEq(pool.totalDistributed(), 50e6);
     }
@@ -267,23 +267,23 @@ contract ParticipationPoolTest is Test {
         _setPoolBalance(0);
         assertEq(pool.poolBalance(), 0);
 
-        uint256 balanceBefore = crepToken.balanceOf(user1);
+        uint256 balanceBefore = hrepToken.balanceOf(user1);
 
         // Should silently do nothing
         _distributeStakeReward(votingEngine, user1, 100e6);
 
-        assertEq(crepToken.balanceOf(user1), balanceBefore);
+        assertEq(hrepToken.balanceOf(user1), balanceBefore);
         // totalDistributed should NOT change when reward is 0
         assertEq(pool.totalDistributed(), 0);
     }
 
     function test_PoolDepletion_SubmitCapsAtRemaining() public {
-        // Leave only 5 cREP tracked in the pool - submit reward (9 cREP) gets capped.
+        // Leave only 5 HREP tracked in the pool - submit reward (9 HREP) gets capped.
         _setPoolBalance(5e6);
 
         _distributeStakeReward(contentRegistry, user1, 10e6);
 
-        assertEq(crepToken.balanceOf(user1), 5e6);
+        assertEq(hrepToken.balanceOf(user1), 5e6);
         assertEq(pool.poolBalance(), 0);
     }
 
@@ -296,7 +296,7 @@ contract ParticipationPoolTest is Test {
     }
 
     function test_RewardAlwaysBelowStake_AllTiers() public {
-        // Tier boundaries in cREP distributed
+        // Tier boundaries in HREP distributed
         uint256[] memory tiers = new uint256[](5);
         tiers[0] = 0;
         tiers[1] = 1_500_000e6; // 1.5M
@@ -317,11 +317,11 @@ contract ParticipationPoolTest is Test {
     // --- Distribution Accumulation ---
 
     function test_TotalDistributedAccumulatesRewardAmounts() public {
-        // Two votes with stake 100 → each distributes 90 cREP
+        // Two votes with stake 100 → each distributes 90 HREP
         _distributeStakeReward(votingEngine, user1, 100e6);
         _distributeStakeReward(votingEngine, user2, 100e6);
 
-        assertEq(pool.totalDistributed(), 180e6); // 90 + 90 = 180 cREP
+        assertEq(pool.totalDistributed(), 180e6); // 90 + 90 = 180 HREP
     }
 
     function test_TotalDistributedAccumulatesDifferentStakes() public {
@@ -335,11 +335,11 @@ contract ParticipationPoolTest is Test {
     // --- Zero Stake Edge Case ---
 
     function test_RewardVote_ZeroStake_NoReward() public {
-        uint256 balBefore = crepToken.balanceOf(user1);
+        uint256 balBefore = hrepToken.balanceOf(user1);
 
         _distributeStakeReward(votingEngine, user1, 0);
 
-        assertEq(crepToken.balanceOf(user1), balBefore);
+        assertEq(hrepToken.balanceOf(user1), balBefore);
         assertEq(pool.totalDistributed(), 0);
     }
 
@@ -383,8 +383,8 @@ contract ParticipationPoolTest is Test {
     function test_DepositPool() public {
         uint256 depositAmount = 1_000_000e6;
         vm.startPrank(admin);
-        crepToken.mint(admin, depositAmount);
-        crepToken.approve(address(pool), depositAmount);
+        hrepToken.mint(admin, depositAmount);
+        hrepToken.approve(address(pool), depositAmount);
 
         uint256 poolBefore = pool.poolBalance();
         pool.depositPool(depositAmount);
@@ -396,8 +396,8 @@ contract ParticipationPoolTest is Test {
     function test_DepositPool_EmitsEvent() public {
         uint256 depositAmount = 500_000e6;
         vm.startPrank(admin);
-        crepToken.mint(admin, depositAmount);
-        crepToken.approve(address(pool), depositAmount);
+        hrepToken.mint(admin, depositAmount);
+        hrepToken.approve(address(pool), depositAmount);
 
         vm.expectEmit(false, false, false, true);
         emit ParticipationPool.PoolDeposit(depositAmount);
@@ -416,7 +416,7 @@ contract ParticipationPoolTest is Test {
     function test_WithdrawRemaining() public {
         uint256 amount = 1_000_000e6;
         uint256 poolBefore = pool.poolBalance();
-        uint256 recipientBefore = crepToken.balanceOf(admin);
+        uint256 recipientBefore = hrepToken.balanceOf(admin);
         _handoffToGovernance();
 
         vm.expectEmit(true, false, false, true);
@@ -426,7 +426,7 @@ contract ParticipationPoolTest is Test {
         pool.withdrawRemaining(admin, amount);
 
         assertEq(pool.poolBalance(), poolBefore - amount);
-        assertEq(crepToken.balanceOf(admin), recipientBefore + amount);
+        assertEq(hrepToken.balanceOf(admin), recipientBefore + amount);
     }
 
     function test_WithdrawRemaining_FullBalance() public {
@@ -437,7 +437,7 @@ contract ParticipationPoolTest is Test {
         pool.withdrawRemaining(admin, type(uint256).max);
 
         assertEq(pool.poolBalance(), 0);
-        assertEq(crepToken.balanceOf(admin), fullBalance);
+        assertEq(hrepToken.balanceOf(admin), fullBalance);
     }
 
     function test_WithdrawRemaining_OnlyOwner() public {
@@ -470,7 +470,7 @@ contract ParticipationPoolTest is Test {
         vm.prank(votingEngine);
         pool.reserveReward(votingEngine, 5e6);
 
-        uint256 contractBalanceBefore = crepToken.balanceOf(address(pool));
+        uint256 contractBalanceBefore = hrepToken.balanceOf(address(pool));
         uint256 reservedBefore = pool.reservedBalance();
         _handoffToGovernance();
 
@@ -481,7 +481,7 @@ contract ParticipationPoolTest is Test {
         assertEq(pool.reservedBalance(), reservedBefore, "reserved accounting must be unchanged");
         assertEq(pool.reservedRewards(votingEngine), 5e6, "beneficiary reservation must remain");
         assertEq(
-            crepToken.balanceOf(address(pool)),
+            hrepToken.balanceOf(address(pool)),
             contractBalanceBefore - (POOL_AMOUNT - 5e6),
             "contract should retain only reserved funds"
         );
@@ -517,13 +517,13 @@ contract ParticipationPoolTest is Test {
         _distributeStakeReward(contentRegistry, user1, 10e6);
         _distributeStakeReward(contentRegistry, user2, 10e6);
 
-        uint256 voteReward = 100e6 * INITIAL_RATE_BPS / 10000; // 90 cREP
-        uint256 submitReward = 10e6 * INITIAL_RATE_BPS / 10000; // 9 cREP
+        uint256 voteReward = 100e6 * INITIAL_RATE_BPS / 10000; // 90 HREP
+        uint256 submitReward = 10e6 * INITIAL_RATE_BPS / 10000; // 9 HREP
 
-        // user1: 2 votes (90 each) + 1 submission (9) = 189 cREP
-        assertEq(crepToken.balanceOf(user1), voteReward * 2 + submitReward);
-        // user2: 1 vote (90) + 1 submission (9) = 99 cREP
-        assertEq(crepToken.balanceOf(user2), voteReward + submitReward);
+        // user1: 2 votes (90 each) + 1 submission (9) = 189 HREP
+        assertEq(hrepToken.balanceOf(user1), voteReward * 2 + submitReward);
+        // user2: 1 vote (90) + 1 submission (9) = 99 HREP
+        assertEq(hrepToken.balanceOf(user2), voteReward + submitReward);
 
         uint256 totalDistributed = voteReward * 3 + submitReward * 2;
         assertEq(pool.totalDistributed(), totalDistributed);
@@ -534,13 +534,13 @@ contract ParticipationPoolTest is Test {
 
     function test_DistributeReward_TransfersPreComputedAmount() public {
         uint256 amount = 50e6;
-        uint256 balBefore = crepToken.balanceOf(user1);
+        uint256 balBefore = hrepToken.balanceOf(user1);
 
         vm.prank(votingEngine);
         uint256 paid = pool.distributeReward(user1, amount);
 
         assertEq(paid, amount);
-        assertEq(crepToken.balanceOf(user1), balBefore + amount);
+        assertEq(hrepToken.balanceOf(user1), balBefore + amount);
         assertEq(pool.totalDistributed(), amount);
     }
 
@@ -564,12 +564,12 @@ contract ParticipationPoolTest is Test {
 
     function test_RewardVote_FunctionalWithNonReentrant() public {
         _distributeStakeReward(votingEngine, user1, 100e6);
-        assertEq(crepToken.balanceOf(user1), 90e6);
+        assertEq(hrepToken.balanceOf(user1), 90e6);
     }
 
     function test_RewardSubmission_FunctionalWithNonReentrant() public {
         _distributeStakeReward(contentRegistry, user1, 10e6);
-        assertEq(crepToken.balanceOf(user1), 9e6);
+        assertEq(hrepToken.balanceOf(user1), 9e6);
     }
 
     function test_DistributeReward_FunctionalWithNonReentrant() public {

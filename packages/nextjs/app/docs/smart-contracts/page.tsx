@@ -46,8 +46,8 @@ const SmartContracts: NextPage = () => {
           </thead>
           <tbody>
             <tr>
-              <td className="font-mono text-primary">CuryoReputation</td>
-              <td>ERC-20 token (cREP) with governance voting power, ERC-1363 hooks, and governance locks</td>
+              <td className="font-mono text-primary">HumanReputation</td>
+              <td>ERC-20 token (HREP) with governance voting power, ERC-1363 hooks, and governance locks</td>
               <td>No</td>
             </tr>
             <tr>
@@ -87,12 +87,12 @@ const SmartContracts: NextPage = () => {
             </tr>
             <tr>
               <td className="font-mono text-primary">ParticipationPool</td>
-              <td>Halving-tier cREP Bootstrap Pool rewards used by voter reward claims</td>
+              <td>Halving-tier HREP Bootstrap Pool rewards used by voter reward claims</td>
               <td>No</td>
             </tr>
             <tr>
               <td className="font-mono text-primary">QuestionRewardPoolEscrow</td>
-              <td>Question-scoped cREP or USDC custody, voter rewards, and the frontend-operator reward share</td>
+              <td>Question-scoped HREP or USDC custody, voter rewards, and the frontend-operator reward share</td>
               <td>No</td>
             </tr>
             <tr>
@@ -136,7 +136,7 @@ const SmartContracts: NextPage = () => {
 
       <hr />
 
-      <h2>CuryoReputation</h2>
+      <h2>HumanReputation</h2>
       <p>
         ERC-20 token with ERC20Votes for governance, ERC20Permit for scoped approvals, and ERC-1363 transfer hooks for
         one-transaction voting. Fixed supply of 100M with 6 decimals.
@@ -152,13 +152,13 @@ const SmartContracts: NextPage = () => {
         </li>
         <li>
           <strong>Snapshot-based governance:</strong> ERC20Votes provides historical voting-power snapshots for
-          governance, while cREP transfer locks apply after proposing or voting.
+          governance, while HREP transfer locks apply after proposing or voting.
         </li>
         <li>
           <strong>Minting:</strong> Only <code>MINTER_ROLE</code> (HumanFaucet) can mint, up to <code>MAX_SUPPLY</code>.
         </li>
         <li>
-          <strong>Single-tx voting:</strong> The production UI now uses <code>transferAndCall()</code> so cREP transfer
+          <strong>Single-tx voting:</strong> The production UI now uses <code>transferAndCall()</code> so HREP transfer
           and vote commit happen atomically in one wallet transaction.
         </li>
       </ul>
@@ -175,7 +175,7 @@ const SmartContracts: NextPage = () => {
         </li>
         <li>
           <code>transferAndCall(votingEngine, amount, payload)</code> &mdash; Default vote path used by the app. Sends
-          cREP stake to the voting engine and atomically commits the encrypted vote payload.
+          HREP stake to the voting engine and atomically commits the encrypted vote payload.
         </li>
       </ul>
 
@@ -191,7 +191,7 @@ const SmartContracts: NextPage = () => {
       <p>
         VoterIdNFT is required for voting, registering frontends, creating profiles, and creating categories. Question
         submission itself is permissionless and uses bounty funding instead of Voter ID. VoterIdNFT also enforces a
-        per-Voter-ID stake cap of <strong>100 cREP per content per round</strong>, preventing a single identity from
+        per-Voter-ID stake cap of <strong>100 HREP per content per round</strong>, preventing a single identity from
         dominating any vote.
       </p>
       <h3>Key Functions</h3>
@@ -240,7 +240,7 @@ const SmartContracts: NextPage = () => {
       <p>
         ContentRegistry validates submitted media links against CategoryRegistry before deriving the question submission
         key from the submitted metadata. The docs now describe the question-first flow: a required context URL with
-        optional image or YouTube preview media, plus a mandatory non-refundable bounty attached at submission in cREP
+        optional image or YouTube preview media, plus a mandatory non-refundable bounty attached at submission in HREP
         or USDC.
       </p>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
@@ -271,7 +271,7 @@ const SmartContracts: NextPage = () => {
               <td>
                 <span className="badge badge-secondary badge-sm">Cancelled</span>
               </td>
-              <td>Voluntarily removed by the submitter (1 cREP cancellation fee).</td>
+              <td>Voluntarily removed by the submitter (1 HREP cancellation fee).</td>
             </tr>
           </tbody>
         </table>
@@ -295,7 +295,7 @@ const SmartContracts: NextPage = () => {
           still use the governed default.
         </li>
         <li>
-          <code>cancelContent(contentId)</code> &mdash; Cancel own content (1 cREP fee to the configured
+          <code>cancelContent(contentId)</code> &mdash; Cancel own content (1 HREP fee to the configured
           cancellation-fee sink, treasury by default).
         </li>
         <li>
@@ -303,7 +303,7 @@ const SmartContracts: NextPage = () => {
           reverts if content has an active open round.
         </li>
         <li>
-          <code>reviveContent(contentId)</code> &mdash; Revive dormant content (5 cREP, max 2 times). Only the original
+          <code>reviveContent(contentId)</code> &mdash; Revive dormant content (5 HREP, max 2 times). Only the original
           submitter identity can do this, and only during the 1-day exclusive revival window.
         </li>
         <li>
@@ -339,12 +339,12 @@ const SmartContracts: NextPage = () => {
           <tbody>
             <tr>
               <td className="font-mono">MIN_STAKE</td>
-              <td>1 cREP</td>
+              <td>1 HREP</td>
               <td>Minimum vote stake</td>
             </tr>
             <tr>
               <td className="font-mono">MAX_STAKE</td>
-              <td>100 cREP</td>
+              <td>100 HREP</td>
               <td>Maximum vote stake per Voter ID per round</td>
             </tr>
             <tr>
@@ -384,11 +384,11 @@ const SmartContracts: NextPage = () => {
       <ul>
         <li>
           <code>
-            CuryoReputation.transferAndCall(votingEngine, stakeAmount, abi.encode(contentId, roundReferenceRatingBps,
+            HumanReputation.transferAndCall(votingEngine, stakeAmount, abi.encode(contentId, roundReferenceRatingBps,
             commitHash, ciphertext, frontend, targetRound, drandChainHash))
           </code>{" "}
-          &mdash; Default one-transaction vote flow. Transfers cREP and records the tlock-encrypted commit atomically.
-          Direction is hidden until the epoch ends. Requires Voter ID and enforces the same 1&ndash;100 cREP stake
+          &mdash; Default one-transaction vote flow. Transfers HREP and records the tlock-encrypted commit atomically.
+          Direction is hidden until the epoch ends. Requires Voter ID and enforces the same 1&ndash;100 HREP stake
           bounds. The redeployed contract rejects malformed or non-armored ciphertexts, binds the canonical round
           reference score into the vote payload, and binds the reveal-target metadata on-chain.
         </li>
@@ -500,11 +500,11 @@ const SmartContracts: NextPage = () => {
           plus winnings; revealed losers receive a fixed {protocolDocFacts.revealedLoserRefundPercentLabel} rebate.
         </li>
         <li>
-          <code>claimParticipationReward(contentId, roundId)</code> &mdash; Claim the cREP bootstrap reward for eligible
+          <code>claimParticipationReward(contentId, roundId)</code> &mdash; Claim the HREP bootstrap reward for eligible
           winning revealed voters, using the rate snapshotted at settlement.
         </li>
         <li>
-          <code>sweepStrandedCrepToTreasury()</code> &mdash; Governance-only recovery path for any cREP mistakenly sent
+          <code>sweepStrandedHrepToTreasury()</code> &mdash; Governance-only recovery path for any HREP mistakenly sent
           directly to the distributor.
         </li>
       </ul>
@@ -513,20 +513,20 @@ const SmartContracts: NextPage = () => {
 
       <h2>FrontendRegistry</h2>
       <p>
-        Manages frontend operator registration and fee distribution. Frontend operators stake a fixed 1,000 cREP and
+        Manages frontend operator registration and fee distribution. Frontend operators stake a fixed 1,000 HREP and
         receive {protocolDocFacts.frontendShareLabel} for each settled two-sided round they facilitated votes in.
       </p>
       <h3>Key Functions</h3>
       <ul>
         <li>
-          <code>register()</code> &mdash; Register as frontend operator (fixed 1,000 cREP stake). Requires Voter ID.
+          <code>register()</code> &mdash; Register as frontend operator (fixed 1,000 HREP stake). Requires Voter ID.
         </li>
         <li>
           <code>requestDeregister()</code> / <code>completeDeregister()</code> &mdash; Start voluntary exit, then
           withdraw stake + pending fees after the unbonding window elapses.
         </li>
         <li>
-          <code>topUpStake(amount)</code> &mdash; Restore the fixed 1,000 cREP bond after a partial slash so the
+          <code>topUpStake(amount)</code> &mdash; Restore the fixed 1,000 HREP bond after a partial slash so the
           frontend becomes fee-eligible again.
         </li>
         <li>
@@ -588,7 +588,7 @@ const SmartContracts: NextPage = () => {
         Sybil-resistant token distribution using Self.xyz zero-knowledge passport or biometric ID-card verification.
         Claims require a supported credential, proof that the claimant is 18 or older, OFAC sanctions clearance, and the
         configured sanctioned-country exclusion check, currently covering Cuba, Iran, North Korea, and Syria. Five tiers
-        run from Genesis (10,000 cREP for the first 10 users) down to Settler (1 cREP), with claim sizes stepping down
+        run from Genesis (10,000 HREP for the first 10 users) down to Settler (1 HREP), with claim sizes stepping down
         10x at claimant thresholds 10 / 1,000 / 10,000 / 1,000,000. Referral bonuses are 50% of the claim amount for
         both claimant and referrer.
       </p>
@@ -602,7 +602,7 @@ const SmartContracts: NextPage = () => {
 
       <h2>CuryoGovernor</h2>
       <p>
-        OpenZeppelin Governor with timelock control. Uses cREP voting power (ERC20Votes). Tokens are locked for 7 days
+        OpenZeppelin Governor with timelock control. Uses HREP voting power (ERC20Votes). Tokens are locked for 7 days
         when proposing or casting votes.
       </p>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
@@ -643,7 +643,7 @@ const SmartContracts: NextPage = () => {
       <h2>ParticipationPool</h2>
       <p>
         Implements the user-facing Bootstrap Pool for voters. Voter rewards are claimed after round settlement using the
-        rate snapshotted at settlement time. Funded with 12M cREP. Uses a halving schedule: starting at 90% reward rate,
+        rate snapshotted at settlement time. Funded with 12M HREP. Uses a halving schedule: starting at 90% reward rate,
         halving each time a tier threshold is reached (1.5M, 4.5M, 10.5M, 22.5M cumulative), with a 1% floor rate.
       </p>
       <p>
@@ -691,11 +691,11 @@ const SmartContracts: NextPage = () => {
         </li>
         <li>
           <strong>Snapshot-based governance:</strong> CuryoGovernor uses ERC20Votes snapshots for proposal voting power,
-          and governance participation also applies a 7-day cREP transfer lock.
+          and governance participation also applies a 7-day HREP transfer lock.
         </li>
         <li>
           <strong>Sybil Resistance:</strong> VoterIdNFT (soulbound) remains required for voting and other identity-gated
-          actions. Per-identity stake cap of 100 cREP per content per round, plus question-first submission guardrails
+          actions. Per-identity stake cap of 100 HREP per content per round, plus question-first submission guardrails
           and claim gating. Question submission is the same for humans, bots, and delegated agents.
         </li>
         <li>

@@ -5,7 +5,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square" alt="License: MIT"></a>
 </p>
 
-Curyo is a verified human feedback layer for agents, bots, and people. When software reaches a question it cannot answer with confidence, it can ask one focused question, attach source context, fund a bounty in cREP or Celo USDC, and get back a public signal from verified humans who stake cREP on their judgment.
+Curyo is a verified human feedback layer for agents, bots, and people. When software reaches a question it cannot answer with confidence, it can ask one focused question, attach source context, fund a bounty in HREP or Celo USDC, and get back a public signal from verified humans who stake HREP on their judgment.
 
 The same question flow works for a person in the web app, a bot paying through x402, or an MCP/SDK integration. Each ask carries explicit round settings, optional preview media, claimable rewards for eligible voters, and an auditable result that other agents and frontends can read later.
 
@@ -26,8 +26,8 @@ AI agents are increasingly good at drafting, searching, and planning, but they s
 The core loop is:
 
 1. **Ask** — submit a short question with a required context URL and optional image or YouTube preview.
-2. **Fund** — attach a non-refundable bounty in cREP or Celo USDC.
-3. **Vote** — verified humans stake cREP on whether the question's visible rating should move up or down.
+2. **Fund** — attach a non-refundable bounty in HREP or Celo USDC.
+3. **Vote** — verified humans stake HREP on whether the question's visible rating should move up or down.
 4. **Settle** — commit-reveal voting keeps directions hidden through the blind phase, then the round resolves once the selected reveal and voter thresholds are met.
 5. **Use** — agents and frontends read the settled score, revealed votes, optional feedback, and reward state from the public protocol surface.
 
@@ -35,7 +35,7 @@ Key pieces:
 
 - **Question-First Submissions** — humans, bots, and agents all use the same permissionless ask flow
 - **Verified Human Voters** — one soulbound Voter ID NFT per verified human for voting and other identity-gated actions
-- **Staked Judgment** — every vote requires a cREP stake as a conviction signal
+- **Staked Judgment** — every vote requires a HREP stake as a conviction signal
 - **tlock Commit-Reveal** — votes are encrypted with timelock encryption, commits bind explicit drand metadata (`targetRound`, `drandChainHash`), and malformed/non-armored ciphertexts are rejected on-chain
 - **Governed Round Settings** — question creators choose blind phase, max duration, settlement voters, and voter cap inside governance bounds
 - **Agent-Ready Integrations** — SDK helpers, MCP-shaped tools, and the hosted `/api/x402/questions` endpoint let agents quote, submit, track, and read results
@@ -57,7 +57,7 @@ Curyo is a monorepo with eight packages:
 | `packages/sdk`        | Framework-agnostic frontend SDK for hosted reads, vote helpers, and frontend attribution |
 | `packages/ponder`     | Ponder indexer for on-chain event processing and API                                     |
 | `packages/keeper`     | Standalone keeper service for keeper-assisted round settlement                           |
-| `packages/bot`        | Manual CLI bot for question submission and voting                                        |
+| `packages/agents`     | Agent integration hub with runtime examples, question guidance, and operator utilities   |
 | `packages/node-utils` | Shared Node.js utilities used by services and scripts                                    |
 
 ```

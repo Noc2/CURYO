@@ -1,5 +1,5 @@
 import {
-  approveCREP,
+  approveHREP,
   commitVoteDirect,
   evmIncreaseTime,
   getActiveRoundId,
@@ -38,9 +38,9 @@ test.describe("Unanimous settlement (consensus reserve)", () => {
   test.describe.configure({ mode: "serial" });
 
   const VOTING_ENGINE = CONTRACT_ADDRESSES.RoundVotingEngine;
-  const CREP_TOKEN = CONTRACT_ADDRESSES.CuryoReputation;
+  const HREP_TOKEN = CONTRACT_ADDRESSES.HumanReputation;
   const CONTENT_REGISTRY = CONTRACT_ADDRESSES.ContentRegistry;
-  const STAKE = BigInt(10e6); // 10 cREP each (above MIN_STAKE_FOR_RATING threshold)
+  const STAKE = BigInt(10e6); // 10 HREP each (above MIN_STAKE_FOR_RATING threshold)
   const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
   const EPOCH_DURATION = 300; // 5 min — contract minimum is 5 minutes
 
@@ -58,7 +58,7 @@ test.describe("Unanimous settlement (consensus reserve)", () => {
 
     const submitter = ANVIL_ACCOUNTS.account10;
 
-    const approved = await approveCREP(CONTENT_REGISTRY, BigInt(10e6), submitter.address, CREP_TOKEN);
+    const approved = await approveHREP(CONTENT_REGISTRY, BigInt(10e6), submitter.address, HREP_TOKEN);
     expect(approved).toBe(true);
 
     const uniqueId = Date.now();
@@ -107,7 +107,7 @@ test.describe("Unanimous settlement (consensus reserve)", () => {
     const commits: { commitKey: `0x${string}`; isUp: boolean; salt: `0x${string}` }[] = [];
 
     for (let i = 0; i < voters.length; i++) {
-      await approveCREP(VOTING_ENGINE, STAKE, voters[i].address, CREP_TOKEN);
+      await approveHREP(VOTING_ENGINE, STAKE, voters[i].address, HREP_TOKEN);
       const result = await commitVoteDirect(
         BigInt(contentId!),
         true, // UP
@@ -168,7 +168,7 @@ test.describe("Unanimous settlement (consensus reserve)", () => {
     expect(reserveAfter).toBeLessThan(reserveBefore);
 
     const subsidyUsed = reserveBefore - reserveAfter;
-    // Expected subsidy: 5% of totalStake (30 cREP) = 1.5 cREP = 1_500_000
+    // Expected subsidy: 5% of totalStake (30 HREP) = 1.5 HREP = 1_500_000
     // Allow some tolerance for rounding
     expect(subsidyUsed).toBeGreaterThan(0n);
     expect(subsidyUsed).toBeLessThanOrEqual(BigInt(30e6)); // Cannot exceed totalStake

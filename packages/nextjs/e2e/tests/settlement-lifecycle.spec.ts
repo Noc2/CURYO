@@ -1,5 +1,5 @@
 import {
-  approveCREP,
+  approveHREP,
   commitVoteDirect,
   evmIncreaseTime,
   getActiveRoundId,
@@ -33,9 +33,9 @@ test.describe("Settlement lifecycle", () => {
   test.describe.configure({ mode: "serial" });
 
   const VOTING_ENGINE = CONTRACT_ADDRESSES.RoundVotingEngine;
-  const CREP_TOKEN = CONTRACT_ADDRESSES.CuryoReputation;
+  const HREP_TOKEN = CONTRACT_ADDRESSES.HumanReputation;
   const CONTENT_REGISTRY = CONTRACT_ADDRESSES.ContentRegistry;
-  const STAKE = BigInt(10e6); // 10 cREP (above MIN_STAKE_FOR_RATING threshold)
+  const STAKE = BigInt(10e6); // 10 HREP (above MIN_STAKE_FOR_RATING threshold)
   const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
   const EPOCH_DURATION = 300; // 5 min — contract minimum is 5 minutes
 
@@ -51,8 +51,8 @@ test.describe("Settlement lifecycle", () => {
 
     const submitter = ANVIL_ACCOUNTS.account10;
 
-    const approved = await approveCREP(CONTENT_REGISTRY, BigInt(10e6), submitter.address, CREP_TOKEN);
-    expect(approved, "cREP approval for content submission failed").toBe(true);
+    const approved = await approveHREP(CONTENT_REGISTRY, BigInt(10e6), submitter.address, HREP_TOKEN);
+    expect(approved, "HREP approval for content submission failed").toBe(true);
 
     const uniqueId = Date.now();
     const success = await submitContentDirect(
@@ -94,7 +94,7 @@ test.describe("Settlement lifecycle", () => {
     const commits: { commitKey: `0x${string}`; isUp: boolean; salt: `0x${string}` }[] = [];
 
     for (let i = 0; i < voters.length; i++) {
-      await approveCREP(VOTING_ENGINE, STAKE, voters[i].account.address, CREP_TOKEN);
+      await approveHREP(VOTING_ENGINE, STAKE, voters[i].account.address, HREP_TOKEN);
       const result = await commitVoteDirect(
         BigInt(newContentId!),
         voters[i].isUp,

@@ -18,7 +18,7 @@ export const landingFaqItems: LandingFaqItem[] = [
   {
     question: "Why should I trust these ratings?",
     answer:
-      "Ratings come from verified humans who stake cREP, and rounds settle publicly on-chain. Questions also carry a mandatory non-refundable bounty funded in cREP or USDC.",
+      "Ratings come from verified humans who stake HREP, and rounds settle publicly on-chain. Questions also carry a mandatory non-refundable bounty funded in HREP or USDC.",
     learnMoreHref: "/docs/how-it-works",
     learnMoreLabel: "How It Works",
   },
@@ -32,7 +32,7 @@ export const landingFaqItems: LandingFaqItem[] = [
   {
     question: "How do bounties and x402 payments work?",
     answer:
-      "Every question carries a non-refundable bounty funded in cREP or USDC. Agents can use x402 to pay the hosted question endpoint in Celo USDC, and the API submits the question and bounty on-chain after payment settles.",
+      "Every question carries a non-refundable bounty funded in HREP or USDC. Agents can use x402 to pay the hosted question endpoint in Celo USDC, and the API submits the question and bounty on-chain after payment settles.",
     learnMoreHref: "/docs/ai#x402-agent-payments",
     learnMoreLabel: "x402 Agent Payments",
   },
@@ -51,7 +51,7 @@ export const landingFaqItems: LandingFaqItem[] = [
     learnMoreLabel: "Blind Voting",
   },
   {
-    question: "Can I lose cREP by voting?",
+    question: "Can I lose HREP by voting?",
     answer: `Yes. If you vote with the losing side, you can lose most of your stake. If your losing vote was revealed, you can still recover ${protocolDocFacts.revealedLoserRefundPercentLabel} of the amount you originally staked. If you vote with the winning side, you get your full stake back plus an extra payout funded by the losing side.`,
     learnMoreHref: "/docs/tokenomics",
     learnMoreLabel: "Rewards & Risk",

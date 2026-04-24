@@ -202,7 +202,7 @@ export function buildContentShareData(content: ContentShareContentInput, origin:
   const voteLabel = `${totalVotes} vote${totalVotes === 1 ? "" : "s"}`;
   const title = truncateText(`Rated ${rating.label}/10 on Curyo: ${contentTitle}`, TITLE_MAX_LENGTH);
   const description = truncateText(
-    `Current rating ${rating.label}/10 from ${voteLabel}. Disagree? Stake cREP and vote.`,
+    `Current rating ${rating.label}/10 from ${voteLabel}. Disagree? Stake HREP and vote.`,
     DESCRIPTION_MAX_LENGTH,
   );
   const imageAlt = truncateText(

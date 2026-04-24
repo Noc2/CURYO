@@ -66,7 +66,7 @@ src/
 ├── ProfileRegistry.ts       # Profile update events
 ├── FrontendRegistry.ts       # Frontend fee events
 ├── VoterIdNFT.ts             # NFT minting events
-├── CuryoReputation.ts        # Token transfer events
+├── HumanReputation.ts        # Token transfer events
 └── api/
     └── index.ts              # REST API routes (Hono)
 

@@ -4,7 +4,7 @@ import { useAllClaimableRewards } from "~~/hooks/useAllClaimableRewards";
 import { useClaimAll } from "~~/hooks/useClaimAll";
 import { formatUsdAmount } from "~~/lib/questionRewardPools";
 
-function formatCrepAmount(value: bigint) {
+function formatHrepAmount(value: bigint) {
   return (Number(value) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 });
 }
 
@@ -17,13 +17,13 @@ type ClaimRewardsButtonProps = {
 export function ClaimRewardsButton({ buttonClassName, className, showTokenSymbol = true }: ClaimRewardsButtonProps) {
   const {
     claimableItems,
-    totalCrepClaimable,
+    totalHrepClaimable,
     totalUsdcClaimable,
     refetch: refetchClaimable,
   } = useAllClaimableRewards();
   const { claimAll, isClaiming, isPreparingClaim, progress } = useClaimAll();
 
-  if (claimableItems.length === 0 || (totalCrepClaimable <= 0n && totalUsdcClaimable <= 0n)) {
+  if (claimableItems.length === 0 || (totalHrepClaimable <= 0n && totalUsdcClaimable <= 0n)) {
     return null;
   }
 
@@ -40,13 +40,13 @@ export function ClaimRewardsButton({ buttonClassName, className, showTokenSymbol
         className={buttonClassName ?? "btn btn-primary btn-sm w-full"}
       >
         {isPreparingClaim ? "Preparing..." : isClaiming ? `Claim ${progress.current}/${progress.total}` : null}
-        {!isPreparingClaim && !isClaiming && totalCrepClaimable > 0n && totalUsdcClaimable > 0n
-          ? `Claim ${formatCrepAmount(totalCrepClaimable)}${showTokenSymbol ? " cREP" : ""} + ${formatUsdAmount(totalUsdcClaimable)}`
+        {!isPreparingClaim && !isClaiming && totalHrepClaimable > 0n && totalUsdcClaimable > 0n
+          ? `Claim ${formatHrepAmount(totalHrepClaimable)}${showTokenSymbol ? " HREP" : ""} + ${formatUsdAmount(totalUsdcClaimable)}`
           : null}
-        {!isPreparingClaim && !isClaiming && totalCrepClaimable > 0n && totalUsdcClaimable <= 0n
-          ? `Claim ${formatCrepAmount(totalCrepClaimable)}${showTokenSymbol ? " cREP" : ""}`
+        {!isPreparingClaim && !isClaiming && totalHrepClaimable > 0n && totalUsdcClaimable <= 0n
+          ? `Claim ${formatHrepAmount(totalHrepClaimable)}${showTokenSymbol ? " HREP" : ""}`
           : null}
-        {!isPreparingClaim && !isClaiming && totalCrepClaimable <= 0n && totalUsdcClaimable > 0n
+        {!isPreparingClaim && !isClaiming && totalHrepClaimable <= 0n && totalUsdcClaimable > 0n
           ? `Claim ${formatUsdAmount(totalUsdcClaimable)}`
           : null}
       </button>

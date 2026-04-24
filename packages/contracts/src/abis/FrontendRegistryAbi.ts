@@ -71,6 +71,19 @@ export const FrontendRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "MAX_SLASH_REASON_LENGTH",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "STAKE_AMOUNT",
     "inputs": [],
     "outputs": [
@@ -132,7 +145,7 @@ export const FrontendRegistryAbi = [
         "internalType": "address"
       },
       {
-        "name": "crepAmount",
+        "name": "hrepAmount",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -142,7 +155,7 @@ export const FrontendRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "crepToken",
+    "name": "hrepToken",
     "inputs": [],
     "outputs": [
       {
@@ -194,7 +207,7 @@ export const FrontendRegistryAbi = [
         "internalType": "uint64"
       },
       {
-        "name": "crepFees",
+        "name": "hrepFees",
         "type": "uint128",
         "internalType": "uint128"
       },
@@ -223,7 +236,7 @@ export const FrontendRegistryAbi = [
     ],
     "outputs": [
       {
-        "name": "crepFees",
+        "name": "hrepFees",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -356,6 +369,19 @@ export const FrontendRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "initialFeeCreditorConfigured",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "initialize",
     "inputs": [
       {
@@ -369,7 +395,20 @@ export const FrontendRegistryAbi = [
         "internalType": "address"
       },
       {
-        "name": "_crepToken",
+        "name": "_hrepToken",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "initializeFeeCreditor",
+    "inputs": [
+      {
+        "name": "creditor",
         "type": "address",
         "internalType": "address"
       }
@@ -609,7 +648,7 @@ export const FrontendRegistryAbi = [
         "internalType": "address"
       },
       {
-        "name": "crepAmount",
+        "name": "hrepAmount",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
@@ -628,7 +667,7 @@ export const FrontendRegistryAbi = [
         "internalType": "address"
       },
       {
-        "name": "crepAmount",
+        "name": "hrepAmount",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
@@ -647,7 +686,7 @@ export const FrontendRegistryAbi = [
         "internalType": "address"
       },
       {
-        "name": "crepAmount",
+        "name": "hrepAmount",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"

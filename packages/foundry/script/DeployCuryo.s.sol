@@ -1,35 +1,35 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {ScaffoldETHDeploy} from "./DeployHelpers.s.sol";
-import {console} from "forge-std/console.sol";
-import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
-import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
-import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
-import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
-import {CuryoReputation} from "../contracts/CuryoReputation.sol";
-import {ContentRegistry} from "../contracts/ContentRegistry.sol";
-import {RoundVotingEngine} from "../contracts/RoundVotingEngine.sol";
-import {RoundRewardDistributor} from "../contracts/RoundRewardDistributor.sol";
-import {FrontendRegistry} from "../contracts/FrontendRegistry.sol";
-import {CategoryRegistry} from "../contracts/CategoryRegistry.sol";
-import {FeedbackBonusEscrow} from "../contracts/FeedbackBonusEscrow.sol";
-import {ProfileRegistry} from "../contracts/ProfileRegistry.sol";
-import {ProtocolConfig} from "../contracts/ProtocolConfig.sol";
-import {QuestionRewardPoolEscrow} from "../contracts/QuestionRewardPoolEscrow.sol";
-import {VoterIdNFT} from "../contracts/VoterIdNFT.sol";
-import {CuryoGovernor} from "../contracts/governance/CuryoGovernor.sol";
-import {ParticipationPool} from "../contracts/ParticipationPool.sol";
-import {HumanFaucet} from "../contracts/HumanFaucet.sol";
-import {MockERC20} from "../contracts/mocks/MockERC20.sol";
-import {MockIdentityVerificationHub} from "../contracts/mocks/MockIdentityVerificationHub.sol";
-import {IIdentityVerificationHubV2} from "@selfxyz/contracts/contracts/interfaces/IIdentityVerificationHubV2.sol";
-import {SelfStructs} from "@selfxyz/contracts/contracts/libraries/SelfStructs.sol";
-import {SelfUtils} from "@selfxyz/contracts/contracts/libraries/SelfUtils.sol";
+import { ScaffoldETHDeploy } from "./DeployHelpers.s.sol";
+import { console } from "forge-std/console.sol";
+import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import { ProxyAdmin } from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
+import { IAccessControl } from "@openzeppelin/contracts/access/IAccessControl.sol";
+import { TimelockController } from "@openzeppelin/contracts/governance/TimelockController.sol";
+import { IVotes } from "@openzeppelin/contracts/governance/utils/IVotes.sol";
+import { HumanReputation } from "../contracts/HumanReputation.sol";
+import { ContentRegistry } from "../contracts/ContentRegistry.sol";
+import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
+import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
+import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
+import { CategoryRegistry } from "../contracts/CategoryRegistry.sol";
+import { FeedbackBonusEscrow } from "../contracts/FeedbackBonusEscrow.sol";
+import { ProfileRegistry } from "../contracts/ProfileRegistry.sol";
+import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
+import { QuestionRewardPoolEscrow } from "../contracts/QuestionRewardPoolEscrow.sol";
+import { VoterIdNFT } from "../contracts/VoterIdNFT.sol";
+import { CuryoGovernor } from "../contracts/governance/CuryoGovernor.sol";
+import { ParticipationPool } from "../contracts/ParticipationPool.sol";
+import { HumanFaucet } from "../contracts/HumanFaucet.sol";
+import { MockERC20 } from "../contracts/mocks/MockERC20.sol";
+import { MockIdentityVerificationHub } from "../contracts/mocks/MockIdentityVerificationHub.sol";
+import { IIdentityVerificationHubV2 } from "@selfxyz/contracts/contracts/interfaces/IIdentityVerificationHubV2.sol";
+import { SelfStructs } from "@selfxyz/contracts/contracts/libraries/SelfStructs.sol";
+import { SelfUtils } from "@selfxyz/contracts/contracts/libraries/SelfUtils.sol";
 
 /// @notice Deploy script for all Curyo contracts with transparent proxies.
-/// @dev Core protocol voting uses cREP; bounty escrow deployments also wire USDC test collateral.
+/// @dev Core protocol voting uses HREP; bounty escrow deployments also wire USDC test collateral.
 ///      Local dev: deployer is governance (all roles go to deployer).
 ///      Production: TimelockController + CuryoGovernor are deployed, timelock gets all permanent roles including treasury routing.
 contract DeployCuryo is ScaffoldETHDeploy {
@@ -72,7 +72,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         address deployerAddress;
         address governance;
         address governorAddr;
-        CuryoReputation crepToken;
+        HumanReputation hrepToken;
         ContentRegistry registry;
         RoundVotingEngine votingEngine;
         ProtocolConfig protocolConfig;
@@ -127,14 +127,14 @@ contract DeployCuryo is ScaffoldETHDeploy {
             console.log("Treasury routed to governance:", governance);
         }
 
-        // 2. Deploy CuryoReputation (non-upgradeable governance token)
-        CuryoReputation crepToken = new CuryoReputation(deployer, governance);
-        console.log("CuryoReputation deployed at:", address(crepToken));
+        // 2. Deploy HumanReputation (non-upgradeable governance token)
+        HumanReputation hrepToken = new HumanReputation(deployer, governance);
+        console.log("HumanReputation deployed at:", address(hrepToken));
 
         // 3. Deploy CuryoGovernor (production only)
         //    Excluded holders are set later via initializePools() after protocol contracts are deployed.
         if (!isLocalDev) {
-            governor = new CuryoGovernor(IVotes(address(crepToken)), TimelockController(payable(governance)));
+            governor = new CuryoGovernor(IVotes(address(hrepToken)), TimelockController(payable(governance)));
             governorAddr = address(governor);
             console.log("CuryoGovernor deployed at:", governorAddr);
 
@@ -147,7 +147,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
             console.log("Granted PROPOSER_ROLE + CANCELLER_ROLE to Governor, CANCELLER_ROLE to deployer");
 
             // Set governor on token (deployer has CONFIG_ROLE)
-            crepToken.setGovernor(governorAddr);
+            hrepToken.setGovernor(governorAddr);
         }
 
         // 4. Deploy implementations
@@ -164,7 +164,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         TransparentUpgradeableProxy frontendRegistryProxy = new TransparentUpgradeableProxy(
             address(frontendRegistryImpl),
             governance,
-            abi.encodeCall(FrontendRegistry.initialize, (deployer, governance, address(crepToken)))
+            abi.encodeCall(FrontendRegistry.initialize, (deployer, governance, address(hrepToken)))
         );
         FrontendRegistry frontendRegistry = FrontendRegistry(address(frontendRegistryProxy));
 
@@ -176,7 +176,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         TransparentUpgradeableProxy registryProxy = new TransparentUpgradeableProxy(
             address(registryImpl),
             governance,
-            abi.encodeCall(ContentRegistry.initialize, (deployer, governance, address(crepToken)))
+            abi.encodeCall(ContentRegistry.initialize, (deployer, governance, address(hrepToken)))
         );
         ContentRegistry registry = ContentRegistry(address(registryProxy));
 
@@ -192,7 +192,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
             governance,
             abi.encodeCall(
                 RoundVotingEngine.initialize,
-                (governance, address(crepToken), address(registry), address(protocolConfig))
+                (governance, address(hrepToken), address(registry), address(protocolConfig))
             )
         );
         RoundVotingEngine votingEngine = RoundVotingEngine(address(votingEngineProxy));
@@ -202,7 +202,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
             governance,
             abi.encodeCall(
                 RoundRewardDistributor.initialize,
-                (governance, address(crepToken), address(votingEngine), address(registry))
+                (governance, address(hrepToken), address(votingEngine), address(registry))
             )
         );
         RoundRewardDistributor rewardDistributor = RoundRewardDistributor(address(rewardDistributorProxy));
@@ -233,7 +233,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
                 QuestionRewardPoolEscrow.initialize,
                 (
                     governance,
-                    address(crepToken),
+                    address(hrepToken),
                     usdcTokenAddress,
                     address(registry),
                     address(votingEngine),
@@ -276,7 +276,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         _seedCategories(categoryRegistry);
 
         // 10. Set content voting contracts on token (for governance lock bypass)
-        crepToken.setContentVotingContracts(address(votingEngine), address(registry));
+        hrepToken.setContentVotingContracts(address(votingEngine), address(registry));
 
         // 11. Configure round parameters
         ProtocolConfig(address(votingEngine.protocolConfig())).setConfig(20 minutes, 7 days, 3, 1000); // epochDuration, maxDuration, minVoters, maxVoters
@@ -285,30 +285,30 @@ contract DeployCuryo is ScaffoldETHDeploy {
         // Local dev: deployer has DEFAULT_ADMIN_ROLE and needs to grant MINTER_ROLE
         // Production: deployer gets only MINTER_ROLE + CONFIG_ROLE from constructor
         if (isLocalDev) {
-            crepToken.grantRole(crepToken.MINTER_ROLE(), deployer);
+            hrepToken.grantRole(hrepToken.MINTER_ROLE(), deployer);
         }
-        crepToken.mint(deployer, CONSENSUS_POOL_AMOUNT);
-        crepToken.approve(address(votingEngine), CONSENSUS_POOL_AMOUNT);
+        hrepToken.mint(deployer, CONSENSUS_POOL_AMOUNT);
+        hrepToken.approve(address(votingEngine), CONSENSUS_POOL_AMOUNT);
         votingEngine.addToConsensusReserve(CONSENSUS_POOL_AMOUNT);
-        console.log("Funded 4M cREP to consensus reserve");
+        console.log("Funded 4M HREP to consensus reserve");
 
-        // 12a. Fund treasury (32M cREP to governance treasury)
-        crepToken.mint(governance, TREASURY_AMOUNT);
-        console.log("Minted 32M cREP to governance treasury");
+        // 12a. Fund treasury (32M HREP to governance treasury)
+        hrepToken.mint(governance, TREASURY_AMOUNT);
+        console.log("Minted 32M HREP to governance treasury");
 
-        // 12b. Deploy and fund ParticipationPool (12M cREP, user-facing Bootstrap Pool)
-        ParticipationPool participationPool = new ParticipationPool(address(crepToken), governance);
+        // 12b. Deploy and fund ParticipationPool (12M HREP, user-facing Bootstrap Pool)
+        ParticipationPool participationPool = new ParticipationPool(address(hrepToken), governance);
         participationPool.setAuthorizedCaller(address(rewardDistributor), true);
-        crepToken.mint(deployer, PARTICIPATION_POOL_AMOUNT);
-        crepToken.approve(address(participationPool), PARTICIPATION_POOL_AMOUNT);
+        hrepToken.mint(deployer, PARTICIPATION_POOL_AMOUNT);
+        hrepToken.approve(address(participationPool), PARTICIPATION_POOL_AMOUNT);
         participationPool.depositPool(PARTICIPATION_POOL_AMOUNT);
         ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(address(participationPool));
         if (!isLocalDev) {
             participationPool.transferOwnership(governance);
         }
-        console.log("ParticipationPool deployed and funded with 12M cREP");
+        console.log("ParticipationPool deployed and funded with 12M HREP");
 
-        // 12c. Deploy and fund HumanFaucet (52,000,000 cREP, Self.xyz identity verification)
+        // 12c. Deploy and fund HumanFaucet (52,000,000 HREP, Self.xyz identity verification)
         HumanFaucet humanFaucet;
         {
             (address hubAddress, bool isFaucetMock) = _resolveHumanFaucetConfig(isLocalDev);
@@ -319,7 +319,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
                 console.log("MockIdentityVerificationHub deployed at:", hubAddress);
             }
 
-            humanFaucet = new HumanFaucet(address(crepToken), hubAddress, governance);
+            humanFaucet = new HumanFaucet(address(hrepToken), hubAddress, governance);
             console.log("HumanFaucet deployed at:", address(humanFaucet));
 
             // Wire VoterIdNFT
@@ -327,8 +327,8 @@ contract DeployCuryo is ScaffoldETHDeploy {
             humanFaucet.setVoterIdNFT(address(voterIdNFT));
 
             // Fund the faucet with the full remaining launch allocation so launch minting reaches MAX_SUPPLY.
-            crepToken.mint(address(humanFaucet), FAUCET_POOL_AMOUNT);
-            console.log("Minted 52,000,000 cREP to HumanFaucet");
+            hrepToken.mint(address(humanFaucet), FAUCET_POOL_AMOUNT);
+            console.log("Minted 52,000,000 HREP to HumanFaucet");
 
             // Set verification config
             if (!isFaucetMock) {
@@ -381,7 +381,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
             console.log("Governor excluded holders initialized for dynamic quorum");
         }
 
-        _verifyLaunchMintAllocation(crepToken, governance, votingEngine, participationPool, humanFaucet);
+        _verifyLaunchMintAllocation(hrepToken, governance, votingEngine, participationPool, humanFaucet);
 
         // 12e. Mint test tokens and Voter IDs for localhost development
         if (isLocalDev) {
@@ -398,10 +398,10 @@ contract DeployCuryo is ScaffoldETHDeploy {
                 0xBcd4042DE499D14e55001CcbB24a551F3b954096
             ];
             for (uint256 i = 0; i < testAccounts.length; i++) {
-                crepToken.transfer(testAccounts[i], testAmount);
+                hrepToken.transfer(testAccounts[i], testAmount);
                 localUsdcToken.mint(testAccounts[i], 10_000 * 1e6);
             }
-            console.log("Transferred 1000 cREP and minted 10000 mock USDC to 9 test accounts");
+            console.log("Transferred 1000 HREP and minted 10000 mock USDC to 9 test accounts");
 
             voterIdNFT.addMinter(deployer);
             for (uint256 i = 0; i < testAccounts.length; i++) {
@@ -410,7 +410,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
             console.log("Minted Voter IDs to 9 test accounts");
 
             address anvilAccount0 = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
-            crepToken.grantRole(crepToken.MINTER_ROLE(), anvilAccount0);
+            hrepToken.grantRole(hrepToken.MINTER_ROLE(), anvilAccount0);
             voterIdNFT.addMinter(anvilAccount0);
         }
 
@@ -427,11 +427,11 @@ contract DeployCuryo is ScaffoldETHDeploy {
                 console.logAddress(devFaucet);
             }
 
-            // Renounce all deployer roles on CuryoReputation
+            // Renounce all deployer roles on HumanReputation
             // DEFAULT_ADMIN_ROLE last (it controls the other roles)
-            crepToken.renounceRole(crepToken.MINTER_ROLE(), deployer);
-            crepToken.renounceRole(crepToken.CONFIG_ROLE(), deployer);
-            crepToken.renounceRole(crepToken.DEFAULT_ADMIN_ROLE(), deployer);
+            hrepToken.renounceRole(hrepToken.MINTER_ROLE(), deployer);
+            hrepToken.renounceRole(hrepToken.CONFIG_ROLE(), deployer);
+            hrepToken.renounceRole(hrepToken.DEFAULT_ADMIN_ROLE(), deployer);
 
             // Renounce deployer config/admin roles on protocol contracts
             registry.renounceRole(registry.CONFIG_ROLE(), deployer);
@@ -460,7 +460,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
                     deployerAddress: deployer,
                     governance: governance,
                     governorAddr: governorAddr,
-                    crepToken: crepToken,
+                    hrepToken: hrepToken,
                     registry: registry,
                     votingEngine: votingEngine,
                     protocolConfig: protocolConfig,
@@ -478,7 +478,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
             console.log("Verified governance ownership and deployer role renunciation");
         } else {
             // Local dev: just revoke MINTER_ROLE as before
-            crepToken.revokeRole(crepToken.MINTER_ROLE(), deployer);
+            hrepToken.revokeRole(hrepToken.MINTER_ROLE(), deployer);
         }
 
         // 14. Register addresses for scaffold-eth ABI generation
@@ -488,7 +488,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         if (address(governor) != address(0)) {
             deployments.push(Deployment("CuryoGovernor", address(governor)));
         }
-        deployments.push(Deployment("CuryoReputation", address(crepToken)));
+        deployments.push(Deployment("HumanReputation", address(hrepToken)));
         deployments.push(Deployment("FrontendRegistry", address(frontendRegistryProxy)));
         deployments.push(Deployment("ProfileRegistry", address(profileRegistryProxy)));
         deployments.push(Deployment("ContentRegistry", address(registryProxy)));
@@ -509,7 +509,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
 
         // Log deployed addresses
         console.log("=== Curyo Protocol Deployed ===");
-        console.log("CuryoReputation:", address(crepToken));
+        console.log("HumanReputation:", address(hrepToken));
         console.log("FrontendRegistry:", address(frontendRegistry));
         console.log("ProfileRegistry:", address(profileRegistry));
         console.log("ContentRegistry:", address(registry));
@@ -666,25 +666,25 @@ contract DeployCuryo is ScaffoldETHDeploy {
     }
 
     function _verifyLaunchMintAllocation(
-        CuryoReputation crepToken,
+        HumanReputation hrepToken,
         address governance,
         RoundVotingEngine votingEngine,
         ParticipationPool participationPool,
         HumanFaucet humanFaucet
     ) internal view {
         _require(address(humanFaucet) != address(0), "HumanFaucet deployed");
-        _require(crepToken.MAX_SUPPLY() == TOTAL_SUPPLY_CAP, "cREP max supply constant");
-        _require(crepToken.totalSupply() == TOTAL_SUPPLY_CAP, "cREP full launch mint");
+        _require(hrepToken.MAX_SUPPLY() == TOTAL_SUPPLY_CAP, "HREP max supply constant");
+        _require(hrepToken.totalSupply() == TOTAL_SUPPLY_CAP, "HREP full launch mint");
         _require(votingEngine.consensusReserve() == CONSENSUS_POOL_AMOUNT, "Consensus reserve launch allocation");
         _require(
-            crepToken.balanceOf(address(votingEngine)) == CONSENSUS_POOL_AMOUNT, "RoundVotingEngine launch balance"
+            hrepToken.balanceOf(address(votingEngine)) == CONSENSUS_POOL_AMOUNT, "RoundVotingEngine launch balance"
         );
-        _require(crepToken.balanceOf(governance) == TREASURY_AMOUNT, "Treasury launch allocation");
+        _require(hrepToken.balanceOf(governance) == TREASURY_AMOUNT, "Treasury launch allocation");
         _require(
-            crepToken.balanceOf(address(participationPool)) == PARTICIPATION_POOL_AMOUNT,
+            hrepToken.balanceOf(address(participationPool)) == PARTICIPATION_POOL_AMOUNT,
             "ParticipationPool launch allocation"
         );
-        _require(crepToken.balanceOf(address(humanFaucet)) == FAUCET_POOL_AMOUNT, "HumanFaucet launch allocation");
+        _require(hrepToken.balanceOf(address(humanFaucet)) == FAUCET_POOL_AMOUNT, "HumanFaucet launch allocation");
     }
 
     function _assertFaucetVerificationConfig(HumanFaucet humanFaucet, address hubAddress, bytes32 expectedConfigId)
@@ -726,16 +726,16 @@ contract DeployCuryo is ScaffoldETHDeploy {
     }
 
     function _verifyProductionTokenRoles(ProductionDeploymentRoleVerification memory targets) internal view {
-        CuryoReputation crepToken = targets.crepToken;
+        HumanReputation hrepToken = targets.hrepToken;
         _requireHasRole(
-            address(crepToken), crepToken.DEFAULT_ADMIN_ROLE(), targets.governance, "cREP governance default admin"
+            address(hrepToken), hrepToken.DEFAULT_ADMIN_ROLE(), targets.governance, "HREP governance default admin"
         );
-        _requireHasRole(address(crepToken), crepToken.CONFIG_ROLE(), targets.governance, "cREP governance config");
+        _requireHasRole(address(hrepToken), hrepToken.CONFIG_ROLE(), targets.governance, "HREP governance config");
         _requireLacksRole(
-            address(crepToken), crepToken.DEFAULT_ADMIN_ROLE(), targets.deployerAddress, "cREP deployer default admin"
+            address(hrepToken), hrepToken.DEFAULT_ADMIN_ROLE(), targets.deployerAddress, "HREP deployer default admin"
         );
-        _requireLacksRole(address(crepToken), crepToken.CONFIG_ROLE(), targets.deployerAddress, "cREP deployer config");
-        _requireLacksRole(address(crepToken), crepToken.MINTER_ROLE(), targets.deployerAddress, "cREP deployer minter");
+        _requireLacksRole(address(hrepToken), hrepToken.CONFIG_ROLE(), targets.deployerAddress, "HREP deployer config");
+        _requireLacksRole(address(hrepToken), hrepToken.MINTER_ROLE(), targets.deployerAddress, "HREP deployer minter");
     }
 
     function _verifyProductionRegistryRoles(ProductionDeploymentRoleVerification memory targets) internal view {
@@ -968,12 +968,12 @@ contract DeployCuryo is ScaffoldETHDeploy {
     }
 
     function _verifyProductionCoreWiring(ProductionDeploymentRoleVerification memory targets) internal view {
-        _require(targets.crepToken.governor() == targets.governorAddr, "cREP governor");
-        _require(targets.crepToken.votingEngine() == address(targets.votingEngine), "cREP voting engine");
-        _require(targets.crepToken.contentRegistry() == address(targets.registry), "cREP content registry");
+        _require(targets.hrepToken.governor() == targets.governorAddr, "HREP governor");
+        _require(targets.hrepToken.votingEngine() == address(targets.votingEngine), "HREP voting engine");
+        _require(targets.hrepToken.contentRegistry() == address(targets.registry), "HREP content registry");
         _require(
-            address(targets.rewardDistributor.crepToken()) == address(targets.crepToken),
-            "RoundRewardDistributor cREP token"
+            address(targets.rewardDistributor.hrepToken()) == address(targets.hrepToken),
+            "RoundRewardDistributor HREP token"
         );
         _require(
             address(targets.rewardDistributor.votingEngine()) == address(targets.votingEngine),
@@ -1005,7 +1005,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         );
         _require(targets.protocolConfig.voterIdNFT() == address(targets.voterIdNFT), "ProtocolConfig voterIdNFT");
         _require(targets.protocolConfig.treasury() == targets.governance, "ProtocolConfig treasury");
-        _require(address(targets.registry.crepToken()) == address(targets.crepToken), "ContentRegistry cREP token");
+        _require(address(targets.registry.hrepToken()) == address(targets.hrepToken), "ContentRegistry HREP token");
         _require(targets.registry.votingEngine() == address(targets.votingEngine), "ContentRegistry voting engine");
         _require(
             address(targets.registry.categoryRegistry()) == address(targets.categoryRegistry),
@@ -1023,7 +1023,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         _require(targets.registry.treasury() == targets.governance, "ContentRegistry treasury");
         _require(targets.registry.bonusPool() == targets.governance, "ContentRegistry bonus pool");
         _require(
-            address(targets.frontendRegistry.crepToken()) == address(targets.crepToken), "FrontendRegistry cREP token"
+            address(targets.frontendRegistry.hrepToken()) == address(targets.hrepToken), "FrontendRegistry HREP token"
         );
         _require(
             address(targets.frontendRegistry.votingEngine()) == address(targets.votingEngine),
@@ -1039,8 +1039,8 @@ contract DeployCuryo is ScaffoldETHDeploy {
 
     function _verifyProductionEscrowWiring(ProductionDeploymentRoleVerification memory targets) internal view {
         _require(
-            address(targets.questionRewardPoolEscrow.crepToken()) == address(targets.crepToken),
-            "QuestionRewardPoolEscrow cREP"
+            address(targets.questionRewardPoolEscrow.hrepToken()) == address(targets.hrepToken),
+            "QuestionRewardPoolEscrow HREP"
         );
         _require(
             address(targets.questionRewardPoolEscrow.voterIdNFT()) == address(targets.voterIdNFT),
@@ -1083,7 +1083,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         _require(targets.voterIdNFT.stakeRecorder() == address(targets.votingEngine), "VoterIdNFT stake recorder");
         _require(targets.participationPool.owner() == targets.governance, "ParticipationPool governance owner");
         _require(
-            address(targets.participationPool.crepToken()) == address(targets.crepToken), "ParticipationPool cREP token"
+            address(targets.participationPool.hrepToken()) == address(targets.hrepToken), "ParticipationPool HREP token"
         );
         _require(targets.participationPool.governance() == targets.governance, "ParticipationPool governance");
         _require(
@@ -1094,7 +1094,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
             _require(
                 targets.voterIdNFT.authorizedMinters(address(targets.humanFaucet)), "VoterIdNFT HumanFaucet minter"
             );
-            _require(address(targets.humanFaucet.crepToken()) == address(targets.crepToken), "HumanFaucet cREP token");
+            _require(address(targets.humanFaucet.hrepToken()) == address(targets.hrepToken), "HumanFaucet HREP token");
             _require(address(targets.humanFaucet.voterIdNFT()) == address(targets.voterIdNFT), "HumanFaucet voterIdNFT");
             _require(targets.humanFaucet.governance() == targets.governance, "HumanFaucet governance");
             _require(targets.humanFaucet.owner() == targets.governance, "HumanFaucet governance owner");
@@ -1105,7 +1105,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
     function _verifyProductionGovernorAndTimelock(ProductionDeploymentRoleVerification memory targets) internal view {
         _require(targets.governorAddr != address(0), "Governor deployed");
         CuryoGovernor governor = CuryoGovernor(payable(targets.governorAddr));
-        _require(address(governor.crepToken()) == address(targets.crepToken), "Governor cREP token");
+        _require(address(governor.hrepToken()) == address(targets.hrepToken), "Governor HREP token");
         _require(governor.timelock() == targets.governance, "Governor timelock");
         _require(governor.poolsInitialized(), "Governor pools initialized");
         _assertExactExcludedHolders(governor, _buildProductionQuorumExcludedHolders(targets));

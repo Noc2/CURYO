@@ -62,8 +62,8 @@ export async function continueToBountyStep(page: Page): Promise<void> {
   await continueButton.click();
 }
 
-export async function selectBountyRewardAsset(page: Page, asset: "crep" | "usdc"): Promise<void> {
-  const buttonLabel = asset === "crep" ? "cREP" : "USDC";
+export async function selectBountyRewardAsset(page: Page, asset: "hrep" | "usdc"): Promise<void> {
+  const buttonLabel = asset === "hrep" ? "HREP" : "USDC";
   const assetButton = page.getByRole("button", { name: new RegExp(`^${escapeRegExp(buttonLabel)}$`, "i") });
 
   await expect(assetButton).toBeVisible({ timeout: 5_000 });

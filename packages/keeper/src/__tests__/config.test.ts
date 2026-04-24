@@ -1,15 +1,22 @@
 import deployedContracts from "@curyo/contracts/deployedContracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const chain42220 = (deployedContracts as Record<number, Record<string, { address: `0x${string}` }>>)[42220];
-const chain11142220 = (deployedContracts as Record<number, Record<string, { address: `0x${string}` }>>)[11142220];
-const chain31337 = (deployedContracts as Record<number, Record<string, { address: `0x${string}` }>>)[31337];
+type DeploymentChain = Record<string, { address: `0x${string}` }>;
+
+const sharedDeployments = deployedContracts as Record<number, DeploymentChain | undefined>;
+const chain42220 = sharedDeployments[42220];
+const chain11142220 = sharedDeployments[11142220];
+const chain31337 = sharedDeployments[31337];
+const itWithCeloArtifacts = chain42220 ? it : it.skip;
 const ORIGINAL_ENV = { ...process.env };
 const VALID_ENV = {
   RPC_URL: "https://rpc.example.com",
   CHAIN_ID: "11142220",
   VOTING_ENGINE_ADDRESS: chain11142220?.RoundVotingEngine?.address ?? "0x1111111111111111111111111111111111111111",
   CONTENT_REGISTRY_ADDRESS: chain11142220?.ContentRegistry?.address ?? "0x2222222222222222222222222222222222222222",
+  ROUND_REWARD_DISTRIBUTOR_ADDRESS:
+    chain11142220?.RoundRewardDistributor?.address ?? "0x3333333333333333333333333333333333333333",
+  FRONTEND_REGISTRY_ADDRESS: chain11142220?.FrontendRegistry?.address ?? "0x4444444444444444444444444444444444444444",
   KEYSTORE_ACCOUNT: "keeper",
   KEYSTORE_PASSWORD: "secret",
 };
@@ -129,7 +136,7 @@ describe("keeper config", () => {
     expect(config.contracts.contentRegistry).toBe(LOCAL_CONTENT_REGISTRY);
   });
 
-  it("derives Celo mainnet contract addresses from shared deployment artifacts", async () => {
+  itWithCeloArtifacts("derives Celo mainnet contract addresses from shared deployment artifacts", async () => {
     const { config } = await loadKeeperConfig(
       {
         CHAIN_ID: "42220",
@@ -139,8 +146,8 @@ describe("keeper config", () => {
 
     expect(config.chainId).toBe(42220);
     expect(config.chainName).toBe("Celo");
-    expect(config.contracts.votingEngine).toBe(chain42220.RoundVotingEngine.address);
-    expect(config.contracts.contentRegistry).toBe(chain42220.ContentRegistry.address);
+    expect(config.contracts.votingEngine).toBe(chain42220!.RoundVotingEngine.address);
+    expect(config.contracts.contentRegistry).toBe(chain42220!.ContentRegistry.address);
   });
 
   it("ignores stale local contract env values in favor of shared deployment artifacts", async () => {

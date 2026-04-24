@@ -38,7 +38,7 @@ interface FaucetSectionProps {
 const TIER_LABELS = ["Genesis", "Early Adopter", "Pioneer", "Explorer", "Settler"];
 
 /**
- * FaucetSection - Claim cREP tokens using Self.xyz identity verification
+ * FaucetSection - Claim HREP tokens using Self.xyz identity verification
  * Reads live data from the deployed HumanFaucet contract.
  */
 const SELF_VERIFICATION_SESSION_KEY = "curyo_self_verification_session";
@@ -201,8 +201,8 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
     args: [address],
   });
 
-  const { refetch: refetchCrepBalance } = useScaffoldReadContract({
-    contractName: "CuryoReputation",
+  const { refetch: refetchHrepBalance } = useScaffoldReadContract({
+    contractName: "HumanReputation",
     functionName: "balanceOf",
     args: [address],
     query: { enabled: !!address },
@@ -254,15 +254,15 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
 
       if (address) {
         try {
-          const balanceResult = await refetchCrepBalance();
+          const balanceResult = await refetchHrepBalance();
           if (balanceResult.data !== undefined) {
-            queryClient.setQueryData(["wallet-crep-balance", address.toLowerCase()], balanceResult.data);
+            queryClient.setQueryData(["wallet-hrep-balance", address.toLowerCase()], balanceResult.data);
           }
         } catch {
           // Fall back to invalidation-only refresh if the direct balance read fails.
         }
 
-        void queryClient.invalidateQueries({ queryKey: ["wallet-crep-balance", address.toLowerCase()] });
+        void queryClient.invalidateQueries({ queryKey: ["wallet-hrep-balance", address.toLowerCase()] });
       }
 
       void queryClient.invalidateQueries({ queryKey: FREE_TRANSACTION_ALLOWANCE_QUERY_KEY });
@@ -272,7 +272,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
       void refetchVoterId();
 
       if (claimStatus === "verified") {
-        notification.success("cREP sent and Voter ID minted. Your wallet balance may take a few seconds to refresh.", {
+        notification.success("HREP sent and Voter ID minted. Your wallet balance may take a few seconds to refresh.", {
           duration: 6000,
         });
         router.replace(POST_CLAIM_ROUTE);
@@ -280,13 +280,13 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
       }
 
       notification.warning(
-        "cREP sent, but your Voter ID is still pending. Voting will unlock after minting is retried.",
+        "HREP sent, but your Voter ID is still pending. Voting will unlock after minting is retried.",
         {
           duration: 9000,
         },
       );
     },
-    [address, clearStatusToast, queryClient, refetchCrepBalance, refetchVoterId, router, stopPolling],
+    [address, clearStatusToast, queryClient, refetchHrepBalance, refetchVoterId, router, stopPolling],
   );
 
   const startPolling = useCallback(() => {
@@ -476,7 +476,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
   const handleVerificationSuccess = useCallback(() => {
     completionHandled.current = false;
     setVerificationConfirmed(true);
-    showStatusToast("Verification received. Finalizing your cREP faucet claim...");
+    showStatusToast("Verification received. Finalizing your HREP faucet claim...");
     startPolling();
   }, [showStatusToast, startPolling]);
 
@@ -562,14 +562,14 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
         )}
 
         <p className="text-base-content/60">
-          You have claimed your cREP tokens and received your Voter ID. Check your referral link in Settings.
+          You have claimed your HREP tokens and received your Voter ID. Check your referral link in Settings.
         </p>
 
         {/* Benefits */}
         <div className="bg-base-200 rounded-xl p-4 text-left mt-4">
           <h3 className="font-semibold mb-2">Your Voter ID Unlocks:</h3>
           <ul className="space-y-1 text-base text-base-content/70">
-            <li>Vote on content (up to 100 cREP per content per round)</li>
+            <li>Vote on content (up to 100 HREP per content per round)</li>
             <li>Create your profile</li>
             <li>Refer friends and gain reputation</li>
           </ul>
@@ -586,7 +586,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
     return (
       <div className="surface-card rounded-2xl p-6 text-center space-y-4">
         <ExclamationTriangleIcon className="w-12 h-12 text-warning mx-auto" />
-        <h2 className={surfaceSectionHeadingClassName}>cREP Claimed, Voter ID Pending</h2>
+        <h2 className={surfaceSectionHeadingClassName}>HREP Claimed, Voter ID Pending</h2>
 
         <p className="text-base-content/70">
           Your faucet claim succeeded, but your Voter ID was not minted. Voting, profiles, and referrals unlock after
@@ -619,9 +619,9 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
       {/* Header */}
       <div className="flex items-center gap-2">
         <GiftIcon className="w-6 h-6 text-primary" />
-        <h2 className={surfaceSectionHeadingClassName}>cREP Faucet</h2>
+        <h2 className={surfaceSectionHeadingClassName}>HREP Faucet</h2>
         <InfoTooltip
-          text={`Claim free cREP after proving you are ${FAUCET_MINIMUM_AGE}+, human, and sanctions eligible with Self.xyz.`}
+          text={`Claim free HREP after proving you are ${FAUCET_MINIMUM_AGE}+, human, and sanctions eligible with Self.xyz.`}
         />
       </div>
 
@@ -675,7 +675,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
             <span className="font-medium">Referral Bonus Active!</span>
           </div>
           <p className="text-base text-base-content/70 mt-1">
-            You will receive an extra {formatAmount(claimantBonus)} cREP bonus
+            You will receive an extra {formatAmount(claimantBonus)} HREP bonus
           </p>
         </div>
       )}
@@ -684,7 +684,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-base-200 rounded-xl p-4">
           <p className="text-base text-base-content/60">You Will Receive</p>
-          <p className="text-2xl font-bold text-primary">{formatAmount(totalClaimAmount)} cREP</p>
+          <p className="text-2xl font-bold text-primary">{formatAmount(totalClaimAmount)} HREP</p>
           {referralBonusActive && <p className="text-base text-success">+{formatAmount(claimantBonus)} bonus</p>}
         </div>
         <div className="bg-base-200 rounded-xl p-4">
@@ -720,7 +720,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
               </p>
               <p className="text-base-content/60 text-base">
                 {verificationConfirmed
-                  ? "Self verification succeeded. Your cREP claim is being finalized. Your wallet balance can lag briefly."
+                  ? "Self verification succeeded. Your HREP claim is being finalized. Your wallet balance can lag briefly."
                   : "Complete verification in Self."}
               </p>
             </div>
@@ -754,7 +754,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
         ) : (
           <div className="flex flex-col items-center gap-4 text-center">
             <p className="text-base-content/60 text-base">
-              Claim <span className="font-bold text-primary">{formatAmount(totalClaimAmount)} cREP</span> by verifying
+              Claim <span className="font-bold text-primary">{formatAmount(totalClaimAmount)} HREP</span> by verifying
               with{" "}
               <a href="https://self.xyz" target="_blank" rel="noopener noreferrer" className="link link-primary">
                 Self.xyz
@@ -783,7 +783,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
           <li>Self proves you are {FAUCET_MINIMUM_AGE}+ without sharing your date of birth</li>
           <li>Sanctions screening must pass, and claims are unavailable from {FAUCET_EXCLUDED_COUNTRIES_LABEL}</li>
           <li>Self generates a zero-knowledge proof without sharing personal document data</li>
-          <li>The proof is verified on the blockchain and you receive your cREP + Voter ID</li>
+          <li>The proof is verified on the blockchain and you receive your HREP + Voter ID</li>
         </ol>
       </div>
 

@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 const DEV_FAUCET_ENABLED = process.env.DEV_FAUCET_ENABLED === "true" && process.env.NODE_ENV === "development";
 const RATE_LIMIT = { limit: 10, windowMs: 60_000 }; // 10 req/min per IP
 
-const CREP_DECIMALS = 6;
+const HREP_DECIMALS = 6;
 const USDC_DECIMALS = 6;
 const MAX_MINT_AMOUNT = 10_000; // Cap per request
 
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid wallet address" }, { status: 400 });
     }
 
-    if (!["mint-crep", "mint-voter-id", "mint-usdc"].includes(action)) {
+    if (!["mint-hrep", "mint-voter-id", "mint-usdc"].includes(action)) {
       return NextResponse.json({ error: "Invalid action" }, { status: 400 });
     }
 
@@ -123,20 +123,20 @@ export async function POST(request: NextRequest) {
       transport: http(rpcUrl),
     });
 
-    if (action === "mint-crep") {
-      const crepAddress = contracts.CuryoReputation?.address;
-      if (!crepAddress) {
-        return NextResponse.json({ error: "CuryoReputation not deployed on localhost" }, { status: 500 });
+    if (action === "mint-hrep") {
+      const hrepAddress = contracts.HumanReputation?.address;
+      if (!hrepAddress) {
+        return NextResponse.json({ error: "HumanReputation not deployed on localhost" }, { status: 500 });
       }
 
       const requestedAmount = Number(amount) || 1000;
       if (requestedAmount <= 0 || requestedAmount > MAX_MINT_AMOUNT) {
         return NextResponse.json({ error: `Amount must be between 1 and ${MAX_MINT_AMOUNT}` }, { status: 400 });
       }
-      const mintAmount = parseUnits(requestedAmount.toString(), CREP_DECIMALS);
+      const mintAmount = parseUnits(requestedAmount.toString(), HREP_DECIMALS);
 
       const txHash = await walletClient.writeContract({
-        address: crepAddress,
+        address: hrepAddress,
         abi: mintERC20Abi,
         functionName: "mint",
         args: [address as `0x${string}`, mintAmount],
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         txHash,
-        action: "mint-crep",
+        action: "mint-hrep",
         amount: requestedAmount.toString(),
       });
     }

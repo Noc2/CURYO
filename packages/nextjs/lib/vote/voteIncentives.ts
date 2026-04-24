@@ -61,7 +61,7 @@ function formatPreciseDuration(seconds: number): string {
   return `${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
 }
 
-export function formatCrepAmount(amountMicro: bigint | number, maximumFractionDigits = 1): string {
+export function formatHrepAmount(amountMicro: bigint | number, maximumFractionDigits = 1): string {
   const value = typeof amountMicro === "bigint" ? Number(amountMicro) / 1e6 : amountMicro;
   return value.toLocaleString(undefined, { maximumFractionDigits });
 }
@@ -71,15 +71,15 @@ export function describeOpenRoundActivity(
 ) {
   const votersNeeded = Math.max(0, snapshot.minVoters - snapshot.voteCount);
   if (votersNeeded > 0) {
-    return `${formatCrepAmount(snapshot.totalStake, 0)} cREP active · ${votersNeeded} more vote${votersNeeded === 1 ? "" : "s"} to settle.`;
+    return `${formatHrepAmount(snapshot.totalStake, 0)} HREP active · ${votersNeeded} more vote${votersNeeded === 1 ? "" : "s"} to settle.`;
   }
 
   const revealsNeeded = Math.max(0, snapshot.minVoters - snapshot.revealedCount);
   if (revealsNeeded > 0) {
-    return `${formatCrepAmount(snapshot.totalStake, 0)} cREP active · Waiting for ${revealsNeeded} more reveal${revealsNeeded === 1 ? "" : "s"}.`;
+    return `${formatHrepAmount(snapshot.totalStake, 0)} HREP active · Waiting for ${revealsNeeded} more reveal${revealsNeeded === 1 ? "" : "s"}.`;
   }
 
-  return `${formatCrepAmount(snapshot.totalStake, 0)} cREP active · Settlement threshold is in reach.`;
+  return `${formatHrepAmount(snapshot.totalStake, 0)} HREP active · Settlement threshold is in reach.`;
 }
 
 function getBlindParticipationLabel(ratePercent?: number): string | null {

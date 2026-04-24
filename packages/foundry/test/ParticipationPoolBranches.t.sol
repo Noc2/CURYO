@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {Test} from "forge-std/Test.sol";
-import {CuryoReputation} from "../contracts/CuryoReputation.sol";
-import {ParticipationPool} from "../contracts/ParticipationPool.sol";
+import { Test } from "forge-std/Test.sol";
+import { HumanReputation } from "../contracts/HumanReputation.sol";
+import { ParticipationPool } from "../contracts/ParticipationPool.sol";
 
 /// @title ParticipationPool branch coverage tests
 contract ParticipationPoolBranchesTest is Test {
-    CuryoReputation public crepToken;
+    HumanReputation public hrepToken;
     ParticipationPool public pool;
 
     address public admin = address(1);
@@ -22,13 +22,13 @@ contract ParticipationPoolBranchesTest is Test {
         vm.warp(T0);
         vm.startPrank(admin);
 
-        crepToken = new CuryoReputation(admin, governance);
-        crepToken.mint(admin, 50_000_000e6);
+        hrepToken = new HumanReputation(admin, governance);
+        hrepToken.mint(admin, 50_000_000e6);
 
-        pool = new ParticipationPool(address(crepToken), governance);
+        pool = new ParticipationPool(address(hrepToken), governance);
         pool.setAuthorizedCaller(authorizedCaller, true);
 
-        crepToken.approve(address(pool), POOL_AMOUNT);
+        hrepToken.approve(address(pool), POOL_AMOUNT);
         pool.depositPool(POOL_AMOUNT);
 
         vm.stopPrank();
@@ -82,30 +82,30 @@ contract ParticipationPoolBranchesTest is Test {
 
     function test_RewardVote_PoolDepleted_CapsAtBalance() public {
         // Set pool balance very low
-        _setPoolBalance(1e6); // only 1 cREP left
+        _setPoolBalance(1e6); // only 1 HREP left
 
-        uint256 balBefore = crepToken.balanceOf(user1);
-        _distributeStakeReward(authorizedCaller, user1, 10e6); // would reward 9 cREP at 90%, but pool only has 1
+        uint256 balBefore = hrepToken.balanceOf(user1);
+        _distributeStakeReward(authorizedCaller, user1, 10e6); // would reward 9 HREP at 90%, but pool only has 1
 
-        uint256 balAfter = crepToken.balanceOf(user1);
+        uint256 balAfter = hrepToken.balanceOf(user1);
         assertEq(balAfter - balBefore, 1e6); // capped at pool balance
     }
 
     function test_RewardVote_PoolEmpty_ReturnsZero() public {
         _setPoolBalance(0);
 
-        uint256 balBefore = crepToken.balanceOf(user1);
+        uint256 balBefore = hrepToken.balanceOf(user1);
         _distributeStakeReward(authorizedCaller, user1, 10e6);
-        assertEq(crepToken.balanceOf(user1), balBefore); // no reward
+        assertEq(hrepToken.balanceOf(user1), balBefore); // no reward
     }
 
     function test_RewardSubmission_PoolDepleted_CapsAtBalance() public {
         _setPoolBalance(2e6);
 
-        uint256 balBefore = crepToken.balanceOf(user1);
+        uint256 balBefore = hrepToken.balanceOf(user1);
         _distributeStakeReward(authorizedCaller, user1, 100e6);
 
-        uint256 balAfter = crepToken.balanceOf(user1);
+        uint256 balAfter = hrepToken.balanceOf(user1);
         assertEq(balAfter - balBefore, 2e6); // capped
     }
 
@@ -143,12 +143,12 @@ contract ParticipationPoolBranchesTest is Test {
         vm.prank(authorizedCaller);
         pool.reserveReward(authorizedCaller, 5e6);
 
-        uint256 balanceBefore = crepToken.balanceOf(user1);
+        uint256 balanceBefore = hrepToken.balanceOf(user1);
         vm.prank(authorizedCaller);
         uint256 paid = pool.withdrawReservedReward(user1, 3e6);
 
         assertEq(paid, 3e6);
-        assertEq(crepToken.balanceOf(user1) - balanceBefore, 3e6);
+        assertEq(hrepToken.balanceOf(user1) - balanceBefore, 3e6);
         assertEq(pool.reservedRewards(authorizedCaller), 2e6);
         assertEq(pool.reservedBalance(), 2e6);
     }
@@ -225,7 +225,7 @@ contract ParticipationPoolBranchesTest is Test {
         pool.withdrawRemaining(user1, amount);
 
         assertEq(pool.poolBalance(), 0);
-        assertEq(crepToken.balanceOf(user1), expected);
+        assertEq(hrepToken.balanceOf(user1), expected);
     }
 
     function test_WithdrawRemaining_NothingToWithdraw_Reverts() public {
@@ -248,20 +248,20 @@ contract ParticipationPoolBranchesTest is Test {
         assertEq(pool.poolBalance(), 0);
         assertEq(pool.reservedBalance(), 5e6);
         assertEq(pool.reservedRewards(authorizedCaller), 5e6);
-        assertEq(crepToken.balanceOf(address(pool)), 5e6);
+        assertEq(hrepToken.balanceOf(address(pool)), 5e6);
     }
 
     function test_RecoverSurplus_DirectTransferOnlyRecoversExtraBalance() public {
         vm.prank(admin);
-        crepToken.mint(user1, 5e6);
+        hrepToken.mint(user1, 5e6);
 
         vm.startPrank(user1);
-        crepToken.transfer(address(pool), 5e6);
+        hrepToken.transfer(address(pool), 5e6);
         vm.stopPrank();
 
         uint256 trackedBalanceBefore = pool.poolBalance();
-        uint256 actualBalanceBefore = crepToken.balanceOf(address(pool));
-        uint256 userBalanceBefore = crepToken.balanceOf(user1);
+        uint256 actualBalanceBefore = hrepToken.balanceOf(address(pool));
+        uint256 userBalanceBefore = hrepToken.balanceOf(user1);
 
         vm.prank(admin);
         uint256 recovered = pool.recoverSurplus(user1, type(uint256).max);
@@ -269,11 +269,11 @@ contract ParticipationPoolBranchesTest is Test {
         assertEq(recovered, 5e6, "only the accidental surplus should be recoverable");
         assertEq(pool.poolBalance(), trackedBalanceBefore, "tracked pool balance must remain untouched");
         assertEq(
-            crepToken.balanceOf(address(pool)),
+            hrepToken.balanceOf(address(pool)),
             actualBalanceBefore - 5e6,
             "contract balance should decrease only by the recovered surplus"
         );
-        assertEq(crepToken.balanceOf(user1) - userBalanceBefore, 5e6, "surplus should be returned to the recipient");
+        assertEq(hrepToken.balanceOf(user1) - userBalanceBefore, 5e6, "surplus should be returned to the recipient");
     }
 
     function test_RecoverSurplus_NoSurplusReverts() public {
@@ -317,7 +317,7 @@ contract ParticipationPoolBranchesTest is Test {
 
     /// @dev Use vm.store to set totalDistributed (slot 2 after immutables)
     function _setTotalDistributed(uint256 value) internal {
-        // ParticipationPool storage: crepToken (immutable), governance (immutable), totalDistributed, poolBalance, authorizedCallers
+        // ParticipationPool storage: hrepToken (immutable), governance (immutable), totalDistributed, poolBalance, authorizedCallers
         // For non-upgradeable Ownable: slot 0 = _owner, slot 1 = totalDistributed, slot 2 = poolBalance
         // Actually Ownable stores owner at a specific slot. Let's find the right slot.
         // OZ5 Ownable: slot 0 = _owner (address)

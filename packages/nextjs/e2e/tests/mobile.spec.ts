@@ -762,7 +762,7 @@ test.describe("Mobile viewport (phone)", () => {
 
     const governanceContent = main
       .getByRole("button", { name: /Profile|Leaderboard|Governance|Voter ID/ })
-      .or(main.getByText(/Voting performance|Staked cREP|Checking Voter ID/i));
+      .or(main.getByText(/Voting performance|Staked HREP|Checking Voter ID/i));
     await expect(governanceContent.first()).toBeVisible({ timeout: 15_000 });
   });
 

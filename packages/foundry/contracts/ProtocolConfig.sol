@@ -32,7 +32,7 @@ contract ProtocolConfig is Initializable, AccessControlUpgradeable {
     uint64 public drandPeriod;
     RatingLib.RatingConfig public ratingConfig;
     RatingLib.SlashConfig public slashConfig;
-    uint256 public minSubmissionCrepPool;
+    uint256 public minSubmissionHrepPool;
     uint256 public minSubmissionUsdcPool;
     RoundConfigBounds public roundConfigBounds;
 
@@ -77,7 +77,7 @@ contract ProtocolConfig is Initializable, AccessControlUpgradeable {
     event SlashConfigUpdated(
         uint16 slashThresholdBps, uint16 minSlashSettledRounds, uint48 minSlashLowDuration, uint256 minSlashEvidence
     );
-    event SubmissionRewardMinimumsUpdated(uint256 minCrepPool, uint256 minUsdcPool);
+    event SubmissionRewardMinimumsUpdated(uint256 minHrepPool, uint256 minUsdcPool);
     event RoundConfigBoundsUpdated(
         uint256 minEpochDuration,
         uint256 maxEpochDuration,
@@ -161,7 +161,7 @@ contract ProtocolConfig is Initializable, AccessControlUpgradeable {
             minSlashLowDuration: uint48(7 days),
             minSlashEvidence: 200e6
         });
-        minSubmissionCrepPool = 1e6;
+        minSubmissionHrepPool = 1e6;
         minSubmissionUsdcPool = 1e6;
         _setTreasury(treasuryAuthority);
     }
@@ -268,11 +268,11 @@ contract ProtocolConfig is Initializable, AccessControlUpgradeable {
         _setSlashConfig(slashThresholdBps, minSlashSettledRounds, minSlashLowDuration, minSlashEvidence);
     }
 
-    function setSubmissionRewardMinimums(uint256 minCrepPool, uint256 minUsdcPool) external onlyRole(CONFIG_ROLE) {
-        if (minCrepPool == 0 || minUsdcPool == 0) revert InvalidConfig();
-        minSubmissionCrepPool = minCrepPool;
+    function setSubmissionRewardMinimums(uint256 minHrepPool, uint256 minUsdcPool) external onlyRole(CONFIG_ROLE) {
+        if (minHrepPool == 0 || minUsdcPool == 0) revert InvalidConfig();
+        minSubmissionHrepPool = minHrepPool;
         minSubmissionUsdcPool = minUsdcPool;
-        emit SubmissionRewardMinimumsUpdated(minCrepPool, minUsdcPool);
+        emit SubmissionRewardMinimumsUpdated(minHrepPool, minUsdcPool);
     }
 
     function getRatingConfig() external view returns (RatingLib.RatingConfig memory cfg) {
@@ -535,7 +535,10 @@ contract ProtocolConfig is Initializable, AccessControlUpgradeable {
         // choose 100%, which zeroes out every conservative rating -- not useful and a
         // needless foot-gun.
         uint16 conservativePenaltyMaxBpsCap = 5_000;
-        if (conservativePenaltyMaxBps > conservativePenaltyMaxBpsCap || conservativePenaltyMinBps > conservativePenaltyMaxBps) {
+        if (
+            conservativePenaltyMaxBps > conservativePenaltyMaxBpsCap
+                || conservativePenaltyMinBps > conservativePenaltyMaxBps
+        ) {
             revert InvalidConfig();
         }
 

@@ -8,13 +8,13 @@ import { ERC20Votes } from "@openzeppelin/contracts/token/ERC20/extensions/ERC20
 import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 import { Nonces } from "@openzeppelin/contracts/utils/Nonces.sol";
 
-/// @title CuryoReputation
+/// @title HumanReputation
 /// @notice Reputation token for Curyo platform with governance capabilities.
 /// @dev Uses 6 decimals. Includes ERC20Votes for governance and governance-specific token locking.
 ///      Minting is role-gated and always bounded by MAX_SUPPLY.
-contract CuryoReputation is ERC20, ERC1363, ERC20Permit, ERC20Votes, AccessControl {
+contract HumanReputation is ERC20, ERC1363, ERC20Permit, ERC20Votes, AccessControl {
     uint8 private constant DECIMALS = 6;
-    uint256 public constant MAX_SUPPLY = 100_000_000 * 10 ** DECIMALS; // 100M cREP total cap; launch deployment mints the full cap across faucet, participation, consensus, and treasury pools
+    uint256 public constant MAX_SUPPLY = 100_000_000 * 10 ** DECIMALS; // 100M HREP total cap; launch deployment mints the full cap across faucet, participation, consensus, and treasury pools
 
     /// @notice Role for minting tokens, always bounded by MAX_SUPPLY
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
@@ -45,7 +45,7 @@ contract CuryoReputation is ERC20, ERC1363, ERC20Permit, ERC20Votes, AccessContr
     event GovernorSet(address indexed governor);
     event ContentVotingContractsSet(address indexed votingEngine, address indexed contentRegistry);
 
-    constructor(address _admin, address _governance) ERC20("Curyo Reputation", "cREP") ERC20Permit("Curyo Reputation") {
+    constructor(address _admin, address _governance) ERC20("Human Reputation", "HREP") ERC20Permit("Human Reputation") {
         require(_governance != address(0), "Invalid governance");
 
         // Governance gets permanent control
@@ -184,10 +184,9 @@ contract CuryoReputation is ERC20, ERC1363, ERC20Permit, ERC20Votes, AccessContr
             // 1) self-initiated transfer/transferAndCall into a content-voting contract, or
             // 2) pull-based transferFrom initiated by the matching protocol contract itself.
             bool governanceBypassAllowed = toContentVotingContract
-                && (
-                    msg.sender == from || (toVotingEngine && msg.sender == votingEngine)
-                        || (toContentRegistry && msg.sender == contentRegistry)
-                );
+                && (msg.sender == from
+                    || (toVotingEngine && msg.sender == votingEngine)
+                    || (toContentRegistry && msg.sender == contentRegistry));
 
             if (!governanceBypassAllowed) {
                 require(value <= getTransferableBalance(from), "Exceeds transferable balance (governance locked)");

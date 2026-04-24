@@ -7,7 +7,7 @@ import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
 import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { HumanReputation } from "../contracts/HumanReputation.sol";
 import { ParticipationPool } from "../contracts/ParticipationPool.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
@@ -23,7 +23,7 @@ import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
 contract ContentRegistryBranchesTest is VotingTestBase {
     using stdStorage for StdStorage;
 
-    CuryoReputation public crepToken;
+    HumanReputation public hrepToken;
     ContentRegistry public registry;
     RoundVotingEngine public votingEngine;
     RoundRewardDistributor public rewardDistributor;
@@ -66,8 +66,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.warp(T0);
         vm.startPrank(owner);
 
-        crepToken = new CuryoReputation(owner, owner);
-        crepToken.grantRole(crepToken.MINTER_ROLE(), owner);
+        hrepToken = new HumanReputation(owner, owner);
+        hrepToken.grantRole(hrepToken.MINTER_ROLE(), owner);
 
         ContentRegistry registryImpl = new ContentRegistry();
         RoundVotingEngine engineImpl = new RoundVotingEngine();
@@ -77,7 +77,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(registryImpl),
-                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(crepToken)))
+                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(hrepToken)))
                 )
             )
         );
@@ -87,7 +87,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
                     address(engineImpl),
                     abi.encodeCall(
                         RoundVotingEngine.initialize,
-                        (owner, address(crepToken), address(registry), address(_deployProtocolConfig(owner)))
+                        (owner, address(hrepToken), address(registry), address(_deployProtocolConfig(owner)))
                     )
                 )
             )
@@ -98,7 +98,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
                     address(distImpl),
                     abi.encodeCall(
                         RoundRewardDistributor.initialize,
-                        (owner, address(crepToken), address(votingEngine), address(registry))
+                        (owner, address(hrepToken), address(votingEngine), address(registry))
                     )
                 )
             )
@@ -120,19 +120,19 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         registry.setQuestionRewardPoolEscrow(address(mockQuestionRewardPoolEscrow));
         ProtocolConfig(address(votingEngine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
 
-        participationPool = new ParticipationPool(address(crepToken), owner);
+        participationPool = new ParticipationPool(address(hrepToken), owner);
         participationPool.setAuthorizedCaller(address(registry), true);
         participationPool.setAuthorizedCaller(address(rewardDistributor), true);
 
-        crepToken.mint(owner, 2_000_000e6);
-        crepToken.approve(address(participationPool), 500_000e6);
+        hrepToken.mint(owner, 2_000_000e6);
+        hrepToken.approve(address(participationPool), 500_000e6);
         participationPool.depositPool(500_000e6);
-        crepToken.approve(address(votingEngine), 500_000e6);
+        hrepToken.approve(address(votingEngine), 500_000e6);
         votingEngine.addToConsensusReserve(500_000e6);
 
         address[9] memory users = [submitter, voter1, voter2, voter3, voter4, voter5, voter6, keeper, delegate];
         for (uint256 i = 0; i < users.length; i++) {
-            crepToken.mint(users[i], 10_000e6);
+            hrepToken.mint(users[i], 10_000e6);
         }
 
         vm.stopPrank();
@@ -154,10 +154,17 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         uint16 referenceRatingBps = _currentRatingReferenceBps(contentId);
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
         bytes32 commitHash = _commitHash(
-            isUp, salt, voter, contentId, referenceRatingBps, _tlockCommitTargetRound(), _tlockDrandChainHash(), ciphertext
+            isUp,
+            salt,
+            voter,
+            contentId,
+            referenceRatingBps,
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            ciphertext
         );
         vm.startPrank(voter);
-        crepToken.approve(address(votingEngine), stake);
+        hrepToken.approve(address(votingEngine), stake);
         votingEngine.commitVote(
             contentId,
             referenceRatingBps,
@@ -335,7 +342,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         bytes32 salt = keccak256("arbitrary-question-url");
 
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         (uint256 id, bytes32 submissionKey) =
             _submitQuestionImageWithReservation(registry, url, title, description, tags, categoryId, salt, submitter);
         vm.stopPrank();
@@ -361,7 +368,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             1,
             salt,
             submitter,
-            DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+            DEFAULT_SUBMISSION_REWARD_ASSET_HREP,
             _defaultSubmissionRewardAmount(registry),
             DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
             DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
@@ -376,7 +383,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
     function test_SubmitQuestion_GenericEvidenceUrl_Reverts() public {
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         vm.expectRevert("Invalid media URL");
         registry.submitQuestion(
             "https://example.com/context",
@@ -400,7 +407,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         bytes32 salt = keccak256("youtube-question-url");
 
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         string[] memory imageUrls = _emptyImageUrls();
         bytes32 submissionKey = _reserveQuestionMediaSubmission(
             registry,
@@ -436,7 +443,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         bytes32 salt = keccak256("multi-image-question");
 
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         bytes32 submissionKey = _reserveQuestionSubmissionWithRewardTerms(
             "https://example.com/context",
             imageUrls,
@@ -447,7 +454,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             categoryId,
             salt,
             submitter,
-            DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+            DEFAULT_SUBMISSION_REWARD_ASSET_HREP,
             _defaultSubmissionRewardAmount(registry),
             DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
             DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
@@ -520,7 +527,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             categoryId,
             salt,
             submitter,
-            DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+            DEFAULT_SUBMISSION_REWARD_ASSET_HREP,
             _defaultSubmissionRewardAmount(registry),
             DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
             DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
@@ -545,7 +552,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         uint256 requiredSettledRounds = 2;
         uint256 rewardPoolExpiresAt = block.timestamp + 14 days;
         ContentRegistry.SubmissionRewardTerms memory rewardTerms = _submissionRewardTerms(
-            DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+            DEFAULT_SUBMISSION_REWARD_ASSET_HREP,
             rewardAmount,
             requiredVoters,
             requiredSettledRounds,
@@ -553,7 +560,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         );
 
         vm.startPrank(submitter);
-        crepToken.approve(address(mockQuestionRewardPoolEscrow), rewardAmount);
+        hrepToken.approve(address(mockQuestionRewardPoolEscrow), rewardAmount);
         _reserveQuestionSubmissionWithRewardTerms(
             contextUrl,
             imageUrls,
@@ -564,7 +571,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             categoryId,
             salt,
             submitter,
-            DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+            DEFAULT_SUBMISSION_REWARD_ASSET_HREP,
             rewardAmount,
             requiredVoters,
             requiredSettledRounds,
@@ -587,7 +594,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         assertEq(mockQuestionRewardPoolEscrow.lastContentId(), id);
         assertEq(mockQuestionRewardPoolEscrow.lastFunder(), submitter);
-        assertEq(mockQuestionRewardPoolEscrow.lastAsset(), DEFAULT_SUBMISSION_REWARD_ASSET_CREP);
+        assertEq(mockQuestionRewardPoolEscrow.lastAsset(), DEFAULT_SUBMISSION_REWARD_ASSET_HREP);
         assertEq(mockQuestionRewardPoolEscrow.lastAmount(), rewardAmount);
         assertEq(mockQuestionRewardPoolEscrow.lastRequiredVoters(), requiredVoters);
         assertEq(mockQuestionRewardPoolEscrow.lastRequiredSettledRounds(), requiredSettledRounds);
@@ -604,7 +611,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         bytes32 salt = keccak256("custom-round-config");
         string[] memory imageUrls = _emptyImageUrls();
         ContentRegistry.SubmissionRewardTerms memory rewardTerms = ContentRegistry.SubmissionRewardTerms({
-            asset: DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+            asset: DEFAULT_SUBMISSION_REWARD_ASSET_HREP,
             amount: _defaultSubmissionRewardAmount(registry),
             requiredVoters: 5,
             requiredSettledRounds: 2,
@@ -615,7 +622,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             RoundLib.RoundConfig({ epochDuration: 1 hours, maxDuration: 2 hours, minVoters: 4, maxVoters: 5 });
 
         vm.startPrank(submitter);
-        crepToken.approve(address(mockQuestionRewardPoolEscrow), rewardTerms.amount);
+        hrepToken.approve(address(mockQuestionRewardPoolEscrow), rewardTerms.amount);
         _reserveQuestionSubmissionWithRewardTermsAndRoundConfig(
             contextUrl, imageUrls, "", title, description, tags, categoryId, salt, submitter, rewardTerms, roundConfig
         );
@@ -650,7 +657,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         bytes32 salt = keccak256("round-config-commitment");
         string[] memory imageUrls = _emptyImageUrls();
         ContentRegistry.SubmissionRewardTerms memory rewardTerms = ContentRegistry.SubmissionRewardTerms({
-            asset: DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+            asset: DEFAULT_SUBMISSION_REWARD_ASSET_HREP,
             amount: _defaultSubmissionRewardAmount(registry),
             requiredVoters: DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
             requiredSettledRounds: DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
@@ -663,7 +670,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             RoundLib.RoundConfig({ epochDuration: 1 hours, maxDuration: 3 hours, minVoters: 3, maxVoters: 4 });
 
         vm.startPrank(submitter);
-        crepToken.approve(address(mockQuestionRewardPoolEscrow), rewardTerms.amount);
+        hrepToken.approve(address(mockQuestionRewardPoolEscrow), rewardTerms.amount);
         _reserveQuestionSubmissionWithRewardTermsAndRoundConfig(
             contextUrl,
             imageUrls,
@@ -708,7 +715,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             1,
             keccak256("too-few-voters"),
             _submissionRewardTerms(
-                DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+                DEFAULT_SUBMISSION_REWARD_ASSET_HREP,
                 rewardAmount,
                 2,
                 DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
@@ -735,7 +742,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             1,
             keccak256("too-few-rounds"),
             _submissionRewardTerms(
-                DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+                DEFAULT_SUBMISSION_REWARD_ASSET_HREP,
                 rewardAmount,
                 DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
                 0,
@@ -762,7 +769,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             1,
             keccak256("reward-too-small"),
             _submissionRewardTerms(
-                DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+                DEFAULT_SUBMISSION_REWARD_ASSET_HREP,
                 rewardAmount,
                 rewardAmount + 1,
                 DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
@@ -789,7 +796,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             1,
             keccak256("expired-bounty"),
             _submissionRewardTerms(
-                DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+                DEFAULT_SUBMISSION_REWARD_ASSET_HREP,
                 rewardAmount,
                 DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
                 DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
@@ -814,7 +821,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             spec: _defaultQuestionSpec()
         });
         ContentRegistry.SubmissionRewardTerms memory rewardTerms = _submissionRewardTerms(
-            DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+            DEFAULT_SUBMISSION_REWARD_ASSET_HREP,
             _defaultSubmissionRewardAmount(registry),
             DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
             DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
@@ -823,9 +830,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         vm.expectRevert("Bundle needs multiple questions");
-        registry.submitQuestionBundleWithRewardAndRoundConfig(
-            questions, rewardTerms, _defaultContentRoundConfig()
-        );
+        registry.submitQuestionBundleWithRewardAndRoundConfig(questions, rewardTerms, _defaultContentRoundConfig());
         vm.stopPrank();
     }
 
@@ -854,7 +859,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             spec: _defaultQuestionSpec()
         });
         ContentRegistry.SubmissionRewardTerms memory rewardTerms = _submissionRewardTerms(
-            DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+            DEFAULT_SUBMISSION_REWARD_ASSET_HREP,
             _defaultSubmissionRewardAmount(registry) * 2,
             DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
             DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS + 1,
@@ -863,9 +868,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         vm.expectRevert("Bundle settled rounds unsupported");
-        registry.submitQuestionBundleWithRewardAndRoundConfig(
-            questions, rewardTerms, _defaultContentRoundConfig()
-        );
+        registry.submitQuestionBundleWithRewardAndRoundConfig(questions, rewardTerms, _defaultContentRoundConfig());
         vm.stopPrank();
     }
 
@@ -894,7 +897,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             spec: _defaultQuestionSpec()
         });
         ContentRegistry.SubmissionRewardTerms memory rewardTerms = _submissionRewardTerms(
-            DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+            DEFAULT_SUBMISSION_REWARD_ASSET_HREP,
             _defaultSubmissionRewardAmount(registry) * 2,
             DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
             DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
@@ -903,9 +906,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         vm.expectRevert("Bundle bounty close required");
-        registry.submitQuestionBundleWithRewardAndRoundConfig(
-            questions, rewardTerms, _defaultContentRoundConfig()
-        );
+        registry.submitQuestionBundleWithRewardAndRoundConfig(questions, rewardTerms, _defaultContentRoundConfig());
         vm.stopPrank();
     }
 
@@ -930,7 +931,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             categoryId,
             salt,
             submitter,
-            DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+            DEFAULT_SUBMISSION_REWARD_ASSET_HREP,
             rewardAmount,
             DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
             DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
@@ -948,7 +949,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             categoryId,
             salt,
             _submissionRewardTerms(
-                DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+                DEFAULT_SUBMISSION_REWARD_ASSET_HREP,
                 rewardAmount,
                 DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS + 1,
                 DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
@@ -992,7 +993,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         registry.setVoterIdNFT(address(mockVoterIdNFT));
 
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         uint256 id = _submitContentWithReservation(registry, "https://example.com/no-id", "goal", "goal", "tags", 0);
         vm.stopPrank();
         assertEq(id, 1);
@@ -1004,7 +1005,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         mockVoterIdNFT.setHolder(submitter);
 
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         uint256 id = _submitContentWithReservation(registry, "https://example.com/1", "goal", "goal", "tags", 0);
         vm.stopPrank();
         assertEq(id, 1);
@@ -1019,7 +1020,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         mockVoterIdNFT.setDelegate(delegate);
 
         vm.startPrank(delegate);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         uint256 id =
             _submitContentWithReservation(registry, "https://example.com/delegate-submit", "goal", "goal", "tags", 0);
         vm.stopPrank();
@@ -1032,7 +1033,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     function test_SubmitContent_VoterIdNotConfigured_Succeeds() public {
         // No voterIdNFT set — should skip check
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         uint256 id = _submitContentWithReservation(registry, "https://example.com/1", "goal", "goal", "tags", 0);
         vm.stopPrank();
         assertEq(id, 1);
@@ -1040,7 +1041,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
     function test_SubmitContent_NonHttpsUrl_Reverts() public {
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         vm.expectRevert("Invalid URL");
         registry.submitQuestion(
             "https://example.com/context",
@@ -1057,7 +1058,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
     function test_SubmitContent_HttpUrl_Reverts() public {
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         vm.expectRevert("Invalid URL");
         registry.submitQuestion(
             "https://example.com/context",
@@ -1074,7 +1075,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
     function test_SubmitContent_UrlWithWhitespace_Reverts() public {
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         vm.expectRevert("Invalid URL");
         registry.submitQuestion(
             "https://example.com/context",
@@ -1095,7 +1096,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         mockCategoryRegistry.setSlug(99, "example.com");
 
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         vm.expectRevert("Category not registered");
         registry.submitQuestion(
             "https://example.com/context",
@@ -1120,7 +1121,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         bytes32 salt = keccak256("overflow-content-id");
 
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         string memory imageUrl = _submissionImageUrl(url);
         string[] memory imageUrls = _singleImageUrls(imageUrl);
         _reserveQuestionSubmissionWithRewardTerms(
@@ -1133,7 +1134,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             1,
             salt,
             submitter,
-            DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+            DEFAULT_SUBMISSION_REWARD_ASSET_HREP,
             _defaultSubmissionRewardAmount(registry),
             DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
             DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
@@ -1157,7 +1158,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         bytes32 salt = keccak256("overflow-category-id");
 
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         string memory imageUrl = _submissionImageUrl(url);
         string[] memory imageUrls = _singleImageUrls(imageUrl);
         _reserveQuestionSubmissionWithRewardTerms(
@@ -1170,7 +1171,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             oversizedCategoryId,
             salt,
             submitter,
-            DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+            DEFAULT_SUBMISSION_REWARD_ASSET_HREP,
             _defaultSubmissionRewardAmount(registry),
             DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
             DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
@@ -1185,12 +1186,12 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     }
 
     function test_SubmitContent_DoesNotCreateSubmitterStakeOrReward() public {
-        uint256 balBefore = crepToken.balanceOf(submitter);
+        uint256 balBefore = hrepToken.balanceOf(submitter);
         vm.startPrank(submitter);
         _submitContentWithReservation(registry, "https://example.com/no-submitter-upside", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
-        uint256 balAfter = crepToken.balanceOf(submitter);
+        uint256 balAfter = hrepToken.balanceOf(submitter);
         assertEq(balAfter, balBefore, "mock bounty escrow does not pull funds in branch tests");
     }
 
@@ -1201,7 +1202,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         }
 
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         vm.expectRevert("Invalid URL");
         registry.submitQuestion(
             "https://example.com/context", _singleImageUrls(string(longUrl)), "", "goal", "goal", "tags", 1, bytes32(0)
@@ -1217,7 +1218,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         }
 
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         vm.expectRevert("Question too long");
         registry.submitQuestion(
             "https://example.com/context",
@@ -1239,7 +1240,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         }
 
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         vm.expectRevert("Tags too long");
         registry.submitQuestion(
             "https://example.com/context",
@@ -1256,7 +1257,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
     function test_SubmitContent_DuplicateUrl_Reverts() public {
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 20e6);
+        hrepToken.approve(address(registry), 20e6);
         _submitContentWithReservation(registry, "https://example.com/1", "goal", "goal", "tags", 0);
         vm.expectRevert("Question already submitted");
         registry.submitQuestion(
@@ -1267,7 +1268,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
     function test_SubmitContent_EmptyUrl_Reverts() public {
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         vm.expectRevert("Invalid URL");
         registry.submitQuestion("", _emptyImageUrls(), "", "goal", "goal", "tags", 1, bytes32(0));
         vm.stopPrank();
@@ -1275,7 +1276,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
     function test_SubmitContent_EmptyTitle_Reverts() public {
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         vm.expectRevert("Question required");
         registry.submitQuestion(
             "https://example.com/context",
@@ -1292,7 +1293,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
     function test_SubmitContent_EmptyTags_Reverts() public {
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         vm.expectRevert("Tags required");
         registry.submitQuestion(
             "https://example.com/context",
@@ -1313,7 +1314,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
     function test_CancelContent_NotSubmitter_Reverts() public {
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         _submitContentWithReservation(registry, "https://example.com/1", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
@@ -1331,7 +1332,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         mockVoterIdNFT.setDelegate(delegate);
 
         vm.startPrank(delegate);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         uint256 contentId =
             _submitContentWithReservation(registry, "https://example.com/delegated-cancel", "goal", "goal", "tags", 0);
         vm.stopPrank();
@@ -1349,7 +1350,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
     function test_CancelContent_NotActive_Reverts() public {
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         _submitContentWithReservation(registry, "https://example.com/1", "goal", "goal", "tags", 0);
         registry.cancelContent(1);
 
@@ -1360,7 +1361,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
     function test_CancelContent_HasVotes_Reverts() public {
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         _submitContentWithReservation(registry, "https://example.com/1", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
@@ -1380,7 +1381,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(registryImpl2),
-                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(crepToken)))
+                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(hrepToken)))
                 )
             )
         );
@@ -1392,7 +1393,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.stopPrank();
 
         vm.startPrank(submitter);
-        crepToken.approve(address(reg2), 10e6);
+        hrepToken.approve(address(reg2), 10e6);
         _submitContentWithReservation(reg2, "https://example.com/1", "goal", "goal", "tags", 0);
         reg2.cancelContent(1);
         vm.stopPrank();
@@ -1403,14 +1404,14 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
     function test_CancelContent_DoesNotChargeDeprecatedFee() public {
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         _submitContentWithReservation(registry, "https://example.com/1", "goal", "goal", "tags", 0);
 
-        uint256 bonusBefore = crepToken.balanceOf(bonusPool);
+        uint256 bonusBefore = hrepToken.balanceOf(bonusPool);
         registry.cancelContent(1);
         vm.stopPrank();
 
-        uint256 bonusAfter = crepToken.balanceOf(bonusPool);
+        uint256 bonusAfter = hrepToken.balanceOf(bonusPool);
         assertEq(bonusAfter - bonusBefore, 0);
     }
 
@@ -1419,14 +1420,14 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         registry.setBonusPool(treasury);
 
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         _submitContentWithReservation(registry, "https://example.com/treasury", "goal", "goal", "tags", 0);
 
-        uint256 treasuryBefore = crepToken.balanceOf(treasury);
+        uint256 treasuryBefore = hrepToken.balanceOf(treasury);
         registry.cancelContent(1);
         vm.stopPrank();
 
-        uint256 treasuryAfter = crepToken.balanceOf(treasury);
+        uint256 treasuryAfter = hrepToken.balanceOf(treasury);
         assertEq(treasuryAfter - treasuryBefore, 0);
     }
 
@@ -1436,7 +1437,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
     function test_MarkDormant_PeriodNotElapsed_Reverts() public {
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         _submitContentWithReservation(registry, "https://example.com/1", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
@@ -1451,7 +1452,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(registryImpl2),
-                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(crepToken)))
+                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(hrepToken)))
                 )
             )
         );
@@ -1462,7 +1463,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.stopPrank();
 
         vm.startPrank(submitter);
-        crepToken.approve(address(reg2), 10e6);
+        hrepToken.approve(address(reg2), 10e6);
         _submitContentWithReservation(reg2, "https://example.com/1", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
@@ -1475,7 +1476,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
     function test_MarkDormant_Success() public {
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         _submitContentWithReservation(registry, "https://example.com/1", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
@@ -1488,7 +1489,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
     function test_VoteCommit_UpdatesLastActivityAt() public {
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         _submitContentWithReservation(registry, "https://example.com/activity", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
@@ -1501,7 +1502,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
     function test_MarkDormant_ActiveRound_AllVotesRevealed_Reverts() public {
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         _submitContentWithReservation(registry, "https://example.com/open-round", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
@@ -1522,7 +1523,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
     function test_IsDormancyEligible_ActiveRound_AllVotesRevealed_ReturnsFalse() public {
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         _submitContentWithReservation(registry, "https://example.com/open-round-eligible", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
@@ -1538,7 +1539,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
     function test_MarkDormant_CancelledRound_UsesDormancyAnchor() public {
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         _submitContentWithReservation(registry, "https://example.com/recent-vote", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
@@ -1557,7 +1558,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
     function test_CommitVote_DormancyEligibleContent_CannotStartNewRoundAfterCancellation() public {
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         _submitContentWithReservation(registry, "https://example.com/dormancy-guard", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
@@ -1573,7 +1574,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         bytes32 commitHash = _commitHash(true, salt, voter2, 1, ciphertext);
 
         vm.startPrank(voter2);
-        crepToken.approve(address(votingEngine), STAKE);
+        hrepToken.approve(address(votingEngine), STAKE);
         vm.expectRevert(RoundVotingEngine.DormancyWindowElapsed.selector);
         votingEngine.commitVote(
             1,
@@ -1590,7 +1591,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
     function test_MarkDormant_ReleasesUrlForResubmission() public {
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 20e6);
+        hrepToken.approve(address(registry), 20e6);
         _submitContentWithReservation(registry, "https://example.com/dormant-url", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
@@ -1603,7 +1604,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         // Should be able to resubmit the same URL
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         _submitContentWithReservation(registry, "https://example.com/dormant-url", "goal2", "goal2", "tags2", 0);
         vm.stopPrank();
 
@@ -1616,7 +1617,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         string memory url = "https://example.com/revive-url";
 
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         _submitContentWithReservation(registry, url, "goal", "goal", "tags", 0);
         vm.stopPrank();
 
@@ -1624,14 +1625,16 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         registry.markDormant(1);
 
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 5e6);
+        hrepToken.approve(address(registry), 5e6);
         registry.reviveContent(1);
         vm.stopPrank();
 
         vm.startPrank(voter2);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         vm.expectRevert("Question already submitted");
-        registry.submitQuestion(url, _emptyImageUrls(), "", "goal", "goal", "tags", 1, keccak256("revive-conflict-salt"));
+        registry.submitQuestion(
+            url, _emptyImageUrls(), "", "goal", "goal", "tags", 1, keccak256("revive-conflict-salt")
+        );
         vm.stopPrank();
     }
 
@@ -1639,7 +1642,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         string memory url = "https://example.com/revive-conflict";
 
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         _submitContentWithReservation(registry, url, "goal", "goal", "tags", 0);
         vm.stopPrank();
 
@@ -1650,12 +1653,12 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         registry.releaseDormantSubmissionKey(1);
 
         vm.startPrank(voter1);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         _submitContentWithReservation(registry, url, "goal2", "goal2", "tags2", 0);
         vm.stopPrank();
 
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 5e6);
+        hrepToken.approve(address(registry), 5e6);
         vm.expectRevert("Dormant key released");
         registry.reviveContent(1);
         vm.stopPrank();
@@ -1676,7 +1679,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
                 new ERC1967Proxy(
                     address(registryImpl2),
                     abi.encodeCall(
-                        ContentRegistry.initializeWithTreasury, (owner, governance, treasury, address(crepToken))
+                        ContentRegistry.initializeWithTreasury, (owner, governance, treasury, address(hrepToken))
                     )
                 )
             )
@@ -1705,7 +1708,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         mockCategoryRegistry.setCategoryExists(1, true);
 
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         uint256 id = _submitContentWithReservation(registry, "https://example.com/1", "goal", "goal", "tags", 1);
         vm.stopPrank();
         assertEq(id, 1);
@@ -1720,7 +1723,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         mockCategoryRegistry.setCategoryExists(7, true);
 
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         uint256 id = _submitContentWithReservation(registry, "https://example.com/auto", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
@@ -1739,19 +1742,12 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
     function test_SubmitQuestion_RequiresNonZeroSalt() public {
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         // All other inputs valid; salt=0 should revert with "Salt required" now that
         // the check runs after URL/category/submissionKey validation.
         vm.expectRevert("Salt required");
         registry.submitQuestion(
-            "https://example.com/salt-required",
-            _emptyImageUrls(),
-            "",
-            "Question?",
-            "Context.",
-            "tag",
-            1,
-            bytes32(0)
+            "https://example.com/salt-required", _emptyImageUrls(), "", "Question?", "Context.", "tag", 1, bytes32(0)
         );
         vm.stopPrank();
     }

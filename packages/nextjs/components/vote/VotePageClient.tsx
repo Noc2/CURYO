@@ -1265,8 +1265,8 @@ const HomeInner = () => {
       const advanced = nextIndex > committedIndex ? handleSelectByIndex(nextIndex) : false;
       notification.success(
         advanced
-          ? `Vote submitted! Stake: ${stakeAmount} cREP · next card ready`
-          : `Vote submitted! Stake: ${stakeAmount} cREP`,
+          ? `Vote submitted! Stake: ${stakeAmount} HREP · next card ready`
+          : `Vote submitted! Stake: ${stakeAmount} HREP`,
       );
 
       if (isFirstVote) {

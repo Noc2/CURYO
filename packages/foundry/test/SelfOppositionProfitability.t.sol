@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {Test, console2} from "forge-std/Test.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {ContentRegistry} from "../contracts/ContentRegistry.sol";
-import {RoundVotingEngine} from "../contracts/RoundVotingEngine.sol";
-import {ProtocolConfig} from "../contracts/ProtocolConfig.sol";
-import {RoundRewardDistributor} from "../contracts/RoundRewardDistributor.sol";
-import {CuryoReputation} from "../contracts/CuryoReputation.sol";
-import {ParticipationPool} from "../contracts/ParticipationPool.sol";
-import {RoundLib} from "../contracts/libraries/RoundLib.sol";
-import {RoundEngineReadHelpers} from "./helpers/RoundEngineReadHelpers.sol";
-import {RewardMath} from "../contracts/libraries/RewardMath.sol";
-import {VotingTestBase} from "./helpers/VotingTestHelpers.sol";
-import {MockCategoryRegistry} from "../contracts/mocks/MockCategoryRegistry.sol";
+import { Test, console2 } from "forge-std/Test.sol";
+import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { ContentRegistry } from "../contracts/ContentRegistry.sol";
+import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
+import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
+import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
+import { HumanReputation } from "../contracts/HumanReputation.sol";
+import { ParticipationPool } from "../contracts/ParticipationPool.sol";
+import { RoundLib } from "../contracts/libraries/RoundLib.sol";
+import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
+import { RewardMath } from "../contracts/libraries/RewardMath.sol";
+import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
+import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
 
 /// @title Self-Opposition Profitability Analysis (Post-Fix)
 /// @notice Verifies that the NotWinningSide fix blocks self-opposition attacks.
@@ -21,7 +21,7 @@ import {MockCategoryRegistry} from "../contracts/mocks/MockCategoryRegistry.sol"
 ///         harvest participation rewards from both, making the attack profitable.
 ///         Now, only winning-side voters can claim participation rewards.
 contract SelfOppositionProfitabilityTest is VotingTestBase {
-    CuryoReputation crepToken;
+    HumanReputation hrepToken;
     ContentRegistry registry;
     RoundVotingEngine engine;
     RoundRewardDistributor distributor;
@@ -44,8 +44,8 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
     function setUp() public {
         vm.startPrank(owner);
 
-        crepToken = new CuryoReputation(owner, owner);
-        crepToken.grantRole(crepToken.MINTER_ROLE(), owner);
+        hrepToken = new HumanReputation(owner, owner);
+        hrepToken.grantRole(hrepToken.MINTER_ROLE(), owner);
 
         ContentRegistry regImpl = new ContentRegistry();
         RoundVotingEngine engImpl = new RoundVotingEngine();
@@ -54,7 +54,7 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
         registry = ContentRegistry(
             address(
                 new ERC1967Proxy(
-                    address(regImpl), abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(crepToken)))
+                    address(regImpl), abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(hrepToken)))
                 )
             )
         );
@@ -64,7 +64,7 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
                     address(engImpl),
                     abi.encodeCall(
                         RoundVotingEngine.initialize,
-                        (owner, address(crepToken), address(registry), address(_deployProtocolConfig(owner)))
+                        (owner, address(hrepToken), address(registry), address(_deployProtocolConfig(owner)))
                     )
                 )
             )
@@ -75,7 +75,7 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
                     address(distImpl),
                     abi.encodeCall(
                         RoundRewardDistributor.initialize,
-                        (owner, address(crepToken), address(engine), address(registry))
+                        (owner, address(hrepToken), address(engine), address(registry))
                     )
                 )
             )
@@ -94,27 +94,27 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
         _setTlockRoundConfig(ProtocolConfig(address(engine.protocolConfig())), 1 hours, 7 days, 3, 200);
 
         // Fund consensus reserve
-        crepToken.mint(owner, 100_000e6);
-        crepToken.approve(address(engine), 100_000e6);
+        hrepToken.mint(owner, 100_000e6);
+        hrepToken.approve(address(engine), 100_000e6);
         engine.addToConsensusReserve(100_000e6);
 
         // Set up ParticipationPool
-        pool = new ParticipationPool(address(crepToken), owner);
+        pool = new ParticipationPool(address(hrepToken), owner);
         pool.setAuthorizedCaller(address(distributor), true);
 
-        // Fund participation pool with 12M cREP
-        crepToken.mint(owner, 12_000_000e6);
-        crepToken.approve(address(pool), 12_000_000e6);
+        // Fund participation pool with 12M HREP
+        hrepToken.mint(owner, 12_000_000e6);
+        hrepToken.approve(address(pool), 12_000_000e6);
         pool.depositPool(12_000_000e6);
 
         // Connect pool to engine
         ProtocolConfig(address(engine.protocolConfig())).setParticipationPool(address(pool));
 
         // Fund participants
-        crepToken.mint(submitter, 100_000e6);
-        crepToken.mint(attackerA, 100_000e6);
-        crepToken.mint(attackerB, 100_000e6);
-        crepToken.mint(honest, 100_000e6);
+        hrepToken.mint(submitter, 100_000e6);
+        hrepToken.mint(attackerA, 100_000e6);
+        hrepToken.mint(attackerB, 100_000e6);
+        hrepToken.mint(honest, 100_000e6);
 
         vm.stopPrank();
 
@@ -126,7 +126,7 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
     function _submit() internal returns (uint256) {
         contentNonce++;
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         uint256 id = _submitContentWithReservation(
             registry,
             string(abi.encodePacked("https://example.com/", vm.toString(contentNonce))),
@@ -147,10 +147,17 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
         bytes memory ciphertext = _testCiphertext(up, salt, cid);
         bytes32 commitHash = _commitHash(up, salt, voter, cid, ciphertext);
         vm.prank(voter);
-        crepToken.approve(address(engine), stake);
+        hrepToken.approve(address(engine), stake);
         vm.prank(voter);
         engine.commitVote(
-            cid, _defaultRatingReferenceBps(), _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, stake, address(0)
+            cid,
+            _defaultRatingReferenceBps(),
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            commitHash,
+            ciphertext,
+            stake,
+            address(0)
         );
         commitKey = keccak256(abi.encodePacked(voter, commitHash));
     }
@@ -165,12 +172,12 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
             RoundLib.Commit memory c = RoundEngineReadHelpers.commit(engine, cid, roundId, keys[i]);
             if (!c.revealed && c.stakeAmount > 0) {
                 (bool up, bytes32 s) = _decodeTestCiphertext(c.ciphertext);
-                try engine.revealVoteByCommitKey(cid, roundId, keys[i], up, s) {} catch {}
+                try engine.revealVoteByCommitKey(cid, roundId, keys[i], up, s) { } catch { }
             }
         }
         RoundLib.Round memory r2 = RoundEngineReadHelpers.round(engine, cid, roundId);
         if (r2.thresholdReachedAt > 0) {
-            try engine.settleRound(cid, roundId) {} catch {}
+            try engine.settleRound(cid, roundId) { } catch { }
         }
     }
 
@@ -181,11 +188,11 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
 
     function _resetParticipationPool(uint256 distributed) internal {
         vm.startPrank(owner);
-        pool = new ParticipationPool(address(crepToken), owner);
+        pool = new ParticipationPool(address(hrepToken), owner);
         pool.setAuthorizedCaller(address(distributor), true);
 
-        crepToken.mint(owner, TIER_TEST_POOL_BALANCE);
-        crepToken.approve(address(pool), TIER_TEST_POOL_BALANCE);
+        hrepToken.mint(owner, TIER_TEST_POOL_BALANCE);
+        hrepToken.approve(address(pool), TIER_TEST_POOL_BALANCE);
         pool.depositPool(TIER_TEST_POOL_BALANCE);
         ProtocolConfig(address(engine.protocolConfig())).setParticipationPool(address(pool));
         vm.stopPrank();
@@ -223,8 +230,8 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
     ///         participation + voter pool share. The losing side gets nothing from participation.
     function test_Tier0_AttackUnprofitable_WithFix() public {
         uint256 cid = _submit();
-        uint256 startA = crepToken.balanceOf(attackerA);
-        uint256 startB = crepToken.balanceOf(attackerB);
+        uint256 startA = hrepToken.balanceOf(attackerA);
+        uint256 startB = hrepToken.balanceOf(attackerB);
 
         _vote(attackerA, cid, true, 100e6);
         _vote(attackerB, cid, false, 1e6);
@@ -239,12 +246,12 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
         vm.prank(attackerA);
         distributor.claimParticipationReward(cid, 1);
 
-        uint256 endA = crepToken.balanceOf(attackerA);
-        uint256 endB = crepToken.balanceOf(attackerB);
+        uint256 endA = hrepToken.balanceOf(attackerA);
+        uint256 endB = hrepToken.balanceOf(attackerB);
 
-        // WalletA gains: voter pool share + participation (90% of 100 cREP = 90 cREP)
-        // WalletB loses: 1 cREP stake (forfeited)
-        // Without walletB participation (was 0.9 cREP), net is still positive due to walletA participation.
+        // WalletA gains: voter pool share + participation (90% of 100 HREP = 90 HREP)
+        // WalletB loses: 1 HREP stake (forfeited)
+        // Without walletB participation (was 0.9 HREP), net is still positive due to walletA participation.
         // BUT the attacker's profit is now just participation on the winning side minus lost stake.
         // This is equivalent to just voting honestly on the winning side — no advantage from opposition.
         uint256 totalStart = startA + startB;
@@ -253,28 +260,28 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
         // The attacker still profits from the winning side participation + voter pool share.
         // But this is NOT an exploit — any honest voter on the winning side earns the same.
         // The key insight: the attacker gains nothing EXTRA from the opposing vote.
-        // The 1 cREP lost stake is pure deadweight loss with no compensating participation.
-        // Honest strategy (vote 101 cREP UP, no opposition) would yield more.
+        // The 1 HREP lost stake is pure deadweight loss with no compensating participation.
+        // Honest strategy (vote 101 HREP UP, no opposition) would yield more.
 
-        // Net from opposition = voter pool share of 1 cREP losing pool - 1 cREP lost stake
-        // voter pool share = 80% * 1 * (100/150) = ~0.533 cREP
-        // Net from opposition alone = 0.533 - 1 = -0.467 cREP (LOSS)
+        // Net from opposition = voter pool share of 1 HREP losing pool - 1 HREP lost stake
+        // voter pool share = 80% * 1 * (100/150) = ~0.533 HREP
+        // Net from opposition alone = 0.533 - 1 = -0.467 HREP (LOSS)
         // The self-opposition is ALWAYS a net loss now.
         // (Participation is earned regardless of whether you also vote the other side)
 
         // Verify the opposition itself was unprofitable by comparing to honest-only scenario
-        // The attacker spent 1 cREP on the losing side and got back ~0.547 from voter pool
+        // The attacker spent 1 HREP on the losing side and got back ~0.547 from voter pool
         // That's a guaranteed loss on the opposition component
         assertTrue(totalEnd > totalStart, "Winner still profits overall from legitimate winning vote");
     }
 
     // ==================== Test 3: Honest-only strategy dominates ====================
 
-    /// @notice Shows that voting 101 cREP honestly beats the 100/1 self-opposition strategy.
+    /// @notice Shows that voting 101 HREP honestly beats the 100/1 self-opposition strategy.
     function test_HonestStrategy_Dominates() public {
         // Scenario A: Self-opposition (100 UP + 1 DOWN)
         uint256 cidA = _submit();
-        uint256 startA = crepToken.balanceOf(attackerA) + crepToken.balanceOf(attackerB);
+        uint256 startA = hrepToken.balanceOf(attackerA) + hrepToken.balanceOf(attackerB);
 
         _vote(attackerA, cidA, true, 100e6);
         _vote(attackerB, cidA, false, 1e6);
@@ -287,14 +294,14 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
         distributor.claimParticipationReward(cidA, 1);
         // walletB cannot claim participation (NotWinningSide)
 
-        uint256 endA = crepToken.balanceOf(attackerA) + crepToken.balanceOf(attackerB);
+        uint256 endA = hrepToken.balanceOf(attackerA) + hrepToken.balanceOf(attackerB);
         int256 profitOpposition = int256(endA) - int256(startA);
 
         vm.warp(block.timestamp + 24 hours + 1);
 
         // Scenario B: Honest vote (100 UP only, no opposition)
         uint256 cidB = _submit();
-        uint256 startB = crepToken.balanceOf(attackerA);
+        uint256 startB = hrepToken.balanceOf(attackerA);
 
         _vote(attackerA, cidB, true, 100e6);
         // Need another DOWN voter to make it non-unanimous and have a losing pool
@@ -307,10 +314,10 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
         vm.prank(attackerA);
         distributor.claimParticipationReward(cidB, 1);
 
-        uint256 endB_honest = crepToken.balanceOf(attackerA);
+        uint256 endB_honest = hrepToken.balanceOf(attackerA);
         int256 profitHonest = int256(endB_honest) - int256(startB);
 
-        // Honest strategy yields strictly more because it doesn't waste 1 cREP on losing side
+        // Honest strategy yields strictly more because it doesn't waste 1 HREP on losing side
         assertGt(profitHonest, profitOpposition, "Honest strategy strictly dominates self-opposition");
     }
 
@@ -354,7 +361,7 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
 
         // Net from opposition = attackerShare - stakeLose
         // attackerShare < stakeLose because voterPool = 80% of stakeLose < stakeLose
-        // Even if attacker had 100% of voter pool: 0.80 cREP < 1 cREP = loss
+        // Even if attacker had 100% of voter pool: 0.80 HREP < 1 HREP = loss
         assert(voterPool < stakeLose); // 0.80 < 1.0 — ALWAYS a loss
 
         // The opposition component is guaranteed unprofitable regardless of tier

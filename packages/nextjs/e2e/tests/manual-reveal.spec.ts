@@ -1,5 +1,5 @@
 import {
-  approveCREP,
+  approveHREP,
   commitVoteDirect,
   evmIncreaseTime,
   evmSetTimestamp,
@@ -21,7 +21,7 @@ test.describe("Manual reveal fallback", () => {
   test.describe.configure({ mode: "serial" });
 
   const VOTING_ENGINE = CONTRACT_ADDRESSES.RoundVotingEngine;
-  const CREP_TOKEN = CONTRACT_ADDRESSES.CuryoReputation;
+  const HREP_TOKEN = CONTRACT_ADDRESSES.HumanReputation;
   const CONTENT_REGISTRY = CONTRACT_ADDRESSES.ContentRegistry;
   const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
   const STAKE = BigInt(10e6);
@@ -52,7 +52,7 @@ test.describe("Manual reveal fallback", () => {
     // on-chain revealability window with the tlock decryption window.
     await evmSetTimestamp(Math.floor(Date.now() / 1000) - CHAIN_TIME_OFFSET);
 
-    const submitApproved = await approveCREP(CONTENT_REGISTRY, BigInt(10e6), submitter.address, CREP_TOKEN);
+    const submitApproved = await approveHREP(CONTENT_REGISTRY, BigInt(10e6), submitter.address, HREP_TOKEN);
     expect(submitApproved, "Content submission approval failed").toBe(true);
 
     const submitted = await submitContentDirect(
@@ -79,7 +79,7 @@ test.describe("Manual reveal fallback", () => {
     expect(indexedContent, "Ponder did not index the manual reveal content").toBe(true);
     expect(contentId).toBeTruthy();
 
-    const approved = await approveCREP(VOTING_ENGINE, STAKE, voter.address, CREP_TOKEN);
+    const approved = await approveHREP(VOTING_ENGINE, STAKE, voter.address, HREP_TOKEN);
     expect(approved, "Vote approval failed").toBe(true);
 
     // Commit with short tlock epoch — the ciphertext will be decryptable in TLOCK_EPOCH real seconds

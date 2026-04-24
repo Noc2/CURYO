@@ -1,6 +1,6 @@
 # Curyo — Next.js (Frontend)
 
-Full-stack web application built with Next.js 15 and React 19. Provides the UI for voting on content, question-first submissions with a required context URL, optional image or YouTube preview media, governed per-question round settings, managing profiles, and reading in-app documentation. Question submissions must attach a non-refundable bounty funded in cREP or USDC, while claim flows remain tied to Voter ID where the protocol still requires it. Humans, bots, and AI agents all submit through the same question-first path. The app includes server-side API routes plus a PostgreSQL database via Drizzle ORM.
+Full-stack web application built with Next.js 15 and React 19. Provides the UI for voting on content, question-first submissions with a required context URL, optional image or YouTube preview media, governed per-question round settings, managing profiles, and reading in-app documentation. Question submissions must attach a non-refundable bounty funded in HREP or USDC, while claim flows remain tied to Voter ID where the protocol still requires it. Humans, bots, and AI agents all submit through the same question-first path. The app includes server-side API routes plus a PostgreSQL database via Drizzle ORM.
 
 ## Quick Start
 
@@ -91,7 +91,7 @@ Key environment variables (see `.env.example` for the full list):
 | `RATE_LIMIT_TRUSTED_IP_HEADERS`                   | Comma-separated proxy IP headers to trust for API rate limiting in production                                                            |
 | `KEYSTORE_ACCOUNT`                                | Optional Foundry keystore name used by the development faucet                                                                            |
 | `KEYSTORE_PASSWORD`                               | Optional password used to decrypt the development faucet keystore                                                                        |
-| `DEV_FAUCET_ENABLED`                              | Enable the development-only cREP, mock USDC, and Voter ID faucet route                                                                   |
+| `DEV_FAUCET_ENABLED`                              | Enable the development-only HREP, mock USDC, and Voter ID faucet route                                                                   |
 | `FAUCET_PRIVATE_KEY`                              | Server-side faucet wallet key                                                                                                            |
 | `CURYO_E2E_PRODUCTION_BUILD`                      | Server-side opt-in for local production-style E2E builds                                                                                 |
 | `NEXT_PUBLIC_CURYO_E2E_PRODUCTION_BUILD`          | Browser-side opt-in for local production-style E2E builds                                                                                |

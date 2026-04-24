@@ -1,13 +1,13 @@
 import { protocolCopy } from "./protocolCopy";
 
-const crepAmountFormatter = new Intl.NumberFormat("en-US");
-const crepCompactFormatter = new Intl.NumberFormat("en-US", {
+const hrepAmountFormatter = new Intl.NumberFormat("en-US");
+const hrepCompactFormatter = new Intl.NumberFormat("en-US", {
   notation: "compact",
   maximumFractionDigits: 1,
 });
 
-const CREP_MAX_SUPPLY = 100_000_000;
-export const CREP_MAX_SUPPLY_LABEL = `${crepAmountFormatter.format(CREP_MAX_SUPPLY)} cREP`;
+const HREP_MAX_SUPPLY = 100_000_000;
+export const HREP_MAX_SUPPLY_LABEL = `${hrepAmountFormatter.format(HREP_MAX_SUPPLY)} HREP`;
 
 type TokenDistributionEntry = {
   label: string;
@@ -21,7 +21,7 @@ const tokenDistributionEntries: readonly TokenDistributionEntry[] = [
     label: "Faucet Pool",
     amount: 52_000_000,
     purpose:
-      "One-time claims for verified humans (10,000 to 1 cREP per claim, tiered by adoption, serves up to ~41M users)",
+      "One-time claims for verified humans (10,000 to 1 HREP per claim, tiered by adoption, serves up to ~41M users)",
     color: "#7E8996",
   },
   {
@@ -34,7 +34,7 @@ const tokenDistributionEntries: readonly TokenDistributionEntry[] = [
     label: "Treasury",
     amount: 32_000_000,
     purpose:
-      "Governance-controlled cREP tokens for ecosystem grants, partner activation, whistleblower rewards, and protocol development",
+      "Governance-controlled HREP tokens for ecosystem grants, partner activation, whistleblower rewards, and protocol development",
     color: "#F5F0EB",
   },
   {
@@ -45,17 +45,17 @@ const tokenDistributionEntries: readonly TokenDistributionEntry[] = [
   },
 ] as const;
 
-const CREP_INITIAL_MINTED_SUPPLY = tokenDistributionEntries.reduce((sum, entry) => sum + entry.amount, 0);
-export const CREP_INITIAL_MINTED_SUPPLY_COMPACT_LABEL = crepCompactFormatter.format(CREP_INITIAL_MINTED_SUPPLY);
+const HREP_INITIAL_MINTED_SUPPLY = tokenDistributionEntries.reduce((sum, entry) => sum + entry.amount, 0);
+export const HREP_INITIAL_MINTED_SUPPLY_COMPACT_LABEL = hrepCompactFormatter.format(HREP_INITIAL_MINTED_SUPPLY);
 const FAUCET_POOL_AMOUNT = tokenDistributionEntries[0].amount;
-export const FAUCET_POOL_AMOUNT_COMPACT_LABEL = crepCompactFormatter.format(FAUCET_POOL_AMOUNT);
+export const FAUCET_POOL_AMOUNT_COMPACT_LABEL = hrepCompactFormatter.format(FAUCET_POOL_AMOUNT);
 
-function formatCrepAmount(amount: number): string {
-  return `${crepAmountFormatter.format(amount)} cREP`;
+function formatHrepAmount(amount: number): string {
+  return `${hrepAmountFormatter.format(amount)} HREP`;
 }
 
 function formatAllocationPercent(amount: number): string {
-  const percent = (amount / CREP_MAX_SUPPLY) * 100;
+  const percent = (amount / HREP_MAX_SUPPLY) * 100;
   if (percent === 0) return "0.0%";
   if (Number.isInteger(percent)) return `${percent.toFixed(1)}%`;
   return `${percent.toFixed(4).replace(/0+$/, "").replace(/\.$/, "")}%`;
@@ -63,19 +63,19 @@ function formatAllocationPercent(amount: number): string {
 
 export const tokenDistributionTableRows = tokenDistributionEntries.map(entry => ({
   ...entry,
-  amountLabel: formatCrepAmount(entry.amount),
+  amountLabel: formatHrepAmount(entry.amount),
 }));
 
 export const tokenAllocationChartSlices = tokenDistributionEntries.map((entry, index) => ({
   ...entry,
   index,
-  amountLabel: formatCrepAmount(entry.amount),
+  amountLabel: formatHrepAmount(entry.amount),
   percentLabel: formatAllocationPercent(entry.amount),
-  value: (entry.amount / CREP_MAX_SUPPLY) * 100,
+  value: (entry.amount / HREP_MAX_SUPPLY) * 100,
 }));
 
 export const tokenDistributionWhitepaperRows = tokenDistributionEntries.map(entry => [
   entry.label,
-  formatCrepAmount(entry.amount),
+  formatHrepAmount(entry.amount),
   entry.purpose,
 ]);

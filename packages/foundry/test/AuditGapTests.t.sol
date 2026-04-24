@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {VotingTestBase} from "./helpers/VotingTestHelpers.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {ContentRegistry} from "../contracts/ContentRegistry.sol";
-import {RoundVotingEngine} from "../contracts/RoundVotingEngine.sol";
-import {ProtocolConfig} from "../contracts/ProtocolConfig.sol";
-import {RoundRewardDistributor} from "../contracts/RoundRewardDistributor.sol";
-import {RoundLib} from "../contracts/libraries/RoundLib.sol";
-import {RoundEngineReadHelpers} from "./helpers/RoundEngineReadHelpers.sol";
-import {CuryoReputation} from "../contracts/CuryoReputation.sol";
-import {ParticipationPool} from "../contracts/ParticipationPool.sol";
-import {FrontendRegistry} from "../contracts/FrontendRegistry.sol";
-import {MockCategoryRegistry} from "../contracts/mocks/MockCategoryRegistry.sol";
-import {MockVoterIdNFT} from "./mocks/MockVoterIdNFT.sol";
+import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
+import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { ContentRegistry } from "../contracts/ContentRegistry.sol";
+import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
+import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
+import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
+import { RoundLib } from "../contracts/libraries/RoundLib.sol";
+import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
+import { HumanReputation } from "../contracts/HumanReputation.sol";
+import { ParticipationPool } from "../contracts/ParticipationPool.sol";
+import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
+import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
+import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
 
 /// @title Audit Gap Tests — Priority-1 test coverage for gaps identified during security audit.
 /// @dev Covers:
@@ -23,7 +23,7 @@ import {MockVoterIdNFT} from "./mocks/MockVoterIdNFT.sol";
 ///   4. Tied + RevealFailed refund path precedence
 ///   5. Exact cooldown boundary timing
 contract AuditGapTests is VotingTestBase {
-    CuryoReputation public crepToken;
+    HumanReputation public hrepToken;
     ContentRegistry public registry;
     RoundVotingEngine public votingEngine;
     RoundRewardDistributor public rewardDistributor;
@@ -47,8 +47,8 @@ contract AuditGapTests is VotingTestBase {
         vm.roll(100);
         vm.startPrank(owner);
 
-        crepToken = new CuryoReputation(owner, owner);
-        crepToken.grantRole(crepToken.MINTER_ROLE(), owner);
+        hrepToken = new HumanReputation(owner, owner);
+        hrepToken.grantRole(hrepToken.MINTER_ROLE(), owner);
 
         ContentRegistry registryImpl = new ContentRegistry();
         RoundVotingEngine engineImpl = new RoundVotingEngine();
@@ -58,7 +58,7 @@ contract AuditGapTests is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(registryImpl),
-                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(crepToken)))
+                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(hrepToken)))
                 )
             )
         );
@@ -69,7 +69,7 @@ contract AuditGapTests is VotingTestBase {
                     address(engineImpl),
                     abi.encodeCall(
                         RoundVotingEngine.initialize,
-                        (owner, address(crepToken), address(registry), address(_deployProtocolConfig(owner)))
+                        (owner, address(hrepToken), address(registry), address(_deployProtocolConfig(owner)))
                     )
                 )
             )
@@ -81,17 +81,17 @@ contract AuditGapTests is VotingTestBase {
                     address(distImpl),
                     abi.encodeCall(
                         RoundRewardDistributor.initialize,
-                        (owner, address(crepToken), address(votingEngine), address(registry))
+                        (owner, address(hrepToken), address(votingEngine), address(registry))
                     )
                 )
             )
         );
 
         // ParticipationPool
-        participationPool = new ParticipationPool(address(crepToken), owner);
+        participationPool = new ParticipationPool(address(hrepToken), owner);
         participationPool.setAuthorizedCaller(address(rewardDistributor), true);
-        crepToken.mint(owner, 1_000_000e6);
-        crepToken.approve(address(participationPool), 1_000_000e6);
+        hrepToken.mint(owner, 1_000_000e6);
+        hrepToken.approve(address(participationPool), 1_000_000e6);
         participationPool.depositPool(1_000_000e6);
 
         // FrontendRegistry
@@ -99,7 +99,7 @@ contract AuditGapTests is VotingTestBase {
         frontendRegistry = FrontendRegistry(
             address(
                 new ERC1967Proxy(
-                    address(frImpl), abi.encodeCall(FrontendRegistry.initialize, (owner, owner, address(crepToken)))
+                    address(frImpl), abi.encodeCall(FrontendRegistry.initialize, (owner, owner, address(hrepToken)))
                 )
             )
         );
@@ -122,21 +122,21 @@ contract AuditGapTests is VotingTestBase {
 
         // Fund consensus reserve
         uint256 reserveAmount = 1_000_000e6;
-        crepToken.mint(owner, reserveAmount);
-        crepToken.approve(address(votingEngine), reserveAmount);
+        hrepToken.mint(owner, reserveAmount);
+        hrepToken.approve(address(votingEngine), reserveAmount);
         votingEngine.addToConsensusReserve(reserveAmount);
 
-        // Mint cREP to test users
+        // Mint HREP to test users
         address[6] memory users = [submitter, voter1, voter2, voter3, voter4, frontend];
         for (uint256 i = 0; i < users.length; i++) {
-            crepToken.mint(users[i], 100_000e6);
+            hrepToken.mint(users[i], 100_000e6);
         }
         voterIdNFT.setHolder(frontend);
 
         // Register frontend
         vm.stopPrank();
         vm.startPrank(frontend);
-        crepToken.approve(address(frontendRegistry), 1_000e6);
+        hrepToken.approve(address(frontendRegistry), 1_000e6);
         frontendRegistry.register();
         vm.stopPrank();
 
@@ -149,7 +149,7 @@ contract AuditGapTests is VotingTestBase {
 
     function _submitContent(string memory url) internal returns (uint256 contentId) {
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         _submitContentWithReservation(registry, url, "test goal", "test goal", "test", 0);
         vm.stopPrank();
         return registry.nextContentId() - 1;
@@ -163,7 +163,7 @@ contract AuditGapTests is VotingTestBase {
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
         bytes32 hash = _commitHash(isUp, salt, voter, contentId, ciphertext);
         vm.startPrank(voter);
-        crepToken.approve(address(votingEngine), stakeAmt);
+        hrepToken.approve(address(votingEngine), stakeAmt);
         votingEngine.commitVote(
             contentId,
             _defaultRatingReferenceBps(),
@@ -198,7 +198,7 @@ contract AuditGapTests is VotingTestBase {
         bytes32 hash = _commitHash(true, salt, voter1, contentId, ct);
 
         vm.startPrank(voter1);
-        crepToken.approve(address(votingEngine), STAKE);
+        hrepToken.approve(address(votingEngine), STAKE);
         vm.expectRevert(); // EnforcedPause
         votingEngine.commitVote(
             contentId,
@@ -256,12 +256,12 @@ contract AuditGapTests is VotingTestBase {
 
         vm.warp(block.timestamp + 7 days + 1);
 
-        uint256 keeperBalanceBefore = crepToken.balanceOf(voter4);
+        uint256 keeperBalanceBefore = hrepToken.balanceOf(voter4);
 
         vm.prank(voter4);
         votingEngine.cancelExpiredRound(contentId, 1);
 
-        assertEq(crepToken.balanceOf(voter4), keeperBalanceBefore, "cancel should not pay keeper rewards");
+        assertEq(hrepToken.balanceOf(voter4), keeperBalanceBefore, "cancel should not pay keeper rewards");
     }
 
     /// @notice Verify processUnrevealedVotes respects whenNotPaused
@@ -310,11 +310,17 @@ contract AuditGapTests is VotingTestBase {
         registry.pause();
 
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         vm.expectRevert(); // EnforcedPause
         registry.submitQuestion(
             "https://example.com/context",
-            _singleImageUrls("https://pause-test-6.com/image.jpg"), "", "goal", "goal", "tag", 1, bytes32(0)
+            _singleImageUrls("https://pause-test-6.com/image.jpg"),
+            "",
+            "goal",
+            "goal",
+            "tag",
+            1,
+            bytes32(0)
         );
         vm.stopPrank();
     }
@@ -365,41 +371,41 @@ contract AuditGapTests is VotingTestBase {
         assertTrue(round.upWins, "UP should win");
 
         // 1. Voter reward (winner voter1)
-        uint256 v1Before = crepToken.balanceOf(voter1);
+        uint256 v1Before = hrepToken.balanceOf(voter1);
         vm.prank(voter1);
         rewardDistributor.claimReward(contentId, 1);
-        uint256 v1After = crepToken.balanceOf(voter1);
+        uint256 v1After = hrepToken.balanceOf(voter1);
         assertTrue(v1After > v1Before, "Winner should receive reward");
 
         // 2. Voter reward (winner voter2)
-        uint256 v2Before = crepToken.balanceOf(voter2);
+        uint256 v2Before = hrepToken.balanceOf(voter2);
         vm.prank(voter2);
         rewardDistributor.claimReward(contentId, 1);
-        uint256 v2After = crepToken.balanceOf(voter2);
+        uint256 v2After = hrepToken.balanceOf(voter2);
         assertTrue(v2After > v2Before, "Winner 2 should receive reward");
 
         // 3. Loser refund (voter3 — revealed loser gets 5% rebate)
-        uint256 v3Before = crepToken.balanceOf(voter3);
+        uint256 v3Before = hrepToken.balanceOf(voter3);
         vm.prank(voter3);
         rewardDistributor.claimReward(contentId, 1);
-        uint256 v3After = crepToken.balanceOf(voter3);
+        uint256 v3After = hrepToken.balanceOf(voter3);
         assertTrue(v3After > v3Before, "Revealed loser should receive 5% rebate");
         assertEq(v3After - v3Before, STAKE * 500 / 10000, "Rebate should be 5% of stake");
 
         // 4. Frontend fee (credited to FrontendRegistry, then claimed by operator)
         vm.prank(frontend);
         rewardDistributor.claimFrontendFee(contentId, 1, frontend);
-        uint256 feBefore = crepToken.balanceOf(frontend);
+        uint256 feBefore = hrepToken.balanceOf(frontend);
         vm.prank(frontend);
         frontendRegistry.claimFees();
-        uint256 feAfter = crepToken.balanceOf(frontend);
+        uint256 feAfter = hrepToken.balanceOf(frontend);
         assertTrue(feAfter > feBefore, "Frontend should receive fee via claimFees");
 
         // 5. Participation reward (voter1 = winner)
-        uint256 v1PartBefore = crepToken.balanceOf(voter1);
+        uint256 v1PartBefore = hrepToken.balanceOf(voter1);
         vm.prank(voter1);
         rewardDistributor.claimParticipationReward(contentId, 1);
-        uint256 v1PartAfter = crepToken.balanceOf(voter1);
+        uint256 v1PartAfter = hrepToken.balanceOf(voter1);
         assertTrue(v1PartAfter > v1PartBefore, "Winner should get participation reward");
 
         // Verify: no double claims
@@ -428,7 +434,7 @@ contract AuditGapTests is VotingTestBase {
         // Need 5th voter for 2 unrevealed
         address voter5 = address(8);
         vm.prank(owner);
-        crepToken.mint(voter5, 100_000e6);
+        hrepToken.mint(voter5, 100_000e6);
         _commit(voter5, contentId, false, STAKE, address(0)); // unrevealed
 
         vm.warp(block.timestamp + EPOCH_DURATION);
@@ -530,7 +536,7 @@ contract AuditGapTests is VotingTestBase {
         bytes memory ct = _testCiphertext(true, salt, contentId);
         bytes32 hash = _commitHash(true, salt, voter1, contentId, ct);
         vm.startPrank(voter1);
-        crepToken.approve(address(votingEngine), STAKE);
+        hrepToken.approve(address(votingEngine), STAKE);
         vm.expectRevert(RoundVotingEngine.CooldownActive.selector);
         votingEngine.commitVote(
             contentId,
@@ -574,16 +580,16 @@ contract AuditGapTests is VotingTestBase {
         uint256 reserveAfter = votingEngine.consensusReserve();
         assertTrue(reserveAfter < reserveBefore, "Consensus reserve should decrease");
 
-        // Expected subsidy: 5% of total stake (30 cREP), capped at 50 cREP
+        // Expected subsidy: 5% of total stake (30 HREP), capped at 50 HREP
         uint256 totalStake = STAKE * 3;
         uint256 expectedSubsidy = (totalStake * 500) / 10000;
         assertEq(reserveBefore - reserveAfter, expectedSubsidy, "Reserve decrease should match subsidy formula");
 
         // Winners should be able to claim rewards
-        uint256 v1Before = crepToken.balanceOf(voter1);
+        uint256 v1Before = hrepToken.balanceOf(voter1);
         vm.prank(voter1);
         rewardDistributor.claimReward(contentId, 1);
-        assertTrue(crepToken.balanceOf(voter1) > v1Before, "Voter should get stake + subsidy share");
+        assertTrue(hrepToken.balanceOf(voter1) > v1Before, "Voter should get stake + subsidy share");
     }
 
     // =========================================================================
@@ -616,7 +622,7 @@ contract AuditGapTests is VotingTestBase {
         vm.prank(voter3);
         rewardDistributor.claimReward(contentId, 1);
 
-        uint256 engineBalAfter = crepToken.balanceOf(address(votingEngine));
+        uint256 engineBalAfter = hrepToken.balanceOf(address(votingEngine));
 
         // Engine balance should be >= engineBalStart (consensus reserve grew by 5% of losing pool)
         // The only remaining funds should be: consensus reserve + any rounding dust

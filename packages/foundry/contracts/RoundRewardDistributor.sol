@@ -1,25 +1,25 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {RoundVotingEngine} from "./RoundVotingEngine.sol";
-import {ContentRegistry} from "./ContentRegistry.sol";
-import {ProtocolConfig} from "./ProtocolConfig.sol";
-import {IFrontendRegistry} from "./interfaces/IFrontendRegistry.sol";
-import {IParticipationPool} from "./interfaces/IParticipationPool.sol";
-import {RoundLib} from "./libraries/RoundLib.sol";
-import {RewardMath} from "./libraries/RewardMath.sol";
+import { RoundVotingEngine } from "./RoundVotingEngine.sol";
+import { ContentRegistry } from "./ContentRegistry.sol";
+import { ProtocolConfig } from "./ProtocolConfig.sol";
+import { IFrontendRegistry } from "./interfaces/IFrontendRegistry.sol";
+import { IParticipationPool } from "./interfaces/IParticipationPool.sol";
+import { RoundLib } from "./libraries/RoundLib.sol";
+import { RewardMath } from "./libraries/RewardMath.sol";
 
 /// @title RoundRewardDistributor
 /// @notice Pull-based reward claiming for settled rounds.
 /// @dev NOT pausable — users must always be able to withdraw their funds.
 ///      Rewards are distributed proportional to epoch-weighted effective stake.
-///      Epoch-1 (blind) voters earn 4× more per cREP than epoch-2+ voters.
+///      Epoch-1 (blind) voters earn 4× more per HREP than epoch-2+ voters.
 contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
 
@@ -35,7 +35,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     error NotWinningSide();
     error NoParticipationRate();
     error NoCommit();
-    error NoStrandedCrep();
+    error NoStrandedHrep();
     error TreasuryNotSet();
     error InvalidParticipationSnapshot();
     error UnauthorizedCaller();
@@ -59,7 +59,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     uint256 public constant STALE_REWARD_FINALIZATION_DELAY = 30 days;
 
     // --- State ---
-    IERC20 public crepToken;
+    IERC20 public hrepToken;
     RoundVotingEngine public votingEngine;
     ContentRegistry public registry;
 
@@ -142,43 +142,43 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         uint256 rewardRateBps,
         uint256 totalReward
     );
-    event StrandedCrepSwept(address indexed treasury, uint256 amount);
+    event StrandedHrepSwept(address indexed treasury, uint256 amount);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
 
-    function initialize(address _governance, address _crepToken, address _votingEngine, address _registry)
+    function initialize(address _governance, address _hrepToken, address _votingEngine, address _registry)
         public
         initializer
     {
         __AccessControl_init();
 
         require(_governance != address(0), "Invalid governance");
-        require(_crepToken != address(0), "Invalid cREP token");
+        require(_hrepToken != address(0), "Invalid HREP token");
         require(_votingEngine != address(0), "Invalid voting engine");
         require(_registry != address(0), "Invalid registry");
 
         _grantRole(DEFAULT_ADMIN_ROLE, _governance);
 
-        crepToken = IERC20(_crepToken);
+        hrepToken = IERC20(_hrepToken);
         votingEngine = RoundVotingEngine(_votingEngine);
         registry = ContentRegistry(_registry);
     }
 
-    /// @notice Sweep any cREP accidentally held by the distributor to the protocol treasury.
+    /// @notice Sweep any HREP accidentally held by the distributor to the protocol treasury.
     /// @dev Historical cancellation fees were mistakenly routed here in some deployments. This contract does not
     ///      custody live reward inventory, so governance can safely recover the full balance to treasury.
-    function sweepStrandedCrepToTreasury() external onlyRole(DEFAULT_ADMIN_ROLE) nonReentrant returns (uint256 amount) {
+    function sweepStrandedHrepToTreasury() external onlyRole(DEFAULT_ADMIN_ROLE) nonReentrant returns (uint256 amount) {
         address treasury = _protocolTreasury();
         if (treasury == address(0)) revert TreasuryNotSet();
 
-        amount = crepToken.balanceOf(address(this));
-        if (amount == 0) revert NoStrandedCrep();
+        amount = hrepToken.balanceOf(address(this));
+        if (amount == 0) revert NoStrandedHrep();
 
-        crepToken.safeTransfer(treasury, amount);
-        emit StrandedCrepSwept(treasury, amount);
+        hrepToken.safeTransfer(treasury, amount);
+        emit StrandedHrepSwept(treasury, amount);
     }
 
     // --- Voter Reward Claiming ---
@@ -332,8 +332,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
             expectedTotal += RewardMath.calculateVoterReward(effectiveStake, weightedWinningStake, voterPool);
         }
 
-        releasedDust =
-            _finalizableDust(voterPool, expectedTotal, roundVoterRewardClaimedAmount[contentId][roundId]);
+        releasedDust = _finalizableDust(voterPool, expectedTotal, roundVoterRewardClaimedAmount[contentId][roundId]);
         if (releasedDust == 0) revert NoRewardDust();
 
         roundVoterRewardDustFinalized[contentId][roundId] = true;
@@ -693,7 +692,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         }
 
         votingEngine.transferReward(address(this), fee);
-        crepToken.forceApprove(address(votingEngine), fee);
+        hrepToken.forceApprove(address(votingEngine), fee);
         votingEngine.addToConsensusReserve(fee);
     }
 

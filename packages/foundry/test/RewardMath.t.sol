@@ -55,9 +55,7 @@ contract RewardMathTest is Test {
             harness.splitPool(losingPool);
 
         assertEq(
-            voterShare + platformShare + treasuryShare + consensusShare,
-            losingPool,
-            "Pool split must conserve total"
+            voterShare + platformShare + treasuryShare + consensusShare, losingPool, "Pool split must conserve total"
         );
     }
 
@@ -100,9 +98,7 @@ contract RewardMathTest is Test {
         assertEq(treasuryShare, (losingPool * 100) / 10000, "Treasury share must be 1%");
         assertEq(consensusShare, (losingPool * 500) / 10000, "Consensus share must be 5%");
         assertEq(
-            voterShare,
-            losingPool - platformShare - treasuryShare - consensusShare,
-            "Voter share must be remainder"
+            voterShare, losingPool - platformShare - treasuryShare - consensusShare, "Voter share must be remainder"
         );
     }
 
@@ -244,13 +240,13 @@ contract RewardMathTest is Test {
     // ====================================================
 
     function test_ConsensusSubsidy_Normal() public view {
-        // 50 cREP total stake, 1M reserve → subsidy = 50 * 5% = 2.5 cREP
+        // 50 HREP total stake, 1M reserve → subsidy = 50 * 5% = 2.5 HREP
         uint256 subsidy = harness.calculateConsensusSubsidy(50e6, 1_000_000e6);
-        assertEq(subsidy, 2_500_000, "5% of 50 cREP = 2.5 cREP");
+        assertEq(subsidy, 2_500_000, "5% of 50 HREP = 2.5 HREP");
     }
 
     function test_ConsensusSubsidy_CappedByReserve() public view {
-        // 1000 cREP total stake, 10 cREP reserve → subsidy capped at 10 cREP
+        // 1000 HREP total stake, 10 HREP reserve → subsidy capped at 10 HREP
         uint256 subsidy = harness.calculateConsensusSubsidy(1000e6, 10e6);
         assertEq(subsidy, 10e6, "Should be capped by reserve balance");
     }
@@ -266,9 +262,9 @@ contract RewardMathTest is Test {
     }
 
     function test_ConsensusSubsidy_CappedByMaxSubsidy() public view {
-        // 2000 cREP total stake, 5% = 100 cREP desired, but cap is 50 cREP
+        // 2000 HREP total stake, 5% = 100 HREP desired, but cap is 50 HREP
         uint256 subsidy = harness.calculateConsensusSubsidy(2000e6, 1_000_000e6);
-        assertEq(subsidy, 50e6, "Subsidy capped at 50 cREP (MAX_CONSENSUS_SUBSIDY)");
+        assertEq(subsidy, 50e6, "Subsidy capped at 50 HREP (MAX_CONSENSUS_SUBSIDY)");
     }
 
     // ====================================================

@@ -45,7 +45,7 @@ export const governorAbi = parseAbi([
 
 const timelockAbi = parseAbi(["function getMinDelay() view returns (uint256)"]);
 
-type GovernanceManagedContractName = "CuryoGovernor" | "CuryoReputation" | "FrontendRegistry" | "ContentRegistry";
+type GovernanceManagedContractName = "CuryoGovernor" | "HumanReputation" | "FrontendRegistry" | "ContentRegistry";
 
 type GovernanceTargetContract = {
   name: GovernanceManagedContractName;
@@ -124,7 +124,7 @@ export function getProposalDescriptionHash(description: string): Hex {
 export function useGovernanceContracts() {
   const { targetNetwork } = useTargetNetwork();
   const publicClient = usePublicClient({ chainId: targetNetwork.id });
-  const token = useDeployedContractInfo({ contractName: "CuryoReputation" });
+  const token = useDeployedContractInfo({ contractName: "HumanReputation" });
   const frontendRegistry = useDeployedContractInfo({ contractName: "FrontendRegistry" });
   const contentRegistry = useDeployedContractInfo({ contractName: "ContentRegistry" });
 
@@ -135,7 +135,7 @@ export function useGovernanceContracts() {
     isFetched: governorReadFetched,
     isError: governorReadError,
   } = useScaffoldReadContract({
-    contractName: "CuryoReputation",
+    contractName: "HumanReputation",
     functionName: "governor" as any,
   });
 
@@ -186,7 +186,7 @@ export function useGovernanceContracts() {
     }
     if (token.data) {
       items.push({
-        name: "CuryoReputation",
+        name: "HumanReputation",
         address: token.data.address,
         abi: token.data.abi as Abi,
       });

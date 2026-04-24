@@ -36,7 +36,7 @@ function PoolStat({ title, description, tooltip, value, isLoading, Icon }: PoolS
       {isLoading ? (
         <div className="h-8 w-32 bg-base-content/10 rounded animate-pulse mt-4" />
       ) : (
-        <p className="text-2xl font-bold tabular-nums mt-4">{formatBalance(value)} cREP</p>
+        <p className="text-2xl font-bold tabular-nums mt-4">{formatBalance(value)} HREP</p>
       )}
     </div>
   );
@@ -49,9 +49,9 @@ export const TreasuryBalance = () => {
     functionName: "treasury",
   });
 
-  // Read cREP balance of treasury
+  // Read HREP balance of treasury
   const { data: treasuryBalanceRaw, isLoading: balanceLoading } = useScaffoldReadContract({
-    contractName: "CuryoReputation",
+    contractName: "HumanReputation",
     functionName: "balanceOf",
     args: [treasuryAddress],
     query: {
@@ -81,7 +81,7 @@ export const TreasuryBalance = () => {
       <div className="flex items-center gap-2">
         <h2 className={surfaceSectionHeadingClassName}>Protocol Pools</h2>
         <InfoTooltip
-          text="Live cREP balances across the treasury and protocol-controlled pools."
+          text="Live HREP balances across the treasury and protocol-controlled pools."
           className="[&>svg]:opacity-60"
         />
       </div>

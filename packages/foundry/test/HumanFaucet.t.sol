@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 import { Test, console } from "forge-std/Test.sol";
 import { HumanFaucet } from "../contracts/HumanFaucet.sol";
 import { MockIdentityVerificationHub } from "../contracts/mocks/MockIdentityVerificationHub.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { HumanReputation } from "../contracts/HumanReputation.sol";
 import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
 import { SelfVerificationRoot } from "@selfxyz/contracts/contracts/abstract/SelfVerificationRoot.sol";
 import { ISelfVerificationRoot } from "@selfxyz/contracts/contracts/interfaces/ISelfVerificationRoot.sol";
@@ -19,18 +19,18 @@ contract HumanFaucetTest is Test {
 
     HumanFaucet public faucet;
     MockIdentityVerificationHub public mockHub;
-    CuryoReputation public crepToken;
+    HumanReputation public hrepToken;
 
     address public admin = address(1);
     address public user1 = address(2);
     address public user2 = address(3);
 
     // Tier amounts
-    uint256 public constant TIER_0_AMOUNT = 10_000e6; // 10,000 cREP (Genesis)
-    uint256 public constant TIER_1_AMOUNT = 1_000e6; // 1,000 cREP (Early Adopter)
-    uint256 public constant TIER_2_AMOUNT = 100e6; // 100 cREP (Pioneer)
-    uint256 public constant TIER_3_AMOUNT = 10e6; // 10 cREP (Explorer)
-    uint256 public constant TIER_4_AMOUNT = 1e6; // 1 cREP (Settler)
+    uint256 public constant TIER_0_AMOUNT = 10_000e6; // 10,000 HREP (Genesis)
+    uint256 public constant TIER_1_AMOUNT = 1_000e6; // 1,000 HREP (Early Adopter)
+    uint256 public constant TIER_2_AMOUNT = 100e6; // 100 HREP (Pioneer)
+    uint256 public constant TIER_3_AMOUNT = 10e6; // 10 HREP (Explorer)
+    uint256 public constant TIER_4_AMOUNT = 1e6; // 1 HREP (Settler)
 
     // Tier thresholds
     uint256 public constant TIER_0_THRESHOLD = 10;
@@ -38,27 +38,27 @@ contract HumanFaucetTest is Test {
     uint256 public constant TIER_2_THRESHOLD = 10_000;
     uint256 public constant TIER_3_THRESHOLD = 1_000_000;
 
-    // Tier 0 referral amounts (50% of 10,000 cREP)
+    // Tier 0 referral amounts (50% of 10,000 HREP)
     uint256 public constant TIER_0_REFERRAL_BONUS = 5_000e6;
     uint256 public constant TIER_0_REFERRER_REWARD = 5_000e6;
 
     function setUp() public {
         vm.startPrank(admin);
 
-        // Deploy cREP token
-        crepToken = new CuryoReputation(admin, admin);
+        // Deploy HREP token
+        hrepToken = new HumanReputation(admin, admin);
 
         // Deploy mock identity verification hub
         mockHub = new MockIdentityVerificationHub();
 
         // Deploy HumanFaucet
-        faucet = new HumanFaucet(address(crepToken), address(mockHub), admin);
+        faucet = new HumanFaucet(address(hrepToken), address(mockHub), admin);
 
         // Pre-mint tokens to faucet (52M for production, using same for tests)
-        uint256 faucetBalance = 52_000_000 * 1e6; // 52M cREP
-        crepToken.grantRole(crepToken.MINTER_ROLE(), admin);
-        crepToken.mint(address(faucet), faucetBalance);
-        crepToken.revokeRole(crepToken.MINTER_ROLE(), admin);
+        uint256 faucetBalance = 52_000_000 * 1e6; // 52M HREP
+        hrepToken.grantRole(hrepToken.MINTER_ROLE(), admin);
+        hrepToken.mint(address(faucet), faucetBalance);
+        hrepToken.revokeRole(hrepToken.MINTER_ROLE(), admin);
 
         // Set the mock config ID
         bytes32 mockConfigId = mockHub.MOCK_CONFIG_ID();
@@ -70,7 +70,7 @@ contract HumanFaucetTest is Test {
     // --- Initialization Tests ---
 
     function test_Initialization() public view {
-        assertEq(address(faucet.crepToken()), address(crepToken));
+        assertEq(address(faucet.hrepToken()), address(hrepToken));
         assertEq(faucet.TIER_0_AMOUNT(), TIER_0_AMOUNT);
         assertEq(faucet.totalClaimed(), 0);
         assertEq(faucet.totalClaimants(), 0);
@@ -88,14 +88,14 @@ contract HumanFaucetTest is Test {
     function test_Claim_Success() public {
         mockHub.setVerified(user1);
 
-        assertEq(crepToken.balanceOf(user1), 0);
+        assertEq(hrepToken.balanceOf(user1), 0);
         assertFalse(faucet.hasClaimed(user1));
         assertEq(faucet.totalClaimants(), 0);
 
         mockHub.simulateVerification(address(faucet), user1);
 
-        // Tier 0 (Genesis): 10,000 cREP
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        // Tier 0 (Genesis): 10,000 HREP
+        assertEq(hrepToken.balanceOf(user1), TIER_0_AMOUNT);
         assertTrue(faucet.hasClaimed(user1));
         assertEq(faucet.totalClaimants(), 1);
         assertEq(faucet.totalClaimed(), TIER_0_AMOUNT);
@@ -108,7 +108,7 @@ contract HumanFaucetTest is Test {
         vm.prank(user1);
         faucet.verifySelfProof(_buildProofPayload(PASSPORT_ATTESTATION_ID, userContextData), userContextData);
 
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertEq(hrepToken.balanceOf(user1), TIER_0_AMOUNT);
         assertTrue(faucet.hasClaimed(user1));
     }
 
@@ -126,7 +126,7 @@ contract HumanFaucetTest is Test {
         faucet.verifySelfProof(_buildProofPayload(PASSPORT_ATTESTATION_ID, userContextData), userContextData);
 
         assertEq(faucet.referredBy(user2), user1);
-        assertEq(crepToken.balanceOf(user2), TIER_0_AMOUNT + TIER_0_REFERRAL_BONUS);
+        assertEq(hrepToken.balanceOf(user2), TIER_0_AMOUNT + TIER_0_REFERRAL_BONUS);
         assertEq(faucet.referralEarnings(user1), TIER_0_REFERRER_REWARD);
     }
 
@@ -182,11 +182,11 @@ contract HumanFaucetTest is Test {
         mockHub.setVerified(user2);
 
         mockHub.simulateVerification(address(faucet), user1);
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertEq(hrepToken.balanceOf(user1), TIER_0_AMOUNT);
         assertEq(faucet.totalClaimants(), 1);
 
         mockHub.simulateVerification(address(faucet), user2);
-        assertEq(crepToken.balanceOf(user2), TIER_0_AMOUNT);
+        assertEq(hrepToken.balanceOf(user2), TIER_0_AMOUNT);
         assertEq(faucet.totalClaimants(), 2);
         assertEq(faucet.totalClaimed(), TIER_0_AMOUNT * 2);
     }
@@ -194,7 +194,7 @@ contract HumanFaucetTest is Test {
     // --- Tier Tests ---
 
     function test_TierTransitions() public {
-        // Tier 0 (Genesis): first 10 claims at 10,000 cREP
+        // Tier 0 (Genesis): first 10 claims at 10,000 HREP
         assertEq(faucet.getCurrentTier(), 0);
         assertEq(faucet.getCurrentClaimAmount(), TIER_0_AMOUNT);
 
@@ -217,7 +217,7 @@ contract HumanFaucetTest is Test {
         address boundaryUser = address(uint160(50000));
         mockHub.setVerified(boundaryUser);
         mockHub.simulateVerification(address(faucet), boundaryUser);
-        assertEq(crepToken.balanceOf(boundaryUser), TIER_0_AMOUNT);
+        assertEq(hrepToken.balanceOf(boundaryUser), TIER_0_AMOUNT);
 
         // Now totalClaimants == 10, tier transitions to 1
         assertEq(faucet.getCurrentTier(), 1);
@@ -226,7 +226,7 @@ contract HumanFaucetTest is Test {
         address nextUser = address(uint160(50001));
         mockHub.setVerified(nextUser);
         mockHub.simulateVerification(address(faucet), nextUser);
-        assertEq(crepToken.balanceOf(nextUser), TIER_1_AMOUNT);
+        assertEq(hrepToken.balanceOf(nextUser), TIER_1_AMOUNT);
     }
 
     function test_GetCurrentTier_AllTiers() public {
@@ -307,7 +307,7 @@ contract HumanFaucetTest is Test {
         // Advance to tier 4 (Settler)
         _setTotalClaimants(TIER_3_THRESHOLD);
         (uint256 bonus4, uint256 reward4) = faucet.getCurrentReferralAmounts();
-        assertEq(bonus4, 500000); // 50% of 1 = 0.5 cREP = 500000
+        assertEq(bonus4, 500000); // 50% of 1 = 0.5 HREP = 500000
         assertEq(reward4, 500000);
     }
 
@@ -346,7 +346,7 @@ contract HumanFaucetTest is Test {
         mockHub.setVerifiedWithNullifier(user1, nullifier);
 
         mockHub.simulateVerification(address(faucet), user1);
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertEq(hrepToken.balanceOf(user1), TIER_0_AMOUNT);
 
         ISelfVerificationRoot.GenericDiscloseOutputV2 memory output;
         output.attestationId = PASSPORT_ATTESTATION_ID;
@@ -497,7 +497,7 @@ contract HumanFaucetTest is Test {
 
         mockHub.simulateVerificationWithOutput(address(faucet), output);
 
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertEq(hrepToken.balanceOf(user1), TIER_0_AMOUNT);
         assertTrue(faucet.hasClaimed(user1));
     }
 
@@ -552,12 +552,12 @@ contract HumanFaucetTest is Test {
     function test_FullClaimFlow() public {
         mockHub.setVerified(user1);
 
-        assertEq(crepToken.balanceOf(user1), 0);
+        assertEq(hrepToken.balanceOf(user1), 0);
         assertFalse(faucet.hasClaimed(user1));
 
         mockHub.simulateVerification(address(faucet), user1);
 
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertEq(hrepToken.balanceOf(user1), TIER_0_AMOUNT);
         assertTrue(faucet.hasClaimed(user1));
         assertEq(faucet.totalClaimants(), 1);
         assertEq(faucet.totalClaimed(), TIER_0_AMOUNT);
@@ -565,7 +565,7 @@ contract HumanFaucetTest is Test {
         vm.expectRevert(HumanFaucet.NullifierAlreadyUsed.selector);
         mockHub.simulateVerification(address(faucet), user1);
 
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertEq(hrepToken.balanceOf(user1), TIER_0_AMOUNT);
     }
 
     // --- Age Disclosure Handling Tests ---
@@ -576,7 +576,7 @@ contract HumanFaucetTest is Test {
         vm.expectRevert(HumanFaucet.MinimumAgeNotMet.selector);
         mockHub.simulateVerificationWithAge(address(faucet), user1, 0);
 
-        assertEq(crepToken.balanceOf(user1), 0);
+        assertEq(hrepToken.balanceOf(user1), 0);
         assertFalse(faucet.hasClaimed(user1));
     }
 
@@ -586,7 +586,7 @@ contract HumanFaucetTest is Test {
         vm.expectRevert(HumanFaucet.MinimumAgeNotMet.selector);
         mockHub.simulateVerificationWithAge(address(faucet), user1, 17);
 
-        assertEq(crepToken.balanceOf(user1), 0);
+        assertEq(hrepToken.balanceOf(user1), 0);
         assertFalse(faucet.hasClaimed(user1));
     }
 
@@ -601,7 +601,7 @@ contract HumanFaucetTest is Test {
         vm.expectRevert(HumanFaucet.MinimumAgeNotMet.selector);
         mockHub.simulateVerificationWithOutput(address(faucet), output);
 
-        assertEq(crepToken.balanceOf(user1), 0);
+        assertEq(hrepToken.balanceOf(user1), 0);
         assertFalse(faucet.hasClaimed(user1));
     }
 
@@ -610,7 +610,7 @@ contract HumanFaucetTest is Test {
 
         mockHub.simulateVerificationWithAge(address(faucet), user1, MINIMUM_FAUCET_AGE);
 
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertEq(hrepToken.balanceOf(user1), TIER_0_AMOUNT);
         assertTrue(faucet.hasClaimed(user1));
     }
 
@@ -619,7 +619,7 @@ contract HumanFaucetTest is Test {
 
         mockHub.simulateVerificationWithAge(address(faucet), user1, 21);
 
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertEq(hrepToken.balanceOf(user1), TIER_0_AMOUNT);
         assertTrue(faucet.hasClaimed(user1));
     }
 
@@ -633,7 +633,7 @@ contract HumanFaucetTest is Test {
 
         mockHub.simulateVerificationWithOutput(address(faucet), output);
 
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertEq(hrepToken.balanceOf(user1), TIER_0_AMOUNT);
         assertTrue(faucet.hasClaimed(user1));
     }
 
@@ -647,7 +647,7 @@ contract HumanFaucetTest is Test {
 
         mockHub.simulateVerificationWithOutput(address(faucet), output);
 
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertEq(hrepToken.balanceOf(user1), TIER_0_AMOUNT);
         assertTrue(faucet.hasClaimed(user1));
     }
 
@@ -693,17 +693,17 @@ contract HumanFaucetTest is Test {
         mockHub.simulateVerification(address(faucet), user1);
 
         assertTrue(faucet.isValidReferrer(user1));
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertEq(hrepToken.balanceOf(user1), TIER_0_AMOUNT);
 
         mockHub.setVerified(user2);
         bytes memory userData = abi.encodePacked(user1);
         mockHub.simulateVerificationWithUserData(address(faucet), user2, userData);
 
-        // User2 gets 10,000 + 5,000 = 15,000 cREP
-        assertEq(crepToken.balanceOf(user2), TIER_0_AMOUNT + TIER_0_REFERRAL_BONUS);
+        // User2 gets 10,000 + 5,000 = 15,000 HREP
+        assertEq(hrepToken.balanceOf(user2), TIER_0_AMOUNT + TIER_0_REFERRAL_BONUS);
 
-        // User1 gets 10,000 + 5,000 = 15,000 cREP
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT + TIER_0_REFERRER_REWARD);
+        // User1 gets 10,000 + 5,000 = 15,000 HREP
+        assertEq(hrepToken.balanceOf(user1), TIER_0_AMOUNT + TIER_0_REFERRER_REWARD);
 
         assertEq(faucet.referralCount(user1), 1);
         assertEq(faucet.referredBy(user2), user1);
@@ -715,7 +715,7 @@ contract HumanFaucetTest is Test {
 
         mockHub.simulateVerificationWithUserData(address(faucet), user1, userData);
 
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertEq(hrepToken.balanceOf(user1), TIER_0_AMOUNT);
         assertEq(faucet.referredBy(user1), address(0));
         assertEq(faucet.referralCount(user2), 0);
     }
@@ -731,7 +731,7 @@ contract HumanFaucetTest is Test {
         mockHub.simulateVerificationWithUserData(address(faucet), user3, userData);
 
         // Self-referral rejected — only base amount
-        assertEq(crepToken.balanceOf(user3), TIER_0_AMOUNT);
+        assertEq(hrepToken.balanceOf(user3), TIER_0_AMOUNT);
         assertEq(faucet.referredBy(user3), address(0));
     }
 
@@ -739,7 +739,7 @@ contract HumanFaucetTest is Test {
         mockHub.setVerified(user1);
         mockHub.simulateVerificationWithUserData(address(faucet), user1, "");
 
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertEq(hrepToken.balanceOf(user1), TIER_0_AMOUNT);
         assertEq(faucet.referredBy(user1), address(0));
     }
 
@@ -748,7 +748,7 @@ contract HumanFaucetTest is Test {
         bytes memory shortData = hex"1234567890";
         mockHub.simulateVerificationWithUserData(address(faucet), user1, shortData);
 
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertEq(hrepToken.balanceOf(user1), TIER_0_AMOUNT);
         assertEq(faucet.referredBy(user1), address(0));
     }
 
@@ -784,11 +784,11 @@ contract HumanFaucetTest is Test {
 
         (uint256 count, uint256 totalEarned) = faucet.getReferralStats(user1);
         assertEq(count, 5);
-        // 5 referrals × 5,000 cREP each = 25,000 cREP
+        // 5 referrals × 5,000 HREP each = 25,000 HREP
         assertEq(totalEarned, TIER_0_REFERRER_REWARD * 5);
 
-        // User1 balance: 10,000 (claim) + 25,000 (referral rewards) = 35,000 cREP
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT + TIER_0_REFERRER_REWARD * 5);
+        // User1 balance: 10,000 (claim) + 25,000 (referral rewards) = 35,000 HREP
+        assertEq(hrepToken.balanceOf(user1), TIER_0_AMOUNT + TIER_0_REFERRER_REWARD * 5);
     }
 
     function test_ReferralAmounts_Tier0() public view {
@@ -816,7 +816,7 @@ contract HumanFaucetTest is Test {
         bytes memory userData = abi.encodePacked(user1);
         mockHub.simulateVerificationWithUserData(address(faucet), user2, userData);
 
-        // Total referral rewards = bonus (5,000) + reward (5,000) = 10,000 cREP
+        // Total referral rewards = bonus (5,000) + reward (5,000) = 10,000 HREP
         assertEq(faucet.totalReferralRewards(), TIER_0_REFERRAL_BONUS + TIER_0_REFERRER_REWARD);
     }
 
@@ -842,12 +842,12 @@ contract HumanFaucetTest is Test {
         vm.prank(admin);
         faucet.withdrawRemaining(admin, 1_000_000e6);
 
-        assertEq(crepToken.balanceOf(admin), 1_000_000e6);
-        assertEq(crepToken.balanceOf(address(faucet)), 51_000_000e6);
+        assertEq(hrepToken.balanceOf(admin), 1_000_000e6);
+        assertEq(hrepToken.balanceOf(address(faucet)), 51_000_000e6);
     }
 
     function test_WithdrawRemainingFullBalance() public {
-        uint256 faucetBalance = crepToken.balanceOf(address(faucet));
+        uint256 faucetBalance = hrepToken.balanceOf(address(faucet));
 
         vm.prank(admin);
         faucet.pause();
@@ -855,8 +855,8 @@ contract HumanFaucetTest is Test {
         vm.prank(admin);
         faucet.withdrawRemaining(admin, type(uint256).max);
 
-        assertEq(crepToken.balanceOf(admin), faucetBalance);
-        assertEq(crepToken.balanceOf(address(faucet)), 0);
+        assertEq(hrepToken.balanceOf(admin), faucetBalance);
+        assertEq(hrepToken.balanceOf(address(faucet)), 0);
     }
 
     function test_WithdrawRemainingRequiresPause() public {
@@ -894,7 +894,7 @@ contract HumanFaucetTest is Test {
         vm.expectRevert(Pausable.EnforcedPause.selector);
         mockHub.simulateVerification(address(faucet), user1);
 
-        assertEq(crepToken.balanceOf(user1), 0);
+        assertEq(hrepToken.balanceOf(user1), 0);
     }
 
     function test_Unpause_AllowsClaims() public {
@@ -906,17 +906,17 @@ contract HumanFaucetTest is Test {
 
         mockHub.setVerified(user1);
         mockHub.simulateVerification(address(faucet), user1);
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertEq(hrepToken.balanceOf(user1), TIER_0_AMOUNT);
     }
 
     function test_Pause_AllowsWithdrawRemaining() public {
         vm.prank(admin);
         faucet.pause();
 
-        uint256 faucetBalance = crepToken.balanceOf(address(faucet));
+        uint256 faucetBalance = hrepToken.balanceOf(address(faucet));
         vm.prank(admin);
         faucet.withdrawRemaining(admin, faucetBalance);
-        assertEq(crepToken.balanceOf(address(faucet)), 0);
+        assertEq(hrepToken.balanceOf(address(faucet)), 0);
     }
 
     function test_Pause_OnlyOwner() public {

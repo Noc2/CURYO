@@ -13,7 +13,7 @@ const PADDING_Y = 12;
 const LABEL_AREA = 48; // right side reserved for y-axis labels
 
 /**
- * SVG chart showing the connected user's cREP balance over time,
+ * SVG chart showing the connected user's HREP balance over time,
  * reconstructed from Transfer events indexed by Ponder.
  */
 export function BalanceHistory({ address: addressProp }: { address?: `0x${string}` }) {
@@ -23,7 +23,7 @@ export function BalanceHistory({ address: addressProp }: { address?: `0x${string
   const [isLoading, setIsLoading] = useState(false);
   const [fetchError, setFetchError] = useState(false);
   const { data: currentBalanceRaw } = useScaffoldReadContract({
-    contractName: "CuryoReputation",
+    contractName: "HumanReputation",
     functionName: "balanceOf",
     args: [address],
     query: { enabled: !!address },
@@ -98,8 +98,8 @@ export function BalanceHistory({ address: addressProp }: { address?: `0x${string
   return (
     <div className="surface-card rounded-2xl p-6 w-full">
       <div className="mb-4 flex items-start justify-between gap-3">
-        <h2 className={surfaceSectionHeadingClassName}>cREP balance</h2>
-        <span className="text-base tabular-nums text-base-content/60">{currentFormatted} cREP</span>
+        <h2 className={surfaceSectionHeadingClassName}>HREP balance</h2>
+        <span className="text-base tabular-nums text-base-content/60">{currentFormatted} HREP</span>
       </div>
       {isLoading ? (
         <div className="h-[160px] flex items-center justify-center">
@@ -276,7 +276,7 @@ function BalanceChart({ data }: { data: ChartPoint[] }) {
           }}
         >
           <div className="font-medium">
-            {points[hoveredIndex].balance.toLocaleString(undefined, { maximumFractionDigits: 0 })} cREP
+            {points[hoveredIndex].balance.toLocaleString(undefined, { maximumFractionDigits: 0 })} HREP
           </div>
           <div className="text-base-content/50 text-xs">{formatDate(points[hoveredIndex].timestamp)}</div>
         </div>

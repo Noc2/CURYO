@@ -9,7 +9,7 @@ import { useSubmissionStakes } from "~~/hooks/useSubmissionStakes";
 import { useVotingStakes } from "~~/hooks/useVotingStakes";
 
 /**
- * Shows a breakdown of the connected user's actively staked cREP.
+ * Shows a breakdown of the connected user's actively staked HREP.
  * Uses the same hooks as the navbar for consistent data.
  */
 export function StakeBreakdown({
@@ -51,8 +51,8 @@ export function StakeBreakdown({
   return (
     <div className="surface-card rounded-2xl p-6 space-y-1.5">
       <div className="flex items-start justify-between gap-3">
-        <h2 className={surfaceSectionHeadingClassName}>Staked cREP</h2>
-        <span className="text-base tabular-nums text-base-content/60">{format(totalStaked)} cREP</span>
+        <h2 className={surfaceSectionHeadingClassName}>Staked HREP</h2>
+        <span className="text-base tabular-nums text-base-content/60">{format(totalStaked)} HREP</span>
       </div>
       {entries.length > 0 ? (
         <div className="flex flex-wrap gap-2">

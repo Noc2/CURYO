@@ -100,7 +100,7 @@ function renderMetrics(): string {
     keeper_last_successful_run_timestamp: "Unix timestamp of last successful run",
     keeper_is_running: "Whether a keeper run is currently in progress",
     keeper_wallet_balance_wei: "Keeper wallet native balance in wei",
-    keeper_consensus_reserve_wei: "RoundVotingEngine consensus reserve balance in cREP base units",
+    keeper_consensus_reserve_wei: "RoundVotingEngine consensus reserve balance in HREP base units",
   };
 
   for (const [name, value] of Object.entries(gauges)) {

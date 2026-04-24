@@ -2,7 +2,7 @@ import "server-only";
 import { isAddress } from "viem";
 import type { ReputationAvatarPayload } from "~~/lib/avatar/avatarPayload";
 import { getOptionalPonderUrl } from "~~/lib/env/server";
-import { readCRepBalances, readProfileRegistryAvatarAccent } from "~~/lib/profileRegistry/server";
+import { readHrepBalances, readProfileRegistryAvatarAccent } from "~~/lib/profileRegistry/server";
 
 type ReputationAvatarApiResponse = Omit<ReputationAvatarPayload, "balance" | "avatarAccentHex"> & {
   avatarAccentHex?: string | null;
@@ -55,7 +55,7 @@ export async function getReputationAvatarPayload(
           })
           .catch(() => null)
       : Promise.resolve<ReputationAvatarApiResponse | null>(null),
-    readCRepBalances([normalizedAddress], { chainId: options.chainId }).catch(
+    readHrepBalances([normalizedAddress], { chainId: options.chainId }).catch(
       () => ({ [normalizedAddress]: 0n }) as Record<string, bigint>,
     ),
     readProfileRegistryAvatarAccent(normalizedAddress, { chainId: options.chainId }).catch(() => ({

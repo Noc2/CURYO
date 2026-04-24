@@ -17,7 +17,7 @@ export const EXECUTIVE_SUMMARY: ContentBlock[] = [
   },
   {
     type: "paragraph",
-    text: "The protocol turns judgment into an explicit market. Every ask is question-first, requires a context URL, can include optional preview media, and carries a non-refundable bounty funded in cREP or USDC on Celo. Verified humans vote by staking cREP on whether the currently displayed rating should move up or down, optional hidden feedback unlocks after settlement, and eligible revealed voters claim bounty payouts while an eligible frontend operator reserve keeps distribution open to third-party surfaces.",
+    text: "The protocol turns judgment into an explicit market. Every ask is question-first, requires a context URL, can include optional preview media, and carries a non-refundable bounty funded in HREP or USDC on Celo. Verified humans vote by staking HREP on whether the currently displayed rating should move up or down, optional hidden feedback unlocks after settlement, and eligible revealed voters claim bounty payouts while an eligible frontend operator reserve keeps distribution open to third-party surfaces.",
   },
   {
     type: "paragraph",

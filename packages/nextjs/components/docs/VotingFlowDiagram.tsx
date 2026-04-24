@@ -11,7 +11,7 @@ import { protocolDocFacts } from "~~/lib/docs/protocolFacts";
 const STEPS = [
   {
     label: "Vote",
-    duration: "1–100 cREP",
+    duration: "1–100 HREP",
     description: "Choose up or down, stake is locked, direction is encrypted",
     Icon: LockClosedIcon,
   },

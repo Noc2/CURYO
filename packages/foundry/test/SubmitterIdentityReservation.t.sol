@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { Test } from "forge-std/Test.sol";
 
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { HumanReputation } from "../contracts/HumanReputation.sol";
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
 import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
@@ -12,7 +12,7 @@ import { ContentSubmissionTestBase } from "./helpers/VotingTestHelpers.sol";
 
 contract SubmitterIdentityReservationTest is Test, ContentSubmissionTestBase {
     ContentRegistry public registry;
-    CuryoReputation public crepToken;
+    HumanReputation public hrepToken;
     MockCategoryRegistry public mockCategoryRegistry;
     MockVoterIdNFT public mockVoterIdNFT;
 
@@ -25,15 +25,15 @@ contract SubmitterIdentityReservationTest is Test, ContentSubmissionTestBase {
 
         vm.startPrank(owner);
 
-        crepToken = new CuryoReputation(owner, owner);
-        crepToken.grantRole(crepToken.MINTER_ROLE(), owner);
+        hrepToken = new HumanReputation(owner, owner);
+        hrepToken.grantRole(hrepToken.MINTER_ROLE(), owner);
 
         ContentRegistry registryImpl = new ContentRegistry();
         registry = ContentRegistry(
             address(
                 new ERC1967Proxy(
                     address(registryImpl),
-                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(crepToken)))
+                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(hrepToken)))
                 )
             )
         );
@@ -45,8 +45,8 @@ contract SubmitterIdentityReservationTest is Test, ContentSubmissionTestBase {
         mockVoterIdNFT = new MockVoterIdNFT();
         registry.setVoterIdNFT(address(mockVoterIdNFT));
 
-        crepToken.mint(submitter, 100e6);
-        crepToken.mint(delegate, 100e6);
+        hrepToken.mint(submitter, 100e6);
+        hrepToken.mint(delegate, 100e6);
 
         vm.stopPrank();
     }
@@ -56,7 +56,7 @@ contract SubmitterIdentityReservationTest is Test, ContentSubmissionTestBase {
         mockVoterIdNFT.setHolder(submitter);
 
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         uint256 contentId = _submitContentWithReservation(
             registry, "https://example.com/unchanged-identity", "goal", "goal", "tags", 0
         );
@@ -82,7 +82,9 @@ contract SubmitterIdentityReservationTest is Test, ContentSubmissionTestBase {
         string[] memory imageUrls = _singleImageUrls(imageUrl);
 
         vm.startPrank(delegate);
-        _reserveQuestionMediaSubmission(registry, contextUrl, imageUrls, "", title, description, tags, 1, salt, delegate);
+        _reserveQuestionMediaSubmission(
+            registry, contextUrl, imageUrls, "", title, description, tags, 1, salt, delegate
+        );
         vm.stopPrank();
 
         vm.prank(submitter);

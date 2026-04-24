@@ -1,7 +1,7 @@
 export { CategoryRegistryAbi } from "./CategoryRegistryAbi";
 export { ContentRegistryAbi } from "./ContentRegistryAbi";
 export { CuryoGovernorAbi } from "./CuryoGovernorAbi";
-export { CuryoReputationAbi } from "./CuryoReputationAbi";
+export { HumanReputationAbi } from "./HumanReputationAbi";
 export { FeedbackBonusEscrowAbi } from "./FeedbackBonusEscrowAbi";
 export { FrontendRegistryAbi } from "./FrontendRegistryAbi";
 export { ProfileRegistryAbi } from "./ProfileRegistryAbi";

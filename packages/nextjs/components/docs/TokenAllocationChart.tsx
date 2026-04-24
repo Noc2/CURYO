@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CREP_INITIAL_MINTED_SUPPLY_COMPACT_LABEL, tokenAllocationChartSlices } from "~~/lib/docs/tokenomics";
+import { HREP_INITIAL_MINTED_SUPPLY_COMPACT_LABEL, tokenAllocationChartSlices } from "~~/lib/docs/tokenomics";
 
 const SIZE = 200;
 const CENTER = SIZE / 2;
@@ -71,7 +71,7 @@ export function TokenAllocationChart() {
           fontSize={11}
           fontWeight={500}
         >
-          {CREP_INITIAL_MINTED_SUPPLY_COMPACT_LABEL}
+          {HREP_INITIAL_MINTED_SUPPLY_COMPACT_LABEL}
         </text>
         <text
           x={CENTER}
@@ -81,7 +81,7 @@ export function TokenAllocationChart() {
           fillOpacity={0.3}
           fontSize={9}
         >
-          cREP
+          HREP
         </text>
       </svg>
       <div className="flex flex-col gap-2">

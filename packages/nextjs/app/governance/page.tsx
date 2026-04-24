@@ -111,17 +111,17 @@ function GovernancePageInner() {
     setReferrer(capturedAttribution?.referrer ?? getStoredReferralAddress());
   }, [searchParams]);
 
-  // Check cREP balance
-  const { data: crepBalance, isLoading: crepBalanceLoading } = useScaffoldReadContract({
-    contractName: "CuryoReputation",
+  // Check HREP balance
+  const { data: hrepBalance, isLoading: hrepBalanceLoading } = useScaffoldReadContract({
+    contractName: "HumanReputation",
     functionName: "balanceOf",
     args: [address],
     query: { enabled: !!address },
   });
   const { hasVoterId, isResolved: voterIdResolved } = useVoterIdNFT(address);
 
-  const hasResolvedBalance = !!address && !crepBalanceLoading && crepBalance !== undefined;
-  const hasZeroBalance = hasResolvedBalance && crepBalance === 0n;
+  const hasResolvedBalance = !!address && !hrepBalanceLoading && hrepBalance !== undefined;
+  const hasZeroBalance = hasResolvedBalance && hrepBalance === 0n;
   const addressKey = address?.toLowerCase() ?? null;
   const shouldWaitForEntryRouting = Boolean(address) && (!hashInitialized || !voterIdResolved);
   const faucetOnly = Boolean(address) && hashInitialized && voterIdResolved && !hasVoterId;
@@ -184,7 +184,7 @@ function GovernancePageInner() {
 
   // Show connect wallet prompt if not connected
   if (!isConnected) {
-    return <ConnectWalletCard title="cREP" message="Sign in to participate." />;
+    return <ConnectWalletCard title="HREP" message="Sign in to participate." />;
   }
 
   if (shouldWaitForEntryRouting) {

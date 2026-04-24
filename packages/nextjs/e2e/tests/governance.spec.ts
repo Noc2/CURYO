@@ -11,7 +11,7 @@ test.describe("Governance page", () => {
     // Wait for main content to render before checking tabs
     await expect(page.locator("main")).toBeVisible({ timeout: 15_000 });
 
-    // Account #2 has cREP, so should see all tabs (not just Faucet)
+    // Account #2 has HREP, so should see all tabs (not just Faucet)
     const profileTab = page.getByRole("button", { name: "Profile", exact: true });
     const leaderboardTab = page.getByRole("button", { name: "Leaderboard" });
     const governanceTab = page.getByRole("button", { name: "Governance" });

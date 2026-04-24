@@ -3,7 +3,7 @@ export const CuryoGovernorAbi = [
     "type": "constructor",
     "inputs": [
       {
-        "name": "_crepToken",
+        "name": "_hrepToken",
         "type": "address",
         "internalType": "contract IVotes"
       },
@@ -100,6 +100,19 @@ export const CuryoGovernorAbi = [
   {
     "type": "function",
     "name": "MINIMUM_QUORUM",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "PROPOSAL_COOLDOWN_BLOCKS",
     "inputs": [],
     "outputs": [
       {
@@ -324,7 +337,7 @@ export const CuryoGovernorAbi = [
   },
   {
     "type": "function",
-    "name": "crepToken",
+    "name": "hrepToken",
     "inputs": [],
     "outputs": [
       {
@@ -611,6 +624,25 @@ export const CuryoGovernorAbi = [
         "name": "",
         "type": "string",
         "internalType": "string"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "nextProposalBlock",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -1782,6 +1814,22 @@ export const CuryoGovernorAbi = [
     "type": "error",
     "name": "InvalidShortString",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ProposalCooldownActive",
+    "inputs": [
+      {
+        "name": "proposer",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "nextProposalBlock",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
   },
   {
     "type": "error",

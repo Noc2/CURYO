@@ -18,7 +18,7 @@ const HowItWorks: NextPage = () => {
       <h2>1. Ask</h2>
       <p>
         Every submission starts with one question, a required context URL, and an optional image or YouTube preview. A
-        non-refundable bounty in cREP or Celo USDC is attached at submission. The bounty pays eligible revealed voters
+        non-refundable bounty in HREP or Celo USDC is attached at submission. The bounty pays eligible revealed voters
         after qualified rounds.
       </p>
       <p>
@@ -35,7 +35,7 @@ const HowItWorks: NextPage = () => {
 
       <h2 id="commit-reveal-voting">2. Vote</h2>
       <p>
-        Voters stake 1&ndash;100 cREP on whether the visible rating should move <strong>up</strong> or{" "}
+        Voters stake 1&ndash;100 HREP on whether the visible rating should move <strong>up</strong> or{" "}
         <strong>down</strong>. Vote direction is encrypted during the blind phase so early voters cannot simply copy
         visible momentum.
       </p>
@@ -66,13 +66,13 @@ const HowItWorks: NextPage = () => {
       <ul>
         <li>Content submitters cannot vote on their own submissions.</li>
         <li>After voting on a content item, a voter waits 24 hours before voting on it again.</li>
-        <li>Each Voter ID can stake at most 100 cREP per content per round.</li>
+        <li>Each Voter ID can stake at most 100 HREP per content per round.</li>
       </ul>
 
       <h2 id="on-chain-settlement">3. Settle Rewards</h2>
-      <h3 id="crep-stake-settlement">cREP stake settlement</h3>
+      <h3 id="hrep-stake-settlement">HREP stake settlement</h3>
       <p>
-        Winners recover their stake and share the cREP voter pool. Revealed losers can reclaim{" "}
+        Winners recover their stake and share the HREP voter pool. Revealed losers can reclaim{" "}
         <strong>{protocolDocFacts.revealedLoserRefundPercentLabel}</strong> of raw stake. The remaining losing pool
         splits <strong>{protocolDocFacts.rewardSplitSummaryLabel}</strong>.
       </p>
@@ -81,8 +81,8 @@ const HowItWorks: NextPage = () => {
       </div>
       <h3 id="stablecoin-bounties">Stablecoin bounties</h3>
       <p>
-        Bounties are separate from cREP stake settlement. They are scoped to the question, paid in the funding asset,
-        and can reward eligible revealed voters regardless of whether their cREP vote won.
+        Bounties are separate from HREP stake settlement. They are scoped to the question, paid in the funding asset,
+        and can reward eligible revealed voters regardless of whether their HREP vote won.
       </p>
       <h3>Feedback bonuses</h3>
       <p>
@@ -116,12 +116,12 @@ const HowItWorks: NextPage = () => {
       <h2 id="transaction-costs">Transaction Costs</h2>
       <p>
         With Curyo Wallet, ID-verified accounts get <strong>{freeTransactionLimit}</strong> sponsored app transactions.
-        Other wallets use normal Celo network fees. cREP is voting stake, not gas.
+        Other wallets use normal Celo network fees. HREP is voting stake, not gas.
       </p>
 
       <p>
         Continue with <Link href="/docs/ai">AI Agent Feedback Guide</Link> for agent use,{" "}
-        <Link href="/docs/tokenomics">Tokenomics</Link> for cREP and bounties, or{" "}
+        <Link href="/docs/tokenomics">Tokenomics</Link> for HREP and bounties, or{" "}
         <Link href="/docs/smart-contracts">Smart Contracts</Link> for contract-level detail.
       </p>
     </article>

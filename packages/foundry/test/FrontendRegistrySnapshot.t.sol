@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { HumanReputation } from "../contracts/HumanReputation.sol";
 import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
 import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
@@ -18,7 +18,7 @@ import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
 /// @title FrontendRegistrySnapshotTest
 /// @notice Guards the settlement-time snapshot preservation for frontend registry rotations.
 contract FrontendRegistrySnapshotTest is VotingTestBase {
-    CuryoReputation public crepToken;
+    HumanReputation public hrepToken;
     ContentRegistry public registry;
     RoundVotingEngine public votingEngine;
     RoundRewardDistributor public rewardDistributor;
@@ -52,8 +52,8 @@ contract FrontendRegistrySnapshotTest is VotingTestBase {
 
         vm.startPrank(owner);
 
-        crepToken = new CuryoReputation(owner, owner);
-        crepToken.grantRole(crepToken.MINTER_ROLE(), owner);
+        hrepToken = new HumanReputation(owner, owner);
+        hrepToken.grantRole(hrepToken.MINTER_ROLE(), owner);
 
         ContentRegistry registryImpl = new ContentRegistry();
         RoundVotingEngine engineImpl = new RoundVotingEngine();
@@ -63,7 +63,7 @@ contract FrontendRegistrySnapshotTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(registryImpl),
-                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(crepToken)))
+                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(hrepToken)))
                 )
             )
         );
@@ -76,7 +76,7 @@ contract FrontendRegistrySnapshotTest is VotingTestBase {
                     address(engineImpl),
                     abi.encodeCall(
                         RoundVotingEngine.initialize,
-                        (owner, address(crepToken), address(registry), address(protocolConfig))
+                        (owner, address(hrepToken), address(registry), address(protocolConfig))
                     )
                 )
             )
@@ -88,7 +88,7 @@ contract FrontendRegistrySnapshotTest is VotingTestBase {
                     address(distImpl),
                     abi.encodeCall(
                         RoundRewardDistributor.initialize,
-                        (owner, address(crepToken), address(votingEngine), address(registry))
+                        (owner, address(hrepToken), address(votingEngine), address(registry))
                     )
                 )
             )
@@ -109,18 +109,18 @@ contract FrontendRegistrySnapshotTest is VotingTestBase {
         originalFrontendRegistry.setVoterIdNFT(address(originalVoterIdNFT));
         ProtocolConfig(address(protocolConfig)).setFrontendRegistry(address(originalFrontendRegistry));
 
-        crepToken.mint(owner, 100_000e6);
-        crepToken.mint(submitter, 10_000e6);
-        crepToken.mint(voter1, 10_000e6);
-        crepToken.mint(voter2, 10_000e6);
-        crepToken.mint(voter3, 10_000e6);
-        crepToken.mint(frontendOp, 5_000e6);
+        hrepToken.mint(owner, 100_000e6);
+        hrepToken.mint(submitter, 10_000e6);
+        hrepToken.mint(voter1, 10_000e6);
+        hrepToken.mint(voter2, 10_000e6);
+        hrepToken.mint(voter3, 10_000e6);
+        hrepToken.mint(frontendOp, 5_000e6);
         originalVoterIdNFT.setHolder(frontendOp);
 
         vm.stopPrank();
 
         vm.startPrank(frontendOp);
-        crepToken.approve(address(originalFrontendRegistry), 1000e6);
+        hrepToken.approve(address(originalFrontendRegistry), 1000e6);
         originalFrontendRegistry.register();
         vm.stopPrank();
     }
@@ -147,7 +147,7 @@ contract FrontendRegistrySnapshotTest is VotingTestBase {
         vm.stopPrank();
 
         vm.startPrank(frontendOp);
-        crepToken.approve(address(replacementRegistry), 1000e6);
+        hrepToken.approve(address(replacementRegistry), 1000e6);
         replacementRegistry.register();
         vm.stopPrank();
 
@@ -177,7 +177,7 @@ contract FrontendRegistrySnapshotTest is VotingTestBase {
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
 
         vm.startPrank(voter);
-        crepToken.approve(address(votingEngine), STAKE);
+        hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
             _defaultRatingReferenceBps(),
@@ -195,7 +195,7 @@ contract FrontendRegistrySnapshotTest is VotingTestBase {
 
     function _submitContent() internal returns (uint256 contentId) {
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         _submitContentWithReservation(
             registry, "https://example.com/frontend-snapshot", "test goal", "test goal", "test", 1
         );
@@ -208,7 +208,7 @@ contract FrontendRegistrySnapshotTest is VotingTestBase {
         frontendRegistry = FrontendRegistry(
             address(
                 new ERC1967Proxy(
-                    address(impl), abi.encodeCall(FrontendRegistry.initialize, (owner, owner, address(crepToken)))
+                    address(impl), abi.encodeCall(FrontendRegistry.initialize, (owner, owner, address(hrepToken)))
                 )
             )
         );

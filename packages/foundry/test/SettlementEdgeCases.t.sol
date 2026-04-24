@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {Test} from "forge-std/Test.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {ContentRegistry} from "../contracts/ContentRegistry.sol";
-import {RoundVotingEngine} from "../contracts/RoundVotingEngine.sol";
-import {ProtocolConfig} from "../contracts/ProtocolConfig.sol";
-import {RoundRewardDistributor} from "../contracts/RoundRewardDistributor.sol";
-import {RoundLib} from "../contracts/libraries/RoundLib.sol";
-import {RoundEngineReadHelpers} from "./helpers/RoundEngineReadHelpers.sol";
-import {CuryoReputation} from "../contracts/CuryoReputation.sol";
-import {ParticipationPool} from "../contracts/ParticipationPool.sol";
-import {FrontendRegistry} from "../contracts/FrontendRegistry.sol";
-import {VotingTestBase} from "./helpers/VotingTestHelpers.sol";
-import {MockCategoryRegistry} from "../contracts/mocks/MockCategoryRegistry.sol";
+import { Test } from "forge-std/Test.sol";
+import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { ContentRegistry } from "../contracts/ContentRegistry.sol";
+import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
+import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
+import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
+import { RoundLib } from "../contracts/libraries/RoundLib.sol";
+import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
+import { HumanReputation } from "../contracts/HumanReputation.sol";
+import { ParticipationPool } from "../contracts/ParticipationPool.sol";
+import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
+import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
+import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
 
 // =========================================================================
 // TEST CONTRACT: Settlement Edge Cases
@@ -24,7 +24,7 @@ import {MockCategoryRegistry} from "../contracts/mocks/MockCategoryRegistry.sol"
 ///         settle on already-settled, treasury=address(0), consensus reserve depletion,
 ///         small losing pool rounding, cancel after tie, state machine transitions.
 contract SettlementEdgeCasesTest is VotingTestBase {
-    CuryoReputation public crepToken;
+    HumanReputation public hrepToken;
     ContentRegistry public registry;
     RoundVotingEngine public engine;
     RoundRewardDistributor public rewardDistributor;
@@ -42,7 +42,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
     address public treasury = address(100);
     address public frontend1 = address(200);
 
-    uint256 public constant STAKE = 5e6; // 5 cREP
+    uint256 public constant STAKE = 5e6; // 5 HREP
     uint256 public constant MIN_STAKE = 1e6;
     uint256 public constant T0 = 1_000_000;
     uint256 public constant EPOCH = 1 hours;
@@ -51,8 +51,8 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         vm.warp(T0);
         vm.startPrank(owner);
 
-        crepToken = new CuryoReputation(owner, owner);
-        crepToken.grantRole(crepToken.MINTER_ROLE(), owner);
+        hrepToken = new HumanReputation(owner, owner);
+        hrepToken.grantRole(hrepToken.MINTER_ROLE(), owner);
 
         ContentRegistry registryImpl = new ContentRegistry();
         RoundVotingEngine engineImpl = new RoundVotingEngine();
@@ -62,7 +62,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(registryImpl),
-                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(crepToken)))
+                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(hrepToken)))
                 )
             )
         );
@@ -73,7 +73,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
                     address(engineImpl),
                     abi.encodeCall(
                         RoundVotingEngine.initialize,
-                        (owner, address(crepToken), address(registry), address(_deployProtocolConfig(owner)))
+                        (owner, address(hrepToken), address(registry), address(_deployProtocolConfig(owner)))
                     )
                 )
             )
@@ -85,7 +85,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
                     address(distImpl),
                     abi.encodeCall(
                         RoundRewardDistributor.initialize,
-                        (owner, address(crepToken), address(engine), address(registry))
+                        (owner, address(hrepToken), address(engine), address(registry))
                     )
                 )
             )
@@ -106,7 +106,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         frontendRegistry = FrontendRegistry(
             address(
                 new ERC1967Proxy(
-                    address(frImpl), abi.encodeCall(FrontendRegistry.initialize, (owner, owner, address(crepToken)))
+                    address(frImpl), abi.encodeCall(FrontendRegistry.initialize, (owner, owner, address(hrepToken)))
                 )
             )
         );
@@ -114,20 +114,20 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         frontendRegistry.addFeeCreditor(address(rewardDistributor));
         ProtocolConfig(address(engine.protocolConfig())).setFrontendRegistry(address(frontendRegistry));
 
-        participationPool = new ParticipationPool(address(crepToken), owner);
+        participationPool = new ParticipationPool(address(hrepToken), owner);
         participationPool.setAuthorizedCaller(address(rewardDistributor), true);
         participationPool.setAuthorizedCaller(address(registry), true);
         ProtocolConfig(address(engine.protocolConfig())).setParticipationPool(address(participationPool));
 
-        crepToken.mint(owner, 2_000_000e6);
-        crepToken.approve(address(participationPool), 500_000e6);
+        hrepToken.mint(owner, 2_000_000e6);
+        hrepToken.approve(address(participationPool), 500_000e6);
         participationPool.depositPool(500_000e6);
-        crepToken.approve(address(engine), 500_000e6);
+        hrepToken.approve(address(engine), 500_000e6);
         engine.addToConsensusReserve(500_000e6);
 
         address[8] memory users = [submitter, voter1, voter2, voter3, voter4, voter5, voter6, frontend1];
         for (uint256 i = 0; i < users.length; i++) {
-            crepToken.mint(users[i], 10_000e6);
+            hrepToken.mint(users[i], 10_000e6);
         }
 
         vm.stopPrank();
@@ -145,10 +145,17 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
         uint16 referenceRatingBps = _currentRatingReferenceBps(contentId);
         bytes32 commitHash = _commitHash(
-            isUp, salt, voter, contentId, referenceRatingBps, _tlockCommitTargetRound(), _tlockDrandChainHash(), ciphertext
+            isUp,
+            salt,
+            voter,
+            contentId,
+            referenceRatingBps,
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            ciphertext
         );
         vm.prank(voter);
-        crepToken.approve(address(engine), stakeAmt);
+        hrepToken.approve(address(engine), stakeAmt);
         vm.prank(voter);
         engine.commitVote(
             contentId,
@@ -169,7 +176,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
 
     function _submitContent() internal returns (uint256 contentId) {
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         _submitContentWithReservation(registry, "https://example.com/1", "test goal", "test goal", "test", 0);
         vm.stopPrank();
         contentId = 1;
@@ -177,7 +184,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
 
     function _submitContentN(uint256 n) internal returns (uint256) {
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         string memory url = string(abi.encodePacked("https://example.com/", vm.toString(n)));
         _submitContentWithReservation(registry, url, "test goal", "test goal", "test", 0);
         vm.stopPrank();
@@ -186,7 +193,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
 
     function _commitOnEngine(
         RoundVotingEngine votingEngine,
-        CuryoReputation token,
+        HumanReputation token,
         address voter,
         uint256 contentId,
         bool isUp,
@@ -210,11 +217,11 @@ contract SettlementEdgeCasesTest is VotingTestBase {
 
     function _deployZeroReserveHarness()
         internal
-        returns (CuryoReputation token, ContentRegistry registry_, RoundVotingEngine votingEngine)
+        returns (HumanReputation token, ContentRegistry registry_, RoundVotingEngine votingEngine)
     {
         vm.startPrank(owner);
 
-        token = new CuryoReputation(owner, owner);
+        token = new HumanReputation(owner, owner);
         token.grantRole(token.MINTER_ROLE(), owner);
 
         ContentRegistry registryImpl = new ContentRegistry();
@@ -269,7 +276,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         vm.stopPrank();
     }
 
-    function _submitContentOnRegistry(CuryoReputation token, ContentRegistry registry_, string memory url)
+    function _submitContentOnRegistry(HumanReputation token, ContentRegistry registry_, string memory url)
         internal
         returns (uint256 contentId)
     {
@@ -280,7 +287,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         contentId = 1;
     }
 
-    function _prepareUnanimousRoundOnEngine(RoundVotingEngine votingEngine, CuryoReputation token, uint256 contentId)
+    function _prepareUnanimousRoundOnEngine(RoundVotingEngine votingEngine, HumanReputation token, uint256 contentId)
         internal
         returns (uint256 roundId)
     {
@@ -514,17 +521,17 @@ contract SettlementEdgeCasesTest is VotingTestBase {
     function test_Settle_TreasuryReceivesFee() public {
         (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, false);
 
-        uint256 treasuryBefore = crepToken.balanceOf(treasury);
+        uint256 treasuryBefore = hrepToken.balanceOf(treasury);
 
         engine.settleRound(contentId, roundId);
 
-        uint256 treasuryAfter = crepToken.balanceOf(treasury);
+        uint256 treasuryAfter = hrepToken.balanceOf(treasury);
         // Treasury should receive some fee from the losing pool
         assertGt(treasuryAfter, treasuryBefore);
     }
 
     // =========================================================================
-    // 10. SMALL LOSING POOL: rounding edge case with 1 cREP losing pool
+    // 10. SMALL LOSING POOL: rounding edge case with 1 HREP losing pool
     // =========================================================================
 
     function test_Settle_MinimalLosingPool_NoRevert() public {
@@ -586,13 +593,13 @@ contract SettlementEdgeCasesTest is VotingTestBase {
     // =========================================================================
 
     function test_Settle_Unanimous_ZeroReserve_SettlesWithZeroSubsidy() public {
-        (CuryoReputation crepToken2, ContentRegistry registry2, RoundVotingEngine engine2) = _deployZeroReserveHarness();
+        (HumanReputation hrepToken2, ContentRegistry registry2, RoundVotingEngine engine2) = _deployZeroReserveHarness();
 
         // DO NOT fund consensus reserve — leave at 0
         assertEq(engine2.consensusReserve(), 0);
 
-        uint256 contentId = _submitContentOnRegistry(crepToken2, registry2, "https://example.com/zero-reserve");
-        uint256 roundId = _prepareUnanimousRoundOnEngine(engine2, crepToken2, contentId);
+        uint256 contentId = _submitContentOnRegistry(hrepToken2, registry2, "https://example.com/zero-reserve");
+        uint256 roundId = _prepareUnanimousRoundOnEngine(engine2, hrepToken2, contentId);
 
         // Settle — should succeed even with zero reserve
         engine2.settleRound(contentId, roundId);
@@ -744,13 +751,13 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, false);
         engine.settleRound(contentId, roundId);
 
-        uint256 balanceBefore = crepToken.balanceOf(voter3);
+        uint256 balanceBefore = hrepToken.balanceOf(voter3);
 
         // voter3 voted false (down) but up won
         vm.prank(voter3);
         rewardDistributor.claimReward(contentId, roundId);
 
-        uint256 balanceAfter = crepToken.balanceOf(voter3);
+        uint256 balanceAfter = hrepToken.balanceOf(voter3);
         assertEq(balanceAfter - balanceBefore, STAKE / 20);
     }
 
@@ -820,12 +827,12 @@ contract SettlementEdgeCasesTest is VotingTestBase {
 
         engine.settleRound(contentId, roundId);
 
-        uint256 balanceBefore = crepToken.balanceOf(voter1);
+        uint256 balanceBefore = hrepToken.balanceOf(voter1);
 
         vm.prank(voter1);
         engine.claimCancelledRoundRefund(contentId, roundId);
 
-        uint256 balanceAfter = crepToken.balanceOf(voter1);
+        uint256 balanceAfter = hrepToken.balanceOf(voter1);
         assertEq(balanceAfter - balanceBefore, STAKE);
     }
 
@@ -837,12 +844,12 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, false);
         engine.settleRound(contentId, roundId);
 
-        uint256 balanceBefore = crepToken.balanceOf(voter1);
+        uint256 balanceBefore = hrepToken.balanceOf(voter1);
 
         vm.prank(voter1);
         rewardDistributor.claimReward(contentId, roundId);
 
-        uint256 balanceAfter = crepToken.balanceOf(voter1);
+        uint256 balanceAfter = hrepToken.balanceOf(voter1);
         // Winner gets at least their stake back + some reward from losing pool
         assertGt(balanceAfter - balanceBefore, STAKE);
     }
@@ -854,7 +861,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
     function test_Settle_AsymmetricStakes_ProportionalRewards() public {
         uint256 contentId = _submitContent();
 
-        // voter1 stakes 10 cREP (up), voter2 stakes 5 cREP (up), voter3 stakes 5 cREP (down)
+        // voter1 stakes 10 HREP (up), voter2 stakes 5 HREP (up), voter3 stakes 5 HREP (down)
         (bytes32 ck1, bytes32 s1) = _commit(voter1, contentId, true, 10e6);
         (bytes32 ck2, bytes32 s2) = _commit(voter2, contentId, true, STAKE);
         (bytes32 ck3, bytes32 s3) = _commit(voter3, contentId, false, STAKE);
@@ -869,16 +876,16 @@ contract SettlementEdgeCasesTest is VotingTestBase {
 
         engine.settleRound(contentId, roundId);
 
-        uint256 bal1Before = crepToken.balanceOf(voter1);
-        uint256 bal2Before = crepToken.balanceOf(voter2);
+        uint256 bal1Before = hrepToken.balanceOf(voter1);
+        uint256 bal2Before = hrepToken.balanceOf(voter2);
 
         vm.prank(voter1);
         rewardDistributor.claimReward(contentId, roundId);
         vm.prank(voter2);
         rewardDistributor.claimReward(contentId, roundId);
 
-        uint256 reward1 = crepToken.balanceOf(voter1) - bal1Before;
-        uint256 reward2 = crepToken.balanceOf(voter2) - bal2Before;
+        uint256 reward1 = hrepToken.balanceOf(voter1) - bal1Before;
+        uint256 reward2 = hrepToken.balanceOf(voter2) - bal2Before;
 
         // voter1 staked 2x, so should get a larger reward
         assertGt(reward1, reward2);

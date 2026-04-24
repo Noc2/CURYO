@@ -9,10 +9,10 @@ export const MIN_REWARD_POOL_REQUIRED_VOTERS = 3;
 export const MIN_REWARD_POOL_SETTLED_ROUNDS = 1;
 export const DEFAULT_REWARD_POOL_FRONTEND_FEE_BPS = 300;
 export const DEFAULT_SUBMISSION_REWARD_POOL = 1_000_000n;
-export const SUBMISSION_REWARD_ASSET_CREP = 0;
+export const SUBMISSION_REWARD_ASSET_HREP = 0;
 export const SUBMISSION_REWARD_ASSET_USDC = 1;
 
-export type SubmissionRewardAsset = "crep" | "usdc";
+export type SubmissionRewardAsset = "hrep" | "usdc";
 
 export const QUESTION_SUBMISSION_ABI = ContentRegistryAbi;
 export const QUESTION_REWARD_POOL_ESCROW_ABI = QuestionRewardPoolEscrowAbi;
@@ -98,7 +98,7 @@ export function formatSubmissionRewardAmount(
   value: bigint | number | string | undefined | null,
   asset: SubmissionRewardAsset,
 ): string {
-  return `${formatTokenAmount6(value)} ${asset === "crep" ? "cREP" : "USDC"}`;
+  return `${formatTokenAmount6(value)} ${asset === "hrep" ? "HREP" : "USDC"}`;
 }
 
 export function formatUsdAmount(value: bigint | number | string | undefined | null): string {

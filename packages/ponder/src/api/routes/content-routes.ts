@@ -733,7 +733,7 @@ export function registerContentRoutes(app: ApiApp) {
       .where(eq(content.submitter, address));
 
     const [rewardSummary] = await db
-      .select({ total: sql<bigint>`coalesce(sum(${rewardClaim.crepReward}), 0)` })
+      .select({ total: sql<bigint>`coalesce(sum(${rewardClaim.hrepReward}), 0)` })
       .from(rewardClaim)
       .where(eq(rewardClaim.voter, address));
 

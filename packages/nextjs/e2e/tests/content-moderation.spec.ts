@@ -1,7 +1,7 @@
 import {
   cancelContent,
   submitContentDirect,
-  transferCREP,
+  transferHREP,
   waitForPonderIndexed,
 } from "../helpers/admin-helpers";
 import { ANVIL_ACCOUNTS, DEPLOYER } from "../helpers/anvil-accounts";
@@ -14,7 +14,7 @@ import { expect, test } from "@playwright/test";
  * Triggers Ponder events: ContentCancelled.
  *
  * Account allocation:
- * - Account #2 (cREP + VoterID) — submits content, cancels own content
+ * - Account #2 (HREP + VoterID) — submits content, cancels own content
  * - Account #9 (deployer = governance in local dev) — funds account #2
  *
  * All interactions use direct contract calls for reliability.
@@ -23,7 +23,7 @@ test.describe("Content moderation", () => {
   test.describe.configure({ mode: "serial" });
 
   const CONTENT_REGISTRY = CONTRACT_ADDRESSES.ContentRegistry;
-  const CREP_TOKEN = CONTRACT_ADDRESSES.CuryoReputation;
+  const HREP_TOKEN = CONTRACT_ADDRESSES.HumanReputation;
   const SUBMITTER = ANVIL_ACCOUNTS.account2.address;
   const SUBMISSION_REWARD_POOL = BigInt(1e6);
 
@@ -43,8 +43,8 @@ test.describe("Content moderation", () => {
       // Ponder may not be available
     }
 
-    // Top up cREP for mandatory submission bounties (deployer has ~10M)
-    await transferCREP(SUBMITTER, SUBMISSION_REWARD_POOL * 2n, DEPLOYER.address, CREP_TOKEN);
+    // Top up HREP for mandatory submission bounties (deployer has ~10M)
+    await transferHREP(SUBMITTER, SUBMISSION_REWARD_POOL * 2n, DEPLOYER.address, HREP_TOKEN);
 
     // Ask question
     const uniqueId = Date.now();

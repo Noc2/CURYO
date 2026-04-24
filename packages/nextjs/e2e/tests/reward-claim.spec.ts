@@ -1,5 +1,5 @@
 import {
-  approveCREP,
+  approveHREP,
   claimParticipationReward,
   claimVoterReward,
   commitVoteDirect,
@@ -43,9 +43,9 @@ test.describe("Reward claim lifecycle", () => {
 
   const VOTING_ENGINE = CONTRACT_ADDRESSES.RoundVotingEngine;
   const REWARD_DISTRIBUTOR = CONTRACT_ADDRESSES.RoundRewardDistributor;
-  const CREP_TOKEN = CONTRACT_ADDRESSES.CuryoReputation;
+  const HREP_TOKEN = CONTRACT_ADDRESSES.HumanReputation;
   const CONTENT_REGISTRY = CONTRACT_ADDRESSES.ContentRegistry;
-  const STAKE = BigInt(10e6); // 10 cREP (above MIN_STAKE_FOR_RATING threshold)
+  const STAKE = BigInt(10e6); // 10 HREP (above MIN_STAKE_FOR_RATING threshold)
   const LOSER_REBATE = STAKE / 20n; // 5%
   const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
   const EPOCH_DURATION = 300; // 5 min — contract minimum is 5 minutes
@@ -64,8 +64,8 @@ test.describe("Reward claim lifecycle", () => {
 
     const submitter = ANVIL_ACCOUNTS.account2;
 
-    const approved = await approveCREP(CONTENT_REGISTRY, BigInt(10e6), submitter.address, CREP_TOKEN);
-    expect(approved, "cREP approval for content submission failed").toBe(true);
+    const approved = await approveHREP(CONTENT_REGISTRY, BigInt(10e6), submitter.address, HREP_TOKEN);
+    expect(approved, "HREP approval for content submission failed").toBe(true);
 
     const uniqueId = Date.now();
     const success = await submitContentDirect(
@@ -107,7 +107,7 @@ test.describe("Reward claim lifecycle", () => {
     const commits: { commitKey: `0x${string}`; isUp: boolean; salt: `0x${string}` }[] = [];
 
     for (let i = 0; i < voters.length; i++) {
-      await approveCREP(VOTING_ENGINE, STAKE, voters[i].account.address, CREP_TOKEN);
+      await approveHREP(VOTING_ENGINE, STAKE, voters[i].account.address, HREP_TOKEN);
       const result = await commitVoteDirect(
         BigInt(newContentId!),
         voters[i].isUp,
@@ -185,7 +185,7 @@ test.describe("Reward claim lifecycle", () => {
 
     await gotoWithRetry(page, "/governance#profile", { ensureWalletConnected: true });
 
-    const balanceBefore = await readTokenBalance(winner.address, CREP_TOKEN);
+    const balanceBefore = await readTokenBalance(winner.address, HREP_TOKEN);
     const walletSummary = page.getByTestId("wallet-connected");
     const claimButton = walletSummary.getByRole("button", { name: /^Claim\b/ }).first();
     await expect(claimButton).toBeVisible({
@@ -194,7 +194,7 @@ test.describe("Reward claim lifecycle", () => {
     await claimButton.click();
 
     await expect
-      .poll(async () => readTokenBalance(winner.address, CREP_TOKEN), {
+      .poll(async () => readTokenBalance(winner.address, HREP_TOKEN), {
         message: "winner wallet balance should increase after claiming from the relocated wallet summary",
         timeout: 45_000,
       })
@@ -253,7 +253,7 @@ test.describe("Reward claim lifecycle", () => {
         r.contentId === settledContentId && r.roundId === settledRound.roundId,
     );
     expect(loserReward).toBeTruthy();
-    expect(loserReward.crepReward).toBe(LOSER_REBATE.toString());
+    expect(loserReward.hrepReward).toBe(LOSER_REBATE.toString());
     expect(loserReward.stakeReturned).toBe("0");
   });
 
@@ -323,7 +323,7 @@ test.describe("Reward claim lifecycle", () => {
     const unrevealed2 = ANVIL_ACCOUNTS.account6;
     const uniqueId = Date.now();
 
-    const submitApproved = await approveCREP(CONTENT_REGISTRY, BigInt(10e6), submitter.address, CREP_TOKEN);
+    const submitApproved = await approveHREP(CONTENT_REGISTRY, BigInt(10e6), submitter.address, HREP_TOKEN);
     expect(submitApproved, "Content submission approval failed").toBe(true);
 
     const submitted = await submitContentDirect(
@@ -369,7 +369,7 @@ test.describe("Reward claim lifecycle", () => {
     }[] = [];
 
     for (const voter of revealedVoters) {
-      const approved = await approveCREP(VOTING_ENGINE, STAKE, voter.account.address, CREP_TOKEN);
+      const approved = await approveHREP(VOTING_ENGINE, STAKE, voter.account.address, HREP_TOKEN);
       expect(approved, `Vote approval failed for ${voter.account.address}`).toBe(true);
 
       const commit = await commitVoteDirect(
@@ -390,7 +390,7 @@ test.describe("Reward claim lifecycle", () => {
     await evmIncreaseTime(EPOCH_DURATION + 1);
 
     for (const voter of unrevealedVoters) {
-      const approved = await approveCREP(VOTING_ENGINE, STAKE, voter.account.address, CREP_TOKEN);
+      const approved = await approveHREP(VOTING_ENGINE, STAKE, voter.account.address, HREP_TOKEN);
       expect(approved, `Vote approval failed for ${voter.account.address}`).toBe(true);
 
       const commit = await commitVoteDirect(
@@ -424,8 +424,8 @@ test.describe("Reward claim lifecycle", () => {
     expect(settled, "Cleanup setup round did not settle").toBe(true);
 
     const consensusReserveBefore = await readUint256("consensusReserve", VOTING_ENGINE);
-    const unrevealed1Before = await readTokenBalance(unrevealed1.address, CREP_TOKEN);
-    const unrevealed2Before = await readTokenBalance(unrevealed2.address, CREP_TOKEN);
+    const unrevealed1Before = await readTokenBalance(unrevealed1.address, HREP_TOKEN);
+    const unrevealed2Before = await readTokenBalance(unrevealed2.address, HREP_TOKEN);
 
     const cleanupSuccess = await processUnrevealedVotes(
       BigInt(cleanupContentId!),
@@ -438,8 +438,8 @@ test.describe("Reward claim lifecycle", () => {
     expect(cleanupSuccess, "Cleanup should process unrevealed votes").toBe(true);
 
     const consensusReserveAfter = await readUint256("consensusReserve", VOTING_ENGINE);
-    const unrevealed1After = await readTokenBalance(unrevealed1.address, CREP_TOKEN);
-    const unrevealed2After = await readTokenBalance(unrevealed2.address, CREP_TOKEN);
+    const unrevealed1After = await readTokenBalance(unrevealed1.address, HREP_TOKEN);
+    const unrevealed2After = await readTokenBalance(unrevealed2.address, HREP_TOKEN);
 
     // Current-epoch unrevealed stakes had no chance to reveal before settlement, so they are refunded.
     expect(unrevealed1After - unrevealed1Before).toBe(STAKE);

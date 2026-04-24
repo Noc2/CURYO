@@ -25,7 +25,7 @@ library RoundCleanupLib {
         mapping(address => bool) storage refundClaims,
         mapping(address => bytes32) storage roundVoterCommitHash,
         mapping(bytes32 => RoundLib.Commit) storage roundCommits,
-        IERC20 crepToken,
+        IERC20 hrepToken,
         address claimer
     ) external returns (uint256 refundAmount) {
         if (
@@ -48,14 +48,14 @@ library RoundCleanupLib {
         commit.stakeAmount = 0;
         refundClaims[claimer] = true;
 
-        crepToken.safeTransfer(claimer, refundAmount);
+        hrepToken.safeTransfer(claimer, refundAmount);
     }
 
     function processUnrevealedVotes(
         RoundLib.Round storage round,
         bytes32[] storage commitKeys,
         mapping(bytes32 => RoundLib.Commit) storage roundCommits,
-        IERC20 crepToken,
+        IERC20 hrepToken,
         ProtocolConfig protocolConfig,
         uint256 consensusReserve,
         uint256 startIndex,
@@ -65,7 +65,7 @@ library RoundCleanupLib {
         returns (
             uint256 forfeitedToTreasury,
             uint256 addedToConsensusReserve,
-            uint256 refundedCrep,
+            uint256 refundedHrep,
             uint256 processedPastEpochCount,
             uint256 updatedConsensusReserve
         )
@@ -89,8 +89,8 @@ library RoundCleanupLib {
                         forfeitedToTreasury += amount;
                     }
                 } else {
-                    try TokenTransferLib.safeTransfer(crepToken, commit.voter, amount) {
-                        refundedCrep += amount;
+                    try TokenTransferLib.safeTransfer(hrepToken, commit.voter, amount) {
+                        refundedHrep += amount;
                     } catch {
                         forfeitedToTreasury += amount;
                     }
@@ -101,7 +101,7 @@ library RoundCleanupLib {
         if (forfeitedToTreasury > 0) {
             address currentTreasury = protocolConfig.treasury();
             if (currentTreasury != address(0)) {
-                try TokenTransferLib.safeTransfer(crepToken, currentTreasury, forfeitedToTreasury) { }
+                try TokenTransferLib.safeTransfer(hrepToken, currentTreasury, forfeitedToTreasury) { }
                 catch {
                     updatedConsensusReserve += forfeitedToTreasury;
                 }
@@ -110,7 +110,7 @@ library RoundCleanupLib {
             }
         }
 
-        if (forfeitedToTreasury == 0 && addedToConsensusReserve == 0 && refundedCrep == 0) {
+        if (forfeitedToTreasury == 0 && addedToConsensusReserve == 0 && refundedHrep == 0) {
             revert NothingProcessed();
         }
     }

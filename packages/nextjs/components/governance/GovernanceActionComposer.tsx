@@ -16,7 +16,7 @@ import {
   useGovernanceWrite,
 } from "~~/hooks/useGovernance";
 
-type ComposerFieldType = "address" | "uint" | "crep" | "string" | "textarea" | "csv" | "bytes32";
+type ComposerFieldType = "address" | "uint" | "hrep" | "string" | "textarea" | "csv" | "bytes32";
 
 type ComposerField = {
   key: string;
@@ -30,7 +30,7 @@ type ComposerField = {
 type FieldParser = {
   address: (key: string, label: string) => Address;
   uint: (key: string, label: string) => bigint;
-  crep: (key: string, label: string) => bigint;
+  hrep: (key: string, label: string) => bigint;
   bytes32: (key: string, label: string) => `0x${string}`;
   string: (key: string, label: string) => string;
   csv: (key: string) => string[];
@@ -41,7 +41,7 @@ type GovernanceActionTemplate = {
   group: string;
   label: string;
   mode: "proposal" | "direct";
-  contractName: "CuryoGovernor" | "CuryoReputation" | "FrontendRegistry" | "ContentRegistry";
+  contractName: "CuryoGovernor" | "HumanReputation" | "FrontendRegistry" | "ContentRegistry";
   functionName: string;
   description: string;
   allowCustomDescription?: boolean;
@@ -73,7 +73,7 @@ function buildTreasuryGrantDescription(values: Record<string, string>) {
   const milestones = cleanDescriptionValue(values.milestones, "Unspecified");
 
   return [
-    `Treasury grant: ${amount} cREP to ${recipient}`,
+    `Treasury grant: ${amount} HREP to ${recipient}`,
     "",
     `Track: ${track}`,
     `Recipient type: ${recipientType}`,
@@ -81,11 +81,11 @@ function buildTreasuryGrantDescription(values: Record<string, string>) {
     `Expected impact: ${impact}`,
     `Milestones/reporting: ${milestones}`,
     "",
-    "This proposal transfers cREP from the governance timelock treasury to the recipient. cREP carries voting power and is intended for protocol-aligned ecosystem participation, not as a protocol-backed payment.",
+    "This proposal transfers HREP from the governance timelock treasury to the recipient. HREP carries voting power and is intended for protocol-aligned ecosystem participation, not as a protocol-backed payment.",
   ].join("\n");
 }
 
-function parsePreviewCrepAmount(value: string | undefined) {
+function parsePreviewHrepAmount(value: string | undefined) {
   const trimmed = value?.trim();
   if (!trimmed) return undefined;
 
@@ -97,7 +97,7 @@ function parsePreviewCrepAmount(value: string | undefined) {
   }
 }
 
-function formatCRepAmount(value: bigint | undefined) {
+function formatHrepAmount(value: bigint | undefined) {
   if (value === undefined) return "—";
 
   const formatted = formatUnits(value, 6);
@@ -105,7 +105,7 @@ function formatCRepAmount(value: bigint | undefined) {
   const wholePart = Number(whole).toLocaleString();
   const trimmedFraction = fraction.replace(/0+$/, "").slice(0, 2);
 
-  return trimmedFraction ? `${wholePart}.${trimmedFraction} cREP` : `${wholePart} cREP`;
+  return trimmedFraction ? `${wholePart}.${trimmedFraction} HREP` : `${wholePart} HREP`;
 }
 
 function formatPercentOf(value: bigint | undefined, total: bigint | undefined) {
@@ -148,10 +148,10 @@ const actionTemplates: readonly GovernanceActionTemplate[] = [
     mode: "proposal",
     contractName: "CuryoGovernor",
     functionName: "setProposalThreshold",
-    description: "Create a proposal to update the cREP required to create new proposals.",
-    fields: [{ key: "threshold", label: "Proposal threshold (cREP)", type: "crep", required: true }],
-    buildArgs: (_, parser) => [parser.crep("threshold", "Proposal threshold")],
-    buildDescription: values => `Set proposal threshold to ${values.threshold || "0"} cREP`,
+    description: "Create a proposal to update the HREP required to create new proposals.",
+    fields: [{ key: "threshold", label: "Proposal threshold (HREP)", type: "hrep", required: true }],
+    buildArgs: (_, parser) => [parser.hrep("threshold", "Proposal threshold")],
+    buildDescription: values => `Set proposal threshold to ${values.threshold || "0"} HREP`,
   },
   {
     id: "governor-update-quorum",
@@ -170,9 +170,9 @@ const actionTemplates: readonly GovernanceActionTemplate[] = [
     group: "Treasury",
     label: "Treasury grant",
     mode: "proposal",
-    contractName: "CuryoReputation",
+    contractName: "HumanReputation",
     functionName: "transfer",
-    description: "Create a proposal to send cREP from the governance timelock treasury to a recipient.",
+    description: "Create a proposal to send HREP from the governance timelock treasury to a recipient.",
     allowCustomDescription: false,
     fields: [
       {
@@ -184,8 +184,8 @@ const actionTemplates: readonly GovernanceActionTemplate[] = [
       },
       {
         key: "amount",
-        label: "Grant amount (cREP)",
-        type: "crep",
+        label: "Grant amount (HREP)",
+        type: "hrep",
         required: true,
         helperText: "Use a narrow amount that matches the requested ecosystem role.",
       },
@@ -208,7 +208,7 @@ const actionTemplates: readonly GovernanceActionTemplate[] = [
         label: "Purpose",
         type: "textarea",
         required: true,
-        helperText: "Explain why this recipient should hold cREP.",
+        helperText: "Explain why this recipient should hold HREP.",
       },
       {
         key: "impact",
@@ -226,8 +226,8 @@ const actionTemplates: readonly GovernanceActionTemplate[] = [
       },
     ],
     buildArgs: (_, parser) => {
-      const amount = parser.crep("amount", "Grant amount");
-      if (amount <= 0n) throw new Error("Grant amount must be greater than 0 cREP.");
+      const amount = parser.hrep("amount", "Grant amount");
+      if (amount <= 0n) throw new Error("Grant amount must be greater than 0 HREP.");
       return [parser.address("recipient", "Recipient address"), amount];
     },
     buildDescription: buildTreasuryGrantDescription,
@@ -242,15 +242,15 @@ const actionTemplates: readonly GovernanceActionTemplate[] = [
     description: "Create a proposal to slash a frontend's stake and disable it.",
     fields: [
       { key: "frontend", label: "Frontend address", type: "address", required: true },
-      { key: "amount", label: "Slash amount (cREP)", type: "crep", required: true },
+      { key: "amount", label: "Slash amount (HREP)", type: "hrep", required: true },
       { key: "reason", label: "Reason", type: "textarea", required: true },
     ],
     buildArgs: (_, parser) => [
       parser.address("frontend", "Frontend address"),
-      parser.crep("amount", "Slash amount"),
+      parser.hrep("amount", "Slash amount"),
       parser.string("reason", "Reason"),
     ],
-    buildDescription: values => `Slash frontend ${values.frontend || "address"} by ${values.amount || "0"} cREP`,
+    buildDescription: values => `Slash frontend ${values.frontend || "address"} by ${values.amount || "0"} HREP`,
   },
   {
     id: "frontend-unslash",
@@ -434,7 +434,7 @@ export function GovernanceActionComposer() {
   const [formError, setFormError] = useState<string | null>(null);
 
   const { data: votingPowerRaw } = useScaffoldReadContract({
-    contractName: "CuryoReputation",
+    contractName: "HumanReputation",
     functionName: "getVotes" as any,
     args: [address] as any,
     query: { enabled: !!address },
@@ -455,12 +455,12 @@ export function GovernanceActionComposer() {
   const activeProposalThreshold = proposalThreshold;
 
   const grantAmount = useMemo(
-    () => (isTreasuryGrant ? parsePreviewCrepAmount(formValues.amount) : undefined),
+    () => (isTreasuryGrant ? parsePreviewHrepAmount(formValues.amount) : undefined),
     [formValues.amount, isTreasuryGrant],
   );
 
   const { data: timelockTreasuryBalance } = useScaffoldReadContract({
-    contractName: "CuryoReputation",
+    contractName: "HumanReputation",
     functionName: "balanceOf" as any,
     args: [timelockAddress] as any,
     query: { enabled: isTreasuryGrant && !!timelockAddress },
@@ -508,12 +508,12 @@ export function GovernanceActionComposer() {
       if (!/^\d+$/.test(value)) throw new Error(`${label} must be a whole number.`);
       return BigInt(value);
     },
-    crep: (key, label) => {
+    hrep: (key, label) => {
       const value = formValues[key]?.trim() ?? "";
       try {
         return parseUnits(value, 6);
       } catch {
-        throw new Error(`${label} must be a valid cREP amount.`);
+        throw new Error(`${label} must be a valid HREP amount.`);
       }
     },
     bytes32: (key, label) => {
@@ -755,7 +755,7 @@ export function GovernanceActionComposer() {
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                     <div>
                       <p className="text-base text-base-content/50">Timelock treasury balance</p>
-                      <p className="font-mono text-base text-base-content/80">{formatCRepAmount(treasuryBalance)}</p>
+                      <p className="font-mono text-base text-base-content/80">{formatHrepAmount(treasuryBalance)}</p>
                     </div>
                     <div>
                       <p className="text-base text-base-content/50">Share of treasury</p>
@@ -778,14 +778,14 @@ export function GovernanceActionComposer() {
                   </p>
                   {treasuryAddressMismatch && (
                     <p className="text-base text-warning">
-                      The ContentRegistry treasury address is not the governor timelock. This proposal spends cREP held
+                      The ContentRegistry treasury address is not the governor timelock. This proposal spends HREP held
                       by the timelock treasury.
                     </p>
                   )}
                   {grantExceedsTreasury && (
                     <p className="text-base text-warning">
-                      The grant amount exceeds the current timelock cREP balance, so execution would fail unless the
-                      treasury receives more cREP before execution.
+                      The grant amount exceeds the current timelock HREP balance, so execution would fail unless the
+                      treasury receives more HREP before execution.
                     </p>
                   )}
                 </div>

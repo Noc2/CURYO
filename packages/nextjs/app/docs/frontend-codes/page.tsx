@@ -104,7 +104,7 @@ const FrontendCodes: NextPage = () => {
       </p>
       <ol>
         <li>
-          <strong>Stake 1,000 cREP</strong> to the FrontendRegistry contract.
+          <strong>Stake 1,000 HREP</strong> to the FrontendRegistry contract.
         </li>
         <li>
           <strong>Integrate:</strong> Include your registered address in the vote payload, or configure it as the
@@ -113,9 +113,9 @@ const FrontendCodes: NextPage = () => {
         <li>
           <strong>Claim:</strong> First call{" "}
           <code>RoundRewardDistributor.claimFrontendFee(contentId, roundId, frontend)</code> from your operator address
-          on each settled round, then withdraw your accumulated cREP from <code>FrontendRegistry.claimFees()</code>{" "}
+          on each settled round, then withdraw your accumulated HREP from <code>FrontendRegistry.claimFees()</code>{" "}
           while active, or with <code>completeDeregister()</code> after exit. If governance slashes your frontend, you
-          must restore the full 1,000 cREP bond before fee claims can accrue to you again. Reward-pool frontend shares
+          must restore the full 1,000 HREP bond before fee claims can accrue to you again. Reward-pool frontend shares
           are paid automatically when eligible voters claim.
         </li>
       </ol>
@@ -123,7 +123,7 @@ const FrontendCodes: NextPage = () => {
       <h2>Frontend Attribution</h2>
       <p>Include your frontend address in the payload you send through the single-transaction vote flow:</p>
       <pre className="bg-base-200 p-4 rounded-lg overflow-x-auto">
-        <code>{`CuryoReputation.transferAndCall(
+        <code>{`HumanReputation.transferAndCall(
     votingEngineAddress,
     stakeAmount,
     abi.encode(
@@ -301,11 +301,11 @@ const FrontendCodes: NextPage = () => {
       <p>Frontend operators are subject to governance control:</p>
       <ul>
         <li>
-          <strong>Slashing</strong> - Governance can slash staked cREP for abuse and confiscate already accrued frontend
+          <strong>Slashing</strong> - Governance can slash staked HREP for abuse and confiscate already accrued frontend
           fees.
         </li>
         <li>
-          <strong>Rebonding required</strong> - After a partial slash, operators must top back up to the full 1,000 cREP
+          <strong>Rebonding required</strong> - After a partial slash, operators must top back up to the full 1,000 HREP
           stake before frontend fees can accrue again.
         </li>
       </ul>

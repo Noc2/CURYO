@@ -178,7 +178,7 @@ async function recordFaucetIntro(page: Page): Promise<void> {
   await gotoWithRetry(page, "/governance#faucet", { ensureWalletConnected: true, timeout: 60_000 });
   await ensureWalletVisible(page, ANVIL_ACCOUNTS.account1.address);
 
-  await page.getByRole("heading", { name: "cREP Faucet" }).waitFor({ state: "visible", timeout: 30_000 });
+  await page.getByRole("heading", { name: "HREP Faucet" }).waitFor({ state: "visible", timeout: 30_000 });
   await page.getByRole("heading", { name: "How it works" }).waitFor({ state: "visible", timeout: 30_000 });
   await page.waitForLoadState("networkidle").catch(() => undefined);
 
@@ -228,7 +228,7 @@ async function recordVoteScene(page: Page, searchQuery?: string): Promise<void> 
   await showCaption(
     page,
     "Blind vote with stake",
-    "This wallet already has a Voter ID and cREP, so the demo can go straight into a live vote.",
+    "This wallet already has a Voter ID and HREP, so the demo can go straight into a live vote.",
   );
   await pause(page, 1_600);
   await hideCaption(page);
@@ -238,9 +238,9 @@ async function recordVoteScene(page: Page, searchQuery?: string): Promise<void> 
   const stakeModal = page.locator("[role='dialog']").first();
   await stakeModal.waitFor({ state: "visible", timeout: 15_000 });
 
-  const oneCrepButton = stakeModal.getByRole("button", { name: /^1$/ });
-  if (await oneCrepButton.isVisible().catch(() => false)) {
-    await clickTarget(page, oneCrepButton, 250);
+  const oneHrepButton = stakeModal.getByRole("button", { name: /^1$/ });
+  if (await oneHrepButton.isVisible().catch(() => false)) {
+    await clickTarget(page, oneHrepButton, 250);
   }
 
   const confirmButton = stakeModal.getByRole("button", { name: /Stake \d+/i });

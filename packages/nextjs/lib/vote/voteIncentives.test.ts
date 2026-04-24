@@ -59,7 +59,7 @@ test("describeOpenRoundActivity uses committed votes before the settle quorum is
       revealedCount: 0,
       minVoters: 3,
     }),
-    "30 cREP active · 1 more vote to settle.",
+    "30 HREP active · 1 more vote to settle.",
   );
 });
 
@@ -71,7 +71,7 @@ test("describeOpenRoundActivity switches to reveal progress after commit quorum 
       revealedCount: 1,
       minVoters: 3,
     }),
-    "30 cREP active · Waiting for 2 more reveals.",
+    "30 HREP active · Waiting for 2 more reveals.",
   );
 });
 

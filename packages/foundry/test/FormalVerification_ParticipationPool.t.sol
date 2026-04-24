@@ -1,23 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {Test} from "forge-std/Test.sol";
-import {ParticipationPool} from "../contracts/ParticipationPool.sol";
-import {CuryoReputation} from "../contracts/CuryoReputation.sol";
+import { Test } from "forge-std/Test.sol";
+import { ParticipationPool } from "../contracts/ParticipationPool.sol";
+import { HumanReputation } from "../contracts/HumanReputation.sol";
 
 /// @title Formal Verification: Bootstrap Pool Sustainability
 /// @notice 10 scenarios stress-testing tier transitions, drainage rates, conservation,
 ///         cross-tier rewards, and graceful pool depletion.
 contract FormalVerification_ParticipationPoolTest is Test {
     ParticipationPool pool;
-    CuryoReputation crepToken;
+    HumanReputation hrepToken;
 
     address admin = address(1);
     address governance = address(2);
     address caller = address(3); // authorized caller
     address user = address(5);
 
-    uint256 constant POOL_AMOUNT = 12_000_000e6; // 12M cREP
+    uint256 constant POOL_AMOUNT = 12_000_000e6; // 12M HREP
     uint256 constant INITIAL_RATE = 9000; // 90%
     uint256 constant TIER0_BOUNDARY = 1_500_000e6; // 1.5M
     uint256 constant TIER1_BOUNDARY = 4_500_000e6; // 4.5M (1.5M + 3M)
@@ -26,15 +26,15 @@ contract FormalVerification_ParticipationPoolTest is Test {
 
     function setUp() public {
         vm.startPrank(admin);
-        crepToken = new CuryoReputation(admin, admin);
-        crepToken.grantRole(crepToken.MINTER_ROLE(), admin);
+        hrepToken = new HumanReputation(admin, admin);
+        hrepToken.grantRole(hrepToken.MINTER_ROLE(), admin);
 
-        pool = new ParticipationPool(address(crepToken), governance);
+        pool = new ParticipationPool(address(hrepToken), governance);
         pool.setAuthorizedCaller(caller, true);
 
-        // Fund pool with 12M cREP
-        crepToken.mint(admin, POOL_AMOUNT);
-        crepToken.approve(address(pool), POOL_AMOUNT);
+        // Fund pool with 12M HREP
+        hrepToken.mint(admin, POOL_AMOUNT);
+        hrepToken.approve(address(pool), POOL_AMOUNT);
         pool.depositPool(POOL_AMOUNT);
 
         vm.stopPrank();
@@ -98,30 +98,30 @@ contract FormalVerification_ParticipationPoolTest is Test {
 
     // ==================== Test 5: Drainage Model - 1000 Votes/Day at Tier 0 ====================
 
-    /// @notice Tier 0 (90%) lasts ~33 days at 1000 votes/day with 50 cREP avg stake.
+    /// @notice Tier 0 (90%) lasts ~33 days at 1000 votes/day with 50 HREP avg stake.
     function test_DrainageModel_1000VotesPerDay_Tier0() public pure {
         // Each vote: stake=50e6, reward=50e6 * 9000 / 10000 = 45e6
         uint256 rewardPerVote = 50e6 * INITIAL_RATE / 10000;
-        assertEq(rewardPerVote, 45e6, "Each vote drains 45 cREP at tier 0");
+        assertEq(rewardPerVote, 45e6, "Each vote drains 45 HREP at tier 0");
 
         // Daily drain: 1000 * 45e6 = 45_000e6
         uint256 dailyDrain = 1000 * rewardPerVote;
-        assertEq(dailyDrain, 45_000e6, "Daily drain = 45K cREP");
+        assertEq(dailyDrain, 45_000e6, "Daily drain = 45K HREP");
 
-        // Tier 0 capacity: 1.5M cREP
+        // Tier 0 capacity: 1.5M HREP
         uint256 daysToExhaust = TIER0_BOUNDARY / dailyDrain;
         assertEq(daysToExhaust, 33, "Tier 0 survives ~33 days");
 
         // Remaining after 33 full days: 1.5M - 33*45K = 1.5M - 1.485M = 15K
         uint256 remaining = TIER0_BOUNDARY - (daysToExhaust * dailyDrain);
-        assertEq(remaining, 15_000e6, "15K cREP remainder before tier transition");
+        assertEq(remaining, 15_000e6, "15K HREP remainder before tier transition");
     }
 
     // ==================== Test 6: Full Lifecycle Drainage Model ====================
 
     /// @notice Pool survives > 900K votes total across all funded tiers.
     function test_DrainageModel_FullLifecycle() public pure {
-        // Model: 1000 votes/day at 50 cREP avg stake across all tiers
+        // Model: 1000 votes/day at 50 HREP avg stake across all tiers
         uint256 avgStake = 50e6;
         uint256 votesPerDay = 1000;
 
@@ -160,11 +160,11 @@ contract FormalVerification_ParticipationPoolTest is Test {
 
     /// @notice 200 max-stake voters per round at tier 0: exhausted in ~83 rounds.
     function test_WorstCase_AllMaxStake() public pure {
-        // 200 voters x 100 cREP x 90% = 18,000 cREP per round
+        // 200 voters x 100 HREP x 90% = 18,000 HREP per round
         uint256 maxStake = 100e6;
         uint256 maxVoters = 200;
         uint256 rewardPerRound = maxVoters * (maxStake * INITIAL_RATE / 10000);
-        assertEq(rewardPerRound, 18_000e6, "18K cREP drained per worst-case round");
+        assertEq(rewardPerRound, 18_000e6, "18K HREP drained per worst-case round");
 
         uint256 roundsToExhaust = TIER0_BOUNDARY / rewardPerRound;
         assertEq(roundsToExhaust, 83, "Tier 0 survives ~83 max-load rounds");
@@ -197,15 +197,15 @@ contract FormalVerification_ParticipationPoolTest is Test {
 
     /// @notice Reward at tier boundary uses pre-transition rate; tier transitions after.
     function test_CrossTierReward_BoundaryTransaction() public {
-        // Set totalDistributed to 1.5M - 50 cREP (just before tier boundary)
+        // Set totalDistributed to 1.5M - 50 HREP (just before tier boundary)
         _setTotalDistributed(TIER0_BOUNDARY - 50e6);
 
         assertEq(pool.getCurrentRateBps(), 9000, "Still tier 0 before reward");
 
-        // Reward with 100 cREP stake -> reward = 90 cREP at 90% rate
+        // Reward with 100 HREP stake -> reward = 90 HREP at 90% rate
         _distributeStakeReward(user, 100e6);
 
-        assertEq(crepToken.balanceOf(user), 90e6, "Full 90 cREP reward at tier 0 rate");
+        assertEq(hrepToken.balanceOf(user), 90e6, "Full 90 HREP reward at tier 0 rate");
 
         // After: totalDistributed = 1.5M - 50e6 + 90e6 = 1.5M + 40e6 (past boundary)
         assertEq(pool.totalDistributed(), TIER0_BOUNDARY + 40e6, "Past tier 0 boundary");
@@ -220,12 +220,12 @@ contract FormalVerification_ParticipationPoolTest is Test {
         _setPoolBalance(0);
         assertEq(pool.poolBalance(), 0, "Pool drained");
 
-        uint256 balBefore = crepToken.balanceOf(user);
+        uint256 balBefore = hrepToken.balanceOf(user);
 
         // Reward attempt should silently do nothing
         _distributeStakeReward(user, 100e6);
 
-        assertEq(crepToken.balanceOf(user), balBefore, "No tokens transferred");
+        assertEq(hrepToken.balanceOf(user), balBefore, "No tokens transferred");
         assertEq(pool.totalDistributed(), 0, "totalDistributed unchanged");
     }
 
@@ -245,7 +245,7 @@ contract FormalVerification_ParticipationPoolTest is Test {
         assertEq(pool.poolBalance(), 0, "all unreserved pool funds should be withdrawn");
         assertEq(pool.reservedBalance(), 7e6, "reserved accounting must remain intact");
         assertEq(pool.reservedRewards(caller), 7e6, "beneficiary reservation must remain intact");
-        assertEq(crepToken.balanceOf(address(pool)), 7e6, "contract should retain reserved funds only");
+        assertEq(hrepToken.balanceOf(address(pool)), 7e6, "contract should retain reserved funds only");
     }
 
     function _distributeStakeReward(address recipient, uint256 stakeAmount) internal returns (uint256 paidAmount) {

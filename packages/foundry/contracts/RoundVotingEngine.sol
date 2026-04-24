@@ -98,13 +98,13 @@ contract RoundVotingEngine is
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
     // --- Constants ---
-    uint256 internal constant MIN_STAKE = 1e6; // 1 cREP (6 decimals)
-    uint256 internal constant MAX_STAKE = 100e6; // 100 cREP (6 decimals)
+    uint256 internal constant MIN_STAKE = 1e6; // 1 HREP (6 decimals)
+    uint256 internal constant MAX_STAKE = 100e6; // 100 HREP (6 decimals)
     uint256 internal constant VOTE_COOLDOWN = 24 hours; // Time-based cooldown per content per voter
     uint256 internal constant MAX_CIPHERTEXT_SIZE = 2_048; // 2 KB max ciphertext to prevent storage bloat
 
     // --- State ---
-    IERC20 internal crepToken;
+    IERC20 internal hrepToken;
     ContentRegistry internal registry;
     ProtocolConfig public protocolConfig;
 
@@ -192,9 +192,7 @@ contract RoundVotingEngine is
     ///         back to the consensus reserve -- either because the treasury address is
     ///         unset or because the transfer reverted. Gives indexers a distinct signal
     ///         from the settled-round replenishment path (`UnrevealedStakeAddedToConsensusReserve`).
-    event ForfeitedFundsFallbackToConsensusReserve(
-        uint256 indexed contentId, uint256 indexed roundId, uint256 amount
-    );
+    event ForfeitedFundsFallbackToConsensusReserve(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
     event CurrentEpochRefunded(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
     event TreasuryFeeDistributed(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
     event ConsensusReserveFunded(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
@@ -205,7 +203,7 @@ contract RoundVotingEngine is
         _disableInitializers();
     }
 
-    function initialize(address _governance, address _crepToken, address _registry, address _protocolConfig)
+    function initialize(address _governance, address _hrepToken, address _registry, address _protocolConfig)
         public
         initializer
     {
@@ -213,31 +211,31 @@ contract RoundVotingEngine is
         __Pausable_init();
 
         if (_governance == address(0)) revert InvalidAddress();
-        if (_crepToken == address(0)) revert InvalidAddress();
+        if (_hrepToken == address(0)) revert InvalidAddress();
         if (_registry == address(0)) revert InvalidAddress();
         if (_protocolConfig == address(0)) revert InvalidAddress();
 
         _grantRole(DEFAULT_ADMIN_ROLE, _governance);
         _grantRole(PAUSER_ROLE, _governance);
 
-        crepToken = IERC20(_crepToken);
+        hrepToken = IERC20(_hrepToken);
         registry = ContentRegistry(_registry);
         protocolConfig = ProtocolConfig(_protocolConfig);
     }
 
-    /// @notice Add cREP to the consensus reserve.
+    /// @notice Add HREP to the consensus reserve.
     /// @dev Permissionless by design — treasury top-ups and slashed-stake routing both use this same path.
     function addToConsensusReserve(uint256 amount) external nonReentrant {
-        _pullCrepFromSender(amount);
+        _pullHrepFromSender(amount);
         consensusReserve += amount;
     }
 
-    /// @notice Transfer cREP reward tokens to a recipient. Only callable by RewardDistributor.
-    function transferReward(address recipient, uint256 crepAmount) external {
+    /// @notice Transfer HREP reward tokens to a recipient. Only callable by RewardDistributor.
+    function transferReward(address recipient, uint256 hrepAmount) external {
         if (msg.sender != protocolConfig.rewardDistributor()) revert Unauthorized();
         if (recipient == address(0)) revert InvalidAddress();
-        if (crepAmount > 0) {
-            crepToken.safeTransfer(recipient, crepAmount);
+        if (hrepAmount > 0) {
+            hrepToken.safeTransfer(recipient, hrepAmount);
         }
     }
 
@@ -274,7 +272,7 @@ contract RoundVotingEngine is
     /// @param drandChainHash drand chain hash bound into the commitment.
     /// @param commitHash keccak256(abi.encodePacked(isUp, salt, voter, contentId, roundReferenceRatingBps, targetRound, drandChainHash, keccak256(ciphertext))).
     /// @param ciphertext Tlock-encrypted payload (decryptable after epoch end via drand).
-    /// @param stakeAmount Amount of cREP tokens to stake (1-100).
+    /// @param stakeAmount Amount of HREP tokens to stake (1-100).
     /// @param frontend Address of frontend operator for fee distribution.
     function commitVote(
         uint256 contentId,
@@ -306,7 +304,7 @@ contract RoundVotingEngine is
         whenNotPaused
         returns (bytes4)
     {
-        if (msg.sender != address(crepToken)) revert Unauthorized();
+        if (msg.sender != address(hrepToken)) revert Unauthorized();
         if (operator != from) revert Unauthorized();
 
         (
@@ -405,9 +403,9 @@ contract RoundVotingEngine is
             contentId, roundId, ciphertext, targetRound, drandChainHash, epochEnd, roundCfg.epochDuration
         );
 
-        // Transfer cREP stake after all lightweight validation passes.
+        // Transfer HREP stake after all lightweight validation passes.
         if (!stakeAlreadyTransferred) {
-            crepToken.safeTransferFrom(voter, address(this), stakeAmount);
+            hrepToken.safeTransferFrom(voter, address(this), stakeAmount);
         }
 
         _storeCommittedVote(
@@ -759,7 +757,7 @@ contract RoundVotingEngine is
         uint256 losingPool = upWins ? round.downPool : round.upPool;
 
         consensusReserve = RoundSettlementDistributionLib.distribute(
-            crepToken,
+            hrepToken,
             protocolConfig,
             round,
             roundVoterPool,
@@ -807,7 +805,7 @@ contract RoundVotingEngine is
             cancelledRoundRefundClaimed[contentId][roundId],
             voterCommitHash[contentId][roundId],
             commits[contentId][roundId],
-            crepToken,
+            hrepToken,
             msg.sender
         );
 
@@ -844,14 +842,14 @@ contract RoundVotingEngine is
         (
             uint256 forfeitedToTreasury,
             uint256 addedToConsensusReserve,
-            uint256 refundedCrep,
+            uint256 refundedHrep,
             uint256 processedPastEpochCount,
             uint256 updatedConsensusReserve
         ) = RoundCleanupLib.processUnrevealedVotes(
             round,
             commitKeys,
             commits[contentId][roundId],
-            crepToken,
+            hrepToken,
             protocolConfig,
             consensusReserve,
             startIndex,
@@ -887,17 +885,17 @@ contract RoundVotingEngine is
             }
         }
 
-        if (refundedCrep > 0) {
-            emit CurrentEpochRefunded(contentId, roundId, refundedCrep);
+        if (refundedHrep > 0) {
+            emit CurrentEpochRefunded(contentId, roundId, refundedHrep);
         }
     }
     // =========================================================================
     // INTERNAL HELPERS
     // =========================================================================
 
-    function _pullCrepFromSender(uint256 amount) internal {
+    function _pullHrepFromSender(uint256 amount) internal {
         if (amount == 0) revert ZeroAmount();
-        crepToken.safeTransferFrom(msg.sender, address(this), amount);
+        hrepToken.safeTransferFrom(msg.sender, address(this), amount);
     }
 
     function _getRoundConfig(uint256 contentId, uint256 roundId) internal view returns (RoundLib.RoundConfig memory) {

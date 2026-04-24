@@ -18,12 +18,10 @@ library RoundSettlementDistributionLib {
     /// @notice Emitted when the 1% treasury fee could not be delivered (treasury unset or
     ///         transfer reverted) and the amount was rerouted into the voter pool instead.
     ///         Lets indexers reconcile voter-reward accounting with expected fee splits.
-    event TreasuryFeeFallbackToVoterPool(
-        uint256 indexed contentId, uint256 indexed roundId, uint256 amount
-    );
+    event TreasuryFeeFallbackToVoterPool(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
 
     function distribute(
-        IERC20 crepToken,
+        IERC20 hrepToken,
         ProtocolConfig protocolConfig,
         RoundLib.Round storage round,
         mapping(uint256 => mapping(uint256 => uint256)) storage roundVoterPool,
@@ -66,7 +64,7 @@ library RoundSettlementDistributionLib {
             }
 
             if (treasuryShare > 0) {
-                _transferTreasuryFee(crepToken, protocolConfig, roundVoterPool, contentId, roundId, treasuryShare);
+                _transferTreasuryFee(hrepToken, protocolConfig, roundVoterPool, contentId, roundId, treasuryShare);
             }
 
             return updatedConsensusReserve;
@@ -109,7 +107,7 @@ library RoundSettlementDistributionLib {
     }
 
     function _transferTreasuryFee(
-        IERC20 crepToken,
+        IERC20 hrepToken,
         ProtocolConfig protocolConfig,
         mapping(uint256 => mapping(uint256 => uint256)) storage roundVoterPool,
         uint256 contentId,
@@ -118,7 +116,7 @@ library RoundSettlementDistributionLib {
     ) private {
         address currentTreasury = protocolConfig.treasury();
         if (currentTreasury != address(0)) {
-            try TokenTransferLib.safeTransfer(crepToken, currentTreasury, treasuryShare) {
+            try TokenTransferLib.safeTransfer(hrepToken, currentTreasury, treasuryShare) {
                 emit TreasuryFeeDistributed(contentId, roundId, treasuryShare);
             } catch {
                 roundVoterPool[contentId][roundId] += treasuryShare;

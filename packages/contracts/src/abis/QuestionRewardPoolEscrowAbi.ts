@@ -19,6 +19,19 @@ export const QuestionRewardPoolEscrowAbi = [
   },
   {
     "type": "function",
+    "name": "BUNDLE_CLAIM_GRACE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "CONFIG_ROLE",
     "inputs": [],
     "outputs": [
@@ -110,7 +123,7 @@ export const QuestionRewardPoolEscrowAbi = [
   },
   {
     "type": "function",
-    "name": "REWARD_ASSET_CREP",
+    "name": "REWARD_ASSET_HREP",
     "inputs": [],
     "outputs": [
       {
@@ -524,7 +537,7 @@ export const QuestionRewardPoolEscrowAbi = [
   },
   {
     "type": "function",
-    "name": "crepToken",
+    "name": "hrepToken",
     "inputs": [],
     "outputs": [
       {
@@ -619,7 +632,7 @@ export const QuestionRewardPoolEscrowAbi = [
         "internalType": "address"
       },
       {
-        "name": "crepToken_",
+        "name": "hrepToken_",
         "type": "address",
         "internalType": "address"
       },

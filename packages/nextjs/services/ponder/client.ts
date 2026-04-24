@@ -646,7 +646,7 @@ export interface PonderRewardClaim {
   epochId: string | null;
   voter: string;
   stakeReturned: string;
-  crepReward: string;
+  hrepReward: string;
   claimedAt: string;
 }
 

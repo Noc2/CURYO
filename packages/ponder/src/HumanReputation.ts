@@ -18,7 +18,7 @@ const INDEXED_CONTRACT_NAMES = [
   "ProfileRegistry",
   "FrontendRegistry",
   "VoterIdNFT",
-  "CuryoReputation",
+  "HumanReputation",
   "HumanFaucet",
   "ParticipationPool",
   "QuestionRewardPoolEscrow",
@@ -49,7 +49,7 @@ function buildExcludedAddresses() {
 
 const excludedAddresses = buildExcludedAddresses();
 
-ponder.on("CuryoReputation:Transfer", async ({ event, context }) => {
+ponder.on("HumanReputation:Transfer", async ({ event, context }) => {
   const { from, to, value } = event.args;
 
   // Record every transfer for balance history

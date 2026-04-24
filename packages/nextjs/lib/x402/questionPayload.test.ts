@@ -245,7 +245,7 @@ test("parseX402QuestionRequest rejects non-USDC x402 bounties", () => {
     () =>
       parseX402QuestionRequest({
         ...VALID_REQUEST,
-        bounty: { ...VALID_REQUEST.bounty, asset: "cREP" },
+        bounty: { ...VALID_REQUEST.bounty, asset: "HREP" },
       }),
     X402QuestionInputError,
   );

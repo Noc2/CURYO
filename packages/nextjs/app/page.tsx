@@ -57,7 +57,7 @@ const FEATURE_BENEFITS: {
     achievedBy: "Commit-reveal voting and reputation staking make dishonest or losing votes economically costly.",
     links: [
       { label: "Commit-reveal", href: "/docs/how-it-works#commit-reveal-voting" },
-      { label: "Staking", href: "/docs/how-it-works#crep-stake-settlement" },
+      { label: "Staking", href: "/docs/how-it-works#hrep-stake-settlement" },
     ],
   },
   {

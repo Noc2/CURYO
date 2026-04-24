@@ -13,7 +13,7 @@ import { useParticipationRate } from "~~/hooks/useParticipationRate";
 import { useRoundSnapshot } from "~~/hooks/useRoundSnapshot";
 import { useVoterIdNFT, useVoterIdStake } from "~~/hooks/useVoterIdNFT";
 import type { OpenRoundFallbackData, VotingConfig } from "~~/lib/contracts/roundVotingEngine";
-import { estimateVoteReturn, formatCrepAmount } from "~~/lib/vote/voteIncentives";
+import { estimateVoteReturn, formatHrepAmount } from "~~/lib/vote/voteIncentives";
 
 interface StakeSelectorProps {
   isOpen: boolean;
@@ -69,14 +69,14 @@ export function StakeSelector({
 
   const { remainingCapacity } = useVoterIdStake(contentId, currentRoundId, tokenId);
 
-  const { data: crepBalance } = useScaffoldReadContract({
-    contractName: "CuryoReputation",
+  const { data: hrepBalance } = useScaffoldReadContract({
+    contractName: "HumanReputation",
     functionName: "balanceOf",
     args: [address],
   });
 
   const { data: tokenSymbol } = useScaffoldReadContract({
-    contractName: "CuryoReputation",
+    contractName: "HumanReputation",
     functionName: "symbol",
   });
 
@@ -89,12 +89,12 @@ export function StakeSelector({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isConfirming, isOpen, onCancel]);
 
-  const symbol = tokenSymbol ?? "cREP";
+  const symbol = tokenSymbol ?? "HREP";
   const { calculateBonus } = useParticipationRate();
   const voteBonus = calculateBonus(amount);
   const voteEstimate = estimateVoteReturn(estimateSnapshot, isUp, amount);
 
-  const balanceFormatted = crepBalance ? Number(crepBalance) / 1e6 : 0;
+  const balanceFormatted = hrepBalance ? Number(hrepBalance) / 1e6 : 0;
   const capacityFormatted = remainingCapacity != null ? Number(remainingCapacity) / 1e6 : 100;
   const maxByBalance = Math.floor(balanceFormatted);
   const maxByCapacity = Math.floor(capacityFormatted);
@@ -287,7 +287,7 @@ export function StakeSelector({
                       <span>Est. return if right</span>
                       <span className="font-semibold tabular-nums">
                         {openPhaseGrossReturnMicro !== null
-                          ? `${formatCrepAmount(openPhaseGrossReturnMicro)} ${symbol}`
+                          ? `${formatHrepAmount(openPhaseGrossReturnMicro)} ${symbol}`
                           : "Loading"}
                       </span>
                     </div>
@@ -295,14 +295,14 @@ export function StakeSelector({
                       <span>If wrong but revealed</span>
                       <span className="font-semibold tabular-nums">
                         {openPhaseRevealedRefundMicro !== null
-                          ? `${formatCrepAmount(openPhaseRevealedRefundMicro)} ${symbol}`
+                          ? `${formatHrepAmount(openPhaseRevealedRefundMicro)} ${symbol}`
                           : "Loading"}
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-3">
                       <span>Live pools</span>
                       <span className="font-semibold tabular-nums">
-                        up {formatCrepAmount(upPool, 0)} · down {formatCrepAmount(downPool, 0)}
+                        up {formatHrepAmount(upPool, 0)} · down {formatHrepAmount(downPool, 0)}
                       </span>
                     </div>
                   </>

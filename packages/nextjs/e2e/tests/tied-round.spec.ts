@@ -25,15 +25,15 @@ import { expect, test } from "@playwright/test";
  *
  * Strategy:
  * 1. Ask a fresh question via the UI to get a clean round with 0 votes
- * 2. 4 accounts vote on the SAME content via UI: 2 UP + 2 DOWN, all 1 cREP
+ * 2. 4 accounts vote on the SAME content via UI: 2 UP + 2 DOWN, all 1 HREP
  *    (UI voting uses commitVote correctly via hooks)
  * 3. Fast-forward past epoch → keeper reveals via keeper API → fast-forward → settle
  * 4. Verify round.state === 3 (Tied) and rating unchanged
  *
  * Account allocation:
  * - Account #2 — submits new content
- * - Accounts #3, #4 — vote UP (1 cREP each)
- * - Accounts #5, #6 — vote DOWN (1 cREP each)
+ * - Accounts #3, #4 — vote UP (1 HREP each)
+ * - Accounts #5, #6 — vote DOWN (1 HREP each)
  *
  * NOTE: Uses accounts that may already have cooldowns from settlement-lifecycle
  * and reward-claim tests. The test asks a fresh question to avoid cooldown issues.
@@ -93,7 +93,7 @@ test.describe("Tied round lifecycle", () => {
 
     // Ask
     await continueToBountyStep(page);
-    await selectBountyRewardAsset(page, "crep");
+    await selectBountyRewardAsset(page, "hrep");
     const submitBtn = page.getByRole("button", { name: /^Submit/i });
     await expect(submitBtn).toBeVisible({ timeout: 5_000 });
     await expect(submitBtn).toBeEnabled({ timeout: 5_000 });

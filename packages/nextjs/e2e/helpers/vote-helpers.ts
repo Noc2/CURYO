@@ -76,7 +76,7 @@ export async function voteOnContent(page: Page, direction: "up" | "down"): Promi
     await presetBtn.click();
   }
 
-  // Click the confirm/stake button — text is "Stake {N} cREP"
+  // Click the confirm/stake button — text is "Stake {N} HREP"
   const confirmBtn = stakeModal.getByRole("button", { name: /Stake \d+/i });
   const confirmVisible = await confirmBtn
     .waitFor({ state: "visible", timeout: 5_000 })
@@ -161,7 +161,7 @@ export async function voteOnSpecificContent(
     .catch(() => false);
   if (!modalVisible) return false;
 
-  // Click "1" preset (lowest stake = 1 cREP)
+  // Click "1" preset (lowest stake = 1 HREP)
   const presetBtn = stakeModal.getByRole("button", { name: /^1$/ });
   if (
     await presetBtn

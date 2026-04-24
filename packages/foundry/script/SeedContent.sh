@@ -10,7 +10,7 @@ DEPLOY_JSON="$SCRIPT_DIR/../deployments/31337.json"
 CATEGORY_ID_RESOLVER="$SCRIPT_DIR/../scripts-js/resolveCategoryId.js"
 
 RPC="http://127.0.0.1:8545"
-SUBMISSION_BOUNTY_AMOUNT="1000000" # 1 cREP in 6 decimals (default minimum submission Bounty)
+SUBMISSION_BOUNTY_AMOUNT="1000000" # 1 HREP in 6 decimals (default minimum submission Bounty)
 SUBMISSION_BOUNTY_REQUIRED_VOTERS="3"
 SUBMISSION_BOUNTY_REQUIRED_SETTLED_ROUNDS="1"
 SUBMISSION_BOUNTY_EXPIRES_AT="0"
@@ -22,7 +22,7 @@ SUBMISSION_ROUND_EPOCH_DURATION="1200"
 SUBMISSION_ROUND_MAX_DURATION="604800"
 SUBMISSION_ROUND_MIN_VOTERS="3"
 SUBMISSION_ROUND_MAX_VOTERS="1000"
-VOTE_STAKE="5000000" # 5 cREP for votes
+VOTE_STAKE="5000000" # 5 HREP for votes
 
 # Check if localhost deployment exists
 if [ ! -f "$DEPLOY_JSON" ]; then
@@ -37,7 +37,7 @@ if ! cast chain-id --rpc-url "$RPC" > /dev/null 2>&1; then
 fi
 
 # Read contract addresses from deployment file
-TOKEN=$(grep -o '"0x[^"]*": "CuryoReputation"' "$DEPLOY_JSON" | grep -o '0x[^"]*' || true)
+TOKEN=$(grep -o '"0x[^"]*": "HumanReputation"' "$DEPLOY_JSON" | grep -o '0x[^"]*' || true)
 REGISTRY=$(grep -o '"0x[^"]*": "ContentRegistry"' "$DEPLOY_JSON" | grep -o '0x[^"]*' || true)
 QUESTION_REWARD_POOL_ESCROW=$(grep -o '"0x[^"]*": "QuestionRewardPoolEscrow"' "$DEPLOY_JSON" | grep -o '0x[^"]*' || true)
 FEEDBACK_BONUS_ESCROW=$(grep -o '"0x[^"]*": "FeedbackBonusEscrow"' "$DEPLOY_JSON" | grep -o '0x[^"]*' || true)
@@ -50,7 +50,7 @@ if [ -z "$TOKEN" ] || [ -z "$REGISTRY" ] || [ -z "$QUESTION_REWARD_POOL_ESCROW" 
   exit 1
 fi
 
-echo "CuryoReputation:         $TOKEN"
+echo "HumanReputation:         $TOKEN"
 echo "ContentRegistry:         $REGISTRY"
 echo "QuestionRewardPoolEscrow: $QUESTION_REWARD_POOL_ESCROW"
 echo "FeedbackBonusEscrow:     $FEEDBACK_BONUS_ESCROW"
@@ -61,7 +61,7 @@ echo ""
 
 # Anvil/hardhat default private keys
 # Accounts 2-10 for question submission (some reused for later questions), 9-10 also for voting
-# Note: These accounts are pre-funded with cREP during deployment (see DeployCuryo.s.sol)
+# Note: These accounts are pre-funded with HREP during deployment (see DeployCuryo.s.sol)
 KEYS=(
   "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a"  # Account 2
   "0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6"  # Account 3
@@ -321,7 +321,7 @@ for BUNDLE_CATEGORY_SLUG in "${BUNDLE_CATEGORY_SLUGS[@]}"; do
 done
 
 echo "=== Seeding example AI agent and research questions ==="
-echo "(Test accounts were pre-funded with cREP during deployment; seeded Bounties use varied cREP amounts)"
+echo "(Test accounts were pre-funded with HREP during deployment; seeded Bounties use varied HREP amounts)"
 echo ""
 
 TOTAL_ITEMS="${#CONTEXT_URLS[@]}"
@@ -390,8 +390,8 @@ for ((i = 0; i < TOTAL_ITEMS; i++)); do
     cast rpc anvil_setBalance "$ADDR" "0x8AC7230489E80000" --rpc-url "$RPC" > /dev/null 2>&1
   fi
 
-  # 1. Approve the Bounty escrow to pull the non-refundable cREP submission Bounty
-  echo "  Approving cREP Bounty: $BOUNTY_AMOUNT"
+  # 1. Approve the Bounty escrow to pull the non-refundable HREP submission Bounty
+  echo "  Approving HREP Bounty: $BOUNTY_AMOUNT"
   cast send "$TOKEN" "approve(address,uint256)" "$QUESTION_REWARD_POOL_ESCROW" "$BOUNTY_AMOUNT" --private-key "$KEY" --rpc-url "$RPC" > /dev/null
 
   # 2. Reserve the hidden submission commitment before revealing the question metadata

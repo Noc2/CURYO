@@ -9,7 +9,7 @@ import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { HumanReputation } from "../contracts/HumanReputation.sol";
 import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
 import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
 
@@ -27,7 +27,7 @@ contract SelectiveRevelationTest is VotingTestBase {
         bytes32 commitKey;
     }
 
-    CuryoReputation public crepToken;
+    HumanReputation public hrepToken;
     ContentRegistry public registry;
     RoundVotingEngine public engine;
     RoundRewardDistributor public rewardDistributor;
@@ -38,7 +38,7 @@ contract SelectiveRevelationTest is VotingTestBase {
     address[10] public voters;
     address public treasury = address(100);
 
-    uint256 public constant STAKE = 5e6; // 5 cREP
+    uint256 public constant STAKE = 5e6; // 5 HREP
     uint256 public constant T0 = 1_000_000;
     uint256 public constant EPOCH = 1 hours;
     uint256 public constant GRACE_PERIOD = 60 minutes;
@@ -47,8 +47,8 @@ contract SelectiveRevelationTest is VotingTestBase {
         vm.warp(T0);
         vm.startPrank(owner);
 
-        crepToken = new CuryoReputation(owner, owner);
-        crepToken.grantRole(crepToken.MINTER_ROLE(), owner);
+        hrepToken = new HumanReputation(owner, owner);
+        hrepToken.grantRole(hrepToken.MINTER_ROLE(), owner);
 
         ContentRegistry registryImpl = new ContentRegistry();
         RoundVotingEngine engineImpl = new RoundVotingEngine();
@@ -58,7 +58,7 @@ contract SelectiveRevelationTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(registryImpl),
-                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(crepToken)))
+                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(hrepToken)))
                 )
             )
         );
@@ -69,7 +69,7 @@ contract SelectiveRevelationTest is VotingTestBase {
                     address(engineImpl),
                     abi.encodeCall(
                         RoundVotingEngine.initialize,
-                        (owner, address(crepToken), address(registry), address(_deployProtocolConfig(owner)))
+                        (owner, address(hrepToken), address(registry), address(_deployProtocolConfig(owner)))
                     )
                 )
             )
@@ -81,7 +81,7 @@ contract SelectiveRevelationTest is VotingTestBase {
                     address(distImpl),
                     abi.encodeCall(
                         RoundRewardDistributor.initialize,
-                        (owner, address(crepToken), address(engine), address(registry))
+                        (owner, address(hrepToken), address(engine), address(registry))
                     )
                 )
             )
@@ -97,17 +97,17 @@ contract SelectiveRevelationTest is VotingTestBase {
         _setTlockRoundConfig(ProtocolConfig(address(engine.protocolConfig())), EPOCH, 7 days, 3, 1000);
         ProtocolConfig(address(engine.protocolConfig())).setRevealGracePeriod(GRACE_PERIOD);
 
-        crepToken.mint(owner, 2_000_000e6);
-        crepToken.approve(address(engine), 500_000e6);
+        hrepToken.mint(owner, 2_000_000e6);
+        hrepToken.approve(address(engine), 500_000e6);
         engine.addToConsensusReserve(500_000e6);
 
         // Set up 10 voters
         for (uint256 i = 0; i < 10; i++) {
             voters[i] = address(uint160(10 + i));
-            crepToken.mint(voters[i], 10_000e6);
+            hrepToken.mint(voters[i], 10_000e6);
         }
 
-        crepToken.mint(submitter, 10_000e6);
+        hrepToken.mint(submitter, 10_000e6);
 
         vm.stopPrank();
     }
@@ -138,9 +138,10 @@ contract SelectiveRevelationTest is VotingTestBase {
         salt = keccak256(abi.encodePacked(voter, block.timestamp));
         CommitArtifacts memory artifacts = _buildCommitArtifacts(voter, contentId, isUp, salt);
         vm.startPrank(voter);
-        crepToken.approve(address(engine), stake);
+        hrepToken.approve(address(engine), stake);
         engine.commitVote(
-            contentId, _defaultRatingReferenceBps(),
+            contentId,
+            _defaultRatingReferenceBps(),
             artifacts.targetRound,
             artifacts.drandChainHash,
             artifacts.commitHash,
@@ -158,7 +159,7 @@ contract SelectiveRevelationTest is VotingTestBase {
 
     function _submitContent() internal returns (uint256 contentId) {
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         _submitContentWithReservation(registry, "https://example.com/selective", "test", "test", "test", 0);
         vm.stopPrank();
         contentId = 1;

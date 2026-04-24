@@ -27,7 +27,7 @@ test("RoundRevealedBreakdown renders Up before Down to match the vote button ord
     />,
   ).replace(/\s+/g, " ");
 
-  assert.match(html, /Up<\/span>\s*<span[^>]*>0 cREP<\/span>\s*<span[^>]*>0 votes<\/span>/);
-  assert.match(html, /Down<\/span>\s*<span[^>]*>5 cREP<\/span>\s*<span[^>]*>1 vote<\/span>/);
+  assert.match(html, /Up<\/span>\s*<span[^>]*>0 HREP<\/span>\s*<span[^>]*>0 votes<\/span>/);
+  assert.match(html, /Down<\/span>\s*<span[^>]*>5 HREP<\/span>\s*<span[^>]*>1 vote<\/span>/);
   assert.ok(html.indexOf(">Up<") < html.indexOf(">Down<"));
 });

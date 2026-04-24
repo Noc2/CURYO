@@ -1,4 +1,4 @@
-export const CuryoReputationAbi = [
+export const HumanReputationAbi = [
   {
     "type": "constructor",
     "inputs": [

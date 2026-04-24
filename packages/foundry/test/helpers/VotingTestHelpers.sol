@@ -7,7 +7,7 @@ import { Base64 } from "@openzeppelin/contracts/utils/Base64.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { CuryoReputation } from "../../contracts/CuryoReputation.sol";
+import { HumanReputation } from "../../contracts/HumanReputation.sol";
 import { ContentRegistry } from "../../contracts/ContentRegistry.sol";
 import { ProtocolConfig } from "../../contracts/ProtocolConfig.sol";
 import { RoundVotingEngine } from "../../contracts/RoundVotingEngine.sol";
@@ -31,7 +31,7 @@ function deployInitializedProtocolConfig(address admin, address governance) retu
 abstract contract ContentSubmissionTestBase {
     Vm internal constant HEVM = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
     ContentRegistry internal activeTlockContentRegistry;
-    uint8 internal constant DEFAULT_SUBMISSION_REWARD_ASSET_CREP = 0;
+    uint8 internal constant DEFAULT_SUBMISSION_REWARD_ASSET_HREP = 0;
     uint256 internal constant DEFAULT_SUBMISSION_REWARD_POOL = 1e6;
     uint256 internal constant DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS = 3;
     uint256 internal constant DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS = 1;
@@ -191,7 +191,7 @@ abstract contract ContentSubmissionTestBase {
             );
         uint256 rewardAmount = _defaultSubmissionRewardAmount(reservation.registry);
         bytes32 revealCommitment = _questionReservationRevealCommitment(reservation, submissionKey, rewardAmount);
-        IERC20(reservation.registry.crepToken()).approve(rewardEscrow, rewardAmount);
+        IERC20(reservation.registry.hrepToken()).approve(rewardEscrow, rewardAmount);
         reservation.registry.reserveSubmission(revealCommitment);
     }
 
@@ -202,7 +202,7 @@ abstract contract ContentSubmissionTestBase {
     ) internal view returns (bytes32) {
         ContentRegistry.SubmissionRewardTerms memory rewardTerms =
             ContentRegistry.SubmissionRewardTerms({
-                asset: DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+                asset: DEFAULT_SUBMISSION_REWARD_ASSET_HREP,
                 amount: rewardAmount,
                 requiredVoters: DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
                 requiredSettledRounds: DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
@@ -238,7 +238,7 @@ abstract contract ContentSubmissionTestBase {
     ) internal view returns (bytes32) {
         uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
         ContentRegistry.SubmissionRewardTerms memory rewardTerms = ContentRegistry.SubmissionRewardTerms({
-            asset: DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+            asset: DEFAULT_SUBMISSION_REWARD_ASSET_HREP,
             amount: rewardAmount,
             requiredVoters: DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
             requiredSettledRounds: DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
@@ -408,7 +408,7 @@ abstract contract ContentSubmissionTestBase {
     function _defaultSubmissionRewardAmount(ContentRegistry registry) internal view returns (uint256) {
         ProtocolConfig config = registry.protocolConfig();
         if (address(config) != address(0)) {
-            uint256 configuredMinimum = config.minSubmissionCrepPool();
+            uint256 configuredMinimum = config.minSubmissionHrepPool();
             if (configuredMinimum != 0) return configuredMinimum;
         }
         return DEFAULT_SUBMISSION_REWARD_POOL;
@@ -507,7 +507,7 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
 
     struct DirectTestCommitRequest {
         RoundVotingEngine engine;
-        CuryoReputation crepToken;
+        HumanReputation hrepToken;
         address voter;
         uint256 contentId;
         bool isUp;
@@ -518,7 +518,7 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
 
     struct TransferAndCallTestCommitRequest {
         RoundVotingEngine engine;
-        CuryoReputation crepToken;
+        HumanReputation hrepToken;
         address voter;
         uint256 contentId;
         bool isUp;
@@ -727,7 +727,7 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
             _buildTestCommitArtifacts(request.voter, request.isUp, request.salt, request.contentId);
 
         vm.startPrank(request.voter);
-        request.crepToken.approve(address(request.engine), request.stake);
+        request.hrepToken.approve(address(request.engine), request.stake);
         request.engine
             .commitVote(
                 request.contentId,
@@ -761,7 +761,7 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         );
 
         vm.prank(request.voter);
-        request.crepToken.transferAndCall(address(request.engine), request.stake, payload);
+        request.hrepToken.transferAndCall(address(request.engine), request.stake, payload);
 
         return artifacts.commitKey;
     }
@@ -814,14 +814,7 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         bytes memory ciphertext
     ) internal view returns (bytes32) {
         return _commitHash(
-            isUp,
-            salt,
-            voter,
-            contentId,
-            _currentRatingReferenceBps(contentId),
-            targetRound,
-            drandChainHash,
-            ciphertext
+            isUp, salt, voter, contentId, _currentRatingReferenceBps(contentId), targetRound, drandChainHash, ciphertext
         );
     }
 

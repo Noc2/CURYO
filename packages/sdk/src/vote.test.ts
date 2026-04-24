@@ -1,4 +1,4 @@
-import { CuryoReputationAbi, decodeVoteTransferPayload } from "@curyo/contracts";
+import { HumanReputationAbi, decodeVoteTransferPayload } from "@curyo/contracts";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { decodeFunctionData } from "viem";
@@ -96,7 +96,7 @@ test("buildVoteTransferAndCallData encodes the token transfer call", () => {
   });
 
   const decoded = decodeFunctionData({
-    abi: CuryoReputationAbi,
+    abi: HumanReputationAbi,
     data,
   });
 

@@ -52,7 +52,7 @@ contract GasBudgetTest is RoundIntegrationTest {
         uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
         address rewardEscrow = _ensureDefaultQuestionRewardPoolEscrow(registry);
         vm.startPrank(submitter);
-        crepToken.approve(rewardEscrow, rewardAmount);
+        hrepToken.approve(rewardEscrow, rewardAmount);
         vm.stopPrank();
 
         string memory imageUrl = "https://example.com/gas-submit.jpg";
@@ -101,7 +101,7 @@ contract GasBudgetTest is RoundIntegrationTest {
         bytes memory ciphertext = _testCiphertext(true, salt, contentId);
 
         vm.startPrank(voter1);
-        crepToken.approve(address(votingEngine), STAKE);
+        hrepToken.approve(address(votingEngine), STAKE);
         vm.stopPrank();
 
         uint256 gasUsed = _measureCallAs(
@@ -131,7 +131,7 @@ contract GasBudgetTest is RoundIntegrationTest {
         bytes memory ciphertext = _testCiphertext(true, salt, contentId);
 
         vm.startPrank(voter1);
-        crepToken.approve(address(votingEngine), STAKE);
+        hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
             _defaultRatingReferenceBps(),
@@ -222,7 +222,7 @@ contract GasBudgetTest is RoundIntegrationTest {
         bytes32 ch3 = _commitHash(false, s3, voter3, contentId);
 
         vm.startPrank(voter1);
-        crepToken.approve(address(votingEngine), STAKE);
+        hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
             _defaultRatingReferenceBps(),
@@ -236,7 +236,7 @@ contract GasBudgetTest is RoundIntegrationTest {
         vm.stopPrank();
 
         vm.startPrank(voter2);
-        crepToken.approve(address(votingEngine), STAKE);
+        hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
             _defaultRatingReferenceBps(),
@@ -250,7 +250,7 @@ contract GasBudgetTest is RoundIntegrationTest {
         vm.stopPrank();
 
         vm.startPrank(voter3);
-        crepToken.approve(address(votingEngine), STAKE);
+        hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
             _defaultRatingReferenceBps(),
@@ -271,8 +271,7 @@ contract GasBudgetTest is RoundIntegrationTest {
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter2, ch2), true, s2);
 
         vm.warp(
-            round.startTime + 7 days
-                + ProtocolConfig(address(votingEngine.protocolConfig())).revealGracePeriod() + 1
+            round.startTime + 7 days + ProtocolConfig(address(votingEngine.protocolConfig())).revealGracePeriod() + 1
         );
         votingEngine.finalizeRevealFailedRound(contentId, roundId);
 
@@ -290,7 +289,7 @@ contract GasBudgetTest is RoundIntegrationTest {
         bytes32 commitHash = _commitHash(true, salt, voter1, contentId);
 
         vm.startPrank(voter1);
-        crepToken.approve(address(votingEngine), STAKE);
+        hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
             _defaultRatingReferenceBps(),

@@ -540,7 +540,7 @@ ponder.on("RoundVotingEngine:CancelledRoundRefundClaimed", async ({ event, conte
       source: "refund",
       voter,
       stakeReturned: amount,
-      crepReward: 0n,
+      hrepReward: 0n,
       claimedAt: event.block.timestamp,
     })
     .onConflictDoNothing();

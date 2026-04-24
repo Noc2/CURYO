@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { HumanReputation } from "../contracts/HumanReputation.sol";
 import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
 import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
 import { MockERC20 } from "../contracts/mocks/MockERC20.sol";
@@ -17,7 +17,7 @@ import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
 
 contract QuestionRewardPoolEscrowTest is VotingTestBase {
-    CuryoReputation public crepToken;
+    HumanReputation public hrepToken;
     ContentRegistry public registry;
     RoundVotingEngine public votingEngine;
     RoundRewardDistributor public rewardDistributor;
@@ -70,8 +70,8 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
 
         vm.startPrank(owner);
 
-        crepToken = new CuryoReputation(owner, owner);
-        crepToken.grantRole(crepToken.MINTER_ROLE(), owner);
+        hrepToken = new HumanReputation(owner, owner);
+        hrepToken.grantRole(hrepToken.MINTER_ROLE(), owner);
 
         ContentRegistry registryImpl = new ContentRegistry();
         RoundVotingEngine engineImpl = new RoundVotingEngine();
@@ -84,7 +84,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(registryImpl),
-                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(crepToken)))
+                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(hrepToken)))
                 )
             )
         );
@@ -94,7 +94,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
                     address(engineImpl),
                     abi.encodeCall(
                         RoundVotingEngine.initialize,
-                        (owner, address(crepToken), address(registry), address(protocolConfig))
+                        (owner, address(hrepToken), address(registry), address(protocolConfig))
                     )
                 )
             )
@@ -105,7 +105,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
                     address(distImpl),
                     abi.encodeCall(
                         RoundRewardDistributor.initialize,
-                        (owner, address(crepToken), address(votingEngine), address(registry))
+                        (owner, address(hrepToken), address(votingEngine), address(registry))
                     )
                 )
             )
@@ -117,7 +117,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(frontendRegistryImpl),
-                    abi.encodeCall(FrontendRegistry.initialize, (owner, owner, address(crepToken)))
+                    abi.encodeCall(FrontendRegistry.initialize, (owner, owner, address(hrepToken)))
                 )
             )
         );
@@ -129,7 +129,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
                         QuestionRewardPoolEscrow.initialize,
                         (
                             owner,
-                            address(crepToken),
+                            address(hrepToken),
                             address(usdc),
                             address(registry),
                             address(votingEngine),
@@ -161,14 +161,14 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         _setTlockRoundConfig(protocolConfig, EPOCH_DURATION, 7 days, 3, 200);
 
         uint256 reserveAmount = 1_000_000e6;
-        crepToken.mint(owner, reserveAmount);
-        crepToken.approve(address(votingEngine), reserveAmount);
+        hrepToken.mint(owner, reserveAmount);
+        hrepToken.approve(address(votingEngine), reserveAmount);
         votingEngine.addToConsensusReserve(reserveAmount);
 
         address[7] memory humans = [submitter, funder, voter1, voter2, voter3, voter4, frontend1];
         for (uint256 i = 0; i < humans.length; i++) {
             voterIdNFT.setHolder(humans[i]);
-            crepToken.mint(humans[i], 10_000e6);
+            hrepToken.mint(humans[i], 10_000e6);
             usdc.mint(humans[i], 1_000e6);
         }
         usdc.mint(delegate1, 1_000e6);
@@ -302,7 +302,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         bytes32 commitKey1 = _commitTestVote(
             DirectTestCommitRequest({
                 engine: votingEngine,
-                crepToken: crepToken,
+                hrepToken: hrepToken,
                 voter: voter1,
                 contentId: contentId,
                 isUp: true,
@@ -321,7 +321,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         bytes32 commitKey2 = _commitTestVote(
             DirectTestCommitRequest({
                 engine: votingEngine,
-                crepToken: crepToken,
+                hrepToken: hrepToken,
                 voter: voter2,
                 contentId: contentId,
                 isUp: true,
@@ -334,7 +334,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         bytes32 commitKey3 = _commitTestVote(
             DirectTestCommitRequest({
                 engine: votingEngine,
-                crepToken: crepToken,
+                hrepToken: hrepToken,
                 voter: voter3,
                 contentId: contentId,
                 isUp: false,
@@ -703,27 +703,18 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
 
     function testBundleDoesNotFailOnUnsettledTerminalRound() public {
         uint256[] memory contentIds = new uint256[](2);
-        contentIds[0] =
-            _submitQuestionWithContext("https://example.com/bundle-a", "https://example.com/bundle-a.jpg");
-        contentIds[1] =
-            _submitQuestionWithContext("https://example.com/bundle-b", "https://example.com/bundle-b.jpg");
+        contentIds[0] = _submitQuestionWithContext("https://example.com/bundle-a", "https://example.com/bundle-a.jpg");
+        contentIds[1] = _submitQuestionWithContext("https://example.com/bundle-b", "https://example.com/bundle-b.jpg");
         uint256 bundleId = 1;
-        uint8 rewardAsset = rewardPoolEscrow.REWARD_ASSET_CREP();
+        uint8 rewardAsset = rewardPoolEscrow.REWARD_ASSET_HREP();
         uint256 bountyClosesAt = block.timestamp + 30 days;
 
         vm.prank(submitter);
-        crepToken.approve(address(rewardPoolEscrow), REWARD_POOL_AMOUNT);
+        hrepToken.approve(address(rewardPoolEscrow), REWARD_POOL_AMOUNT);
 
         vm.prank(address(registry));
         rewardPoolEscrow.createSubmissionBundleFromRegistry(
-            bundleId,
-            contentIds,
-            submitter,
-            rewardAsset,
-            REWARD_POOL_AMOUNT,
-            3,
-            bountyClosesAt,
-            bountyClosesAt
+            bundleId, contentIds, submitter, rewardAsset, REWARD_POOL_AMOUNT, 3, bountyClosesAt, bountyClosesAt
         );
 
         vm.prank(address(votingEngine));
@@ -768,13 +759,9 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         protocolConfig.setSubmissionRewardMinimums(3, 3);
         vm.stopPrank();
 
-        RoundLib.RoundConfig memory roundConfig =
-            RoundLib.RoundConfig({
-                epochDuration: uint32(EPOCH_DURATION),
-                maxDuration: uint32(7 days),
-                minVoters: 3,
-                maxVoters: 4
-            });
+        RoundLib.RoundConfig memory roundConfig = RoundLib.RoundConfig({
+            epochDuration: uint32(EPOCH_DURATION), maxDuration: uint32(7 days), minVoters: 3, maxVoters: 4
+        });
         uint256 contentId = _submitQuestionWithRoundConfig("https://example.com/underfunded.jpg", roundConfig);
         uint256 rewardPoolId = 1;
 
@@ -799,10 +786,8 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
 
     function _submitBundleQuestions() internal returns (uint256[] memory contentIds) {
         contentIds = new uint256[](2);
-        contentIds[0] =
-            _submitQuestionWithContext("https://example.com/bundle-a", "https://example.com/bundle-a.jpg");
-        contentIds[1] =
-            _submitQuestionWithContext("https://example.com/bundle-b", "https://example.com/bundle-b.jpg");
+        contentIds[0] = _submitQuestionWithContext("https://example.com/bundle-a", "https://example.com/bundle-a.jpg");
+        contentIds[1] = _submitQuestionWithContext("https://example.com/bundle-b", "https://example.com/bundle-b.jpg");
     }
 
     function _createSubmissionBundle(
@@ -814,8 +799,8 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
     ) internal returns (uint256 bundleId) {
         bundleId = 1;
         vm.startPrank(bundleFunder);
-        if (asset == rewardPoolEscrow.REWARD_ASSET_CREP()) {
-            crepToken.approve(address(rewardPoolEscrow), amount);
+        if (asset == rewardPoolEscrow.REWARD_ASSET_HREP()) {
+            hrepToken.approve(address(rewardPoolEscrow), amount);
         } else {
             usdc.approve(address(rewardPoolEscrow), amount);
         }
@@ -824,14 +809,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         uint256 bountyClosesAt = block.timestamp + 30 days;
         vm.prank(address(registry));
         rewardPoolEscrow.createSubmissionBundleFromRegistry(
-            bundleId,
-            contentIds,
-            bundleFunder,
-            asset,
-            amount,
-            requiredCompleters,
-            bountyClosesAt,
-            bountyClosesAt
+            bundleId, contentIds, bundleFunder, asset, amount, requiredCompleters, bountyClosesAt, bountyClosesAt
         );
     }
 
@@ -853,16 +831,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
 
         vm.startPrank(submitter);
         _reserveQuestionMediaSubmission(
-            registry,
-            contextUrl,
-            imageUrls,
-            "",
-            QUESTION,
-            DESCRIPTION,
-            TAGS,
-            CATEGORY_ID,
-            salt,
-            submitter
+            registry, contextUrl, imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, salt, submitter
         );
         vm.warp(block.timestamp + 1);
         contentId = registry.submitQuestion(contextUrl, imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, salt);
@@ -878,8 +847,9 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         activeTlockContentRegistry = registry;
         bytes32 salt = keccak256(abi.encode(url, QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, submitter, block.timestamp));
 
-        (, bytes32 submissionKey) =
-            registry.previewQuestionSubmissionKey("https://example.com/context", imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID);
+        (, bytes32 submissionKey) = registry.previewQuestionSubmissionKey(
+            "https://example.com/context", imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID
+        );
         uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
         bytes32 revealCommitment = _questionRevealCommitment(
             submissionKey,
@@ -891,7 +861,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
             salt,
             submitter,
             ContentRegistry.SubmissionRewardTerms({
-                asset: DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+                asset: DEFAULT_SUBMISSION_REWARD_ASSET_HREP,
                 amount: rewardAmount,
                 requiredVoters: DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
                 requiredSettledRounds: DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
@@ -902,12 +872,11 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         );
 
         vm.startPrank(submitter);
-        crepToken.approve(address(rewardPoolEscrow), rewardAmount);
+        hrepToken.approve(address(rewardPoolEscrow), rewardAmount);
         registry.reserveSubmission(revealCommitment);
         vm.warp(block.timestamp + 1);
         contentId = registry.submitQuestionWithRoundConfig(
-            "https://example.com/context",
-            imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, salt, roundConfig
+            "https://example.com/context", imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, salt, roundConfig
         );
         vm.stopPrank();
     }
@@ -979,7 +948,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
             commitKeys[i] = _commitTestVote(
                 DirectTestCommitRequest({
                     engine: votingEngine,
-                    crepToken: crepToken,
+                    hrepToken: hrepToken,
                     voter: voters[i],
                     contentId: contentId,
                     isUp: directions[i],
@@ -1036,16 +1005,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
             address(votingEngine),
             abi.encodeWithSignature("commits(uint256,uint256,bytes32)", contentId, roundId, commitKey),
             abi.encode(
-                voter,
-                uint64(STAKE),
-                bytes(""),
-                uint64(0),
-                bytes32(0),
-                address(0),
-                uint48(0),
-                true,
-                true,
-                uint8(0)
+                voter, uint64(STAKE), bytes(""), uint64(0), bytes32(0), address(0), uint48(0), true, true, uint8(0)
             )
         );
         // Escrow reads via the narrow commitCore getter for gas; mock it too so tests
@@ -1059,7 +1019,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
 
     function _registerFrontend(address frontend) internal {
         vm.startPrank(frontend);
-        crepToken.approve(address(frontendRegistry), frontendRegistry.STAKE_AMOUNT());
+        hrepToken.approve(address(frontendRegistry), frontendRegistry.STAKE_AMOUNT());
         frontendRegistry.register();
         vm.stopPrank();
     }

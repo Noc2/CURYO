@@ -18,7 +18,7 @@ import { RoundLib } from "./libraries/RoundLib.sol";
 
 /// @title QuestionRewardPoolEscrow
 /// @notice Holds per-question USDC bounties and pays equal per-round rewards to revealed voters.
-/// @dev Curyo 2 keeps cREP coherence penalties in the voting engine. Stablecoin payouts are participation rewards.
+/// @dev Curyo 2 keeps HREP coherence penalties in the voting engine. Stablecoin payouts are participation rewards.
 contract QuestionRewardPoolEscrow is
     Initializable,
     AccessControlUpgradeable,
@@ -39,7 +39,7 @@ contract QuestionRewardPoolEscrow is
     /// @notice Grace period voters have after bountyClosesAt to claim on a still-claimable bundle
     ///         before a third party can sweep the remainder back to the funder.
     uint256 public constant BUNDLE_CLAIM_GRACE = 7 days;
-    uint8 public constant REWARD_ASSET_CREP = 0;
+    uint8 public constant REWARD_ASSET_HREP = 0;
     uint8 public constant REWARD_ASSET_USDC = 1;
 
     struct RewardPool {
@@ -119,7 +119,7 @@ contract QuestionRewardPoolEscrow is
         bool terminal;
     }
 
-    IERC20 public crepToken;
+    IERC20 public hrepToken;
     IERC20 public usdcToken;
     ContentRegistry public registry;
     RoundVotingEngine public votingEngine;
@@ -227,14 +227,14 @@ contract QuestionRewardPoolEscrow is
 
     function initialize(
         address admin,
-        address crepToken_,
+        address hrepToken_,
         address usdcToken_,
         address registry_,
         address votingEngine_,
         address voterIdNFT_
     ) external initializer {
         require(admin != address(0), "Invalid admin");
-        require(crepToken_ != address(0), "Invalid cREP token");
+        require(hrepToken_ != address(0), "Invalid HREP token");
         require(usdcToken_ != address(0), "Invalid token");
         require(registry_ != address(0), "Invalid registry");
         require(votingEngine_ != address(0), "Invalid engine");
@@ -247,7 +247,7 @@ contract QuestionRewardPoolEscrow is
         _grantRole(CONFIG_ROLE, admin);
         _grantRole(PAUSER_ROLE, admin);
 
-        crepToken = IERC20(crepToken_);
+        hrepToken = IERC20(hrepToken_);
         usdcToken = IERC20(usdcToken_);
         registry = ContentRegistry(registry_);
         votingEngine = RoundVotingEngine(votingEngine_);
@@ -339,7 +339,7 @@ contract QuestionRewardPoolEscrow is
         require(bundleRewards[bundleId].id == 0, "Bundle exists");
         require(contentIds.length > 0, "No questions");
         require(funder != address(0), "Invalid funder");
-        require(asset == REWARD_ASSET_CREP || asset == REWARD_ASSET_USDC, "Invalid asset");
+        require(asset == REWARD_ASSET_HREP || asset == REWARD_ASSET_USDC, "Invalid asset");
         require(requiredCompleters >= MIN_REQUIRED_VOTERS, "Too few voters");
         require(amount >= requiredCompleters, "Amount too small");
         _requireFutureBountyWindow(bountyClosesAt);
@@ -418,7 +418,7 @@ contract QuestionRewardPoolEscrow is
         bool nonRefundable
     ) internal returns (uint256 rewardPoolId) {
         require(amount > 0, "Amount required");
-        require(asset == REWARD_ASSET_CREP || asset == REWARD_ASSET_USDC, "Invalid asset");
+        require(asset == REWARD_ASSET_HREP || asset == REWARD_ASSET_USDC, "Invalid asset");
         require(registry.isContentActive(contentId), "Content not active");
         require(requiredVoters >= MIN_REQUIRED_VOTERS, "Too few voters");
         require(requiredSettledRounds >= MIN_REQUIRED_SETTLED_ROUNDS, "Too few rounds");
@@ -586,10 +586,7 @@ contract QuestionRewardPoolEscrow is
         );
     }
 
-    function recordBundleQuestionTerminal(uint256 contentId, uint256 roundId, bool settled)
-        external
-        nonReentrant
-    {
+    function recordBundleQuestionTerminal(uint256 contentId, uint256 roundId, bool settled) external nonReentrant {
         // Intentionally NOT gated by whenNotPaused: the voting engine invokes this inside a
         // try/catch during settlement, so a paused escrow would silently swallow the terminal
         // signal with no retry path, permanently locking bundle claims. Caller is restricted
@@ -705,9 +702,7 @@ contract QuestionRewardPoolEscrow is
         // would have their earned share swept back to the funder. Give them an explicit
         // grace window to finish claiming before anyone can race them.
         if (_isBundleClaimOpen(bundle)) {
-            require(
-                block.timestamp > uint256(bundle.bountyClosesAt) + BUNDLE_CLAIM_GRACE, "Claim grace active"
-            );
+            require(block.timestamp > uint256(bundle.bountyClosesAt) + BUNDLE_CLAIM_GRACE, "Claim grace active");
         }
         refundAmount = bundle.fundedAmount - bundle.claimedAmount;
         require(refundAmount > 0, "No refund");
@@ -750,9 +745,7 @@ contract QuestionRewardPoolEscrow is
         // markDormant + refundInactiveRewardPool to strip the bounty before the submitter
         // can recover it. Wait until the revival window closes. Cancelled / non-dormant
         // content has dormantKeyReleasableAt == 0 so this check is a no-op there.
-        require(
-            block.timestamp > registry.dormantKeyReleasableAt(rewardPool.contentId), "Revival window active"
-        );
+        require(block.timestamp > registry.dormantKeyReleasableAt(rewardPool.contentId), "Revival window active");
         refundAmount = _refundUnallocatedRewardPool(rewardPoolId, rewardPool);
     }
 
@@ -888,7 +881,7 @@ contract QuestionRewardPoolEscrow is
     }
 
     function _rewardToken(uint8 asset) internal view returns (IERC20 token) {
-        if (asset == REWARD_ASSET_CREP) return crepToken;
+        if (asset == REWARD_ASSET_HREP) return hrepToken;
         if (asset == REWARD_ASSET_USDC) return usdcToken;
         revert("Invalid asset");
     }

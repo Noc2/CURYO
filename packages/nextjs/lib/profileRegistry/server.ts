@@ -41,7 +41,7 @@ const EMPTY_AVATAR_ACCENT: ProfileRegistryAvatarAccent = {
 const MULTICALL_BATCH_SIZE = 200;
 
 type ProfileRegistryReadContext = {
-  crepToken?: {
+  hrepToken?: {
     abi: Abi;
     address: Address;
   };
@@ -74,7 +74,7 @@ function resolveProfileRegistryReadContext(chainId?: number): ProfileRegistryRea
   }
 
   return {
-    crepToken: contractsForChain?.CuryoReputation,
+    hrepToken: contractsForChain?.HumanReputation,
     profileRegistry: contractsForChain?.ProfileRegistry,
     publicClient: createPublicClient({
       chain: targetNetwork,
@@ -236,7 +236,7 @@ export async function readProfileRegistryAvatarAccent(
   }
 }
 
-export async function readCRepBalances(
+export async function readHrepBalances(
   addresses: string[],
   options: { chainId?: number } = {},
 ): Promise<Record<string, bigint>> {
@@ -248,7 +248,7 @@ export async function readCRepBalances(
   }
 
   const context = resolveProfileRegistryReadContext(options.chainId);
-  if (!context?.crepToken || normalizedAddresses.length === 0) {
+  if (!context?.hrepToken || normalizedAddresses.length === 0) {
     return balances;
   }
 
@@ -257,8 +257,8 @@ export async function readCRepBalances(
       const results = await context.publicClient.multicall({
         allowFailure: true,
         contracts: batch.map(address => ({
-          address: context.crepToken!.address,
-          abi: context.crepToken!.abi,
+          address: context.hrepToken!.address,
+          abi: context.hrepToken!.abi,
           functionName: "balanceOf",
           args: [address],
         })),
@@ -273,8 +273,8 @@ export async function readCRepBalances(
         batch.map(async address => {
           try {
             const result = await context.publicClient.readContract({
-              address: context.crepToken!.address,
-              abi: context.crepToken!.abi,
+              address: context.hrepToken!.address,
+              abi: context.hrepToken!.abi,
               functionName: "balanceOf",
               args: [address],
             });

@@ -26,7 +26,7 @@ test("required deployment helper reports missing contract definitions per target
     {
       31337: {
         ContentRegistry: {},
-        CuryoReputation: {},
+        HumanReputation: {},
         ProtocolConfig: {},
       },
       42220: {
@@ -34,8 +34,8 @@ test("required deployment helper reports missing contract definitions per target
         ProtocolConfig: {},
       },
     },
-    ["ContentRegistry", "CuryoReputation"],
+    ["ContentRegistry", "HumanReputation"],
   );
 
-  assert.deepEqual(missingContracts, ["42220:CuryoReputation"]);
+  assert.deepEqual(missingContracts, ["42220:HumanReputation"]);
 });

@@ -1,9 +1,9 @@
 import Link from "next/link";
 import type { Metadata, NextPage } from "next";
 
-const botSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/bot";
+const agentsSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/agents";
 const sdkSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/sdk";
-const agentExamplesSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/sdk/examples/agent";
+const agentExamplesSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/agents/examples";
 const agentTemplatesSourceHref = "https://github.com/Noc2/CURYO/blob/main/packages/nextjs/lib/agent/templates.ts";
 
 export const metadata = {
@@ -34,9 +34,9 @@ const AIPage: NextPage = () => {
         />
         <FeatureCard
           title="Paid"
-          description="Every ask attaches a cREP or Celo USDC bounty, so human attention is funded."
+          description="Every ask attaches a HREP or Celo USDC bounty, so human attention is funded."
         />
-        <FeatureCard title="Verified" description="Votes come from Voter ID holders and are backed by cREP stake." />
+        <FeatureCard title="Verified" description="Votes come from Voter ID holders and are backed by HREP stake." />
         <FeatureCard
           title="Reusable"
           description="Settled ratings, votes, and feedback remain readable by other tools."
@@ -129,7 +129,7 @@ const AIPage: NextPage = () => {
           It selects a template, quotes the ask, and submits a short question, source URL, optional media, bounty, and
           round settings.
         </li>
-        <li>Humans vote with hidden cREP stakes during the blind phase.</li>
+        <li>Humans vote with hidden HREP stakes during the blind phase.</li>
         <li>Voters can add hidden feedback for context, ambiguity, source quality, or vote rationale.</li>
         <li>
           The round settles, feedback unlocks, and the agent reads a structured result with an answer, confidence,
@@ -456,11 +456,11 @@ const AIPage: NextPage = () => {
           show the same loop across OpenClaw, Hermes, chat connectors, Gemini CLI, and backend workers.
         </li>
         <li>
-          <strong>Bot package:</strong> use the{" "}
-          <a href={botSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
-            reference bot
+          <strong>Agents package:</strong> use the{" "}
+          <a href={agentsSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
+            reference agents
           </a>{" "}
-          for source adapters, delegated wallets, and scheduled strategies.
+          for MCP configs, runtime examples, question design, and operator utilities.
         </li>
         <li>
           <strong>MCP adapter:</strong> use narrow tools such as <code>curyo_quote_question</code>,{" "}

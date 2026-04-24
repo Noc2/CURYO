@@ -6,12 +6,12 @@ const GovernanceDocs: NextPage = () => {
     <article className="prose max-w-none">
       <h1>Governance</h1>
       <p className="lead text-base-content/60 text-lg">
-        cREP governance controls protocol settings, upgrades, treasury routing, and Voter ID enforcement.
+        HREP governance controls protocol settings, upgrades, treasury routing, and Voter ID enforcement.
       </p>
 
       <h2>What Governance Does</h2>
       <p>
-        cREP is a reputation token with no token sale and no treasury backing. Governance power comes from earned cREP,
+        HREP is a reputation token with no token sale and no treasury backing. Governance power comes from earned HREP,
         and proposals execute through the governor and timelock.
       </p>
       <ul>
@@ -132,14 +132,14 @@ const GovernanceDocs: NextPage = () => {
 
       <h2>Treasury</h2>
       <p>
-        The treasury starts with 32M cREP under governor/timelock control. Ongoing inflows include the treasury share of
+        The treasury starts with 32M HREP under governor/timelock control. Ongoing inflows include the treasury share of
         contested losing pools, withdrawal fees, and forfeited unrevealed votes. Spending follows the same proposal and
         timelock path as upgrades.
       </p>
       <p>
         Treasury grants can support work that grows the Curyo feedback network: partner activation, integrations,
         research and data projects, community growth, protocol development, and security or whistleblower rewards.
-        Because cREP also carries governance power, grant proposals should explain the recipient, purpose, amount,
+        Because HREP also carries governance power, grant proposals should explain the recipient, purpose, amount,
         expected impact, and any milestone or reporting expectations.
       </p>
 

@@ -215,7 +215,7 @@ function buildCandidates(
       const body =
         source === "watched"
           ? `${bodyPrefix}: "${item.title}".`
-          : `${bodyPrefix}: "${item.title}". Open Governance to claim your cREP from this round.`;
+          : `${bodyPrefix}: "${item.title}". Open Governance to claim your HREP from this round.`;
 
       candidates.set(eventKey, {
         walletAddress: subscription.walletAddress,

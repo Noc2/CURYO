@@ -5,7 +5,7 @@ import { Test } from "forge-std/Test.sol";
 import { TimelockController } from "@openzeppelin/contracts/governance/TimelockController.sol";
 import { IVotes } from "@openzeppelin/contracts/governance/utils/IVotes.sol";
 
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { HumanReputation } from "../contracts/HumanReputation.sol";
 import { CuryoGovernor } from "../contracts/governance/CuryoGovernor.sol";
 
 contract GovernanceGasBudgetTest is Test {
@@ -26,7 +26,7 @@ contract GovernanceGasBudgetTest is Test {
         vm.pauseGasMetering();
         vm.startPrank(DEPLOYER);
 
-        CuryoReputation token = new CuryoReputation(DEPLOYER, DEPLOYER);
+        HumanReputation token = new HumanReputation(DEPLOYER, DEPLOYER);
         token.grantRole(token.MINTER_ROLE(), DEPLOYER);
 
         TimelockController timelock = new TimelockController(2 days, new address[](0), new address[](0), DEPLOYER);
