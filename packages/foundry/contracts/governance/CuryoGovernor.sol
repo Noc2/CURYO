@@ -54,6 +54,7 @@ contract CuryoGovernor is
 
     error ExcludedHolderCannotGovern(address holder);
     error ProposalCooldownActive(address proposer, uint256 nextProposalBlock);
+    error InvalidProposalThreshold();
 
     /// @notice Deploy the governor with HREP token and timelock
     /// @param _hrepToken The HREP voting token address
@@ -112,6 +113,11 @@ contract CuryoGovernor is
 
     function proposalThreshold() public view override(Governor, GovernorSettings) returns (uint256) {
         return super.proposalThreshold();
+    }
+
+    function _setProposalThreshold(uint256 newProposalThreshold) internal override {
+        if (newProposalThreshold == 0) revert InvalidProposalThreshold();
+        super._setProposalThreshold(newProposalThreshold);
     }
 
     /// @notice Dynamic quorum: 4% of circulating supply (total minus excluded protocol-controlled balances)

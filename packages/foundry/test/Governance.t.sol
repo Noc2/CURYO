@@ -542,6 +542,19 @@ contract GovernanceTest is Test {
         }
     }
 
+    function test_GovernorRejectsZeroProposalThreshold() public {
+        uint256 thresholdBefore = governor.proposalThreshold();
+
+        _executeSingleCallProposal(
+            address(governor),
+            abi.encodeWithSignature("setProposalThreshold(uint256)", 0),
+            "Reject zero proposal threshold",
+            true
+        );
+
+        assertEq(governor.proposalThreshold(), thresholdBefore);
+    }
+
     function test_GovernorAllowsProposalsBeforePoolsInitialization() public {
         vm.startPrank(deployer);
         CuryoGovernor freshGovernor = new CuryoGovernor(IVotes(address(token)), timelock);
