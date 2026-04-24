@@ -29,9 +29,9 @@ test.describe("Mobile viewport (phone)", () => {
     await page.getByLabel("Open menu").click();
 
     const dropdown = page.locator(".dropdown-content");
-    await expect(dropdown.getByRole("link", { name: /Rate/i })).toBeVisible({ timeout: 5_000 });
-    await expect(dropdown.getByRole("link", { name: /Ask/i })).toBeVisible({ timeout: 3_000 });
-    await expect(dropdown.getByRole("link", { name: /cREP/i })).toBeVisible({ timeout: 3_000 });
+    await expect(dropdown.getByRole("link", { name: /Discover/i })).toBeVisible({ timeout: 5_000 });
+    await expect(dropdown.getByRole("link", { name: /Submit/i })).toBeVisible({ timeout: 3_000 });
+    await expect(dropdown.getByRole("link", { name: /Reputation/i })).toBeVisible({ timeout: 3_000 });
     const voteTopChrome = page.locator('[data-vote-mobile-top-chrome="true"]');
     await expect(voteTopChrome).toHaveAttribute("data-visible", "false");
     await expect(voteTopChrome).toHaveAttribute("inert", "");
@@ -654,9 +654,9 @@ test.describe("Mobile viewport (phone)", () => {
     await page.getByLabel("Open menu").click();
     await page
       .locator(".dropdown-content")
-      .getByRole("link", { name: /Ask/i })
+      .getByRole("link", { name: /Submit/i })
       .waitFor({ state: "visible", timeout: 3_000 });
-    await page.locator(".dropdown-content").getByRole("link", { name: /Ask/i }).click();
+    await page.locator(".dropdown-content").getByRole("link", { name: /Submit/i }).click();
 
     await expect(page).toHaveURL(/\/ask/, { timeout: 15_000 });
   });

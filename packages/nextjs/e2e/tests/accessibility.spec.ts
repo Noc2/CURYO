@@ -36,7 +36,7 @@ test.describe("Accessibility basics", () => {
     const searchInput = page.getByRole("textbox", { name: "Search content" });
     await expect(searchInput.first()).toBeVisible({ timeout: 10_000 });
     await expect(page.getByRole("link", { name: "Discover" })).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByRole("link", { name: "Ask" })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("link", { name: "Submit" })).toBeVisible({ timeout: 10_000 });
     await expect(page.getByRole("button", { name: /^View(?:: .+)?$/i }).first()).toBeVisible({ timeout: 10_000 });
   });
 
