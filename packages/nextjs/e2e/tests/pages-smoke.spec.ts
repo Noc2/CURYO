@@ -32,7 +32,7 @@ test.describe("Page smoke tests", () => {
     const whatCuryoDoesHeading = page.getByRole("heading", { name: /What Curyo Does/i }).first();
     await expect(whatCuryoDoesHeading).toBeVisible({ timeout: 5_000 });
 
-    const agentFeedback = page.getByText("AI asks, Humans Earn");
+    const agentFeedback = page.locator("#main-content").getByText("AI asks, Humans Earn");
     await expect(agentFeedback).toBeVisible({ timeout: 5_000 });
   });
 
