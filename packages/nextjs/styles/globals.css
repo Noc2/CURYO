@@ -19,7 +19,7 @@
   --color-primary-content: #f8f2ed;
   --color-secondary: #8b858e;
   --color-secondary-content: #f8f2ed;
-  --color-accent: #7a4561;
+  --color-accent: #b3341b;
   --color-accent-content: #f8f2ed;
   --color-neutral: #1d181e;
   --color-neutral-content: #f5f0eb;
@@ -75,7 +75,7 @@
   background: var(--color-base-100);
   --curyo-ember: #d56a3e;
   --curyo-ember-hover: #e07a4e;
-  --curyo-ember-deep: #7a4561;
+  --curyo-ember-deep: #b3341b;
   --curyo-warm-white: #f5f0eb;
   --curyo-steel: #8b858e;
   --curyo-surface: #090a0c;
@@ -85,7 +85,7 @@
   --curyo-surface-nested: #0d0a0f;
   --curyo-ember-rgb: 213 106 62;
   --curyo-ember-hover-rgb: 224 122 78;
-  --curyo-ember-deep-rgb: 122 69 97;
+  --curyo-ember-deep-rgb: 179 52 27;
   --curyo-warm-white-rgb: 245 240 235;
   --curyo-steel-rgb: 139 133 142;
   --curyo-surface-rgb: 9 10 12;
