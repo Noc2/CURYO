@@ -195,9 +195,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
 
         RoundLib.Round memory round = _readRound(contentId, roundId);
         require(round.state == RoundLib.RoundState.Settled, "Round not settled");
-        if (votingEngine.roundUnrevealedCleanupRemaining(contentId, roundId) > 0) {
-            revert UnrevealedCleanupPending();
-        }
+        _requireNoPendingUnrevealedCleanup(contentId, roundId);
 
         // Find voter's commit
         RoundLib.Commit memory commit = _findVoterCommit(contentId, roundId, msg.sender);
@@ -305,9 +303,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         if (roundVoterRewardDustFinalized[contentId][roundId]) revert RewardDustAlreadyFinalized();
 
         RoundLib.Round memory round = _readSettledStaleRound(contentId, roundId);
-        if (votingEngine.roundUnrevealedCleanupRemaining(contentId, roundId) > 0) {
-            revert UnrevealedCleanupPending();
-        }
+        _requireNoPendingUnrevealedCleanup(contentId, roundId);
 
         uint256 totalWinningClaimants = round.upWins ? round.upCount : round.downCount;
         if (sortedWinningVoters.length != totalWinningClaimants) revert InvalidFinalizationInput();
@@ -352,6 +348,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         if (roundFrontendFeeDustFinalized[contentId][roundId]) revert RewardDustAlreadyFinalized();
 
         _readSettledStaleRound(contentId, roundId);
+        _requireNoPendingUnrevealedCleanup(contentId, roundId);
 
         uint256 totalFrontendPool = votingEngine.roundFrontendPool(contentId, roundId);
         uint256 totalEligibleStake = votingEngine.roundStakeWithEligibleFrontend(contentId, roundId);
@@ -424,6 +421,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     {
         RoundLib.Round memory round = _readRound(contentId, roundId);
         if (round.state != RoundLib.RoundState.Settled) revert RoundNotSettled();
+        _requireNoPendingUnrevealedCleanup(contentId, roundId);
 
         uint256 winningStake = round.upWins ? round.upPool : round.downPool;
         uint256 totalReward;
@@ -447,6 +445,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
 
         RoundLib.Round memory round = _readRound(contentId, roundId);
         if (round.state != RoundLib.RoundState.Settled) revert RoundNotSettled();
+        _requireNoPendingUnrevealedCleanup(contentId, roundId);
 
         address rewardPoolAddress = roundParticipationRewardPool[contentId][roundId];
         uint256 rateBps = roundParticipationRewardRateBps[contentId][roundId];
@@ -506,6 +505,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
 
         RoundLib.Round memory round = _readRound(contentId, roundId);
         if (round.state != RoundLib.RoundState.Settled) revert RoundNotSettled();
+        _requireNoPendingUnrevealedCleanup(contentId, roundId);
 
         uint256 winnerCount = round.upWins ? round.upCount : round.downCount;
         bool stale = _isStaleRound(round);
@@ -591,6 +591,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     {
         RoundLib.Round memory round = _readRound(contentId, roundId);
         if (round.state != RoundLib.RoundState.Settled) revert RoundNotSettled();
+        _requireNoPendingUnrevealedCleanup(contentId, roundId);
         if (frontendFeeClaimed[contentId][roundId][frontend]) revert AlreadyClaimed();
 
         uint256 totalFrontendPool = votingEngine.roundFrontendPool(contentId, roundId);
@@ -618,6 +619,12 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         frontendFeeClaimed[contentId][roundId][frontend] = true;
         roundFrontendClaimedCount[contentId][roundId] += 1;
         roundFrontendClaimedAmount[contentId][roundId] += fee;
+    }
+
+    function _requireNoPendingUnrevealedCleanup(uint256 contentId, uint256 roundId) internal view {
+        if (votingEngine.roundUnrevealedCleanupRemaining(contentId, roundId) > 0) {
+            revert UnrevealedCleanupPending();
+        }
     }
 
     function _resolveFrontendFeeDisposition(uint256 contentId, uint256 roundId, address frontend)

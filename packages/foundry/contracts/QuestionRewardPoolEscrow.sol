@@ -532,6 +532,7 @@ contract QuestionRewardPoolEscrow is
         returns (uint256 rewardAmount)
     {
         RewardPool storage rewardPool = _getExistingRewardPool(rewardPoolId);
+        require(votingEngine.roundUnrevealedCleanupRemaining(rewardPool.contentId, roundId) == 0, "Cleanup pending");
         _qualifyRoundIfNeeded(rewardPoolId, rewardPool, roundId);
 
         IVoterIdNFT roundVoterIdNft = _roundVoterIdNft(rewardPool.contentId, roundId);
@@ -794,6 +795,7 @@ contract QuestionRewardPoolEscrow is
         if (!revealed) return 0;
 
         RoundSnapshot storage snapshot = roundSnapshots[rewardPoolId][roundId];
+        if (votingEngine.roundUnrevealedCleanupRemaining(rewardPool.contentId, roundId) > 0) return 0;
         if (!snapshot.qualified) {
             if (!_canPreviewNewQualification(rewardPool, roundId)) return 0;
             (, bool canQualify, uint256 eligibleVoters) = _previewRoundQualification(rewardPool, roundId);
@@ -928,6 +930,10 @@ contract QuestionRewardPoolEscrow is
         for (uint256 i = 0; i < questions.length; i++) {
             BundleQuestion storage question = questions[i];
             require(question.terminal && question.settled, "Question not settled");
+            require(
+                votingEngine.roundUnrevealedCleanupRemaining(question.contentId, question.roundId) == 0,
+                "Cleanup pending"
+            );
             uint256 voterId = _voterIdForRound(question.contentId, question.roundId, account);
             require(voterId != 0, "Voter ID required");
             bytes32 commitKey = votingEngine.voterIdCommitKey(question.contentId, question.roundId, voterId);
@@ -951,6 +957,7 @@ contract QuestionRewardPoolEscrow is
         for (uint256 i = 0; i < questions.length; i++) {
             BundleQuestion storage question = questions[i];
             if (!question.terminal || !question.settled) return false;
+            if (votingEngine.roundUnrevealedCleanupRemaining(question.contentId, question.roundId) > 0) return false;
             uint256 voterId = _voterIdForRound(question.contentId, question.roundId, account);
             if (voterId == 0) return false;
             bytes32 commitKey = votingEngine.voterIdCommitKey(question.contentId, question.roundId, voterId);

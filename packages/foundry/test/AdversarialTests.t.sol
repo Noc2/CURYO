@@ -193,13 +193,13 @@ contract AdversarialTests is VotingTestBase {
         engine.settleRound(contentId, roundId);
     }
 
-    function _finalizeRevealFailedRound(uint256 contentId, uint256 roundId, bytes32[] memory commitKeys) internal {
+    function _settleAfterFinalGrace(uint256 contentId, uint256 roundId, bytes32[] memory commitKeys) internal {
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         vm.warp(round.startTime + 7 days + ProtocolConfig(address(engine.protocolConfig())).revealGracePeriod() + 1);
         for (uint256 i = 0; i < commitKeys.length; i++) {
             _reveal(contentId, roundId, commitKeys[i]);
         }
-        engine.finalizeRevealFailedRound(contentId, roundId);
+        engine.settleRound(contentId, roundId);
     }
 
     // =========================================================================
@@ -329,17 +329,17 @@ contract AdversarialTests is VotingTestBase {
         bytes32[] memory cks = new bytes32[](2);
         cks[0] = ck1;
         cks[1] = ck2;
-        _finalizeRevealFailedRound(contentId, roundId, cks);
+        _settleAfterFinalGrace(contentId, roundId, cks);
 
         vm.prank(voter3);
-        vm.expectRevert("Round not settled");
+        vm.expectRevert(RoundRewardDistributor.UnrevealedCleanupPending.selector);
         distributor.claimReward(contentId, roundId);
 
         engine.processUnrevealedVotes(contentId, roundId, 0, 0);
 
-        // Reveal-failed rounds never pay winner rewards, even after unrevealed cleanup.
+        // Unrevealed votes cannot claim winner rewards, even after cleanup.
         vm.prank(voter3);
-        vm.expectRevert("Round not settled");
+        vm.expectRevert("Vote not revealed");
         distributor.claimReward(contentId, roundId);
     }
 
@@ -358,20 +358,20 @@ contract AdversarialTests is VotingTestBase {
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
-        // Only reveal first two, then finalize as reveal-failed after the final grace window.
+        // Only reveal first two, then settle after the final grace window.
         bytes32[] memory cks = new bytes32[](2);
         cks[0] = ck1;
         cks[1] = ck2;
-        _finalizeRevealFailedRound(contentId, roundId, cks);
+        _settleAfterFinalGrace(contentId, roundId, cks);
 
-        uint256 treasuryBefore = hrepToken.balanceOf(treasury);
+        uint256 reserveBefore = engine.consensusReserve();
 
-        // Process unrevealed (reveal-failed unrevealed stake is forfeited to treasury).
+        // Process unrevealed (settled unrevealed stake is credited to consensus reserve).
         engine.processUnrevealedVotes(contentId, roundId, 0, 0);
 
-        uint256 treasuryAfter1 = hrepToken.balanceOf(treasury);
-        uint256 routedAmount = treasuryAfter1 - treasuryBefore;
-        assertGt(routedAmount, 0, "Some amount should be routed to treasury");
+        uint256 reserveAfter1 = engine.consensusReserve();
+        uint256 routedAmount = reserveAfter1 - reserveBefore;
+        assertGt(routedAmount, 0, "Some amount should be routed to reserve");
 
         // Process again — same range, reverts because nothing left to process (stakeAmount zeroed)
         vm.expectRevert(RoundVotingEngine.NothingProcessed.selector);

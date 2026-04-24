@@ -675,7 +675,7 @@ contract RoundVotingEngine is
         if (round.state != RoundLib.RoundState.Open) revert RoundNotOpen();
         RoundLib.RoundConfig memory roundCfg = _getRoundConfig(contentId, roundId);
         if (round.voteCount < roundCfg.minVoters) revert NotEnoughVotes();
-        if (round.revealedCount == round.voteCount) revert ThresholdReached();
+        if (round.revealedCount >= roundCfg.minVoters) revert ThresholdReached();
         if (!_canFinalizeRevealFailedRound(contentId, roundId, round)) revert RevealGraceActive();
 
         _markRoundRevealFailed(contentId, roundId, round);
@@ -688,8 +688,8 @@ contract RoundVotingEngine is
     /// @notice Reveal a specific commit by commit key. Any caller that knows the plaintext may call.
     /// @dev In normal operation a keeper decrypts the tlock ciphertext off-chain using drand and submits the plaintext
     ///      `(isUp, salt)` here. Voters can also self-reveal. The contract verifies consistency against the stored
-    ///      ciphertext hash. If any past-epoch ciphertext is not revealed, settlement remains blocked and the
-    ///      round can be finalized as reveal-failed after the final reveal grace window.
+    ///      ciphertext hash. If any past-epoch ciphertext is not revealed, settlement remains blocked until the
+    ///      final reveal grace window elapses.
     function revealVoteByCommitKey(uint256 contentId, uint256 roundId, bytes32 commitKey, bool isUp, bytes32 salt)
         external
         nonReentrant
@@ -715,21 +715,15 @@ contract RoundVotingEngine is
         // Must have ≥ minVoters revealed votes
         if (round.revealedCount < roundCfg.minVoters) revert NotEnoughVotes();
 
-        // Prevent selective revelation: all past-epoch commits must be revealed
-        // before settlement is allowed. A round with expired unrevealed commits
-        // can be finalized as reveal-failed after the final reveal grace window.
+        // Prevent selective revelation: all past-epoch commits must be revealed before settlement is allowed.
+        // Once the final reveal grace window has elapsed, revealed quorum is enough to settle and unrevealed
+        // past-epoch stakes stay locked until they are cleaned up.
         // Loop is bounded: votes can only be committed during maxDuration, so no
         // epochUnrevealedCount entries exist beyond startTime + maxDuration + epochDuration.
-        {
-            uint256 epochEnd = round.startTime + roundCfg.epochDuration;
-            uint256 maxEpochEnd = round.startTime + roundCfg.maxDuration + roundCfg.epochDuration;
-            while (epochEnd <= block.timestamp && epochEnd <= maxEpochEnd) {
-                uint256 unrevealedCount = epochUnrevealedCount[contentId][roundId][epochEnd];
-                if (unrevealedCount > 0) {
-                    revert UnrevealedPastEpochVotes();
-                }
-                epochEnd += roundCfg.epochDuration;
-            }
+        uint256 unrevealedPastEpochCount = _pastEpochUnrevealedCount(contentId, roundId, round, roundCfg);
+        if (unrevealedPastEpochCount > 0) {
+            if (!_isFinalRevealGraceElapsed(contentId, roundId, round)) revert UnrevealedPastEpochVotes();
+            roundUnrevealedCleanupRemaining[contentId][roundId] = unrevealedPastEpochCount;
         }
 
         // Tie: equal weighted pools, no winners
@@ -1027,12 +1021,34 @@ contract RoundVotingEngine is
 
         RoundLib.RoundConfig memory roundCfg = _getRoundConfig(contentId, roundId);
         if (round.voteCount < roundCfg.minVoters) return false;
-        if (round.revealedCount == round.voteCount) return false;
+        if (round.revealedCount >= roundCfg.minVoters) return false;
 
+        return _isFinalRevealGraceElapsed(contentId, roundId, round);
+    }
+
+    function _isFinalRevealGraceElapsed(uint256 contentId, uint256 roundId, RoundLib.Round storage round)
+        internal
+        view
+        returns (bool)
+    {
         uint256 finalizationTime = _getRevealFailedFinalizationTime(contentId, roundId, round);
         if (finalizationTime == 0) return false;
 
         return block.timestamp >= finalizationTime;
+    }
+
+    function _pastEpochUnrevealedCount(
+        uint256 contentId,
+        uint256 roundId,
+        RoundLib.Round storage round,
+        RoundLib.RoundConfig memory roundCfg
+    ) internal view returns (uint256 total) {
+        uint256 epochEnd = round.startTime + roundCfg.epochDuration;
+        uint256 maxEpochEnd = round.startTime + roundCfg.maxDuration + roundCfg.epochDuration;
+        while (epochEnd <= block.timestamp && epochEnd <= maxEpochEnd) {
+            total += epochUnrevealedCount[contentId][roundId][epochEnd];
+            epochEnd += roundCfg.epochDuration;
+        }
     }
 
     function _hasOpenRound(uint256 contentId) internal view returns (bool) {

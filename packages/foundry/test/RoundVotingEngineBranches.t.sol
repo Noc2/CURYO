@@ -1144,14 +1144,16 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
     // 10. processUnrevealedVotes
     // =========================================================================
 
-    function test_ProcessUnrevealed_RevealFailedForfeitsExpiredUnrevealedVotes() public {
+    function test_ProcessUnrevealed_SettledRoundAddsExpiredUnrevealedVotesToReserve() public {
+        _registerFrontend(frontend1);
         uint256 contentId = _submitContent();
 
-        // voter1 commits but never reveals — the round must fail instead of settling selectively.
+        // voter1 commits but never reveals. Before final grace this blocks settlement; after final
+        // grace the honest revealed quorum settles and voter1's stake is cleaned into the reserve.
         _commit(voter1, contentId, true, STAKE);
 
         // voter2, voter3, voter4 commit and reveal (3 = minVoters)
-        (bytes32 ck2, bytes32 s2) = _commit(voter2, contentId, true, STAKE);
+        (bytes32 ck2, bytes32 s2) = _commitWithFrontend(voter2, contentId, true, STAKE, frontend1);
         (bytes32 ck3, bytes32 s3) = _commit(voter3, contentId, false, STAKE);
         (bytes32 ck4, bytes32 s4) = _commit(voter4, contentId, true, STAKE);
 
@@ -1169,7 +1171,25 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         engine.settleRound(contentId, roundId);
 
         vm.warp(rPU1start.startTime + 7 days + ProtocolConfig(protocolConfigAddress).revealGracePeriod() + 1);
+        vm.expectRevert(RoundVotingEngine.ThresholdReached.selector);
         engine.finalizeRevealFailedRound(contentId, roundId);
+
+        engine.settleRound(contentId, roundId);
+        RoundLib.Round memory settledRound = RoundEngineReadHelpers.round(engine, contentId, roundId);
+        assertEq(uint256(settledRound.state), uint256(RoundLib.RoundState.Settled));
+        assertEq(engine.roundUnrevealedCleanupRemaining(contentId, roundId), 1);
+
+        vm.expectRevert(RoundRewardDistributor.UnrevealedCleanupPending.selector);
+        vm.prank(voter2);
+        rewardDistributor.claimReward(contentId, roundId);
+
+        vm.expectRevert(RoundRewardDistributor.UnrevealedCleanupPending.selector);
+        vm.prank(voter2);
+        rewardDistributor.claimParticipationReward(contentId, roundId);
+
+        vm.expectRevert(RoundRewardDistributor.UnrevealedCleanupPending.selector);
+        vm.prank(frontend1);
+        rewardDistributor.claimFrontendFee(contentId, roundId, frontend1);
 
         uint256 treasuryBefore = hrepToken.balanceOf(treasury);
         uint256 consensusReserveBefore = engine.consensusReserve();
@@ -1178,16 +1198,19 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         uint256 consensusReserveAfter = engine.consensusReserve();
 
         assertEq(engine.roundUnrevealedCleanupRemaining(contentId, roundId), 0);
-        assertEq(treasuryAfter - treasuryBefore, STAKE, "reveal-failed unrevealed stake should go to treasury");
-        assertEq(consensusReserveAfter, consensusReserveBefore, "reveal-failed forfeits should not boost reserve");
+        assertEq(treasuryAfter, treasuryBefore, "settled unrevealed stake should not go to treasury");
+        assertEq(consensusReserveAfter - consensusReserveBefore, STAKE, "settled unrevealed stake boosts reserve");
 
-        uint256 voter2Before = hrepToken.balanceOf(voter2);
         vm.prank(voter2);
-        engine.claimCancelledRoundRefund(contentId, roundId);
-        assertEq(hrepToken.balanceOf(voter2) - voter2Before, STAKE, "revealed voters recover stake");
+        assertGt(rewardDistributor.claimParticipationReward(contentId, roundId), 0);
+
+        uint256 feesBefore = frontendRegistry.getAccumulatedFees(frontend1);
+        vm.prank(frontend1);
+        rewardDistributor.claimFrontendFee(contentId, roundId, frontend1);
+        assertGt(frontendRegistry.getAccumulatedFees(frontend1), feesBefore);
     }
 
-    function test_ProcessUnrevealed_RevealFailedProcessesExpiredVotesInBatches() public {
+    function test_ProcessUnrevealed_SettledRoundProcessesExpiredVotesInBatches() public {
         uint256 contentId = _submitContent();
 
         _commit(voter1, contentId, true, STAKE);
@@ -1207,19 +1230,20 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         engine.settleRound(contentId, roundId);
 
         vm.warp(roundStart.startTime + 7 days + ProtocolConfig(protocolConfigAddress).revealGracePeriod() + 1);
-        engine.finalizeRevealFailedRound(contentId, roundId);
+        engine.settleRound(contentId, roundId);
+        assertEq(engine.roundUnrevealedCleanupRemaining(contentId, roundId), 2);
 
         uint256 treasuryBefore = hrepToken.balanceOf(treasury);
+        uint256 consensusReserveBefore = engine.consensusReserve();
         engine.processUnrevealedVotes(contentId, roundId, 0, 1);
-        assertEq(hrepToken.balanceOf(treasury) - treasuryBefore, STAKE);
+        assertEq(hrepToken.balanceOf(treasury), treasuryBefore);
+        assertEq(engine.consensusReserve() - consensusReserveBefore, STAKE);
+        assertEq(engine.roundUnrevealedCleanupRemaining(contentId, roundId), 1);
 
         engine.processUnrevealedVotes(contentId, roundId, 1, 1);
-        assertEq(hrepToken.balanceOf(treasury) - treasuryBefore, STAKE * 2);
-
-        uint256 voter3Before = hrepToken.balanceOf(voter3);
-        vm.prank(voter3);
-        engine.claimCancelledRoundRefund(contentId, roundId);
-        assertEq(hrepToken.balanceOf(voter3) - voter3Before, STAKE, "revealed voters recover stake");
+        assertEq(hrepToken.balanceOf(treasury), treasuryBefore);
+        assertEq(engine.consensusReserve() - consensusReserveBefore, STAKE * 2);
+        assertEq(engine.roundUnrevealedCleanupRemaining(contentId, roundId), 0);
     }
 
     function test_ProcessUnrevealed_RefundsCurrentEpochVotes() public {
@@ -1253,7 +1277,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         assertEq(voter4BalAfter - voter4BalBefore, STAKE);
     }
 
-    function test_ProcessUnrevealed_ForfeitureRewardPaidOnlyOncePerRound() public {
+    function test_ProcessUnrevealed_SettledCleanupDoesNotPayKeepers() public {
         uint256 contentId = _submitContent();
 
         _commit(voter1, contentId, true, STAKE);
@@ -1273,7 +1297,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         engine.settleRound(contentId, roundId);
 
         vm.warp(round.startTime + 7 days + ProtocolConfig(protocolConfigAddress).revealGracePeriod() + 1);
-        engine.finalizeRevealFailedRound(contentId, roundId);
+        engine.settleRound(contentId, roundId);
 
         uint256 keeperBalBefore = hrepToken.balanceOf(keeper);
 

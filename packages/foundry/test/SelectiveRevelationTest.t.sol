@@ -269,9 +269,8 @@ contract SelectiveRevelationTest is VotingTestBase {
     // GRACE PERIOD EXPIRY
     // =========================================================================
 
-    /// @notice Unrevealed past-epoch votes continue to block settlement after grace.
-    ///         The round can be finalized as reveal-failed after the final reveal grace window.
-    function test_GracePeriodExpiry_BlocksSettlementAndAllowsRevealFailedFinalization() public {
+    /// @notice Unrevealed past-epoch votes block settlement until final grace, then settle if reveal quorum exists.
+    function test_FinalGraceExpiry_AllowsSettlementAndCleanupWhenRevealQuorumExists() public {
         uint256 contentId = _submitContent();
 
         bytes32[4] memory commitKeys;
@@ -297,10 +296,21 @@ contract SelectiveRevelationTest is VotingTestBase {
         engine.settleRound(contentId, roundId);
 
         vm.warp(r.startTime + 7 days + GRACE_PERIOD + 1);
+        vm.expectRevert(RoundVotingEngine.ThresholdReached.selector);
         engine.finalizeRevealFailedRound(contentId, roundId);
 
+        engine.settleRound(contentId, roundId);
+
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        assertEq(uint256(round.state), uint256(RoundLib.RoundState.RevealFailed));
+        assertEq(uint256(round.state), uint256(RoundLib.RoundState.Settled));
+        assertEq(engine.roundUnrevealedCleanupRemaining(contentId, roundId), 1);
+
+        vm.expectRevert(RoundRewardDistributor.UnrevealedCleanupPending.selector);
+        vm.prank(voters[0]);
+        rewardDistributor.claimReward(contentId, roundId);
+
+        engine.processUnrevealedVotes(contentId, roundId, 0, 0);
+        assertEq(engine.roundUnrevealedCleanupRemaining(contentId, roundId), 0);
     }
 
     /// @notice Within grace period, unrevealed votes still block settlement.
@@ -423,10 +433,11 @@ contract SelectiveRevelationTest is VotingTestBase {
         engine.settleRound(contentId, roundId);
 
         vm.warp(r.startTime + 7 days + GRACE_PERIOD + 1);
-        engine.finalizeRevealFailedRound(contentId, roundId);
+        engine.settleRound(contentId, roundId);
 
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        assertEq(uint256(round.state), uint256(RoundLib.RoundState.RevealFailed));
+        assertEq(uint256(round.state), uint256(RoundLib.RoundState.Settled));
+        assertEq(engine.roundUnrevealedCleanupRemaining(contentId, roundId), 1);
     }
 
     function test_RevealGracePeriodSnapshot_NewRoundUsesUpdatedValue() public {
@@ -458,10 +469,11 @@ contract SelectiveRevelationTest is VotingTestBase {
         engine.settleRound(contentId, roundId);
 
         vm.warp(r.startTime + 7 days + 2 hours + 1);
-        engine.finalizeRevealFailedRound(contentId, roundId);
+        engine.settleRound(contentId, roundId);
 
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        assertEq(uint256(round.state), uint256(RoundLib.RoundState.RevealFailed));
+        assertEq(uint256(round.state), uint256(RoundLib.RoundState.Settled));
+        assertEq(engine.roundUnrevealedCleanupRemaining(contentId, roundId), 1);
     }
 
     // =========================================================================

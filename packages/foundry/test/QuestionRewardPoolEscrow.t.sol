@@ -198,6 +198,23 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(usdc.balanceOf(address(rewardPoolEscrow)), 0);
     }
 
+    function testQuestionRewardClaimWaitsForUnrevealedCleanup() public {
+        uint256 contentId = _submitQuestion("");
+        uint256 rewardPoolId = _createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1);
+        uint256 roundId = _settleRoundWithOneUnrevealed(contentId);
+
+        assertEq(rewardPoolEscrow.claimableQuestionReward(rewardPoolId, roundId, voter1), 0);
+        vm.expectRevert(bytes("Cleanup pending"));
+        vm.prank(voter1);
+        rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
+
+        votingEngine.processUnrevealedVotes(contentId, roundId, 0, 0);
+
+        vm.prank(voter1);
+        uint256 reward = rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
+        assertGt(reward, 0);
+    }
+
     function testRefundableRewardPoolAmountUsesQuestionSelectedVoterCap() public {
         RoundLib.RoundConfig memory roundConfig =
             RoundLib.RoundConfig({ epochDuration: 10 minutes, maxDuration: 1 hours, minVoters: 3, maxVoters: 4 });
@@ -967,6 +984,41 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         }
 
         votingEngine.settleRound(contentId, roundId);
+    }
+
+    function _settleRoundWithOneUnrevealed(uint256 contentId) internal returns (uint256 roundId) {
+        address[] memory voters = _fourVoters();
+        bool[] memory directions = _directions(true, true, false, true);
+        bytes32[] memory salts = new bytes32[](voters.length);
+        bytes32[] memory commitKeys = new bytes32[](voters.length);
+
+        for (uint256 i = 0; i < voters.length; i++) {
+            salts[i] = keccak256(abi.encodePacked(voters[i], contentId, directions[i], i));
+            commitKeys[i] = _commitTestVote(
+                DirectTestCommitRequest({
+                    engine: votingEngine,
+                    hrepToken: hrepToken,
+                    voter: voters[i],
+                    contentId: contentId,
+                    isUp: directions[i],
+                    stake: STAKE,
+                    frontend: address(0),
+                    salt: salts[i]
+                })
+            );
+        }
+
+        roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
+        vm.warp(round.startTime + EPOCH_DURATION + 1);
+
+        for (uint256 i = 0; i < voters.length - 1; i++) {
+            votingEngine.revealVoteByCommitKey(contentId, roundId, commitKeys[i], directions[i], salts[i]);
+        }
+
+        vm.warp(round.startTime + 7 days + protocolConfig.revealGracePeriod() + 1);
+        votingEngine.settleRound(contentId, roundId);
+        assertEq(votingEngine.roundUnrevealedCleanupRemaining(contentId, roundId), 1);
     }
 
     function _mockSettledRound(uint256 contentId, uint256 roundId, uint16 revealedCount) internal {

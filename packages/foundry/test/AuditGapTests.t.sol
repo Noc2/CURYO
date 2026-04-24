@@ -277,9 +277,9 @@ contract AuditGapTests is VotingTestBase {
         _reveal(voter2, contentId, 1, ck2, true, s2);
         _reveal(voter3, contentId, 1, ck3, false, s3);
 
-        // Warp past final reveal-failed grace so unrevealed votes are processable.
+        // Warp past final reveal grace so unrevealed votes are processable after settlement.
         vm.warp(block.timestamp + 7 days + 60 minutes + 1);
-        votingEngine.finalizeRevealFailedRound(contentId, 1);
+        votingEngine.settleRound(contentId, 1);
 
         vm.prank(owner);
         votingEngine.pause();
@@ -443,7 +443,7 @@ contract AuditGapTests is VotingTestBase {
         _reveal(voter3, contentId, 1, ck3, false, s3);
 
         vm.warp(block.timestamp + 7 days + 60 minutes + 1);
-        votingEngine.finalizeRevealFailedRound(contentId, 1);
+        votingEngine.settleRound(contentId, 1);
 
         // count=0 should process all
         votingEngine.processUnrevealedVotes(contentId, 1, 0, 0);
@@ -464,7 +464,7 @@ contract AuditGapTests is VotingTestBase {
         _reveal(voter3, contentId, 1, ck3, false, s3);
 
         vm.warp(block.timestamp + 7 days + 60 minutes + 1);
-        votingEngine.finalizeRevealFailedRound(contentId, 1);
+        votingEngine.settleRound(contentId, 1);
 
         // count=999 should clamp to array length and still succeed
         votingEngine.processUnrevealedVotes(contentId, 1, 0, 999);
@@ -485,7 +485,7 @@ contract AuditGapTests is VotingTestBase {
         _reveal(voter3, contentId, 1, ck3, false, s3);
 
         vm.warp(block.timestamp + 7 days + 60 minutes + 1);
-        votingEngine.finalizeRevealFailedRound(contentId, 1);
+        votingEngine.settleRound(contentId, 1);
 
         // startIndex == array.length should revert
         vm.expectRevert(RoundVotingEngine.IndexOutOfBounds.selector);
@@ -507,7 +507,7 @@ contract AuditGapTests is VotingTestBase {
         _reveal(voter3, contentId, 1, ck3, false, s3);
 
         vm.warp(block.timestamp + 7 days + 60 minutes + 1);
-        votingEngine.finalizeRevealFailedRound(contentId, 1);
+        votingEngine.settleRound(contentId, 1);
 
         // Process first 2 (both revealed, nothing to process)
         // Process last 2 (one revealed, one unrevealed)

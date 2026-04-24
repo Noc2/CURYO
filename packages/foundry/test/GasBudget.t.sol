@@ -273,7 +273,7 @@ contract GasBudgetTest is RoundIntegrationTest {
         vm.warp(
             round.startTime + 7 days + ProtocolConfig(address(votingEngine.protocolConfig())).revealGracePeriod() + 1
         );
-        votingEngine.finalizeRevealFailedRound(contentId, roundId);
+        votingEngine.settleRound(contentId, roundId);
 
         uint256 gasUsed = _measureCall(
             address(votingEngine), abi.encodeCall(RoundVotingEngine.processUnrevealedVotes, (contentId, roundId, 0, 10))
