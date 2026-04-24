@@ -306,44 +306,6 @@ ponder.on("QuestionRewardPoolEscrow:QuestionBundleRoundRecorded", async ({ event
   }
 });
 
-ponder.on("QuestionRewardPoolEscrow:QuestionBundleFailed", async ({ event, context }) => {
-  const { bundleId, contentId, roundId } = event.args;
-  const existingContent = await context.db.find(content, { id: contentId });
-
-  if (existingContent?.bundleIndex !== null && existingContent?.bundleIndex !== undefined) {
-    const id = bundleQuestionRowId(bundleId, existingContent.bundleIndex);
-    await context.db
-      .insert(questionBundleQuestion)
-      .values({
-        id,
-        bundleId,
-        contentId,
-        bundleIndex: existingContent.bundleIndex,
-        roundId,
-        settled: false,
-        terminal: true,
-        updatedAt: event.block.timestamp,
-      })
-      .onConflictDoUpdate(() => ({
-        roundId,
-        settled: false,
-        terminal: true,
-        updatedAt: event.block.timestamp,
-      }));
-  }
-
-  await context.db.update(questionBundleReward, { id: bundleId }).set({
-    failed: true,
-    updatedAt: event.block.timestamp,
-  });
-
-  if (existingContent) {
-    await context.db.update(content, { id: contentId }).set({
-      lastActivityAt: event.block.timestamp,
-    });
-  }
-});
-
 ponder.on("QuestionRewardPoolEscrow:QuestionBundleRewardClaimed", async ({ event, context }) => {
   const {
     bundleId,
@@ -386,6 +348,16 @@ ponder.on("QuestionRewardPoolEscrow:QuestionBundleRewardClaimed", async ({ event
 });
 
 ponder.on("QuestionRewardPoolEscrow:QuestionBundleRewardRefunded", async ({ event, context }) => {
+  const { bundleId, amount } = event.args;
+
+  await context.db.update(questionBundleReward, { id: bundleId }).set((row) => ({
+    refundedAmount: row.refundedAmount + amount,
+    refunded: true,
+    updatedAt: event.block.timestamp,
+  }));
+});
+
+ponder.on("QuestionRewardPoolEscrow:QuestionBundleRewardForfeited", async ({ event, context }) => {
   const { bundleId, amount } = event.args;
 
   await context.db.update(questionBundleReward, { id: bundleId }).set((row) => ({

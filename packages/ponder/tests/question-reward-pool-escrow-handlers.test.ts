@@ -20,6 +20,9 @@ vi.mock("ponder:registry", () => ({
 
 vi.mock("ponder:schema", () => ({
   content: "content",
+  questionBundleClaim: "questionBundleClaim",
+  questionBundleQuestion: "questionBundleQuestion",
+  questionBundleReward: "questionBundleReward",
   questionRewardPool: "questionRewardPool",
   questionRewardPoolClaim: "questionRewardPoolClaim",
   questionRewardPoolRound: "questionRewardPoolRound",
@@ -227,6 +230,52 @@ describe("QuestionRewardPoolEscrow ponder handlers", () => {
         expect.objectContaining({
           table: "questionRewardPool",
           values: expect.objectContaining({ refunded: true, refundedAmount: 50_000_000n }),
+        }),
+      ]),
+    );
+  });
+
+  it("marks bundle rewards refunded when unused funds are returned or forfeited", async () => {
+    const { db, updates } = createDb();
+    const registeredHandlers = await loadHandlers();
+
+    expect(registeredHandlers.has("QuestionRewardPoolEscrow:QuestionBundleFailed")).toBe(false);
+
+    await registeredHandlers.get("QuestionRewardPoolEscrow:QuestionBundleRewardRefunded")!({
+      event: {
+        args: {
+          bundleId: 9n,
+          funder: "0x0000000000000000000000000000000000000001",
+          amount: 30_000_000n,
+        },
+        block: { number: 21n, timestamp: 2_100n },
+      },
+      context: { db },
+    });
+
+    await registeredHandlers.get("QuestionRewardPoolEscrow:QuestionBundleRewardForfeited")!({
+      event: {
+        args: {
+          bundleId: 10n,
+          treasury: "0x0000000000000000000000000000000000000003",
+          amount: 20_000_000n,
+        },
+        block: { number: 22n, timestamp: 2_200n },
+      },
+      context: { db },
+    });
+
+    expect(updates).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          table: "questionBundleReward",
+          key: { id: 9n },
+          values: expect.objectContaining({ refunded: true, refundedAmount: 30_000_000n }),
+        }),
+        expect.objectContaining({
+          table: "questionBundleReward",
+          key: { id: 10n },
+          values: expect.objectContaining({ refunded: true, refundedAmount: 20_000_000n }),
         }),
       ]),
     );
