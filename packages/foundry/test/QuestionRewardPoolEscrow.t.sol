@@ -47,6 +47,9 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
     string internal constant TAGS = "travel";
     string internal constant DEFAULT_MEDIA_URL = "https://example.com/hotel-room.jpg";
     uint256 internal constant CATEGORY_ID = 1;
+    uint8 internal constant REWARD_ASSET_HREP = 0;
+    uint8 internal constant REWARD_ASSET_USDC = 1;
+    uint256 internal constant BUNDLE_CLAIM_GRACE = 7 days;
 
     function _tlockDrandChainHash() internal pure override returns (bytes32) {
         return DEFAULT_DRAND_CHAIN_HASH;
@@ -253,12 +256,6 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(reward1 + reward2 + reward3, 97e6);
         assertEq(usdc.balanceOf(frontend1), frontendBalanceBefore + 3e6);
         assertEq(usdc.balanceOf(address(rewardPoolEscrow)), 0);
-
-        (,,,,, uint256 frontendFeeAllocation, uint256 voterClaimedAmount, uint256 frontendClaimedAmount) =
-            rewardPoolEscrow.roundSnapshots(rewardPoolId, roundId);
-        assertEq(frontendFeeAllocation, 3e6);
-        assertEq(voterClaimedAmount, 97e6);
-        assertEq(frontendClaimedAmount, 3e6);
     }
 
     function testUnregisteredFrontendFeeShareFallsBackToVoterReward() public {
@@ -416,8 +413,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
 
     function testBundleClaimUsesRoundSpecificVoterIdsAfterMigration() public {
         uint256[] memory contentIds = _submitBundleQuestions();
-        uint256 bundleId =
-            _createSubmissionBundle(contentIds, funder, rewardPoolEscrow.REWARD_ASSET_USDC(), REWARD_POOL_AMOUNT, 3);
+        uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, REWARD_POOL_AMOUNT, 3);
 
         address[] memory voters = new address[](3);
         voters[0] = voter2;
@@ -447,8 +443,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
     function testBundleClaimSupportsMultipleRoundSets() public {
         uint256[] memory contentIds = _submitBundleQuestions();
         uint256 bundleAmount = 120e6;
-        uint256 bundleId =
-            _createSubmissionBundle(contentIds, funder, rewardPoolEscrow.REWARD_ASSET_USDC(), bundleAmount, 3, 2);
+        uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, bundleAmount, 3, 2);
 
         address[] memory voters = new address[](3);
         voters[0] = voter2;
@@ -456,11 +451,8 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         voters[2] = voter4;
         bool[] memory directions = _directions(true, true, false);
 
-        uint256 firstQuestionFirstRound = _settleRoundWith(voters, contentIds[0], directions);
-        uint256 secondQuestionFirstRound = _settleRoundWith(voters, contentIds[1], directions);
-
-        assertEq(rewardPoolEscrow.bundleRoundIds(bundleId, 0, 0), firstQuestionFirstRound);
-        assertEq(rewardPoolEscrow.bundleRoundIds(bundleId, 1, 0), secondQuestionFirstRound);
+        _settleRoundWith(voters, contentIds[0], directions);
+        _settleRoundWith(voters, contentIds[1], directions);
         assertGt(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter2), 0);
         assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 1, voter2), 0);
 
@@ -781,7 +773,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         contentIds[0] = _submitQuestionWithContext("https://example.com/bundle-a", "https://example.com/bundle-a.jpg");
         contentIds[1] = _submitQuestionWithContext("https://example.com/bundle-b", "https://example.com/bundle-b.jpg");
         uint256 bundleId = 1;
-        uint8 rewardAsset = rewardPoolEscrow.REWARD_ASSET_HREP();
+        uint8 rewardAsset = REWARD_ASSET_HREP;
         uint256 bountyClosesAt = block.timestamp + 30 days;
 
         vm.prank(submitter);
@@ -885,7 +877,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
     ) internal returns (uint256 bundleId) {
         bundleId = 1;
         vm.startPrank(bundleFunder);
-        if (asset == rewardPoolEscrow.REWARD_ASSET_HREP()) {
+        if (asset == REWARD_ASSET_HREP) {
             hrepToken.approve(address(rewardPoolEscrow), amount);
         } else {
             usdc.approve(address(rewardPoolEscrow), amount);
@@ -1209,8 +1201,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
 
     function testBundleRefund_ClaimGraceBlocksRaceAtBountyClose() public {
         uint256[] memory contentIds = _submitBundleQuestions();
-        uint256 bundleId =
-            _createSubmissionBundle(contentIds, funder, rewardPoolEscrow.REWARD_ASSET_USDC(), REWARD_POOL_AMOUNT, 3);
+        uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, REWARD_POOL_AMOUNT, 3);
 
         address[] memory voters = new address[](3);
         voters[0] = voter2;
@@ -1243,8 +1234,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
 
     function testBundleRefund_WaitsForUnrevealedCleanupAfterGrace() public {
         uint256[] memory contentIds = _submitBundleQuestions();
-        uint256 bundleId =
-            _createSubmissionBundle(contentIds, funder, rewardPoolEscrow.REWARD_ASSET_USDC(), REWARD_POOL_AMOUNT, 3);
+        uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, REWARD_POOL_AMOUNT, 3);
 
         uint256 cleanupRoundId = _settleRoundWithOneUnrevealed(contentIds[0]);
 
@@ -1255,7 +1245,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         bool[] memory directions = _directions(true, true, false);
         _settleRoundWith(voters, contentIds[1], directions);
 
-        vm.warp(block.timestamp + 31 days + rewardPoolEscrow.BUNDLE_CLAIM_GRACE() + 1);
+        vm.warp(block.timestamp + 31 days + BUNDLE_CLAIM_GRACE + 1);
         vm.expectRevert("Cleanup pending");
         rewardPoolEscrow.refundQuestionBundleReward(bundleId);
 

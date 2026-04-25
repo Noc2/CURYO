@@ -37,6 +37,8 @@ contract DeployCuryo is ScaffoldETHDeploy {
     error UnsupportedHumanFaucetChain(uint256 chainId);
 
     bytes32 internal constant ERC1967_ADMIN_SLOT = bytes32(uint256(keccak256("eip1967.proxy.admin")) - 1);
+    bytes32 internal constant QUESTION_ESCROW_CONFIG_ROLE = keccak256("CONFIG_ROLE");
+    bytes32 internal constant QUESTION_ESCROW_PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
     // Timelock delay: 2 days for standard operations
     uint256 public constant TIMELOCK_MIN_DELAY = 2 days;
@@ -851,13 +853,13 @@ contract DeployCuryo is ScaffoldETHDeploy {
         );
         _requireHasRole(
             address(questionRewardPoolEscrow),
-            questionRewardPoolEscrow.CONFIG_ROLE(),
+            QUESTION_ESCROW_CONFIG_ROLE,
             targets.governance,
             "QuestionRewardPoolEscrow governance config"
         );
         _requireHasRole(
             address(questionRewardPoolEscrow),
-            questionRewardPoolEscrow.PAUSER_ROLE(),
+            QUESTION_ESCROW_PAUSER_ROLE,
             targets.governance,
             "QuestionRewardPoolEscrow governance pauser"
         );

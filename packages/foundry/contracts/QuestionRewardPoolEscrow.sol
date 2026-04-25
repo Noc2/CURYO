@@ -28,8 +28,8 @@ contract QuestionRewardPoolEscrow is
     using SafeERC20 for IERC20;
     using SafeCast for uint256;
 
-    bytes32 public constant CONFIG_ROLE = keccak256("CONFIG_ROLE");
-    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+    bytes32 internal constant CONFIG_ROLE = keccak256("CONFIG_ROLE");
+    bytes32 internal constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
     uint256 internal constant MIN_REQUIRED_VOTERS = 3;
     uint256 internal constant MIN_REQUIRED_SETTLED_ROUNDS = 1;
@@ -38,9 +38,9 @@ contract QuestionRewardPoolEscrow is
     uint256 internal constant MAX_FRONTEND_FEE_BPS = 500;
     /// @notice Grace period voters have after bountyClosesAt to claim on a still-claimable bundle
     ///         before a third party can sweep the remainder back to the funder.
-    uint256 public constant BUNDLE_CLAIM_GRACE = 7 days;
-    uint8 public constant REWARD_ASSET_HREP = 0;
-    uint8 public constant REWARD_ASSET_USDC = 1;
+    uint256 internal constant BUNDLE_CLAIM_GRACE = 7 days;
+    uint8 internal constant REWARD_ASSET_HREP = 0;
+    uint8 internal constant REWARD_ASSET_USDC = 1;
 
     struct RewardPool {
         uint64 id;
@@ -138,16 +138,16 @@ contract QuestionRewardPoolEscrow is
     uint256 public nextRewardPoolId;
 
     mapping(uint256 => RewardPool) private rewardPools;
-    mapping(uint256 => mapping(uint256 => RoundSnapshot)) public roundSnapshots;
-    mapping(uint256 => mapping(uint256 => mapping(uint256 => bool))) public rewardClaimed;
+    mapping(uint256 => mapping(uint256 => RoundSnapshot)) private roundSnapshots;
+    mapping(uint256 => mapping(uint256 => mapping(uint256 => bool))) private rewardClaimed;
     mapping(uint256 => BundleReward) private bundleRewards;
     mapping(uint256 => BundleQuestion[]) private bundleQuestions;
-    mapping(uint256 => mapping(uint256 => uint32)) public bundleQuestionRecordedRounds;
-    mapping(uint256 => mapping(uint256 => mapping(uint256 => uint64))) public bundleRoundIds;
-    mapping(uint256 => mapping(uint256 => BundleRoundSetSnapshot)) public bundleRoundSetSnapshots;
-    mapping(uint256 => mapping(uint256 => mapping(uint256 => bool))) public bundleRoundSetRewardClaimed;
-    mapping(uint256 => uint256) public contentBundleId;
-    mapping(uint256 => uint256) public contentBundleIndex;
+    mapping(uint256 => mapping(uint256 => uint32)) private bundleQuestionRecordedRounds;
+    mapping(uint256 => mapping(uint256 => mapping(uint256 => uint64))) private bundleRoundIds;
+    mapping(uint256 => mapping(uint256 => BundleRoundSetSnapshot)) private bundleRoundSetSnapshots;
+    mapping(uint256 => mapping(uint256 => mapping(uint256 => bool))) private bundleRoundSetRewardClaimed;
+    mapping(uint256 => uint256) private contentBundleId;
+    mapping(uint256 => uint256) private contentBundleIndex;
     uint16 public defaultFrontendFeeBps;
 
     event RewardPoolCreated(
@@ -291,28 +291,6 @@ contract QuestionRewardPoolEscrow is
             contentId,
             msg.sender,
             REWARD_ASSET_USDC,
-            amount,
-            requiredVoters,
-            requiredSettledRounds,
-            bountyClosesAt,
-            feedbackClosesAt,
-            false
-        );
-    }
-
-    function createRewardPoolWithAsset(
-        uint256 contentId,
-        uint8 asset,
-        uint256 amount,
-        uint256 requiredVoters,
-        uint256 requiredSettledRounds,
-        uint256 bountyClosesAt,
-        uint256 feedbackClosesAt
-    ) external nonReentrant whenNotPaused returns (uint256 rewardPoolId) {
-        rewardPoolId = _createRewardPool(
-            contentId,
-            msg.sender,
-            asset,
             amount,
             requiredVoters,
             requiredSettledRounds,
