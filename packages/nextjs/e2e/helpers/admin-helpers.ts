@@ -583,6 +583,32 @@ async function readRoundDrandConfig(
 ): Promise<{ chainHash: `0x${string}`; genesisTime: bigint; period: bigint }> {
   const protocolConfigAddress = await resolveProtocolConfigAddress(contractAddress);
   if (roundId > 0n) {
+    const snapshot = await readRoundDrandConfigSnapshot(contractAddress, contentId, roundId, blockTag);
+    if (snapshot) {
+      return snapshot;
+    }
+  }
+
+  const [chainHash, genesisTime, period] = await Promise.all([
+    readUintOrBytes32Getter(protocolConfigAddress, "drandChainHash", [], blockTag),
+    readUintOrBytes32Getter(protocolConfigAddress, "drandGenesisTime", [], blockTag),
+    readUintOrBytes32Getter(protocolConfigAddress, "drandPeriod", [], blockTag),
+  ]);
+
+  if (typeof chainHash !== "string" || typeof genesisTime !== "bigint" || typeof period !== "bigint") {
+    throw new Error("Failed to read drand config");
+  }
+
+  return { chainHash, genesisTime, period };
+}
+
+async function readRoundDrandConfigSnapshot(
+  contractAddress: string,
+  contentId: bigint,
+  roundId: bigint,
+  blockTag: `0x${string}`,
+): Promise<{ chainHash: `0x${string}`; genesisTime: bigint; period: bigint } | null> {
+  try {
     const [chainHash, genesisTime, period] = await Promise.all([
       readUintOrBytes32Getter(contractAddress, "roundDrandChainHashSnapshot", [contentId, roundId], blockTag),
       readUintOrBytes32Getter(contractAddress, "roundDrandGenesisTimeSnapshot", [contentId, roundId], blockTag),
@@ -599,19 +625,11 @@ async function readRoundDrandConfig(
     ) {
       return { chainHash, genesisTime, period };
     }
+  } catch {
+    return null;
   }
 
-  const [chainHash, genesisTime, period] = await Promise.all([
-    readUintOrBytes32Getter(protocolConfigAddress, "drandChainHash", [], blockTag),
-    readUintOrBytes32Getter(protocolConfigAddress, "drandGenesisTime", [], blockTag),
-    readUintOrBytes32Getter(protocolConfigAddress, "drandPeriod", [], blockTag),
-  ]);
-
-  if (typeof chainHash !== "string" || typeof genesisTime !== "bigint" || typeof period !== "bigint") {
-    throw new Error("Failed to read drand config");
-  }
-
-  return { chainHash, genesisTime, period };
+  return null;
 }
 
 async function readUintOrBytes32Getter(
