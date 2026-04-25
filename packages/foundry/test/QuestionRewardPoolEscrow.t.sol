@@ -473,6 +473,60 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(usdc.balanceOf(voter2), 1_000e6 + firstReward + secondReward);
     }
 
+    function testBundleRoundSetDoesNotQualifyWithoutRequiredCompleterIntersection() public {
+        uint256[] memory contentIds = _submitBundleQuestions();
+        uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, REWARD_POOL_AMOUNT, 3);
+
+        address[] memory firstQuestionVoters = new address[](3);
+        firstQuestionVoters[0] = voter1;
+        firstQuestionVoters[1] = voter2;
+        firstQuestionVoters[2] = voter3;
+        address[] memory secondQuestionVoters = new address[](3);
+        secondQuestionVoters[0] = voter2;
+        secondQuestionVoters[1] = voter3;
+        secondQuestionVoters[2] = voter4;
+        bool[] memory directions = _directions(true, true, false);
+
+        _settleRoundWith(firstQuestionVoters, contentIds[0], directions);
+        _settleRoundWith(secondQuestionVoters, contentIds[1], directions);
+
+        assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter2), 0);
+
+        vm.prank(voter2);
+        vm.expectRevert("Bundle not claimable");
+        rewardPoolEscrow.claimQuestionBundleReward(bundleId, 0);
+    }
+
+    function testBundleRoundSetRetriesAfterInsufficientCompleterIntersection() public {
+        uint256[] memory contentIds = _submitBundleQuestions();
+        uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, REWARD_POOL_AMOUNT, 3);
+
+        address[] memory firstQuestionVoters = new address[](3);
+        firstQuestionVoters[0] = voter1;
+        firstQuestionVoters[1] = voter2;
+        firstQuestionVoters[2] = voter3;
+        address[] memory secondQuestionVoters = new address[](3);
+        secondQuestionVoters[0] = voter2;
+        secondQuestionVoters[1] = voter3;
+        secondQuestionVoters[2] = voter4;
+        bool[] memory directions = _directions(true, true, false);
+
+        _settleRoundWith(firstQuestionVoters, contentIds[0], directions);
+        _settleRoundWith(secondQuestionVoters, contentIds[1], directions);
+        assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter2), 0);
+
+        vm.warp(block.timestamp + 25 hours);
+        _settleRoundWith(firstQuestionVoters, contentIds[0], directions);
+        assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter2), 0);
+        _settleRoundWith(firstQuestionVoters, contentIds[1], directions);
+
+        uint256 claimable = rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter2);
+        assertEq(claimable, REWARD_POOL_AMOUNT / 3);
+        vm.prank(voter2);
+        uint256 reward = rewardPoolEscrow.claimQuestionBundleReward(bundleId, 0);
+        assertEq(reward, claimable);
+    }
+
     function testFunderAndSubmitterVoterIdsAreExcludedFromRewardPoolClaims() public {
         uint256 contentId = _submitQuestion("");
         uint256 rewardPoolId = _createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1);
