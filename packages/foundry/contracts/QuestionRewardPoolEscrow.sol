@@ -52,7 +52,6 @@ contract QuestionRewardPoolEscrow is
         uint64 feedbackClosesAt;
         address funder;
         address funderIdentity;
-        uint256 funderVoterId;
         address submitterIdentity;
         uint256 submitterVoterId;
         address submitterVoterIdNFT;
@@ -83,7 +82,6 @@ contract QuestionRewardPoolEscrow is
         uint64 feedbackClosesAt;
         address funder;
         address funderIdentity;
-        uint256 funderVoterId;
         uint8 asset;
         uint32 questionCount;
         uint32 requiredCompleters;
@@ -339,7 +337,6 @@ contract QuestionRewardPoolEscrow is
             feedbackClosesAt: normalizedFeedbackClosesAt.toUint64(),
             funder: funder,
             funderIdentity: funderIdentity,
-            funderVoterId: funderVoterId,
             asset: asset,
             questionCount: contentIds.length.toUint32(),
             requiredCompleters: requiredCompleters.toUint32(),
@@ -430,7 +427,6 @@ contract QuestionRewardPoolEscrow is
             feedbackClosesAt: normalizedFeedbackClosesAt.toUint64(),
             funder: funder,
             funderIdentity: funderIdentity,
-            funderVoterId: funderVoterId,
             submitterIdentity: submitterIdentity,
             submitterVoterId: submitterVoterId,
             submitterVoterIdNFT: address(voterIdNFT),
@@ -1179,7 +1175,7 @@ contract QuestionRewardPoolEscrow is
         view
         returns (uint256)
     {
-        return _resolveFunderVoterId(contentId, roundId, bundle.funder, bundle.funderIdentity, bundle.funderVoterId);
+        return _resolveFunderVoterId(contentId, roundId, bundle.funder, bundle.funderIdentity);
     }
 
     function _getIncompleteRewardPoolForQualification(uint256 rewardPoolId)
@@ -1345,18 +1341,14 @@ contract QuestionRewardPoolEscrow is
     }
 
     function _funderVoterIdForRound(RewardPool storage rewardPool, uint256 roundId) internal view returns (uint256) {
-        return _resolveFunderVoterId(
-            rewardPool.contentId, roundId, rewardPool.funder, rewardPool.funderIdentity, rewardPool.funderVoterId
-        );
+        return _resolveFunderVoterId(rewardPool.contentId, roundId, rewardPool.funder, rewardPool.funderIdentity);
     }
 
-    function _resolveFunderVoterId(
-        uint256 contentId,
-        uint256 roundId,
-        address funder,
-        address funderIdentity,
-        uint256 fallbackVoterId
-    ) internal view returns (uint256) {
+    function _resolveFunderVoterId(uint256 contentId, uint256 roundId, address funder, address funderIdentity)
+        internal
+        view
+        returns (uint256)
+    {
         uint256 funderVoterId = _voterIdForRound(contentId, roundId, funder);
         if (funderVoterId != 0) return funderVoterId;
 
@@ -1365,7 +1357,7 @@ contract QuestionRewardPoolEscrow is
             if (identityVoterId != 0) return identityVoterId;
         }
 
-        return fallbackVoterId;
+        return 0;
     }
 
     function _submitterHasRevealedCommit(RewardPool storage rewardPool, uint256 roundId, uint256 funderVoterId)

@@ -309,6 +309,22 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
         feedbackBonusEscrow.awardFeedbackBonus(poolId, funder, FEEDBACK_HASH, 10e6);
     }
 
+    function testStoredFunderVoterIdDoesNotExcludeDifferentSnapshotHolder() public {
+        uint256 contentId = _submitQuestion("");
+        uint256 poolId = _createFeedbackBonusPool(contentId);
+        uint256 oldFunderVoterId = voterIdNFT.getTokenId(funder);
+
+        MockVoterIdNFT migratedVoterIdNFT = _migrateVoterIdsWithVoter1AtOldFunderId();
+        assertEq(migratedVoterIdNFT.getTokenId(voter1), oldFunderVoterId);
+        assertNotEq(migratedVoterIdNFT.getTokenId(funder), oldFunderVoterId);
+
+        _settleRoundWith(_threeVoters(), contentId, _directions(true, true, false));
+
+        vm.prank(funder);
+        uint256 recipientAmount = feedbackBonusEscrow.awardFeedbackBonus(poolId, voter1, FEEDBACK_HASH, 10e6);
+        assertEq(recipientAmount, 10e6);
+    }
+
     function testAwardRequiresRevealedVote() public {
         uint256 contentId = _submitQuestion("");
         uint256 poolId = _createFeedbackBonusPool(contentId);
@@ -467,5 +483,21 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
         directions[1] = b;
         directions[2] = c;
         directions[3] = d;
+    }
+
+    function _migrateVoterIdsWithVoter1AtOldFunderId() internal returns (MockVoterIdNFT migratedVoterIdNFT) {
+        migratedVoterIdNFT = new MockVoterIdNFT();
+        address[7] memory migratedHumans = [submitter, voter1, voter2, voter3, funder, voter4, frontend1];
+        for (uint256 i = 0; i < migratedHumans.length; i++) {
+            migratedVoterIdNFT.setHolder(migratedHumans[i]);
+        }
+
+        vm.startPrank(owner);
+        protocolConfig.setVoterIdNFT(address(migratedVoterIdNFT));
+        registry.setVoterIdNFT(address(migratedVoterIdNFT));
+        frontendRegistry.setVoterIdNFT(address(migratedVoterIdNFT));
+        questionRewardPoolEscrow.setVoterIdNFT(address(migratedVoterIdNFT));
+        feedbackBonusEscrow.setVoterIdNFT(address(migratedVoterIdNFT));
+        vm.stopPrank();
     }
 }

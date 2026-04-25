@@ -411,6 +411,22 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
     }
 
+    function testStoredFunderVoterIdDoesNotExcludeDifferentSnapshotHolder() public {
+        uint256 contentId = _submitQuestion("");
+        uint256 rewardPoolId = _createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1);
+        uint256 oldFunderVoterId = voterIdNFT.getTokenId(funder);
+
+        MockVoterIdNFT migratedVoterIdNFT = _migrateVoterIdsWithVoter1AtOldFunderId();
+        assertEq(migratedVoterIdNFT.getTokenId(voter1), oldFunderVoterId);
+        assertEq(migratedVoterIdNFT.getTokenId(funder), 0);
+
+        uint256 roundId = _settleRoundWith(_threeVoters(), contentId, _directions(true, true, false));
+
+        vm.prank(voter1);
+        uint256 reward = rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
+        assertEq(reward, REWARD_POOL_AMOUNT / 3);
+    }
+
     function testBundleClaimUsesRoundSpecificVoterIdsAfterMigration() public {
         uint256[] memory contentIds = _submitBundleQuestions();
         uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, REWARD_POOL_AMOUNT, 3);
@@ -1225,6 +1241,21 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
     function _migrateVoterIdsWithDifferentIds() internal returns (MockVoterIdNFT migratedVoterIdNFT) {
         migratedVoterIdNFT = new MockVoterIdNFT();
         address[7] memory migratedHumans = [voter3, voter2, voter1, submitter, funder, voter4, frontend1];
+        for (uint256 i = 0; i < migratedHumans.length; i++) {
+            migratedVoterIdNFT.setHolder(migratedHumans[i]);
+        }
+
+        vm.startPrank(owner);
+        protocolConfig.setVoterIdNFT(address(migratedVoterIdNFT));
+        registry.setVoterIdNFT(address(migratedVoterIdNFT));
+        frontendRegistry.setVoterIdNFT(address(migratedVoterIdNFT));
+        rewardPoolEscrow.setVoterIdNFT(address(migratedVoterIdNFT));
+        vm.stopPrank();
+    }
+
+    function _migrateVoterIdsWithVoter1AtOldFunderId() internal returns (MockVoterIdNFT migratedVoterIdNFT) {
+        migratedVoterIdNFT = new MockVoterIdNFT();
+        address[6] memory migratedHumans = [submitter, voter1, voter2, voter3, voter4, frontend1];
         for (uint256 i = 0; i < migratedHumans.length; i++) {
             migratedVoterIdNFT.setHolder(migratedHumans[i]);
         }

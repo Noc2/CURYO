@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-import {ContentRegistry} from "./ContentRegistry.sol";
-import {RoundVotingEngine} from "./RoundVotingEngine.sol";
-import {ProtocolConfig} from "./ProtocolConfig.sol";
-import {IFrontendRegistry} from "./interfaces/IFrontendRegistry.sol";
-import {IVoterIdNFT} from "./interfaces/IVoterIdNFT.sol";
-import {RoundLib} from "./libraries/RoundLib.sol";
+import { ContentRegistry } from "./ContentRegistry.sol";
+import { RoundVotingEngine } from "./RoundVotingEngine.sol";
+import { ProtocolConfig } from "./ProtocolConfig.sol";
+import { IFrontendRegistry } from "./interfaces/IFrontendRegistry.sol";
+import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
+import { RoundLib } from "./libraries/RoundLib.sol";
 
 /// @title FeedbackBonusEscrow
 /// @notice Holds optional USDC bonuses for useful voter feedback and pays awarded feedback hashes after a round ends.
@@ -40,7 +40,7 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
         uint256 funderVoterId;
         address submitterIdentity;
         uint256 submitterVoterId;
-        address submitterVoterIdNFT;
+        address voterIdNFTSnapshot;
         uint256 fundedAmount;
         uint256 remainingAmount;
         bool forfeited;
@@ -157,7 +157,7 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
             funderVoterId: funderVoterId,
             submitterIdentity: submitterIdentity,
             submitterVoterId: submitterVoterId,
-            submitterVoterIdNFT: address(voterIdNFT),
+            voterIdNFTSnapshot: address(voterIdNFT),
             fundedAmount: receivedAmount,
             remainingAmount: receivedAmount,
             forfeited: false,
@@ -322,7 +322,12 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
 
     function _isExcludedVoter(FeedbackBonusPool storage pool, uint256 voterId) internal view returns (bool) {
         if (voterId == 0) return true;
-        if (voterId == pool.funderVoterId || voterId == pool.submitterVoterId) return true;
+        if (
+            pool.voterIdNFTSnapshot == address(_roundVoterIdNft(pool.contentId, pool.roundId))
+                && (voterId == pool.funderVoterId || voterId == pool.submitterVoterId)
+        ) {
+            return true;
+        }
         if (voterId == _voterIdForRound(pool.contentId, pool.roundId, pool.funder)) return true;
         if (
             pool.funderIdentity != address(0)
