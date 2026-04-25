@@ -45,10 +45,18 @@ contract DeployCuryoHarness is DeployCuryo {
         address votingEngine,
         address treasury,
         address contentRegistry,
-        address frontendRegistry
+        address frontendRegistry,
+        address questionRewardPoolEscrow
     ) external pure returns (address[] memory) {
         return _buildQuorumExcludedHolders(
-            humanFaucet, participationPool, rewardDistributor, votingEngine, treasury, contentRegistry, frontendRegistry
+            humanFaucet,
+            participationPool,
+            rewardDistributor,
+            votingEngine,
+            treasury,
+            contentRegistry,
+            frontendRegistry,
+            questionRewardPoolEscrow
         );
     }
 
@@ -296,7 +304,7 @@ contract DeployCuryoCompilationTest is Test {
         deployScript.exposedAssertExactExcludedHolders(governor, expectedExcludedHolders);
     }
 
-    function test_BuildQuorumExcludedHolders_DoesNotExcludeQuestionRewardPoolEscrow() public {
+    function test_BuildQuorumExcludedHolders_ExcludesQuestionRewardPoolEscrow() public {
         DeployCuryoHarness deployScript = new DeployCuryoHarness();
         address questionRewardPoolEscrow = address(0x700);
 
@@ -307,13 +315,12 @@ contract DeployCuryoCompilationTest is Test {
             address(0x400),
             address(0x500),
             address(0x600),
-            address(0x800)
+            address(0x800),
+            questionRewardPoolEscrow
         );
 
-        assertEq(holders.length, 7);
-        for (uint256 i = 0; i < holders.length; i++) {
-            assertNotEq(holders[i], questionRewardPoolEscrow);
-        }
+        assertEq(holders.length, 8);
+        assertEq(holders[7], questionRewardPoolEscrow);
     }
 
     function _deployGovernorHarness() internal returns (CuryoGovernor governor) {

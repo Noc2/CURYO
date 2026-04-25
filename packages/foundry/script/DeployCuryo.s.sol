@@ -377,7 +377,8 @@ contract DeployCuryo is ScaffoldETHDeploy {
                 address(votingEngine),
                 governance,
                 address(registry),
-                address(frontendRegistry)
+                address(frontendRegistry),
+                address(questionRewardPoolEscrow)
             );
             CuryoGovernor(payable(governorAddr)).initializePools(excludedHolders);
             console.log("Governor excluded holders initialized for dynamic quorum");
@@ -1142,7 +1143,8 @@ contract DeployCuryo is ScaffoldETHDeploy {
             address(targets.votingEngine),
             targets.governance,
             address(targets.registry),
-            address(targets.frontendRegistry)
+            address(targets.frontendRegistry),
+            address(targets.questionRewardPoolEscrow)
         );
     }
 
@@ -1180,9 +1182,10 @@ contract DeployCuryo is ScaffoldETHDeploy {
         address votingEngine,
         address treasury,
         address contentRegistry,
-        address frontendRegistry
+        address frontendRegistry,
+        address questionRewardPoolEscrow
     ) internal pure returns (address[] memory holders) {
-        address[] memory temp = new address[](7);
+        address[] memory temp = new address[](8);
         uint256 count;
 
         if (humanFaucet != address(0)) {
@@ -1194,6 +1197,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         temp[count++] = treasury;
         temp[count++] = contentRegistry;
         temp[count++] = frontendRegistry;
+        temp[count++] = questionRewardPoolEscrow;
 
         holders = new address[](count);
         for (uint256 i = 0; i < count; i++) {
