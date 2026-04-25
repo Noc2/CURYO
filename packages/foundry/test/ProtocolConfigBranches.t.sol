@@ -85,6 +85,7 @@ contract ProtocolConfigBranchesTest is Test {
         bytes32 nextHash = bytes32(uint256(1234));
         uint64 nextGenesis = 42;
         uint64 nextPeriod = 9;
+        vm.warp(100);
 
         vm.expectEmit(true, true, true, true);
         emit DrandConfigUpdated(nextHash, nextGenesis, nextPeriod);
@@ -120,6 +121,17 @@ contract ProtocolConfigBranchesTest is Test {
 
         vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
         config.setDrandConfig(QUICKNET_CHAIN_HASH, 1, 0);
+    }
+
+    function test_SetDrandConfig_RejectsFutureGenesisOrPeriodLongerThanMinEpoch() public {
+        ProtocolConfig config = deployInitializedProtocolConfig(address(this));
+        vm.warp(100);
+
+        vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
+        config.setDrandConfig(QUICKNET_CHAIN_HASH, 101, 3);
+
+        vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
+        config.setDrandConfig(QUICKNET_CHAIN_HASH, 1, 5 minutes + 1);
     }
 
     function test_DefaultRatingAndSlashConfig_UseRedeployDefaults() public {

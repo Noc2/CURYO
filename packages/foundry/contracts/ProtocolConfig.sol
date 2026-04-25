@@ -478,6 +478,8 @@ contract ProtocolConfig is Initializable, AccessControlUpgradeable {
         if (chainHash == bytes32(0)) revert InvalidConfig();
         if (genesisTime == 0) revert InvalidConfig();
         if (period == 0) revert InvalidConfig();
+        if (genesisTime > block.timestamp) revert InvalidConfig();
+        if (period > roundConfigBounds.minEpochDuration) revert InvalidConfig();
 
         drandChainHash = chainHash;
         drandGenesisTime = genesisTime;
