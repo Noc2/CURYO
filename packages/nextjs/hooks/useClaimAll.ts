@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
 import { type ClaimableRewardItem, sortClaimableRewardItems } from "~~/hooks/claimableRewards";
 import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { useGasBalanceStatus } from "~~/hooks/useGasBalanceStatus";
 import { useWalletRpcRecovery } from "~~/hooks/useWalletRpcRecovery";
 import {
@@ -11,6 +12,10 @@ import {
   getClaimPreflightErrorMessage,
   isClaimGasShortageError,
 } from "~~/lib/claimTransactionFeedback";
+import {
+  QUESTION_REWARD_POOL_ESCROW_ABI,
+  getConfiguredQuestionRewardPoolEscrowAddress,
+} from "~~/lib/questionRewardPools";
 import { isWalletRpcOverloadedError } from "~~/lib/transactionErrors";
 import { notification } from "~~/utils/scaffold-eth";
 
@@ -39,6 +44,8 @@ export function useClaimAll() {
   const [isClaiming, setIsClaiming] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const { requireAcceptance } = useTermsAcceptance();
+  const { targetNetwork } = useTargetNetwork();
+  const questionRewardPoolEscrowAddress = getConfiguredQuestionRewardPoolEscrowAddress(targetNetwork.id);
   const {
     canShowFreeTransactionAllowance,
     canSponsorTransactions,
@@ -163,8 +170,13 @@ export function useClaimAll() {
               { getErrorMessage: getTransactionErrorMessage },
             );
           } else if (item.claimType === "question_bundle_reward") {
+            if (!questionRewardPoolEscrowAddress) {
+              throw new Error("Question reward escrow is not configured");
+            }
             await (writeQuestionRewardPoolEscrow as any)(
               {
+                address: questionRewardPoolEscrowAddress,
+                abi: QUESTION_REWARD_POOL_ESCROW_ABI,
                 functionName: "claimQuestionBundleReward",
                 args: [item.bundleId, item.roundSetIndex],
               },
