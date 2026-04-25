@@ -264,6 +264,56 @@ test("createTlockVoteCommit returns the tlock metadata used in the commit hash",
   );
 });
 
+test("createTlockVoteCommit can encrypt to an explicit target round", async () => {
+  const voter = "0x2222222222222222222222222222222222222222";
+  const explicitTargetRound = 987_654n;
+  const commit = await createTlockVoteCommit(
+    {
+      voter,
+      isUp: false,
+      salt: ("0x" + "44".repeat(32)) as `0x${string}`,
+      contentId: 8n,
+      roundId: 4n,
+      roundReferenceRatingBps: 4_500,
+      epochDurationSeconds: 1200,
+    },
+    {
+      client: fakeClient,
+      targetRound: explicitTargetRound,
+      encryptFn: async (targetRound, payload) => {
+        assert.equal(targetRound, Number(explicitTargetRound));
+        const marker = payload[0] === 1 ? "1" : "0";
+        const plaintextMarker = `${marker}:${Buffer.from(payload.slice(1)).toString("hex")}`;
+        return Buffer.from(
+          makeFakeArmoredTlockCiphertext({
+            targetRound: BigInt(targetRound),
+            drandChainHash:
+              "0x52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971",
+            plaintextMarker,
+          }).slice(2),
+          "hex",
+        ).toString("utf8");
+      },
+    },
+  );
+
+  assert.equal(commit.targetRound, explicitTargetRound);
+  assert.equal(
+    commit.commitHash,
+    buildCommitHash(
+      false,
+      ("0x" + "44".repeat(32)) as `0x${string}`,
+      voter,
+      8n,
+      4n,
+      4_500,
+      explicitTargetRound,
+      commit.drandChainHash,
+      commit.ciphertext,
+    ),
+  );
+});
+
 test("getVoteTlockChainInfo returns the canonical drand metadata from the tlock client", async () => {
   const chainInfo = await getVoteTlockChainInfo({ client: fakeClient });
 

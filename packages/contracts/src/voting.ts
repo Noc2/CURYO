@@ -50,6 +50,7 @@ export interface VoteTransferPayload {
 export type VoteTlockRuntime = {
   client?: TlockClient;
   now?: () => number;
+  targetRound?: bigint | number;
   encryptFn?: TlockEncryptFn;
   decryptFn?: TlockDecryptFn;
 };
@@ -345,14 +346,31 @@ async function createTlockVoteArtifacts(
   const now = runtime.now ?? Date.now;
   const encryptFn = runtime.encryptFn ?? timelockEncrypt;
   const chainInfo = await client.chain().info();
-  const targetTime = now() + epochDurationSeconds * 1000;
-  const targetRound = roundAt(targetTime, chainInfo);
+  const targetRound =
+    runtime.targetRound != null
+      ? normalizeTlockTargetRound(runtime.targetRound)
+      : roundAt(now() + epochDurationSeconds * 1000, chainInfo);
   const armored = await encryptFn(targetRound, Buffer.from(encodeVotePlaintext(isUp, salt)), client);
   return {
     ciphertext: stringToHex(armored) as VoteCiphertext,
     targetRound: BigInt(targetRound),
     drandChainHash: `0x${chainInfo.hash}` as VoteDrandChainHash,
   };
+}
+
+function normalizeTlockTargetRound(targetRound: bigint | number): number {
+  const normalized =
+    typeof targetRound === "bigint"
+      ? Number(targetRound)
+      : Number.isInteger(targetRound)
+        ? targetRound
+        : Number.NaN;
+
+  if (!Number.isSafeInteger(normalized) || normalized <= 0) {
+    throw new Error("targetRound must be a positive safe integer");
+  }
+
+  return normalized;
 }
 
 export async function tlockEncryptVote(

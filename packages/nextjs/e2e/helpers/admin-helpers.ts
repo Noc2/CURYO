@@ -16,7 +16,7 @@ import { type RpcSendResult, isRetryableDirectCommitSendResult } from "./direct-
 import "./fetch-shim";
 import { PONDER_URL } from "./ponder-url";
 import { E2E_RPC_URL } from "./service-urls";
-import { deriveAnchoredTlockRuntimeNowMs } from "./tlockRuntime";
+import { deriveAcceptedTlockTargetRound, deriveDrandRoundRevealableAtSeconds } from "./tlockRuntime";
 import { createTlockVoteCommit, encodeVoteTransferPayload } from "@curyo/contracts/voting";
 
 const ANVIL_RPC = E2E_RPC_URL;
@@ -391,17 +391,18 @@ async function readLatestBlockSnapshot(): Promise<{ blockTag: `0x${string}`; tim
   };
 }
 
-async function resolveTlockRuntimeNowMs(
+async function resolveTlockCommitRuntime(
   votingEngineAddress: string,
   contentId: bigint,
-  tlockEpochDurationSeconds: number,
-): Promise<() => number> {
+  commitRoundId: bigint,
+): Promise<{ targetRound: bigint }> {
   const latestBlock = await readLatestBlockSnapshot();
   const currentRoundId = await readCurrentRoundId(votingEngineAddress, contentId, latestBlock.blockTag);
   const { epochDuration } = await readRoundConfig(votingEngineAddress);
+  const drandConfig = await readRoundDrandConfig(votingEngineAddress, contentId, commitRoundId, latestBlock.blockTag);
 
   let roundStartTimeSeconds: number | null = null;
-  if (currentRoundId > 0n) {
+  if (currentRoundId > 0n && currentRoundId === commitRoundId) {
     const round = await readRoundAtBlock(votingEngineAddress, contentId, currentRoundId, latestBlock.blockTag);
     const parsedRound = parseRound(round);
     if (parsedRound?.state === 0 && parsedRound.startTime > 0n) {
@@ -409,14 +410,15 @@ async function resolveTlockRuntimeNowMs(
     }
   }
 
-  const runtimeNowMs = deriveAnchoredTlockRuntimeNowMs({
+  const targetRound = deriveAcceptedTlockTargetRound({
     latestBlockTimestampSeconds: latestBlock.timestampSeconds,
     roundEpochDurationSeconds: Number(epochDuration),
-    tlockEpochDurationSeconds,
+    drandGenesisTimeSeconds: drandConfig.genesisTime,
+    drandPeriodSeconds: drandConfig.period,
     roundStartTimeSeconds,
   });
 
-  return () => runtimeNowMs;
+  return { targetRound };
 }
 
 async function readRoundReferenceRatingBps(
@@ -571,6 +573,181 @@ async function readRoundAtBlock(
     functionName: "rounds",
     data: result,
   });
+}
+
+async function readRoundDrandConfig(
+  contractAddress: string,
+  contentId: bigint,
+  roundId: bigint,
+  blockTag: `0x${string}`,
+): Promise<{ chainHash: `0x${string}`; genesisTime: bigint; period: bigint }> {
+  const protocolConfigAddress = await resolveProtocolConfigAddress(contractAddress);
+  if (roundId > 0n) {
+    const [chainHash, genesisTime, period] = await Promise.all([
+      readUintOrBytes32Getter(contractAddress, "roundDrandChainHashSnapshot", [contentId, roundId], blockTag),
+      readUintOrBytes32Getter(contractAddress, "roundDrandGenesisTimeSnapshot", [contentId, roundId], blockTag),
+      readUintOrBytes32Getter(contractAddress, "roundDrandPeriodSnapshot", [contentId, roundId], blockTag),
+    ]);
+
+    if (
+      typeof chainHash === "string" &&
+      chainHash !== "0x0000000000000000000000000000000000000000000000000000000000000000" &&
+      typeof genesisTime === "bigint" &&
+      genesisTime > 0n &&
+      typeof period === "bigint" &&
+      period > 0n
+    ) {
+      return { chainHash, genesisTime, period };
+    }
+  }
+
+  const [chainHash, genesisTime, period] = await Promise.all([
+    readUintOrBytes32Getter(protocolConfigAddress, "drandChainHash", [], blockTag),
+    readUintOrBytes32Getter(protocolConfigAddress, "drandGenesisTime", [], blockTag),
+    readUintOrBytes32Getter(protocolConfigAddress, "drandPeriod", [], blockTag),
+  ]);
+
+  if (typeof chainHash !== "string" || typeof genesisTime !== "bigint" || typeof period !== "bigint") {
+    throw new Error("Failed to read drand config");
+  }
+
+  return { chainHash, genesisTime, period };
+}
+
+async function readUintOrBytes32Getter(
+  contractAddress: string,
+  functionName: string,
+  args: readonly bigint[],
+  blockTag: `0x${string}` | "latest",
+): Promise<bigint | `0x${string}`> {
+  const { decodeFunctionResult, encodeFunctionData } = await import("viem");
+  const outputType = functionName.toLowerCase().includes("hash") ? "bytes32" : "uint64";
+  const abi = [
+    {
+      name: functionName,
+      type: "function",
+      inputs: args.map((_, index) => ({ name: `arg${index}`, type: "uint256" })),
+      outputs: [{ name: "", type: outputType }],
+      stateMutability: "view",
+    },
+  ] as const;
+  const data = encodeFunctionData({
+    abi,
+    functionName,
+    args: [...args],
+  });
+  const result = await rpcRequest<`0x${string}`>("eth_call", [{ to: contractAddress, data }, blockTag]);
+  if (!result) {
+    throw new Error(`Failed to read ${functionName} from Anvil`);
+  }
+
+  return decodeFunctionResult({
+    abi,
+    functionName,
+    data: result,
+  }) as bigint | `0x${string}`;
+}
+
+async function readCommitTiming(
+  contractAddress: string,
+  contentId: bigint,
+  roundId: bigint,
+  commitKey: `0x${string}`,
+  blockTag: `0x${string}`,
+): Promise<{ revealableAfter: bigint; targetRound: bigint } | null> {
+  const { decodeFunctionResult, encodeFunctionData } = await import("viem");
+  const abi = [
+    {
+      name: "commits",
+      type: "function",
+      inputs: [
+        { name: "contentId", type: "uint256" },
+        { name: "roundId", type: "uint256" },
+        { name: "commitKey", type: "bytes32" },
+      ],
+      outputs: [
+        { name: "voter", type: "address" },
+        { name: "stakeAmount", type: "uint64" },
+        { name: "ciphertext", type: "bytes" },
+        { name: "targetRound", type: "uint64" },
+        { name: "drandChainHash", type: "bytes32" },
+        { name: "frontend", type: "address" },
+        { name: "revealableAfter", type: "uint48" },
+        { name: "revealed", type: "bool" },
+        { name: "isUp", type: "bool" },
+        { name: "epochIndex", type: "uint8" },
+      ],
+      stateMutability: "view",
+    },
+  ] as const;
+  const data = encodeFunctionData({
+    abi,
+    functionName: "commits",
+    args: [contentId, roundId, commitKey],
+  });
+  const result = await rpcRequest<`0x${string}`>("eth_call", [{ to: contractAddress, data }, blockTag]);
+  if (!result) {
+    return null;
+  }
+
+  const commit = decodeFunctionResult({
+    abi,
+    functionName: "commits",
+    data: result,
+  }) as readonly [
+    `0x${string}`,
+    bigint,
+    `0x${string}`,
+    bigint,
+    `0x${string}`,
+    string,
+    number,
+    boolean,
+    boolean,
+    number,
+  ];
+
+  if (commit[0] === "0x0000000000000000000000000000000000000000") {
+    return null;
+  }
+
+  return {
+    targetRound: commit[3],
+    revealableAfter: BigInt(commit[6]),
+  };
+}
+
+async function ensureCommitRevealable(
+  contractAddress: string,
+  contentId: bigint,
+  roundId: bigint,
+  commitKey: `0x${string}`,
+): Promise<void> {
+  const latestBlock = await readLatestBlockSnapshot();
+  const commit = await readCommitTiming(contractAddress, contentId, roundId, commitKey, latestBlock.blockTag);
+  if (!commit) {
+    return;
+  }
+
+  const drandConfig = await readRoundDrandConfig(contractAddress, contentId, roundId, latestBlock.blockTag);
+  const targetRoundRevealableAt = deriveDrandRoundRevealableAtSeconds({
+    targetRound: commit.targetRound,
+    drandGenesisTimeSeconds: drandConfig.genesisTime,
+    drandPeriodSeconds: drandConfig.period,
+  });
+  const revealNotBefore =
+    targetRoundRevealableAt > commit.revealableAfter ? targetRoundRevealableAt : commit.revealableAfter;
+  const latestTimestamp = BigInt(latestBlock.timestampSeconds);
+  if (latestTimestamp >= revealNotBefore) {
+    return;
+  }
+
+  const secondsToIncrease = Number(revealNotBefore - latestTimestamp);
+  if (!Number.isSafeInteger(secondsToIncrease) || secondsToIncrease <= 0) {
+    return;
+  }
+
+  await evmIncreaseTime(secondsToIncrease);
 }
 
 /**
@@ -1393,6 +1570,7 @@ export async function commitVoteDirect(
         contentIdBigInt,
         latestBlock.blockTag,
       );
+      const tlockRuntime = await resolveTlockCommitRuntime(contractAddress, contentIdBigInt, roundId);
       const {
         ciphertext,
         commitHash: chash,
@@ -1410,7 +1588,7 @@ export async function commitVoteDirect(
           epochDurationSeconds: resolvedEpochDurationSeconds,
         },
         {
-          now: await resolveTlockRuntimeNowMs(contractAddress, contentIdBigInt, resolvedEpochDurationSeconds),
+          targetRound: tlockRuntime.targetRound,
         },
       );
 
@@ -1497,6 +1675,7 @@ export async function commitVoteWithTransferAndCallDirect(
         contentIdBigInt,
         latestBlock.blockTag,
       );
+      const tlockRuntime = await resolveTlockCommitRuntime(votingEngineAddress, contentIdBigInt, roundId);
       const {
         ciphertext,
         commitHash: chash,
@@ -1514,7 +1693,7 @@ export async function commitVoteWithTransferAndCallDirect(
           epochDurationSeconds: resolvedEpochDurationSeconds,
         },
         {
-          now: await resolveTlockRuntimeNowMs(votingEngineAddress, contentIdBigInt, resolvedEpochDurationSeconds),
+          targetRound: tlockRuntime.targetRound,
         },
       );
 
@@ -1580,6 +1759,7 @@ export async function revealVoteDirect(
   contractAddress: string,
 ): Promise<boolean> {
   const { encodeFunctionData } = await import("viem");
+  await ensureCommitRevealable(contractAddress, BigInt(contentId), BigInt(roundId), commitKey);
   const data = encodeFunctionData({
     abi: [
       {
