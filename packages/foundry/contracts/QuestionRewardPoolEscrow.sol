@@ -383,16 +383,6 @@ contract QuestionRewardPoolEscrow is
             defaultFrontendFeeBps,
             asset
         );
-        emit BountyWindowCreated(
-            bundleId,
-            0,
-            block.timestamp,
-            bountyClosesAt,
-            normalizedFeedbackClosesAt,
-            requiredCompleters,
-            requiredSettledRounds
-        );
-
         rewardPoolId = bundleId;
     }
 
@@ -472,15 +462,6 @@ contract QuestionRewardPoolEscrow is
             asset,
             nonRefundable
         );
-        emit BountyWindowCreated(
-            rewardPoolId,
-            contentId,
-            block.timestamp,
-            bountyClosesAt,
-            normalizedFeedbackClosesAt,
-            requiredVoters,
-            requiredSettledRounds
-        );
     }
 
     function qualifyRound(uint256 rewardPoolId, uint256 roundId) external whenNotPaused {
@@ -496,8 +477,7 @@ contract QuestionRewardPoolEscrow is
         require(maxRounds > 0, "No rounds");
         RewardPool storage rewardPool = _getIncompleteRewardPoolForQualification(rewardPoolId);
 
-        uint256 fromRoundId = rewardPool.nextRoundToEvaluate;
-        nextRoundToEvaluate = fromRoundId;
+        nextRoundToEvaluate = rewardPool.nextRoundToEvaluate;
         while (skipped < maxRounds) {
             (bool roundFinished, bool canQualify,) = _roundQualificationStatus(rewardPool, nextRoundToEvaluate);
             if (!roundFinished || canQualify) break;
@@ -507,7 +487,6 @@ contract QuestionRewardPoolEscrow is
 
         if (skipped > 0) {
             rewardPool.nextRoundToEvaluate = nextRoundToEvaluate.toUint64();
-            emit RewardPoolCursorAdvanced(rewardPoolId, rewardPool.contentId, fromRoundId, nextRoundToEvaluate, skipped);
         }
     }
 
@@ -752,8 +731,11 @@ contract QuestionRewardPoolEscrow is
     {
         RewardPool storage rewardPool = _getExistingRewardPool(rewardPoolId);
         require(rewardPool.bountyClosesAt != 0 && block.timestamp > rewardPool.bountyClosesAt, "Not expired");
-        refundAmount = _refundUnallocatedRewardPool(rewardPoolId, rewardPool);
-        emit BountyWindowExpired(rewardPoolId, rewardPool.contentId, refundAmount);
+        if (rewardPool.qualifiedRounds >= rewardPool.requiredSettledRounds) {
+            refundAmount = _refundCompleteRewardPool(rewardPoolId, rewardPool);
+        } else {
+            refundAmount = _refundUnallocatedRewardPool(rewardPoolId, rewardPool);
+        }
     }
 
     function refundInactiveRewardPool(uint256 rewardPoolId)
@@ -784,14 +766,44 @@ contract QuestionRewardPoolEscrow is
         require(refundAmount > 0, "No refund");
         rewardPool.refunded = true;
         rewardPool.unallocatedAmount = 0;
+        _transferRewardPoolResidue(rewardPoolId, rewardPool, refundAmount);
+    }
+
+    function _refundCompleteRewardPool(uint256 rewardPoolId, RewardPool storage rewardPool)
+        internal
+        returns (uint256 refundAmount)
+    {
+        require(!rewardPool.refunded, "Already refunded");
+        require(block.timestamp > uint256(rewardPool.bountyClosesAt) + BUNDLE_CLAIM_GRACE, "Claim grace active");
+
+        for (uint256 roundId = rewardPool.startRoundId; roundId < rewardPool.nextRoundToEvaluate;) {
+            RoundSnapshot storage snapshot = roundSnapshots[rewardPoolId][roundId];
+            if (snapshot.qualified && snapshot.claimedCount < snapshot.eligibleVoters) {
+                require(
+                    votingEngine.roundUnrevealedCleanupRemaining(rewardPool.contentId, roundId) == 0, "Cleanup pending"
+                );
+                snapshot.claimedCount = snapshot.eligibleVoters;
+            }
+            unchecked {
+                ++roundId;
+            }
+        }
+
+        refundAmount = rewardPool.fundedAmount - rewardPool.claimedAmount;
+        require(refundAmount > 0, "No refund");
+        rewardPool.refunded = true;
+        _transferRewardPoolResidue(rewardPoolId, rewardPool, refundAmount);
+    }
+
+    function _transferRewardPoolResidue(uint256 rewardPoolId, RewardPool storage rewardPool, uint256 amount) internal {
         if (rewardPool.nonRefundable) {
             address treasury = _protocolTreasury();
             require(treasury != address(0), "Treasury not set");
-            _rewardToken(rewardPool.asset).safeTransfer(treasury, refundAmount);
-            emit RewardPoolForfeited(rewardPoolId, treasury, refundAmount);
+            _rewardToken(rewardPool.asset).safeTransfer(treasury, amount);
+            emit RewardPoolForfeited(rewardPoolId, treasury, amount);
         } else {
-            _rewardToken(rewardPool.asset).safeTransfer(rewardPool.funder, refundAmount);
-            emit RewardPoolRefunded(rewardPoolId, rewardPool.funder, refundAmount);
+            _rewardToken(rewardPool.asset).safeTransfer(rewardPool.funder, amount);
+            emit RewardPoolRefunded(rewardPoolId, rewardPool.funder, amount);
         }
     }
 
@@ -866,9 +878,7 @@ contract QuestionRewardPoolEscrow is
 
     function setDefaultFrontendFeeBps(uint256 frontendFeeBps_) external onlyRole(CONFIG_ROLE) {
         require(frontendFeeBps_ <= MAX_FRONTEND_FEE_BPS, "Fee too high");
-        uint256 previousFrontendFeeBps = defaultFrontendFeeBps;
         defaultFrontendFeeBps = frontendFeeBps_.toUint16();
-        emit DefaultFrontendFeeBpsUpdated(previousFrontendFeeBps, frontendFeeBps_);
     }
 
     function pause() external onlyRole(PAUSER_ROLE) {
