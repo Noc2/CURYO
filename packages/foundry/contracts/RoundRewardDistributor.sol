@@ -70,6 +70,8 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     mapping(uint256 => mapping(uint256 => uint256)) public roundVoterRewardClaimedCount;
     mapping(uint256 => mapping(uint256 => uint256)) public roundVoterRewardClaimedAmount;
     mapping(uint256 => mapping(uint256 => bool)) public roundVoterRewardDustFinalized;
+    mapping(uint256 => mapping(uint256 => uint256)) public roundLoserRebateClaimedCount;
+    mapping(uint256 => mapping(uint256 => uint256)) public roundLoserRebateClaimedAmount;
 
     // Track frontend fee claims: contentId => roundId => frontend => claimed
     mapping(uint256 => mapping(uint256 => mapping(address => bool))) public frontendFeeClaimed;
@@ -219,7 +221,23 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         bool voterWon = (commit.isUp == round.upWins);
 
         if (!voterWon) {
-            uint256 refund = RewardMath.calculateRevealedLoserRefund(commit.stakeAmount);
+            uint256 loserRefundPool =
+                RewardMath.calculateRevealedLoserRefund(round.upWins ? round.downPool : round.upPool);
+            uint256 totalLosingClaimants = round.upWins ? round.downCount : round.upCount;
+            uint256 loserClaimedCount = roundLoserRebateClaimedCount[contentId][roundId];
+            uint256 loserClaimedAmount = roundLoserRebateClaimedAmount[contentId][roundId];
+            if (
+                totalLosingClaimants == 0 || loserClaimedCount >= totalLosingClaimants
+                    || loserClaimedAmount > loserRefundPool
+            ) {
+                revert PoolExhausted();
+            }
+
+            uint256 refund = loserClaimedCount + 1 == totalLosingClaimants
+                ? loserRefundPool - loserClaimedAmount
+                : RewardMath.calculateRevealedLoserRefund(commit.stakeAmount);
+            roundLoserRebateClaimedCount[contentId][roundId] = loserClaimedCount + 1;
+            roundLoserRebateClaimedAmount[contentId][roundId] = loserClaimedAmount + refund;
             if (refund > 0) {
                 votingEngine.transferReward(msg.sender, refund);
             }
@@ -788,7 +806,8 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
 
         uint256 totalFrontendPool = votingEngine.roundFrontendPool(contentId, roundId);
         uint256 expectedTotal = roundFrontendFeeDustExpectedTotal[contentId][roundId];
-        releasedDust = _finalizableDust(totalFrontendPool, expectedTotal, roundFrontendClaimedAmount[contentId][roundId]);
+        releasedDust =
+            _finalizableDust(totalFrontendPool, expectedTotal, roundFrontendClaimedAmount[contentId][roundId]);
         if (releasedDust == 0) revert NoRewardDust();
 
         roundFrontendFeeDustFinalized[contentId][roundId] = true;
