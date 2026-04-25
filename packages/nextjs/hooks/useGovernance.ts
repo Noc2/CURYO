@@ -20,6 +20,7 @@ export const governorAbi = parseAbi([
   "event ProposalCreated(uint256 proposalId, address proposer, address[] targets, uint256[] values, string[] signatures, bytes[] calldatas, uint256 voteStart, uint256 voteEnd, string description)",
   "function castVote(uint256 proposalId, uint8 support) returns (uint256)",
   "function execute(address[] targets, uint256[] values, bytes[] calldatas, bytes32 descriptionHash) payable returns (uint256)",
+  "function MAX_PROPOSAL_THRESHOLD() view returns (uint256)",
   "function MINIMUM_QUORUM() view returns (uint256)",
   "function proposalDeadline(uint256 proposalId) view returns (uint256)",
   "function proposalEta(uint256 proposalId) view returns (uint256)",
@@ -310,6 +311,11 @@ export function useGovernanceStats() {
     functionName: "MINIMUM_QUORUM",
   } as any);
 
+  const { data: maxProposalThreshold } = useReadContract({
+    ...governorReadConfig,
+    functionName: "MAX_PROPOSAL_THRESHOLD",
+  } as any);
+
   const { data: currentQuorum } = useReadContract({
     ...governorReadConfig,
     functionName: "quorum",
@@ -339,6 +345,7 @@ export function useGovernanceStats() {
     proposalThreshold: (proposalThreshold as bigint | undefined) ?? undefined,
     quorumNumerator: (quorumNumerator as bigint | undefined) ?? undefined,
     minimumQuorum: (minimumQuorum as bigint | undefined) ?? undefined,
+    maxProposalThreshold: (maxProposalThreshold as bigint | undefined) ?? undefined,
     currentQuorum: (currentQuorum as bigint | undefined) ?? undefined,
     timelockDelay: (timelockDelay as bigint | undefined) ?? undefined,
   };

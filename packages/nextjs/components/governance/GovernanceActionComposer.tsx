@@ -150,7 +150,11 @@ const actionTemplates: readonly GovernanceActionTemplate[] = [
     functionName: "setProposalThreshold",
     description: "Create a proposal to update the HREP required to create new proposals.",
     fields: [{ key: "threshold", label: "Proposal threshold (HREP)", type: "hrep", required: true }],
-    buildArgs: (_, parser) => [parser.hrep("threshold", "Proposal threshold")],
+    buildArgs: (_, parser) => {
+      const threshold = parser.hrep("threshold", "Proposal threshold");
+      if (threshold === 0n) throw new Error("Proposal threshold must be greater than zero.");
+      return [threshold];
+    },
     buildDescription: values => `Set proposal threshold to ${values.threshold || "0"} HREP`,
   },
   {
@@ -425,7 +429,7 @@ export function GovernanceActionComposer() {
   const wagmiConfig = useConfig();
   const { governorAddress, hasGovernorContract, isGovernorContractLoading, knownContractsByName, timelockAddress } =
     useGovernanceContracts();
-  const { currentQuorum, proposalThreshold } = useGovernanceStats();
+  const { currentQuorum, maxProposalThreshold, proposalThreshold } = useGovernanceStats();
   const { writeContractAsync, isPending } = useGovernanceWrite();
   const [selectedActionId, setSelectedActionId] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -480,6 +484,15 @@ export function GovernanceActionComposer() {
     configuredTreasuryAddress.toLowerCase() !== timelockAddress.toLowerCase();
   const grantExceedsTreasury =
     isTreasuryGrant && grantAmount !== undefined && treasuryBalance !== undefined && grantAmount > treasuryBalance;
+  const thresholdUpdateAmount = useMemo(
+    () =>
+      selectedTemplate?.id === "governor-set-threshold" ? parsePreviewHrepAmount(formValues.threshold) : undefined,
+    [formValues.threshold, selectedTemplate?.id],
+  );
+  const thresholdUpdateExceedsMax =
+    thresholdUpdateAmount !== undefined &&
+    maxProposalThreshold !== undefined &&
+    thresholdUpdateAmount > maxProposalThreshold;
 
   const groupedTemplates = useMemo(() => {
     const grouped = new Map<string, GovernanceActionTemplate[]>();
@@ -585,6 +598,9 @@ export function GovernanceActionComposer() {
           ? getProposalDescriptionHash(effectiveDescription)
           : undefined;
       const args = selectedTemplate.buildArgs(formValues, parser, proposalDescriptionHash);
+      if (selectedTemplate.id === "governor-set-threshold" && thresholdUpdateExceedsMax) {
+        throw new Error(`Proposal threshold cannot exceed ${formatHrepAmount(maxProposalThreshold)}.`);
+      }
 
       if (selectedTemplate.mode === "proposal") {
         const txHash = await writeContractAsync({
@@ -790,6 +806,19 @@ export function GovernanceActionComposer() {
                   )}
                 </div>
               )}
+              {selectedTemplate.id === "governor-set-threshold" && (
+                <div className="space-y-1 pt-2">
+                  <p className="text-base text-base-content/50">
+                    Maximum proposal threshold:{" "}
+                    <span className="font-mono text-base-content/80">{formatHrepAmount(maxProposalThreshold)}</span>
+                  </p>
+                  {thresholdUpdateExceedsMax && (
+                    <p className="text-base text-warning">
+                      The proposed threshold exceeds the governor cap and would revert.
+                    </p>
+                  )}
+                </div>
+              )}
               {selectedTemplate.mode === "proposal" && isGovernorContractLoading && (
                 <p className="text-base text-base-content/50">Checking governance availability...</p>
               )}
@@ -808,7 +837,9 @@ export function GovernanceActionComposer() {
             <button
               className="btn btn-primary w-full"
               disabled={
-                isPending || (selectedTemplate.mode === "proposal" && (!hasGovernorContract || proposalBlocked))
+                isPending ||
+                thresholdUpdateExceedsMax ||
+                (selectedTemplate.mode === "proposal" && (!hasGovernorContract || proposalBlocked))
               }
             >
               {selectedTemplate.mode === "proposal" ? "Create Proposal" : "Send Transaction"}

@@ -43,6 +43,8 @@ contract CuryoGovernor is
     uint256 public constant BOOTSTRAP_PROPOSAL_THRESHOLD = 1_000 * 1e6;
     /// @notice Minimum quorum regardless of circulating supply (100K HREP with 6 decimals)
     uint256 public constant MINIMUM_QUORUM = 100_000 * 1e6;
+    /// @notice Highest threshold governance may set, preventing self-bricked proposal creation.
+    uint256 public constant MAX_PROPOSAL_THRESHOLD = MINIMUM_QUORUM;
     /// @notice Hard cap to keep quorum evaluation bounded and proposals cheap to evaluate.
     uint256 public constant MAX_EXCLUDED_HOLDERS = 16;
     /// @notice Minimum blocks a proposer must wait between successful proposals (~1 day on 1s Celo blocks).
@@ -116,7 +118,9 @@ contract CuryoGovernor is
     }
 
     function _setProposalThreshold(uint256 newProposalThreshold) internal override {
-        if (newProposalThreshold == 0) revert InvalidProposalThreshold();
+        if (newProposalThreshold == 0 || newProposalThreshold > MAX_PROPOSAL_THRESHOLD) {
+            revert InvalidProposalThreshold();
+        }
         super._setProposalThreshold(newProposalThreshold);
     }
 
