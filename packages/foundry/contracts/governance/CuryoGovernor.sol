@@ -37,7 +37,7 @@ contract CuryoGovernor is
     /// @notice Protocol-controlled holders whose balances are excluded from quorum calculation.
     address[] private _excludedHolders;
     mapping(address => bool) public isExcludedHolder;
-    /// @notice Whether excluded holders have been set (one-time initialization)
+    /// @notice Whether excluded holders have been set.
     bool public poolsInitialized;
     /// @notice Bootstrap proposal threshold regardless of early faucet claim sizes (1K HREP with 6 decimals)
     uint256 public constant BOOTSTRAP_PROPOSAL_THRESHOLD = 1_000 * 1e6;
@@ -60,9 +60,13 @@ contract CuryoGovernor is
     mapping(address => uint256) public nextProposalBlock;
 
     error ExcludedHolderCannotGovern(address holder);
+    error InvalidExcludedHolder();
+    error ExcludedHolderHasVotes(address holder);
     error ProposalCooldownActive(address proposer, uint256 nextProposalBlock);
     error InvalidProposalThreshold();
     error InvalidGovernanceTiming();
+
+    event ExcludedHolderReplaced(address indexed oldHolder, address indexed newHolder);
 
     /// @notice Deploy the governor with HREP token and timelock
     /// @param _hrepToken The HREP voting token address
@@ -84,10 +88,8 @@ contract CuryoGovernor is
 
     /// @notice One-time initialization of protocol-controlled holders excluded from dynamic quorum.
     /// @dev Can only be called once by the deployment initializer.
-    ///      After initialization, the excluded-holder set cannot be changed — the quorum formula is fixed.
-    // AUDIT NOTE (L-1): Excluded holders are immutable after initialization. If wrong
-    // addresses are passed, dynamic quorum is permanently broken. This is intentional
-    // to prevent governance manipulation of the quorum formula.
+    ///      After initialization, governance may only replace a fully drained holder with
+    ///      a zero-vote holder. This preserves quorum during protocol contract migrations.
     function initializePools(address[] calldata excludedHolders) external {
         require(!poolsInitialized, "Pools already initialized");
         require(msg.sender == poolsInitializer || msg.sender == timelock(), "Only pools initializer");
@@ -104,7 +106,32 @@ contract CuryoGovernor is
         poolsInitialized = true;
     }
 
-    /// @notice Return the full fixed set of holders excluded from quorum calculations.
+    /// @notice Replace a drained excluded holder with a new zero-balance protocol holder.
+    /// @dev Timelock-only via Governor.onlyGovernance. Both addresses must have zero
+    ///      current voting power so governance cannot exclude already-circulating HREP.
+    function replaceExcludedHolder(address oldHolder, address newHolder) external onlyGovernance {
+        if (!poolsInitialized || !isExcludedHolder[oldHolder] || newHolder == address(0) || isExcludedHolder[newHolder])
+        {
+            revert InvalidExcludedHolder();
+        }
+        if (hrepToken.getVotes(oldHolder) != 0) revert ExcludedHolderHasVotes(oldHolder);
+        if (hrepToken.getVotes(newHolder) != 0) revert ExcludedHolderHasVotes(newHolder);
+
+        uint256 excludedHoldersLength = _excludedHolders.length;
+        for (uint256 i = 0; i < excludedHoldersLength; i++) {
+            if (_excludedHolders[i] == oldHolder) {
+                _excludedHolders[i] = newHolder;
+                isExcludedHolder[oldHolder] = false;
+                isExcludedHolder[newHolder] = true;
+                emit ExcludedHolderReplaced(oldHolder, newHolder);
+                return;
+            }
+        }
+
+        revert InvalidExcludedHolder();
+    }
+
+    /// @notice Return the full set of holders excluded from quorum calculations.
     function getExcludedHolders() external view returns (address[] memory) {
         return _excludedHolders;
     }

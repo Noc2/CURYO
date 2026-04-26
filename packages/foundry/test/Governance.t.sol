@@ -514,14 +514,62 @@ contract GovernanceTest is Test {
         governor.castVote(proposalId, 1);
     }
 
-    function test_GovernorRejectsLegacyExcludedHolderReplacementSelector() public {
+    function test_GovernorCanReplaceDrainedExcludedHolder() public {
         address replacement = address(99);
 
-        (bool success,) = address(governor)
-            .call(abi.encodeWithSignature("replaceExcludedHolder(address,address)", mockFaucet, replacement));
+        vm.prank(mockFrontendRegistry);
+        token.transfer(voter1, FRONTEND_REGISTRY_BALANCE);
 
-        assertFalse(success);
+        _executeSingleCallProposal(
+            address(governor),
+            abi.encodeWithSignature("replaceExcludedHolder(address,address)", mockFrontendRegistry, replacement),
+            "Replace drained excluded holder",
+            false
+        );
+
+        address[] memory holders = governor.getExcludedHolders();
+        assertFalse(governor.isExcludedHolder(mockFrontendRegistry));
+        assertTrue(governor.isExcludedHolder(replacement));
+        assertEq(holders[6], replacement);
+
+        vm.roll(block.number + 1);
+        uint256 quorumBeforeMint = governor.quorum(block.number - 1);
+        vm.prank(deployer);
+        token.mint(replacement, 1_000_000e6);
+        vm.roll(block.number + 1);
+        assertEq(governor.quorum(block.number - 1), quorumBeforeMint);
+    }
+
+    function test_GovernorRejectsExcludedHolderReplacementBeforeDrain() public {
+        address replacement = address(99);
+
+        _executeSingleCallProposal(
+            address(governor),
+            abi.encodeWithSignature("replaceExcludedHolder(address,address)", mockFaucet, replacement),
+            "Reject funded old excluded holder replacement",
+            true
+        );
+
         assertTrue(governor.isExcludedHolder(mockFaucet));
+        assertFalse(governor.isExcludedHolder(replacement));
+    }
+
+    function test_GovernorRejectsExcludedHolderReplacementWithFundedNewHolder() public {
+        address replacement = address(99);
+
+        vm.prank(mockFrontendRegistry);
+        token.transfer(voter1, FRONTEND_REGISTRY_BALANCE);
+        vm.prank(deployer);
+        token.mint(replacement, 1);
+
+        _executeSingleCallProposal(
+            address(governor),
+            abi.encodeWithSignature("replaceExcludedHolder(address,address)", mockFrontendRegistry, replacement),
+            "Reject funded new excluded holder replacement",
+            true
+        );
+
+        assertTrue(governor.isExcludedHolder(mockFrontendRegistry));
         assertFalse(governor.isExcludedHolder(replacement));
     }
 
