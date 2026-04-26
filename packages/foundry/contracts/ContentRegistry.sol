@@ -85,6 +85,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     uint256 public constant MAX_DESCRIPTION_LENGTH = 280;
     uint256 internal constant MAX_TAGS_LENGTH = 256;
     uint256 internal constant MAX_IMAGE_URLS = 4;
+    uint16 internal constant MAX_QUESTION_BUNDLE_ROUND_VOTERS = 100;
 
     // --- Enums ---
     enum ContentStatus {
@@ -477,6 +478,8 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         require(questionRewardPoolEscrow != address(0), "Bounty escrow not set");
 
         RoundLib.RoundConfig memory validatedRoundConfig = _validatedRoundConfig(roundConfig);
+        require(validatedRoundConfig.maxVoters <= MAX_QUESTION_BUNDLE_ROUND_VOTERS);
+        require(rewardTerms.requiredVoters <= validatedRoundConfig.maxVoters);
         _validateSubmissionReward(rewardTerms);
         require(rewardTerms.bountyClosesAt != 0, "Bundle bounty close required");
 

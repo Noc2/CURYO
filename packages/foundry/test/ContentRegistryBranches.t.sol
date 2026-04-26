@@ -277,6 +277,10 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         return RoundLib.RoundConfig({ epochDuration: 1 hours, maxDuration: 7 days, minVoters: 3, maxVoters: 1000 });
     }
 
+    function _bundleContentRoundConfig() internal pure returns (RoundLib.RoundConfig memory) {
+        return RoundLib.RoundConfig({ epochDuration: 1 hours, maxDuration: 7 days, minVoters: 3, maxVoters: 100 });
+    }
+
     function _reserveQuestionSubmission(QuestionReservation memory reservation)
         internal
         returns (bytes32 submissionKey)
@@ -844,6 +848,86 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.stopPrank();
     }
 
+    function test_SubmitQuestionBundleWithReward_RejectsHighRoundVoterCap() public {
+        ContentRegistry.BundleQuestionInput[] memory questions = new ContentRegistry.BundleQuestionInput[](2);
+        questions[0] = ContentRegistry.BundleQuestionInput({
+            contextUrl: "https://example.com/bundle-cap-a",
+            imageUrls: _emptyImageUrls(),
+            videoUrl: "",
+            title: "Question A?",
+            description: "Context voters should consider",
+            tags: "Products",
+            categoryId: 1,
+            salt: keccak256("bundle-cap-a"),
+            spec: _defaultQuestionSpec()
+        });
+        questions[1] = ContentRegistry.BundleQuestionInput({
+            contextUrl: "https://example.com/bundle-cap-b",
+            imageUrls: _emptyImageUrls(),
+            videoUrl: "",
+            title: "Question B?",
+            description: "Context voters should consider",
+            tags: "Products",
+            categoryId: 1,
+            salt: keccak256("bundle-cap-b"),
+            spec: _defaultQuestionSpec()
+        });
+        ContentRegistry.SubmissionRewardTerms memory rewardTerms = _submissionRewardTerms(
+            DEFAULT_SUBMISSION_REWARD_ASSET_HREP,
+            _defaultSubmissionRewardAmount(registry),
+            DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+            DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+            block.timestamp + 30 days
+        );
+        RoundLib.RoundConfig memory roundConfig =
+            RoundLib.RoundConfig({ epochDuration: 1 hours, maxDuration: 7 days, minVoters: 3, maxVoters: 101 });
+
+        vm.startPrank(submitter);
+        vm.expectRevert();
+        registry.submitQuestionBundleWithRewardAndRoundConfig(questions, rewardTerms, roundConfig);
+        vm.stopPrank();
+    }
+
+    function test_SubmitQuestionBundleWithReward_RejectsCompletersAboveRoundVoterCap() public {
+        ContentRegistry.BundleQuestionInput[] memory questions = new ContentRegistry.BundleQuestionInput[](2);
+        questions[0] = ContentRegistry.BundleQuestionInput({
+            contextUrl: "https://example.com/bundle-completers-a",
+            imageUrls: _emptyImageUrls(),
+            videoUrl: "",
+            title: "Question A?",
+            description: "Context voters should consider",
+            tags: "Products",
+            categoryId: 1,
+            salt: keccak256("bundle-completers-a"),
+            spec: _defaultQuestionSpec()
+        });
+        questions[1] = ContentRegistry.BundleQuestionInput({
+            contextUrl: "https://example.com/bundle-completers-b",
+            imageUrls: _emptyImageUrls(),
+            videoUrl: "",
+            title: "Question B?",
+            description: "Context voters should consider",
+            tags: "Products",
+            categoryId: 1,
+            salt: keccak256("bundle-completers-b"),
+            spec: _defaultQuestionSpec()
+        });
+        ContentRegistry.SubmissionRewardTerms memory rewardTerms = _submissionRewardTerms(
+            DEFAULT_SUBMISSION_REWARD_ASSET_HREP,
+            _defaultSubmissionRewardAmount(registry),
+            DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS + 2,
+            DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+            block.timestamp + 30 days
+        );
+        RoundLib.RoundConfig memory roundConfig =
+            RoundLib.RoundConfig({ epochDuration: 1 hours, maxDuration: 7 days, minVoters: 3, maxVoters: 4 });
+
+        vm.startPrank(submitter);
+        vm.expectRevert();
+        registry.submitQuestionBundleWithRewardAndRoundConfig(questions, rewardTerms, roundConfig);
+        vm.stopPrank();
+    }
+
     function test_SubmitQuestionBundleWithReward_AllowsMultipleSettledRounds() public {
         ContentRegistry.BundleQuestionInput[] memory questions = new ContentRegistry.BundleQuestionInput[](2);
         questions[0] = ContentRegistry.BundleQuestionInput({
@@ -878,7 +962,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         vm.expectRevert("Reservation not found");
-        registry.submitQuestionBundleWithRewardAndRoundConfig(questions, rewardTerms, _defaultContentRoundConfig());
+        registry.submitQuestionBundleWithRewardAndRoundConfig(questions, rewardTerms, _bundleContentRoundConfig());
         vm.stopPrank();
     }
 
@@ -916,7 +1000,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         vm.expectRevert("Bundle bounty close required");
-        registry.submitQuestionBundleWithRewardAndRoundConfig(questions, rewardTerms, _defaultContentRoundConfig());
+        registry.submitQuestionBundleWithRewardAndRoundConfig(questions, rewardTerms, _bundleContentRoundConfig());
         vm.stopPrank();
     }
 
