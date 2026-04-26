@@ -45,6 +45,11 @@ contract CuryoGovernor is
     uint256 public constant MINIMUM_QUORUM = 100_000 * 1e6;
     /// @notice Highest threshold governance may set, preventing self-bricked proposal creation.
     uint256 public constant MAX_PROPOSAL_THRESHOLD = MINIMUM_QUORUM;
+    /// @notice Highest voting delay governance may set (~1 week on 1s Celo blocks).
+    uint48 public constant MAX_VOTING_DELAY_BLOCKS = 604_800;
+    /// @notice Voting period bounds governance may set (~1 day to ~30 days on 1s Celo blocks).
+    uint32 public constant MIN_VOTING_PERIOD_BLOCKS = 86_400;
+    uint32 public constant MAX_VOTING_PERIOD_BLOCKS = 2_592_000;
     /// @notice Hard cap to keep quorum evaluation bounded and proposals cheap to evaluate.
     uint256 public constant MAX_EXCLUDED_HOLDERS = 16;
     /// @notice Minimum blocks a proposer must wait between successful proposals (~1 day on 1s Celo blocks).
@@ -57,6 +62,7 @@ contract CuryoGovernor is
     error ExcludedHolderCannotGovern(address holder);
     error ProposalCooldownActive(address proposer, uint256 nextProposalBlock);
     error InvalidProposalThreshold();
+    error InvalidGovernanceTiming();
 
     /// @notice Deploy the governor with HREP token and timelock
     /// @param _hrepToken The HREP voting token address
@@ -115,6 +121,18 @@ contract CuryoGovernor is
 
     function proposalThreshold() public view override(Governor, GovernorSettings) returns (uint256) {
         return super.proposalThreshold();
+    }
+
+    function _setVotingDelay(uint48 newVotingDelay) internal override {
+        if (newVotingDelay > MAX_VOTING_DELAY_BLOCKS) revert InvalidGovernanceTiming();
+        super._setVotingDelay(newVotingDelay);
+    }
+
+    function _setVotingPeriod(uint32 newVotingPeriod) internal override {
+        if (newVotingPeriod < MIN_VOTING_PERIOD_BLOCKS || newVotingPeriod > MAX_VOTING_PERIOD_BLOCKS) {
+            revert InvalidGovernanceTiming();
+        }
+        super._setVotingPeriod(newVotingPeriod);
     }
 
     function _setProposalThreshold(uint256 newProposalThreshold) internal override {

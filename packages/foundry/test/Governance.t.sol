@@ -568,6 +568,39 @@ contract GovernanceTest is Test {
         assertEq(governor.proposalThreshold(), thresholdBefore);
     }
 
+    function test_GovernorRejectsTooHighVotingDelay() public {
+        uint256 delayBefore = governor.votingDelay();
+
+        _executeSingleCallProposal(
+            address(governor),
+            abi.encodeWithSignature("setVotingDelay(uint48)", uint48(governor.MAX_VOTING_DELAY_BLOCKS() + 1)),
+            "Reject too high voting delay",
+            true
+        );
+
+        assertEq(governor.votingDelay(), delayBefore);
+    }
+
+    function test_GovernorRejectsOutOfBoundsVotingPeriod() public {
+        uint256 periodBefore = governor.votingPeriod();
+
+        _executeSingleCallProposal(
+            address(governor),
+            abi.encodeWithSignature("setVotingPeriod(uint32)", uint32(governor.MIN_VOTING_PERIOD_BLOCKS() - 1)),
+            "Reject too short voting period",
+            true
+        );
+        assertEq(governor.votingPeriod(), periodBefore);
+
+        _executeSingleCallProposal(
+            address(governor),
+            abi.encodeWithSignature("setVotingPeriod(uint32)", uint32(governor.MAX_VOTING_PERIOD_BLOCKS() + 1)),
+            "Reject too long voting period",
+            true
+        );
+        assertEq(governor.votingPeriod(), periodBefore);
+    }
+
     function test_GovernorAllowsProposalsBeforePoolsInitialization() public {
         vm.startPrank(deployer);
         CuryoGovernor freshGovernor = new CuryoGovernor(IVotes(address(token)), timelock);
