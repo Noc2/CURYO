@@ -354,6 +354,7 @@ contract ProtocolConfig is Initializable, AccessControlUpgradeable {
     function _setConfig(uint256 epochDuration, uint256 maxDuration, uint256 minVoters, uint256 maxVoters) internal {
         RoundLib.RoundConfig memory nextConfig =
             _validateRoundConfig(epochDuration, maxDuration, minVoters, maxVoters, roundConfigBounds);
+        if (drandPeriod > nextConfig.epochDuration) revert InvalidConfig();
 
         if (revealGracePeriod > 0 && revealGracePeriod < roundConfigBounds.maxEpochDuration) {
             revealGracePeriod = roundConfigBounds.maxEpochDuration;
@@ -386,6 +387,7 @@ contract ProtocolConfig is Initializable, AccessControlUpgradeable {
             maxVoterCap
         );
         _validateRoundConfig(config.epochDuration, config.maxDuration, config.minVoters, config.maxVoters, bounds);
+        if (drandPeriod > bounds.minEpochDuration) revert InvalidConfig();
 
         roundConfigBounds = bounds;
         if (revealGracePeriod > 0 && revealGracePeriod < maxEpochDuration) {

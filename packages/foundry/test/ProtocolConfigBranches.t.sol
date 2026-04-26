@@ -349,6 +349,17 @@ contract ProtocolConfigBranchesTest is Test {
         assertEq(config.revealGracePeriod(), 2 hours);
     }
 
+    function test_SetRoundConfigBounds_RevalidatesStoredDrandPeriod() public {
+        ProtocolConfig config = deployInitializedProtocolConfig(address(this));
+        vm.warp(100);
+
+        config.setRoundConfigBounds(10 minutes, 60 minutes, 1 hours, 30 days, 2, 100, 2, 10_000);
+        config.setDrandConfig(QUICKNET_CHAIN_HASH, 1, uint64(10 minutes));
+
+        vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
+        config.setRoundConfigBounds(5 minutes, 60 minutes, 1 hours, 30 days, 2, 100, 2, 10_000);
+    }
+
     function test_SetRoundConfigBounds_RejectsBoundsThatExcludeCurrentDefault() public {
         ProtocolConfig config = deployInitializedProtocolConfig(address(this));
 
