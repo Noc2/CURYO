@@ -726,10 +726,10 @@ contract QuestionRewardPoolEscrow is
         returns (uint256 refundAmount)
     {
         RewardPool storage rewardPool = _getExistingRewardPool(rewardPoolId);
-        require(rewardPool.bountyClosesAt != 0 && block.timestamp > rewardPool.bountyClosesAt, "Not expired");
         if (rewardPool.qualifiedRounds >= rewardPool.requiredSettledRounds) {
             refundAmount = _refundCompleteRewardPool(rewardPoolId, rewardPool);
         } else {
+            require(rewardPool.bountyClosesAt != 0 && block.timestamp > rewardPool.bountyClosesAt, "Not expired");
             refundAmount = _refundUnallocatedRewardPool(rewardPoolId, rewardPool);
         }
     }
@@ -770,20 +770,28 @@ contract QuestionRewardPoolEscrow is
         returns (uint256 refundAmount)
     {
         require(!rewardPool.refunded, "Already refunded");
-        require(block.timestamp > uint256(rewardPool.bountyClosesAt) + BUNDLE_CLAIM_GRACE, "Claim grace active");
+        uint256 claimDeadline = rewardPool.bountyClosesAt;
 
         for (uint256 roundId = rewardPool.startRoundId; roundId < rewardPool.nextRoundToEvaluate;) {
             RoundSnapshot storage snapshot = roundSnapshots[rewardPoolId][roundId];
-            if (snapshot.qualified && snapshot.claimedCount < snapshot.eligibleVoters) {
-                require(
-                    votingEngine.roundUnrevealedCleanupRemaining(rewardPool.contentId, roundId) == 0, "Cleanup pending"
-                );
-                snapshot.claimedCount = snapshot.eligibleVoters;
+            if (snapshot.qualified) {
+                if (claimDeadline == 0) {
+                    (,,,,,,,,,, uint48 settledAt,,,) = votingEngine.rounds(rewardPool.contentId, roundId);
+                    if (settledAt > claimDeadline) claimDeadline = settledAt;
+                }
+                if (snapshot.claimedCount < snapshot.eligibleVoters) {
+                    require(
+                        votingEngine.roundUnrevealedCleanupRemaining(rewardPool.contentId, roundId) == 0,
+                        "Cleanup pending"
+                    );
+                    snapshot.claimedCount = snapshot.eligibleVoters;
+                }
             }
             unchecked {
                 ++roundId;
             }
         }
+        require(block.timestamp > claimDeadline + BUNDLE_CLAIM_GRACE, "Claim grace active");
 
         refundAmount = rewardPool.fundedAmount - rewardPool.claimedAmount;
         require(refundAmount > 0, "No refund");

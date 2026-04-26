@@ -708,6 +708,29 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(rewardPoolEscrow.claimableQuestionReward(rewardPoolId, roundId, voter2), 0);
     }
 
+    function testCompletedOpenEndedSubmissionPoolCanForfeitUnclaimedRewardsAfterGrace() public {
+        uint256 contentId = _submitQuestion("");
+        uint256 rewardPoolId = rewardPoolEscrow.nextRewardPoolId() - 1;
+        uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
+
+        address[] memory voters = _threeVoters();
+        uint256 roundId = _settleRoundWith(voters, contentId, _directions(true, true, false));
+
+        vm.prank(voter1);
+        uint256 claimed = rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
+
+        vm.expectRevert("Claim grace active");
+        rewardPoolEscrow.refundExpiredRewardPool(rewardPoolId);
+
+        vm.warp(block.timestamp + BUNDLE_CLAIM_GRACE + 1);
+        uint256 treasuryBalanceBefore = hrepToken.balanceOf(treasury);
+        uint256 refundAmount = rewardPoolEscrow.refundExpiredRewardPool(rewardPoolId);
+
+        assertEq(refundAmount, rewardAmount - claimed);
+        assertEq(hrepToken.balanceOf(treasury), treasuryBalanceBefore + refundAmount);
+        assertEq(rewardPoolEscrow.claimableQuestionReward(rewardPoolId, roundId, voter2), 0);
+    }
+
     function testSettledRoundCanQualifyAfterContentDormant() public {
         uint256 contentId = _submitQuestion("");
         uint256 rewardPoolId = _createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1);
