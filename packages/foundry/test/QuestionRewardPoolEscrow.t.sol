@@ -288,13 +288,14 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         rewardPoolEscrow.setDefaultFrontendFeeBps(501);
     }
 
-    function testVotingEngineCanBeUpdatedByConfigRole() public {
+    function testVotingEngineIsPinnedAfterInitialization() public {
         address newEngine = address(0xBEEF);
 
         vm.prank(owner);
+        vm.expectRevert("Invalid engine");
         rewardPoolEscrow.setVotingEngine(newEngine);
 
-        assertEq(address(rewardPoolEscrow.votingEngine()), newEngine);
+        assertEq(address(rewardPoolEscrow.votingEngine()), address(votingEngine));
     }
 
     function testSetVotingEngineRejectsZeroAddress() public {

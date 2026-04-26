@@ -875,9 +875,8 @@ contract QuestionRewardPoolEscrow is
         voterIdNFT = IVoterIdNFT(voterIdNFT_);
     }
 
-    function setVotingEngine(address votingEngine_) external onlyRole(CONFIG_ROLE) {
-        require(votingEngine_ != address(0), "Invalid engine");
-        votingEngine = RoundVotingEngine(votingEngine_);
+    function setVotingEngine(address) external view onlyRole(CONFIG_ROLE) {
+        revert("Invalid engine");
     }
 
     function setDefaultFrontendFeeBps(uint256 frontendFeeBps_) external onlyRole(CONFIG_ROLE) {
