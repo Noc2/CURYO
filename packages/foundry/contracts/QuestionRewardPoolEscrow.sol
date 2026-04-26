@@ -701,7 +701,7 @@ contract QuestionRewardPoolEscrow is
         // would have their earned share swept back to the funder. Give them an explicit
         // grace window to finish claiming before anyone can race them.
         if (_isBundleClaimOpen(bundle)) {
-            require(block.timestamp > uint256(bundle.bountyClosesAt) + BUNDLE_CLAIM_GRACE, "Claim grace active");
+            require(block.timestamp > uint256(bundle.bountyClosesAt) + BUNDLE_CLAIM_GRACE, "Grace");
             _requireBundleCleanupComplete(bundleId);
         }
         refundAmount = bundle.fundedAmount - bundle.claimedAmount;
@@ -791,7 +791,7 @@ contract QuestionRewardPoolEscrow is
                 ++roundId;
             }
         }
-        require(block.timestamp > claimDeadline + BUNDLE_CLAIM_GRACE, "Claim grace active");
+        require(block.timestamp > claimDeadline + BUNDLE_CLAIM_GRACE, "Grace");
 
         refundAmount = rewardPool.fundedAmount - rewardPool.claimedAmount;
         require(refundAmount > 0, "No refund");
@@ -1090,12 +1090,18 @@ contract QuestionRewardPoolEscrow is
 
         uint256 firstContentId = questions[0].contentId;
         uint256 firstRoundId = bundleRoundIds[bundleId][0][roundSetIndex];
+        IVoterIdNFT firstRoundVoterIdNft = _roundVoterIdNft(firstContentId, firstRoundId);
         uint256 commitCount = votingEngine.getRoundCommitCount(firstContentId, firstRoundId);
         for (uint256 i = 0; i < commitCount && completerCount < bundle.requiredCompleters;) {
             bytes32 commitKey = votingEngine.getRoundCommitKey(firstContentId, firstRoundId, i);
-            (address voter,,,, bool revealed,,) = votingEngine.commitCore(firstContentId, firstRoundId, commitKey);
-            if (revealed && !_isBundleExcludedVoter(bundle, bundleId, roundSetIndex, voter)) {
-                if (_completedBundleRoundSetCommitIgnoringCleanup(bundleId, roundSetIndex, voter)) {
+            (,,,, bool revealed,,) = votingEngine.commitCore(firstContentId, firstRoundId, commitKey);
+            if (revealed) {
+                uint256 voterId = votingEngine.commitVoterId(firstContentId, firstRoundId, commitKey);
+                address voter = firstRoundVoterIdNft.getHolder(voterId);
+                if (
+                    !_isBundleExcludedVoter(bundle, bundleId, roundSetIndex, voter)
+                        && _completedBundleRoundSetCommitIgnoringCleanup(bundleId, roundSetIndex, voter)
+                ) {
                     unchecked {
                         completerCount++;
                     }

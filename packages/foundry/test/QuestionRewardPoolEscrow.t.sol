@@ -543,6 +543,34 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(reward, claimable);
     }
 
+    function testBundleRoundSetCountsDelegateCommitAfterDelegateRemoval() public {
+        uint256[] memory contentIds = _submitBundleQuestions();
+        uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, REWARD_POOL_AMOUNT, 3);
+        vm.prank(owner);
+        hrepToken.mint(delegate1, 10_000e6);
+
+        vm.prank(voter2);
+        voterIdNFT.setDelegate(delegate1);
+
+        address[] memory firstQuestionVoters = new address[](3);
+        firstQuestionVoters[0] = delegate1;
+        firstQuestionVoters[1] = voter3;
+        firstQuestionVoters[2] = voter4;
+        address[] memory secondQuestionVoters = new address[](3);
+        secondQuestionVoters[0] = voter2;
+        secondQuestionVoters[1] = voter3;
+        secondQuestionVoters[2] = voter4;
+        bool[] memory directions = _directions(true, true, false);
+
+        _settleRoundWith(firstQuestionVoters, contentIds[0], directions);
+        vm.prank(voter2);
+        voterIdNFT.removeDelegate();
+        _settleRoundWith(secondQuestionVoters, contentIds[1], directions);
+
+        uint256 claimable = rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter2);
+        assertEq(claimable, REWARD_POOL_AMOUNT / 3);
+    }
+
     function testFunderAndSubmitterVoterIdsAreExcludedFromRewardPoolClaims() public {
         uint256 contentId = _submitQuestion("");
         uint256 rewardPoolId = _createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1);
@@ -697,7 +725,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         uint256 claimed = rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
 
         vm.warp(expiresAt + 1);
-        vm.expectRevert("Claim grace active");
+        vm.expectRevert("Grace");
         rewardPoolEscrow.refundExpiredRewardPool(rewardPoolId);
 
         vm.warp(expiresAt + BUNDLE_CLAIM_GRACE + 1);
@@ -719,7 +747,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         vm.prank(voter1);
         uint256 claimed = rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
 
-        vm.expectRevert("Claim grace active");
+        vm.expectRevert("Grace");
         rewardPoolEscrow.refundExpiredRewardPool(rewardPoolId);
 
         vm.warp(block.timestamp + BUNDLE_CLAIM_GRACE + 1);
@@ -1351,7 +1379,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
 
         // Jump past bountyClosesAt (helper sets +30 days).
         vm.warp(block.timestamp + 31 days);
-        vm.expectRevert("Claim grace active");
+        vm.expectRevert("Grace");
         rewardPoolEscrow.refundQuestionBundleReward(bundleId);
 
         // Jump past the 7-day grace; refund now allowed (forfeits to treasury since
