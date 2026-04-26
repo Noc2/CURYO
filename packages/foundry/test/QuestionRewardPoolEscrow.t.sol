@@ -292,7 +292,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         address newEngine = address(0xBEEF);
 
         vm.prank(owner);
-        vm.expectRevert("Invalid engine");
+        vm.expectRevert();
         rewardPoolEscrow.setVotingEngine(newEngine);
 
         assertEq(address(rewardPoolEscrow.votingEngine()), address(votingEngine));
@@ -300,11 +300,11 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
 
     function testSetVotingEngineRejectsZeroAddress() public {
         vm.prank(owner);
-        vm.expectRevert("Invalid engine");
+        vm.expectRevert();
         rewardPoolEscrow.setVotingEngine(address(0));
     }
 
-    function testSetVotingEngineRequiresConfigRole() public {
+    function testSetVotingEngineAlwaysReverts() public {
         vm.prank(voter1);
         vm.expectRevert();
         rewardPoolEscrow.setVotingEngine(address(0xBEEF));
@@ -542,6 +542,63 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         vm.prank(voter2);
         uint256 reward = rewardPoolEscrow.claimQuestionBundleReward(bundleId, 0);
         assertEq(reward, claimable);
+    }
+
+    function testBundleRoundSetRetryIgnoresFutureRoundsRecordedBeforeReset() public {
+        uint256[] memory contentIds = _submitBundleQuestions();
+        uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, 120e6, 3, 2);
+
+        address staleCompleter1 = address(20);
+        address staleCompleter2 = address(21);
+        address staleCompleter3 = address(22);
+        address retryCompleter1 = address(23);
+        address retryCompleter2 = address(24);
+        address retryCompleter3 = address(25);
+        address[] memory extraVoters = new address[](6);
+        extraVoters[0] = staleCompleter1;
+        extraVoters[1] = staleCompleter2;
+        extraVoters[2] = staleCompleter3;
+        extraVoters[3] = retryCompleter1;
+        extraVoters[4] = retryCompleter2;
+        extraVoters[5] = retryCompleter3;
+        vm.startPrank(owner);
+        for (uint256 i = 0; i < extraVoters.length; i++) {
+            voterIdNFT.setHolder(extraVoters[i]);
+            hrepToken.mint(extraVoters[i], 10_000e6);
+        }
+        vm.stopPrank();
+
+        address[] memory firstQuestionVoters = new address[](3);
+        firstQuestionVoters[0] = voter1;
+        firstQuestionVoters[1] = voter2;
+        firstQuestionVoters[2] = voter3;
+        address[] memory secondQuestionVoters = new address[](3);
+        secondQuestionVoters[0] = voter2;
+        secondQuestionVoters[1] = voter3;
+        secondQuestionVoters[2] = voter4;
+        address[] memory staleCompleters = new address[](3);
+        staleCompleters[0] = staleCompleter1;
+        staleCompleters[1] = staleCompleter2;
+        staleCompleters[2] = staleCompleter3;
+        address[] memory retryCompleters = new address[](3);
+        retryCompleters[0] = retryCompleter1;
+        retryCompleters[1] = retryCompleter2;
+        retryCompleters[2] = retryCompleter3;
+        bool[] memory directions = _directions(true, true, false);
+
+        _settleRoundWith(firstQuestionVoters, contentIds[0], directions);
+        vm.warp(block.timestamp + 2 days);
+        _settleRoundWith(staleCompleters, contentIds[0], directions);
+        _settleRoundWith(secondQuestionVoters, contentIds[1], directions);
+
+        vm.warp(block.timestamp + 2 days);
+        _settleRoundWith(retryCompleters, contentIds[0], directions);
+        _settleRoundWith(retryCompleters, contentIds[1], directions);
+        assertGt(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, retryCompleter1), 0);
+
+        vm.warp(block.timestamp + 2 days);
+        _settleRoundWith(staleCompleters, contentIds[1], directions);
+        assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 1, staleCompleter1), 0);
     }
 
     function testBundleRoundSetCountsDelegateCommitAfterDelegateRemoval() public {

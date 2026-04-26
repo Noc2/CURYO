@@ -563,6 +563,7 @@ contract QuestionRewardPoolEscrow is
         uint256 bundleIndex = contentBundleIndex[contentId];
         uint256 roundSetIndex = bundleQuestionRecordedRounds[bundleId][bundleIndex];
         if (roundSetIndex >= bundle.requiredSettledRounds) return;
+        if (roundSetIndex != bundle.completedRoundSets) return;
 
         bool settledWithinWindow = settled && _bundleRoundSettledWithinWindow(bundle, contentId, roundId);
         if (!settledWithinWindow) return;
@@ -875,8 +876,8 @@ contract QuestionRewardPoolEscrow is
         voterIdNFT = IVoterIdNFT(voterIdNFT_);
     }
 
-    function setVotingEngine(address) external view onlyRole(CONFIG_ROLE) {
-        revert("Invalid engine");
+    function setVotingEngine(address) external pure {
+        revert();
     }
 
     function setDefaultFrontendFeeBps(uint256 frontendFeeBps_) external onlyRole(CONFIG_ROLE) {
