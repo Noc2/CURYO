@@ -192,7 +192,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     /// @notice Update the voting engine used for future rounds after old-engine rewards have been drained.
     function setVotingEngine(address _votingEngine) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(_votingEngine != address(0), "Invalid voting engine");
-        if (hrepToken.balanceOf(address(votingEngine)) != 0) revert VotingEngineNotDrained();
+        if (votingEngine.accountedHrepBalance() != 0) revert VotingEngineNotDrained();
         votingEngine = RoundVotingEngine(_votingEngine);
         emit VotingEngineUpdated(_votingEngine);
     }

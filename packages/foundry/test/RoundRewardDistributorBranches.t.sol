@@ -278,14 +278,26 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
 
     function test_SetVotingEngine_RevertsUntilCurrentEngineDrained() public {
         address newEngine = address(0xBEEF);
+        assertEq(votingEngine.accountedHrepBalance(), 500_000e6);
 
         vm.prank(owner);
         vm.expectRevert(RoundRewardDistributor.VotingEngineNotDrained.selector);
         rewardDistributor.setVotingEngine(newEngine);
     }
 
-    function test_SetVotingEngine_UpdatesEngineAfterDrain() public {
-        address placeholderEngine = address(0xCAFE);
+    function test_SetVotingEngine_IgnoresUnaccountedDustAfterDrain() public {
+        RoundVotingEngine engineImpl = new RoundVotingEngine();
+        RoundVotingEngine emptyOldEngine = RoundVotingEngine(
+            address(
+                new ERC1967Proxy(
+                    address(engineImpl),
+                    abi.encodeCall(
+                        RoundVotingEngine.initialize,
+                        (owner, address(hrepToken), address(registry), address(_deployProtocolConfig(owner)))
+                    )
+                )
+            )
+        );
         address newEngine = address(0xBEEF);
         RoundRewardDistributor impl = new RoundRewardDistributor();
         RoundRewardDistributor freshDistributor = RoundRewardDistributor(
@@ -294,11 +306,14 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
                     address(impl),
                     abi.encodeCall(
                         RoundRewardDistributor.initialize,
-                        (owner, address(hrepToken), placeholderEngine, address(registry))
+                        (owner, address(hrepToken), address(emptyOldEngine), address(registry))
                     )
                 )
             )
         );
+        vm.prank(owner);
+        hrepToken.transfer(address(emptyOldEngine), 1);
+        assertEq(emptyOldEngine.accountedHrepBalance(), 0);
 
         vm.prank(owner);
         vm.expectEmit(false, false, false, true);

@@ -34,7 +34,7 @@ library RoundSettlementDistributionLib {
         uint256 roundId,
         uint256 weightedWinningStake,
         uint256 losingPool
-    ) external returns (uint256 updatedConsensusReserve) {
+    ) external returns (uint256 updatedConsensusReserve, uint256 treasuryPaid) {
         updatedConsensusReserve = consensusReserve;
 
         if (losingPool > 0) {
@@ -64,10 +64,11 @@ library RoundSettlementDistributionLib {
             }
 
             if (treasuryShare > 0) {
-                _transferTreasuryFee(hrepToken, protocolConfig, roundVoterPool, contentId, roundId, treasuryShare);
+                treasuryPaid =
+                    _transferTreasuryFee(hrepToken, protocolConfig, roundVoterPool, contentId, roundId, treasuryShare);
             }
 
-            return updatedConsensusReserve;
+            return (updatedConsensusReserve, treasuryPaid);
         }
 
         uint256 totalStake = round.upPool + round.downPool;
@@ -113,10 +114,11 @@ library RoundSettlementDistributionLib {
         uint256 contentId,
         uint256 roundId,
         uint256 treasuryShare
-    ) private {
+    ) private returns (uint256 paid) {
         address currentTreasury = protocolConfig.treasury();
         if (currentTreasury != address(0)) {
             try TokenTransferLib.safeTransfer(hrepToken, currentTreasury, treasuryShare) {
+                paid = treasuryShare;
                 emit TreasuryFeeDistributed(contentId, roundId, treasuryShare);
             } catch {
                 roundVoterPool[contentId][roundId] += treasuryShare;

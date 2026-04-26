@@ -138,6 +138,7 @@ contract RoundVotingEngine is
     // Consensus subsidy reserve: pre-funded + replenished by 5% of each losing pool.
     // Pays out on unanimous rounds (losingPool == 0) to incentivize voting on obvious content.
     uint256 public consensusReserve;
+    uint256 public accountedHrepBalance;
 
     // Config snapshot per round: prevents governance config changes from affecting in-progress rounds
     mapping(uint256 => mapping(uint256 => RoundLib.RoundConfig)) public roundConfigSnapshot;
@@ -227,6 +228,7 @@ contract RoundVotingEngine is
     /// @dev Permissionless by design — treasury top-ups and slashed-stake routing both use this same path.
     function addToConsensusReserve(uint256 amount) external nonReentrant {
         _pullHrepFromSender(amount);
+        accountedHrepBalance += amount;
         consensusReserve += amount;
     }
 
@@ -235,6 +237,7 @@ contract RoundVotingEngine is
         if (msg.sender != protocolConfig.rewardDistributor()) revert Unauthorized();
         if (recipient == address(0)) revert InvalidAddress();
         if (hrepAmount > 0) {
+            accountedHrepBalance -= hrepAmount;
             hrepToken.safeTransfer(recipient, hrepAmount);
         }
     }
@@ -407,6 +410,7 @@ contract RoundVotingEngine is
         if (!stakeAlreadyTransferred) {
             hrepToken.safeTransferFrom(voter, address(this), stakeAmount);
         }
+        accountedHrepBalance += stakeAmount;
 
         _storeCommittedVote(
             contentId,
@@ -750,7 +754,7 @@ contract RoundVotingEngine is
         // redistributed to winners, protocol, treasury, and the consensus reserve.
         uint256 losingPool = upWins ? round.downPool : round.upPool;
 
-        consensusReserve = RoundSettlementDistributionLib.distribute(
+        (uint256 updatedConsensusReserve, uint256 treasuryPaid) = RoundSettlementDistributionLib.distribute(
             hrepToken,
             protocolConfig,
             round,
@@ -765,6 +769,10 @@ contract RoundVotingEngine is
             weightedWinningStake,
             losingPool
         );
+        consensusReserve = updatedConsensusReserve;
+        if (treasuryPaid > 0) {
+            accountedHrepBalance -= treasuryPaid;
+        }
 
         IParticipationPool currentParticipationPool = _getParticipationPool();
         address currentRewardDistributor = protocolConfig.rewardDistributor();
@@ -800,6 +808,7 @@ contract RoundVotingEngine is
             hrepToken,
             msg.sender
         );
+        accountedHrepBalance -= refundAmount;
 
         emit CancelledRoundRefundClaimed(contentId, roundId, msg.sender, refundAmount);
     }
@@ -851,6 +860,13 @@ contract RoundVotingEngine is
         uint256 previousConsensusReserve = consensusReserve;
         if (updatedConsensusReserve != previousConsensusReserve) {
             consensusReserve = updatedConsensusReserve;
+        }
+        uint256 paidOut = refundedHrep;
+        if (forfeitedToTreasury > 0 && updatedConsensusReserve == previousConsensusReserve + addedToConsensusReserve) {
+            paidOut += forfeitedToTreasury;
+        }
+        if (paidOut > 0) {
+            accountedHrepBalance -= paidOut;
         }
 
         if (forfeitedToTreasury > 0) {
@@ -1168,5 +1184,5 @@ contract RoundVotingEngine is
     mapping(uint256 => mapping(uint256 => uint256)) public roundUnrevealedCleanupRemaining;
 
     // --- Storage gap reserved for future upgrades ---
-    uint256[44] private __gap;
+    uint256[43] private __gap;
 }
