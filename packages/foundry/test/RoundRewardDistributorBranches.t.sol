@@ -276,15 +276,36 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
         );
     }
 
-    function test_SetVotingEngine_UpdatesEngine() public {
+    function test_SetVotingEngine_RevertsUntilCurrentEngineDrained() public {
         address newEngine = address(0xBEEF);
+
+        vm.prank(owner);
+        vm.expectRevert(RoundRewardDistributor.VotingEngineNotDrained.selector);
+        rewardDistributor.setVotingEngine(newEngine);
+    }
+
+    function test_SetVotingEngine_UpdatesEngineAfterDrain() public {
+        address placeholderEngine = address(0xCAFE);
+        address newEngine = address(0xBEEF);
+        RoundRewardDistributor impl = new RoundRewardDistributor();
+        RoundRewardDistributor freshDistributor = RoundRewardDistributor(
+            address(
+                new ERC1967Proxy(
+                    address(impl),
+                    abi.encodeCall(
+                        RoundRewardDistributor.initialize,
+                        (owner, address(hrepToken), placeholderEngine, address(registry))
+                    )
+                )
+            )
+        );
 
         vm.prank(owner);
         vm.expectEmit(false, false, false, true);
         emit RoundRewardDistributor.VotingEngineUpdated(newEngine);
-        rewardDistributor.setVotingEngine(newEngine);
+        freshDistributor.setVotingEngine(newEngine);
 
-        assertEq(address(rewardDistributor.votingEngine()), newEngine);
+        assertEq(address(freshDistributor.votingEngine()), newEngine);
     }
 
     function test_SetVotingEngine_ZeroAddressReverts() public {
