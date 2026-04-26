@@ -252,10 +252,8 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
         emit VoterIdNFTUpdated(voterIdNFT_);
     }
 
-    function setVotingEngine(address votingEngine_) external onlyRole(CONFIG_ROLE) {
-        require(votingEngine_ != address(0), "Invalid engine");
-        votingEngine = RoundVotingEngine(votingEngine_);
-        emit VotingEngineUpdated(votingEngine_);
+    function setVotingEngine(address) external view onlyRole(CONFIG_ROLE) {
+        revert("Invalid engine");
     }
 
     function setDefaultFrontendFeeBps(uint256 frontendFeeBps_) external onlyRole(CONFIG_ROLE) {

@@ -222,15 +222,14 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
         vm.stopPrank();
     }
 
-    function testVotingEngineCanBeUpdatedByConfigRole() public {
+    function testVotingEngineIsPinnedAfterInitialization() public {
         address newEngine = address(0xBEEF);
 
         vm.prank(owner);
-        vm.expectEmit(false, false, false, true);
-        emit FeedbackBonusEscrow.VotingEngineUpdated(newEngine);
+        vm.expectRevert("Invalid engine");
         feedbackBonusEscrow.setVotingEngine(newEngine);
 
-        assertEq(address(feedbackBonusEscrow.votingEngine()), newEngine);
+        assertEq(address(feedbackBonusEscrow.votingEngine()), address(votingEngine));
     }
 
     function testSetVotingEngineRejectsZeroAddress() public {
