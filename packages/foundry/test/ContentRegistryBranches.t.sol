@@ -138,6 +138,16 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.stopPrank();
     }
 
+    function test_SetQuestionRewardPoolEscrow_IsOneShot() public {
+        MockQuestionRewardPoolEscrow replacementEscrow = new MockQuestionRewardPoolEscrow();
+
+        vm.prank(owner);
+        vm.expectRevert();
+        registry.setQuestionRewardPoolEscrow(address(replacementEscrow));
+
+        assertEq(registry.questionRewardPoolEscrow(), address(mockQuestionRewardPoolEscrow));
+    }
+
     function _vote(address voter, uint256 contentId, bool isUp) internal {
         _commit(voter, contentId, isUp);
     }
