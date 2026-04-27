@@ -1372,9 +1372,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
     function _resolveSubmitterIdentity(address submitter) internal view returns (address) {
         if (submitter == address(0)) return address(0);
-        if (address(voterIdNFT) == address(0)) {
-            return submitter;
-        }
+        require(address(voterIdNFT) != address(0), "VoterIdNFT not set");
         address resolved = voterIdNFT.resolveHolder(submitter);
         require(resolved != address(0), "Voter ID required");
         return resolved;

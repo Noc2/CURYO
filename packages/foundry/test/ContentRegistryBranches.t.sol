@@ -118,7 +118,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         registry.setCategoryRegistry(address(mockCategoryRegistry));
         registry.setProtocolConfig(address(votingEngine.protocolConfig()));
         registry.setQuestionRewardPoolEscrow(address(mockQuestionRewardPoolEscrow));
+        registry.setVoterIdNFT(address(mockVoterIdNFT));
         ProtocolConfig(address(votingEngine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setVoterIdNFT(address(mockVoterIdNFT));
 
         participationPool = new ParticipationPool(address(hrepToken), owner);
         participationPool.setAuthorizedCaller(address(registry), true);
@@ -133,6 +135,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         address[9] memory users = [submitter, voter1, voter2, voter3, voter4, voter5, voter6, keeper, delegate];
         for (uint256 i = 0; i < users.length; i++) {
             hrepToken.mint(users[i], 10_000e6);
+            if (users[i] != delegate) {
+                mockVoterIdNFT.setHolder(users[i]);
+            }
         }
 
         vm.stopPrank();
@@ -1148,15 +1153,16 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     }
 
     function test_SubmitContent_VoterIdConfigured_RevertsWithoutId() public {
+        address noIdSubmitter = address(0xDEAD);
         vm.prank(owner);
-        registry.setVoterIdNFT(address(mockVoterIdNFT));
+        hrepToken.mint(noIdSubmitter, 10_000e6);
 
-        vm.startPrank(submitter);
+        vm.startPrank(noIdSubmitter);
         hrepToken.approve(address(registry), 10e6);
         NoMediaQuestionText memory question =
             NoMediaQuestionText({ url: "https://example.com/no-id", title: "goal", description: "goal", tags: "tags" });
-        bytes32 salt = _contentSubmissionSalt(question.url, submitter);
-        _reserveNoMediaQuestionSubmission(registry, question, 1, salt, submitter);
+        bytes32 salt = _contentSubmissionSalt(question.url, noIdSubmitter);
+        _reserveNoMediaQuestionSubmission(registry, question, 1, salt, noIdSubmitter);
         vm.warp(block.timestamp + 1);
         vm.expectRevert("Voter ID required");
         _submitNoMediaQuestion(registry, question, 1, salt);
@@ -1164,10 +1170,6 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     }
 
     function test_SubmitContent_VoterIdConfigured_SucceedsWithId() public {
-        vm.prank(owner);
-        registry.setVoterIdNFT(address(mockVoterIdNFT));
-        mockVoterIdNFT.setHolder(submitter);
-
         vm.startPrank(submitter);
         hrepToken.approve(address(registry), 10e6);
         uint256 id = _submitContentWithReservation(registry, "https://example.com/1", "goal", "goal", "tags", 0);
@@ -1194,13 +1196,37 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         assertEq(registry.getSubmitterIdentity(id), submitter, "submitter identity should snapshot the holder");
     }
 
-    function test_SubmitContent_VoterIdNotConfigured_Succeeds() public {
-        // No voterIdNFT set — should skip check
-        vm.startPrank(submitter);
-        hrepToken.approve(address(registry), 10e6);
-        uint256 id = _submitContentWithReservation(registry, "https://example.com/1", "goal", "goal", "tags", 0);
+    function test_SubmitContent_VoterIdNotConfigured_Reverts() public {
+        vm.startPrank(owner);
+        ContentRegistry registryImpl2 = new ContentRegistry();
+        ContentRegistry reg2 = ContentRegistry(
+            address(
+                new ERC1967Proxy(
+                    address(registryImpl2),
+                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(hrepToken)))
+                )
+            )
+        );
+        MockCategoryRegistry mockCategoryRegistry2 = new MockCategoryRegistry();
+        mockCategoryRegistry2.seedDefaultTestCategories();
+        reg2.setCategoryRegistry(address(mockCategoryRegistry2));
+        reg2.setQuestionRewardPoolEscrow(address(mockQuestionRewardPoolEscrow));
         vm.stopPrank();
-        assertEq(id, 1);
+
+        vm.startPrank(submitter);
+        hrepToken.approve(address(reg2), 10e6);
+        NoMediaQuestionText memory question = NoMediaQuestionText({
+            url: "https://example.com/no-config",
+            title: "goal",
+            description: "goal",
+            tags: "tags"
+        });
+        bytes32 salt = _contentSubmissionSalt(question.url, submitter);
+        _reserveNoMediaQuestionSubmission(reg2, question, 1, salt, submitter);
+        vm.warp(block.timestamp + 1);
+        vm.expectRevert("VoterIdNFT not set");
+        _submitNoMediaQuestion(reg2, question, 1, salt);
+        vm.stopPrank();
     }
 
     function test_SubmitContent_NonHttpsUrl_Reverts() public {
@@ -1587,6 +1613,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         MockCategoryRegistry mockCategoryRegistry2 = new MockCategoryRegistry();
         mockCategoryRegistry2.seedDefaultTestCategories();
         reg2.setCategoryRegistry(address(mockCategoryRegistry2));
+        reg2.setVoterIdNFT(address(mockVoterIdNFT));
         // DON'T set votingEngine
         vm.stopPrank();
 
@@ -1657,6 +1684,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         MockCategoryRegistry mockCategoryRegistry2 = new MockCategoryRegistry();
         mockCategoryRegistry2.seedDefaultTestCategories();
         reg2.setCategoryRegistry(address(mockCategoryRegistry2));
+        reg2.setVoterIdNFT(address(mockVoterIdNFT));
         // DON'T set votingEngine
         vm.stopPrank();
 
