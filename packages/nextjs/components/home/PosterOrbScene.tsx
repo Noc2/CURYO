@@ -37,7 +37,8 @@ export function PosterOrbScene({
           z-index: 1;
           inset: -40%;
           pointer-events: none;
-          background-image: url("/launch/curyo-v2-orb-hero-background.webp?v=3");
+          background-color: #000000;
+          background-image: url("/launch/curyo-v2-orb-hero-background.webp?v=4");
           background-position: center;
           background-repeat: no-repeat;
           background-size: contain;
