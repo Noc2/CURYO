@@ -133,7 +133,7 @@ export function registerDataRoutes(app: ApiApp) {
         bountyClosesAt: questionBundleReward.bountyClosesAt,
         feedbackClosesAt: questionBundleReward.feedbackClosesAt,
         expiresAt: questionBundleReward.expiresAt,
-        updatedAt: questionBundleReward.updatedAt,
+        updatedAt: questionBundleRoundSet.updatedAt,
       })
       .from(questionBundleRoundSet)
       .innerJoin(
@@ -184,7 +184,7 @@ export function registerDataRoutes(app: ApiApp) {
         questionBundleReward.bountyClosesAt,
         questionBundleReward.feedbackClosesAt,
         questionBundleReward.expiresAt,
-        questionBundleReward.updatedAt,
+        questionBundleRoundSet.updatedAt,
       )
       .having(
         sql`count(distinct ${questionBundleRound.bundleIndex}) >= ${questionBundleReward.questionCount}`,

@@ -164,6 +164,7 @@ function mockPonderModules<T>(result: T) {
       frontendFeeAllocation: "questionBundleRoundSet.frontendFeeAllocation",
       id: "questionBundleRoundSet.id",
       roundSetIndex: "questionBundleRoundSet.roundSetIndex",
+      updatedAt: "questionBundleRoundSet.updatedAt",
     },
     questionBundleReward: {
       allocatedAmount: "questionBundleReward.allocatedAmount",
