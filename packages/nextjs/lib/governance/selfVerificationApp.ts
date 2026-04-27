@@ -2,7 +2,8 @@ import { FAUCET_EXCLUDED_COUNTRIES, FAUCET_MINIMUM_AGE } from "./faucetEligibili
 import type { FaucetExcludedCountryCode } from "./faucetEligibility";
 import { SelfAppBuilder, getUniversalLink } from "@selfxyz/qrcode";
 import type { SelfApp } from "@selfxyz/qrcode";
-import { isAddress } from "viem";
+import { encodeAbiParameters, isAddress, zeroAddress } from "viem";
+import type { Address, Hex } from "viem";
 
 export const SELF_VERIFICATION_SCOPE = "curyo-faucet";
 
@@ -43,7 +44,19 @@ type BuildSelfVerificationAppParams = {
   chainId: number;
   deeplinkCallback?: string;
   referrer?: string | null;
+  claimAuthorizationUserData?: Hex | null;
 };
+
+export const FAUCET_CLAIM_AUTHORIZATION_MAGIC = "0x48464341";
+
+export const FAUCET_CLAIM_AUTHORIZATION_TYPES = {
+  FaucetClaimAuthorization: [
+    { name: "recipient", type: "address" },
+    { name: "referrer", type: "address" },
+    { name: "nonce", type: "uint256" },
+    { name: "deadline", type: "uint256" },
+  ],
+} as const;
 
 const SELF_ENDPOINT_TYPES: Record<SupportedSelfVerificationChainId, SelfVerificationEndpointType> = {
   42220: "celo",
@@ -75,12 +88,18 @@ export function buildSelfVerificationAppConfig({
   chainId,
   deeplinkCallback = "",
   referrer,
+  claimAuthorizationUserData,
 }: BuildSelfVerificationAppParams): SelfVerificationAppConfig | null {
   if (!isSelfVerificationSupportedChain(chainId)) {
     return null;
   }
 
-  const userDefinedData = typeof referrer === "string" && isAddress(referrer) ? referrer.toLowerCase() : "";
+  const userDefinedData =
+    typeof claimAuthorizationUserData === "string" && claimAuthorizationUserData.startsWith("0x")
+      ? claimAuthorizationUserData
+      : typeof referrer === "string" && isAddress(referrer)
+        ? referrer.toLowerCase()
+        : "";
 
   return {
     appName: "Curyo",
@@ -116,4 +135,23 @@ export function buildSelfVerificationApp(params: BuildSelfVerificationAppParams)
 
 export function getSelfVerificationUniversalLink(selfApp: SelfApp): string {
   return getUniversalLink(selfApp);
+}
+
+export function normalizeFaucetClaimReferrer(referrer: string | null | undefined): Address {
+  return typeof referrer === "string" && isAddress(referrer) ? referrer : zeroAddress;
+}
+
+export function encodeFaucetClaimAuthorizationUserData({
+  referrer,
+  deadline,
+  signature,
+}: {
+  referrer: Address;
+  deadline: bigint;
+  signature: Hex;
+}): Hex {
+  return encodeAbiParameters(
+    [{ type: "bytes4" }, { type: "address" }, { type: "uint256" }, { type: "bytes" }],
+    [FAUCET_CLAIM_AUTHORIZATION_MAGIC, referrer, deadline, signature],
+  );
 }

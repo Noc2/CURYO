@@ -23,7 +23,6 @@ import { FREE_TRANSACTION_ALLOWANCE_QUERY_KEY } from "~~/hooks/useFreeTransactio
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import { FAUCET_EXCLUDED_COUNTRY_NAMES, FAUCET_MINIMUM_AGE } from "~~/lib/governance/faucetEligibility";
 import { shouldRefreshAfterFaucetClaim } from "~~/lib/governance/faucetQueryInvalidation";
-import { buildSelfVerificationApp, getSelfVerificationUniversalLink } from "~~/lib/governance/selfVerificationApp";
 import {
   clearStoredReferralAttribution,
   normalizeReferralAddress,
@@ -434,26 +433,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
   }, [address, finishVerification, hasClaimed, hasVoterId, refetchVoterId, startPolling, verificationPending]);
 
   useEffect(() => {
-    if (
-      typeof window === "undefined" ||
-      !/iPhone|iPad|iPod|Android/i.test(window.navigator.userAgent) ||
-      !address ||
-      !chain?.id ||
-      !faucetContractInfo?.address
-    ) {
-      setSelfRetryLink(null);
-      return;
-    }
-
-    const selfApp = buildSelfVerificationApp({
-      address,
-      contractAddress: faucetContractInfo.address,
-      chainId: chain.id,
-      deeplinkCallback: window.location.href,
-      referrer: effectiveReferrer,
-    });
-
-    setSelfRetryLink(selfApp ? getSelfVerificationUniversalLink(selfApp) : null);
+    setSelfRetryLink(null);
   }, [address, chain?.id, effectiveReferrer, faucetContractInfo?.address]);
 
   useEffect(() => {

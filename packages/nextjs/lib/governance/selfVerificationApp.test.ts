@@ -3,9 +3,11 @@ import {
   SELF_VERIFICATION_SCOPE,
   buildSelfVerificationApp,
   buildSelfVerificationAppConfig,
+  encodeFaucetClaimAuthorizationUserData,
   getSelfVerificationUniversalLink,
   getSelfVerificationWebsocketUrl,
   isSelfVerificationSupportedChain,
+  normalizeFaucetClaimReferrer,
 } from "./selfVerificationApp";
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -62,6 +64,25 @@ test("buildSelfVerificationAppConfig clears invalid referrers from user-defined 
 
   assert.ok(config);
   assert.equal(config.userDefinedData, "");
+});
+
+test("buildSelfVerificationAppConfig prefers claim authorization user data", () => {
+  const claimAuthorizationUserData = encodeFaucetClaimAuthorizationUserData({
+    referrer: normalizeFaucetClaimReferrer(referrer),
+    deadline: 1234n,
+    signature: `0x${"11".repeat(65)}`,
+  });
+
+  const config = buildSelfVerificationAppConfig({
+    address,
+    contractAddress,
+    chainId: 42220,
+    referrer,
+    claimAuthorizationUserData,
+  });
+
+  assert.ok(config);
+  assert.equal(config.userDefinedData, claimAuthorizationUserData);
 });
 
 test("buildSelfVerificationApp creates a mobile universal link that Self can open", () => {

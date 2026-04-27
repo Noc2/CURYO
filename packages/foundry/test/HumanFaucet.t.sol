@@ -5,9 +5,25 @@ import { Test, console } from "forge-std/Test.sol";
 import { HumanFaucet } from "../contracts/HumanFaucet.sol";
 import { MockIdentityVerificationHub } from "../contracts/mocks/MockIdentityVerificationHub.sol";
 import { HumanReputation } from "../contracts/HumanReputation.sol";
+import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import { IERC1271 } from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
 import { SelfVerificationRoot } from "@selfxyz/contracts/contracts/abstract/SelfVerificationRoot.sol";
 import { ISelfVerificationRoot } from "@selfxyz/contracts/contracts/interfaces/ISelfVerificationRoot.sol";
+
+contract MockClaimWallet is IERC1271 {
+    using ECDSA for bytes32;
+
+    address public immutable owner;
+
+    constructor(address owner_) {
+        owner = owner_;
+    }
+
+    function isValidSignature(bytes32 hash, bytes calldata signature) external view returns (bytes4) {
+        return hash.recover(signature) == owner ? IERC1271.isValidSignature.selector : bytes4(0xffffffff);
+    }
+}
 
 /// @title HumanFaucet Test Suite
 contract HumanFaucetTest is Test {
@@ -16,6 +32,10 @@ contract HumanFaucetTest is Test {
     bytes32 internal constant KYC_ATTESTATION_ID = bytes32(uint256(4));
     bytes32 internal constant UNSUPPORTED_ATTESTATION_ID = bytes32(uint256(99));
     uint256 internal constant MINIMUM_FAUCET_AGE = 18;
+    bytes32 internal constant EIP712_DOMAIN_TYPEHASH =
+        keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+    bytes32 internal constant FAUCET_CLAIM_AUTHORIZATION_TYPEHASH =
+        keccak256("FaucetClaimAuthorization(address recipient,address referrer,uint256 nonce,uint256 deadline)");
 
     HumanFaucet public faucet;
     MockIdentityVerificationHub public mockHub;
@@ -128,6 +148,77 @@ contract HumanFaucetTest is Test {
         assertEq(faucet.referredBy(user2), user1);
         assertEq(hrepToken.balanceOf(user2), TIER_0_AMOUNT + TIER_0_REFERRAL_BONUS);
         assertEq(faucet.referralEarnings(user1), TIER_0_REFERRER_REWARD);
+    }
+
+    function test_RecipientAuthorizationRequiredRejectsLegacyUserData() public {
+        mockHub.setVerified(user1);
+        vm.prank(admin);
+        faucet.setRecipientAuthorizationRequired(true);
+
+        vm.expectRevert(HumanFaucet.MissingClaimAuthorization.selector);
+        mockHub.simulateVerification(address(faucet), user1);
+    }
+
+    function test_RecipientAuthorizationRequiredAcceptsEoaSignature() public {
+        uint256 privateKey = 0xA11CE;
+        address user = vm.addr(privateKey);
+        uint256 deadline = block.timestamp + 1 hours;
+        mockHub.setVerified(user);
+        vm.prank(admin);
+        faucet.setRecipientAuthorizationRequired(true);
+
+        bytes memory userData = _buildClaimAuthorizationUserData(user, address(0), deadline, privateKey);
+        mockHub.simulateVerificationWithUserData(address(faucet), user, userData);
+
+        assertTrue(faucet.hasClaimed(user));
+        assertEq(faucet.recipientAuthorizationNonces(user), 1);
+        assertEq(hrepToken.balanceOf(user), TIER_0_AMOUNT);
+    }
+
+    function test_RecipientAuthorizationRejectsDifferentRecipientSignature() public {
+        uint256 privateKey = 0xA11CE;
+        address user = vm.addr(privateKey);
+        uint256 deadline = block.timestamp + 1 hours;
+        mockHub.setVerified(user);
+        vm.prank(admin);
+        faucet.setRecipientAuthorizationRequired(true);
+
+        bytes memory signature = _signClaimAuthorization(privateKey, user2, address(0), 0, deadline);
+        bytes memory userData = abi.encode(bytes4("HFCA"), address(0), deadline, signature);
+
+        vm.expectRevert(HumanFaucet.InvalidClaimAuthorization.selector);
+        mockHub.simulateVerificationWithUserData(address(faucet), user, userData);
+    }
+
+    function test_RecipientAuthorizationRejectsExpiredSignature() public {
+        uint256 privateKey = 0xA11CE;
+        address user = vm.addr(privateKey);
+        uint256 deadline = block.timestamp - 1;
+        mockHub.setVerified(user);
+        vm.prank(admin);
+        faucet.setRecipientAuthorizationRequired(true);
+
+        bytes memory userData = _buildClaimAuthorizationUserData(user, address(0), deadline, privateKey);
+
+        vm.expectRevert(HumanFaucet.ClaimAuthorizationExpired.selector);
+        mockHub.simulateVerificationWithUserData(address(faucet), user, userData);
+    }
+
+    function test_RecipientAuthorizationAcceptsEip1271WalletSignature() public {
+        uint256 ownerKey = 0xB0B;
+        MockClaimWallet wallet = new MockClaimWallet(vm.addr(ownerKey));
+        address user = address(wallet);
+        uint256 deadline = block.timestamp + 1 hours;
+        mockHub.setVerified(user);
+        vm.prank(admin);
+        faucet.setRecipientAuthorizationRequired(true);
+
+        bytes memory userData = _buildClaimAuthorizationUserData(user, address(0), deadline, ownerKey);
+        mockHub.simulateVerificationWithUserData(address(faucet), user, userData);
+
+        assertTrue(faucet.hasClaimed(user));
+        assertEq(faucet.recipientAuthorizationNonces(user), 1);
+        assertEq(hrepToken.balanceOf(user), TIER_0_AMOUNT);
     }
 
     function test_VerifySelfProof_RevertShortProofPayload() public {
@@ -961,6 +1052,34 @@ contract HumanFaucetTest is Test {
 
     function _buildUserContextData(address user, bytes memory userData) internal view returns (bytes memory) {
         return abi.encodePacked(bytes32(uint256(block.chainid)), bytes32(uint256(uint160(user))), userData);
+    }
+
+    function _buildClaimAuthorizationUserData(address user, address referrer, uint256 deadline, uint256 privateKey)
+        internal
+        view
+        returns (bytes memory)
+    {
+        bytes memory signature =
+            _signClaimAuthorization(privateKey, user, referrer, faucet.recipientAuthorizationNonces(user), deadline);
+        return abi.encode(bytes4("HFCA"), referrer, deadline, signature);
+    }
+
+    function _signClaimAuthorization(
+        uint256 privateKey,
+        address user,
+        address referrer,
+        uint256 nonce,
+        uint256 deadline
+    ) internal view returns (bytes memory) {
+        bytes32 domainSeparator = keccak256(
+            abi.encode(
+                EIP712_DOMAIN_TYPEHASH, keccak256("Curyo Human Faucet"), keccak256("1"), block.chainid, address(faucet)
+            )
+        );
+        bytes32 structHash = keccak256(abi.encode(FAUCET_CLAIM_AUTHORIZATION_TYPEHASH, user, referrer, nonce, deadline));
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
+        return abi.encodePacked(r, s, v);
     }
 
     function _calculateBoundUserIdentifier(bytes memory userContextData) internal pure returns (uint256) {

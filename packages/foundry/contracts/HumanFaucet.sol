@@ -5,6 +5,8 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { EIP712 } from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
+import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import { SelfVerificationRoot } from "@selfxyz/contracts/contracts/abstract/SelfVerificationRoot.sol";
 import { ISelfVerificationRoot } from "@selfxyz/contracts/contracts/interfaces/ISelfVerificationRoot.sol";
 import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
@@ -14,7 +16,7 @@ import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
 /// @dev Uses Self.xyz zero-knowledge identity verification for sybil resistance.
 ///      One claim per document nullifier (the same verified identity document can't claim twice).
 ///      This contract holds the 52M faucet allocation minted at launch.
-contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
+contract HumanFaucet is SelfVerificationRoot, EIP712, Ownable, Pausable {
     using SafeERC20 for IERC20;
 
     // --- Tier Constants ---
@@ -44,6 +46,10 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
 
     /// @notice Minimum Self.xyz age disclosure required for faucet claims
     uint256 public constant MINIMUM_FAUCET_AGE = 18;
+
+    /// @notice EIP-712 type hash for recipient-controlled faucet claim authorization.
+    bytes32 public constant FAUCET_CLAIM_AUTHORIZATION_TYPEHASH =
+        keccak256("FaucetClaimAuthorization(address recipient,address referrer,uint256 nonce,uint256 deadline)");
 
     struct AttestationPolicy {
         bool enabled;
@@ -97,6 +103,12 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     /// @notice One-way switch that disables deploy-time migrated claim bootstrapping.
     bool public migrationBootstrapClosed;
 
+    /// @notice When enabled, Self callback userData must include recipient-signed claim authorization.
+    bool public recipientAuthorizationRequired;
+
+    /// @notice Per-recipient nonce consumed by EIP-712 faucet claim authorizations.
+    mapping(address => uint256) public recipientAuthorizationNonces;
+
     /// @notice Governance-controlled acceptance and sanctions requirements for Self.xyz attestation IDs.
     mapping(bytes32 => AttestationPolicy) private _attestationPolicies;
 
@@ -149,6 +161,9 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     /// @notice Emitted when governance updates which Self.xyz credentials can claim.
     event AttestationPolicyUpdated(bytes32 indexed attestationId, bool enabled, bool[3] requiredOfac);
 
+    /// @notice Emitted when governance toggles recipient wallet authorization for public claims.
+    event RecipientAuthorizationRequiredSet(bool required);
+
     // --- Errors ---
 
     /// @notice Thrown when a nullifier has already been used
@@ -187,6 +202,15 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     /// @notice Thrown when migrated referral data is not valid
     error InvalidMigrationReferrer();
 
+    /// @notice Thrown when a production faucet claim omits recipient authorization.
+    error MissingClaimAuthorization();
+
+    /// @notice Thrown when a faucet recipient authorization is expired.
+    error ClaimAuthorizationExpired();
+
+    /// @notice Thrown when a faucet recipient authorization signature is invalid.
+    error InvalidClaimAuthorization();
+
     // --- Constructor ---
 
     /// @notice The governance address (timelock) — ownership can only be transferred here
@@ -198,6 +222,7 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     /// @param _governance The governance address (timelock) — transferOwnership restricted to this
     constructor(address _hrepToken, address _identityVerificationHub, address _governance)
         SelfVerificationRoot(_identityVerificationHub, "curyo-faucet")
+        EIP712("Curyo Human Faucet", "1")
         Ownable(msg.sender)
     {
         require(_governance != address(0), "Invalid governance");
@@ -244,6 +269,13 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     ///      `requiredOfac` indexes follow Self.xyz's output: [document number, name+DOB, name+YOB].
     function setAttestationPolicy(bytes32 attestationId, bool enabled, bool[3] memory requiredOfac) external onlyOwner {
         _setAttestationPolicy(attestationId, enabled, requiredOfac);
+    }
+
+    /// @notice Require recipient-signed EIP-712 authorization in Self callback userData.
+    /// @dev Production launch requires this to be enabled before ownership handoff.
+    function setRecipientAuthorizationRequired(bool required) external onlyOwner {
+        recipientAuthorizationRequired = required;
+        emit RecipientAuthorizationRequiredSet(required);
     }
 
     /// @notice Withdraw remaining HREP tokens (e.g., after faucet decommissioning)
@@ -337,6 +369,7 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
         require(migrationBootstrapClosed, "Bootstrap open");
         require(verificationConfigId != bytes32(0), "Config not set");
         require(address(voterIdNFT) != address(0), "VoterIdNFT not set");
+        require(recipientAuthorizationRequired, "Recipient auth off");
         _unpause();
         transferOwnership(governance);
     }
@@ -537,8 +570,10 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
             revert AddressAlreadyClaimed();
         }
 
-        // Decode referrer from userData (if present)
-        address referrer = _decodeReferrer(userData);
+        (address referrer, uint256 authDeadline, bytes memory authSignature) = _decodeClaimUserData(userData);
+        if (recipientAuthorizationRequired) {
+            _requireClaimAuthorization(user, referrer, authDeadline, authSignature);
+        }
 
         // Calculate amounts (tier-based rate + proportional referral bonus)
         uint256 claimAmount = getCurrentClaimAmount();
@@ -605,6 +640,20 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
         }
 
         _claiming = false;
+    }
+
+    function _requireClaimAuthorization(address user, address referrer, uint256 deadline, bytes memory signature)
+        internal
+    {
+        if (signature.length == 0) revert MissingClaimAuthorization();
+        if (deadline < block.timestamp) revert ClaimAuthorizationExpired();
+
+        uint256 nonce = recipientAuthorizationNonces[user];
+        bytes32 structHash = keccak256(abi.encode(FAUCET_CLAIM_AUTHORIZATION_TYPEHASH, user, referrer, nonce, deadline));
+        if (!SignatureChecker.isValidSignatureNow(user, _hashTypedDataV4(structHash), signature)) {
+            revert InvalidClaimAuthorization();
+        }
+        recipientAuthorizationNonces[user] = nonce + 1;
     }
 
     function _bootstrapMigratedClaim(
@@ -679,9 +728,30 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
         emit MigratedClaimBootstrapped(user, nullifier, amount, referrer, claimantBonus, referrerReward, tokenId);
     }
 
-    /// @notice Decode referrer address from userData
-    /// @param userData The user data bytes containing referrer address
-    /// @return The referrer address (or zero address if invalid)
+    /// @notice Decode claim callback data, including optional recipient authorization.
+    /// @param userData Self.xyz callback user data.
+    function _decodeClaimUserData(bytes memory userData)
+        internal
+        pure
+        returns (address referrer, uint256 deadline, bytes memory signature)
+    {
+        bytes memory payload = userData;
+        if (_isHexData(userData)) {
+            bytes memory decoded = _decodeHexBytes(userData);
+            if (decoded.length >= 128 && _hasClaimAuthorizationMagic(decoded)) {
+                payload = decoded;
+            }
+        }
+        if (payload.length >= 128 && _hasClaimAuthorizationMagic(payload)) {
+            (bytes4 magic, address encodedReferrer, uint256 encodedDeadline, bytes memory encodedSignature) =
+                abi.decode(payload, (bytes4, address, uint256, bytes));
+            if (magic == bytes4("HFCA")) {
+                return (encodedReferrer, encodedDeadline, encodedSignature);
+            }
+        }
+        return (_decodeReferrer(userData), 0, "");
+    }
+
     function _decodeReferrer(bytes memory userData) internal pure returns (address) {
         if (userData.length == 0) return address(0);
         if (
@@ -715,6 +785,34 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
             parsed = (parsed << 4) | uint160(nibble);
         }
         return address(parsed);
+    }
+
+    function _isHexData(bytes memory userData) internal pure returns (bool) {
+        if (
+            userData.length < 2 || userData[0] != bytes1("0")
+                || (userData[1] != bytes1("x") && userData[1] != bytes1("X"))
+        ) {
+            return false;
+        }
+        return userData.length % 2 == 0;
+    }
+
+    function _hasClaimAuthorizationMagic(bytes memory payload) internal pure returns (bool) {
+        if (payload.length < 4) return false;
+        return payload[0] == bytes1("H") && payload[1] == bytes1("F") && payload[2] == bytes1("C")
+            && payload[3] == bytes1("A");
+    }
+
+    function _decodeHexBytes(bytes memory userData) internal pure returns (bytes memory) {
+        uint256 outLength = (userData.length - 2) / 2;
+        bytes memory decoded = new bytes(outLength);
+        for (uint256 i = 0; i < outLength; ++i) {
+            uint8 high = _fromHexChar(uint8(userData[2 + i * 2]));
+            uint8 low = _fromHexChar(uint8(userData[3 + i * 2]));
+            if (high == type(uint8).max || low == type(uint8).max) return "";
+            decoded[i] = bytes1((high << 4) | low);
+        }
+        return decoded;
     }
 
     function _fromHexChar(uint8 charCode) internal pure returns (uint8) {

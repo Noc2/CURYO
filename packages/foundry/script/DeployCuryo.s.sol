@@ -397,6 +397,10 @@ contract DeployCuryo is ScaffoldETHDeploy {
             _assertFaucetVerificationConfig(humanFaucet, humanFaucetHubAddress, mockConfigId);
             console.log("Set mock configId on HumanFaucet");
         }
+        if (!isLocalDev) {
+            humanFaucet.setRecipientAuthorizationRequired(true);
+            console.log("Enabled HumanFaucet recipient wallet authorization");
+        }
 
         // 12e. Mint test tokens and Voter IDs for localhost development
         if (isLocalDev) {
@@ -1178,6 +1182,9 @@ contract DeployCuryo is ScaffoldETHDeploy {
             _require(address(targets.humanFaucet.voterIdNFT()) == address(targets.voterIdNFT), "HumanFaucet voterIdNFT");
             _require(targets.humanFaucet.governance() == targets.governance, "HumanFaucet governance");
             _require(targets.humanFaucet.migrationBootstrapClosed(), "HumanFaucet migration bootstrap closed");
+            _require(
+                targets.humanFaucet.recipientAuthorizationRequired(), "HumanFaucet recipient authorization required"
+            );
             if (targets.humanFaucetOpen) {
                 _require(targets.humanFaucet.owner() == targets.governance, "HumanFaucet governance owner");
                 _require(!targets.humanFaucet.paused(), "HumanFaucet production claims open");
