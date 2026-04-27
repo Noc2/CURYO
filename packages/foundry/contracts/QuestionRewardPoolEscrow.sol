@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-import { ContentRegistry } from "./ContentRegistry.sol";
-import { RoundVotingEngine } from "./RoundVotingEngine.sol";
-import { ProtocolConfig } from "./ProtocolConfig.sol";
-import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
-import { RoundLib } from "./libraries/RoundLib.sol";
-import { QuestionRewardPoolEscrowClaimLib } from "./libraries/QuestionRewardPoolEscrowClaimLib.sol";
+import {ContentRegistry} from "./ContentRegistry.sol";
+import {RoundVotingEngine} from "./RoundVotingEngine.sol";
+import {ProtocolConfig} from "./ProtocolConfig.sol";
+import {IVoterIdNFT} from "./interfaces/IVoterIdNFT.sol";
+import {RoundLib} from "./libraries/RoundLib.sol";
+import {QuestionRewardPoolEscrowClaimLib} from "./libraries/QuestionRewardPoolEscrowClaimLib.sol";
 
 /// @title QuestionRewardPoolEscrow
 /// @notice Holds per-question USDC bounties and pays equal per-round rewards to revealed voters.
@@ -360,7 +360,7 @@ contract QuestionRewardPoolEscrow is
             require(contentBundleId[contentId] == 0, "Content bundled");
             contentBundleId[contentId] = bundleId;
             contentBundleIndex[contentId] = i;
-            bundleQuestions[bundleId].push(BundleQuestion({ contentId: contentId.toUint64() }));
+            bundleQuestions[bundleId].push(BundleQuestion({contentId: contentId.toUint64()}));
             unchecked {
                 ++i;
             }
@@ -502,7 +502,7 @@ contract QuestionRewardPoolEscrow is
         require(!_isExcludedVoter(rewardPool, roundId, voterId), "Excluded voter");
         require(!rewardClaimed[rewardPoolId][roundId][voterId], "Already claimed");
 
-        bytes32 commitKey = votingEngine.voterIdCommitKey(rewardPool.contentId, roundId, voterId);
+        bytes32 commitKey = _commitKeyForVoter(rewardPool.contentId, roundId, roundVoterIdNft, voterId);
         require(commitKey != bytes32(0), "No commit");
 
         (bool revealed, address frontend) = _revealedCommitFrontend(rewardPool.contentId, roundId, commitKey);
@@ -829,7 +829,7 @@ contract QuestionRewardPoolEscrow is
             return 0;
         }
 
-        bytes32 commitKey = votingEngine.voterIdCommitKey(rewardPool.contentId, roundId, voterId);
+        bytes32 commitKey = _commitKeyForVoter(rewardPool.contentId, roundId, roundVoterIdNft, voterId);
         if (commitKey == bytes32(0)) return 0;
         (bool revealed, address frontend) = _revealedCommitFrontend(rewardPool.contentId, roundId, commitKey);
         if (!revealed) return 0;
@@ -899,7 +899,7 @@ contract QuestionRewardPoolEscrow is
         returns (uint256 funderVoterId, address funderIdentity)
     {
         funderVoterId = voterIdNFT.getTokenId(funder);
-        if (funderVoterId == 0) return (0, address(0));
+        require(funderVoterId != 0, "Voter ID required");
         funderIdentity = voterIdNFT.getHolder(funderVoterId);
         if (funderIdentity == address(0)) {
             funderIdentity = funder;
@@ -1028,7 +1028,8 @@ contract QuestionRewardPoolEscrow is
             }
             uint256 voterId = _voterIdForRound(question.contentId, roundId, account);
             if (voterId == 0) return (false, address(0), bytes32(0));
-            bytes32 commitKey = votingEngine.voterIdCommitKey(question.contentId, roundId, voterId);
+            bytes32 commitKey =
+                _commitKeyForVoter(question.contentId, roundId, _roundVoterIdNft(question.contentId, roundId), voterId);
             if (commitKey == bytes32(0)) return (false, address(0), bytes32(0));
             (bool revealed, address questionFrontend) = _revealedCommitFrontend(question.contentId, roundId, commitKey);
             if (!revealed) return (false, address(0), bytes32(0));
@@ -1123,7 +1124,8 @@ contract QuestionRewardPoolEscrow is
             uint256 roundId = bundleRoundIds[bundleId][i][roundSetIndex];
             uint256 voterId = _voterIdForRound(question.contentId, roundId, account);
             if (voterId == 0) return false;
-            bytes32 commitKey = votingEngine.voterIdCommitKey(question.contentId, roundId, voterId);
+            bytes32 commitKey =
+                _commitKeyForVoter(question.contentId, roundId, _roundVoterIdNft(question.contentId, roundId), voterId);
             if (commitKey == bytes32(0)) return false;
             (bool revealed,) = _revealedCommitFrontend(question.contentId, roundId, commitKey);
             if (!revealed) return false;
@@ -1326,7 +1328,7 @@ contract QuestionRewardPoolEscrow is
 
     function _hasRevealedCommit(uint256 contentId, uint256 roundId, uint256 voterId) internal view returns (bool) {
         if (voterId == 0) return false;
-        bytes32 commitKey = votingEngine.voterIdCommitKey(contentId, roundId, voterId);
+        bytes32 commitKey = _commitKeyForVoter(contentId, roundId, _roundVoterIdNft(contentId, roundId), voterId);
         if (commitKey == bytes32(0)) return false;
         (bool revealed,) = _revealedCommitFrontend(contentId, roundId, commitKey);
         return revealed;
@@ -1430,6 +1432,20 @@ contract QuestionRewardPoolEscrow is
     function _requireVoterId(IVoterIdNFT voterIdNft_, address account) internal view returns (uint256 voterId) {
         voterId = voterIdNft_.getTokenId(account);
         require(voterId != 0, "Voter ID required");
+    }
+
+    function _commitKeyForVoter(uint256 contentId, uint256 roundId, IVoterIdNFT voterIdNft_, uint256 voterId)
+        internal
+        view
+        returns (bytes32 commitKey)
+    {
+        commitKey = votingEngine.voterIdCommitKey(contentId, roundId, voterId);
+        if (commitKey == bytes32(0)) {
+            uint256 nullifier = voterIdNft_.getNullifier(voterId);
+            if (nullifier != 0) {
+                commitKey = votingEngine.voterNullifierCommitKey(contentId, roundId, nullifier);
+            }
+        }
     }
 
     function _voterIdForRound(uint256 contentId, uint256 roundId, address account) internal view returns (uint256) {

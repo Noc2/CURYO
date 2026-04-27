@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-import { ContentRegistry } from "./ContentRegistry.sol";
-import { RoundVotingEngine } from "./RoundVotingEngine.sol";
-import { ProtocolConfig } from "./ProtocolConfig.sol";
-import { IFrontendRegistry } from "./interfaces/IFrontendRegistry.sol";
-import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
-import { RoundLib } from "./libraries/RoundLib.sol";
+import {ContentRegistry} from "./ContentRegistry.sol";
+import {RoundVotingEngine} from "./RoundVotingEngine.sol";
+import {ProtocolConfig} from "./ProtocolConfig.sol";
+import {IFrontendRegistry} from "./interfaces/IFrontendRegistry.sol";
+import {IVoterIdNFT} from "./interfaces/IVoterIdNFT.sol";
+import {RoundLib} from "./libraries/RoundLib.sol";
 
 /// @title FeedbackBonusEscrow
 /// @notice Holds optional USDC bonuses for useful voter feedback and pays awarded feedback hashes after a round ends.
@@ -138,8 +138,9 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
 
         uint256 receivedAmount = _pullUsdc(msg.sender, amount);
         uint256 funderVoterId = voterIdNFT.getTokenId(msg.sender);
-        address funderIdentity = funderVoterId == 0 ? address(0) : voterIdNFT.getHolder(funderVoterId);
-        if (funderVoterId != 0 && funderIdentity == address(0)) {
+        require(funderVoterId != 0, "Voter ID required");
+        address funderIdentity = voterIdNFT.getHolder(funderVoterId);
+        if (funderIdentity == address(0)) {
             funderIdentity = msg.sender;
         }
         address submitterIdentity = registry.getSubmitterIdentity(contentId);
@@ -309,9 +310,8 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
         rewardRecipient = roundVoterIdNft.getHolder(voterId);
         require(!_isExcludedVoter(pool, voterId), "Excluded voter");
 
-        bytes32 commitKey = votingEngine.voterIdCommitKey(pool.contentId, pool.roundId, voterId);
+        bytes32 commitKey = _commitKeyForVoter(pool.contentId, pool.roundId, roundVoterIdNft, voterId);
         require(commitKey != bytes32(0), "No commit");
-        require(votingEngine.commitVoterId(pool.contentId, pool.roundId, commitKey) == voterId, "Wrong Voter ID");
 
         (address voter,, address commitFrontend,, bool revealed,,) =
             votingEngine.commitCore(pool.contentId, pool.roundId, commitKey);
@@ -412,6 +412,20 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
     function _voterIdForRound(uint256 contentId, uint256 roundId, address account) internal view returns (uint256) {
         if (account == address(0)) return 0;
         return _roundVoterIdNft(contentId, roundId).getTokenId(account);
+    }
+
+    function _commitKeyForVoter(uint256 contentId, uint256 roundId, IVoterIdNFT voterIdNft_, uint256 voterId)
+        internal
+        view
+        returns (bytes32 commitKey)
+    {
+        commitKey = votingEngine.voterIdCommitKey(contentId, roundId, voterId);
+        if (commitKey == bytes32(0)) {
+            uint256 nullifier = voterIdNft_.getNullifier(voterId);
+            if (nullifier != 0) {
+                commitKey = votingEngine.voterNullifierCommitKey(contentId, roundId, nullifier);
+            }
+        }
     }
 
     function _protocolTreasury() internal view returns (address treasury) {

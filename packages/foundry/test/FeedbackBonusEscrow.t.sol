@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
-import { ContentRegistry } from "../contracts/ContentRegistry.sol";
-import { HumanReputation } from "../contracts/HumanReputation.sol";
-import { FeedbackBonusEscrow } from "../contracts/FeedbackBonusEscrow.sol";
-import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
-import { IFrontendRegistry } from "../contracts/interfaces/IFrontendRegistry.sol";
-import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
-import { MockERC20 } from "../contracts/mocks/MockERC20.sol";
-import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
-import { QuestionRewardPoolEscrow } from "../contracts/QuestionRewardPoolEscrow.sol";
-import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
-import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
-import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
-import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {VotingTestBase} from "./helpers/VotingTestHelpers.sol";
+import {ContentRegistry} from "../contracts/ContentRegistry.sol";
+import {HumanReputation} from "../contracts/HumanReputation.sol";
+import {FeedbackBonusEscrow} from "../contracts/FeedbackBonusEscrow.sol";
+import {FrontendRegistry} from "../contracts/FrontendRegistry.sol";
+import {IFrontendRegistry} from "../contracts/interfaces/IFrontendRegistry.sol";
+import {MockCategoryRegistry} from "../contracts/mocks/MockCategoryRegistry.sol";
+import {MockERC20} from "../contracts/mocks/MockERC20.sol";
+import {ProtocolConfig} from "../contracts/ProtocolConfig.sol";
+import {QuestionRewardPoolEscrow} from "../contracts/QuestionRewardPoolEscrow.sol";
+import {RoundRewardDistributor} from "../contracts/RoundRewardDistributor.sol";
+import {RoundVotingEngine} from "../contracts/RoundVotingEngine.sol";
+import {RoundEngineReadHelpers} from "./helpers/RoundEngineReadHelpers.sol";
+import {MockVoterIdNFT} from "./mocks/MockVoterIdNFT.sol";
 
 contract SlashedFrontendRegistryMock is IFrontendRegistry {
     address public immutable frontend;
@@ -32,7 +32,7 @@ contract SlashedFrontendRegistryMock is IFrontendRegistry {
         return frontend_ == frontend;
     }
 
-    function creditFees(address, uint256) external { }
+    function creditFees(address, uint256) external {}
 
     function getAccumulatedFees(address) external pure returns (uint256 hrepFees) {
         return 0;
@@ -386,6 +386,18 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
         assertEq(recipientAmount, 10e6);
         assertEq(usdc.balanceOf(voter1), holderBalanceBefore + recipientAmount);
         assertEq(usdc.balanceOf(newDelegate), delegateBalanceBefore);
+    }
+
+    function testCreateFeedbackBonusPoolRequiresFunderVoterId() public {
+        uint256 contentId = _submitQuestion("");
+        address unverifiedFunder = address(0xB0B);
+        usdc.mint(unverifiedFunder, BONUS_AMOUNT);
+
+        vm.startPrank(unverifiedFunder);
+        usdc.approve(address(feedbackBonusEscrow), BONUS_AMOUNT);
+        vm.expectRevert("Voter ID required");
+        feedbackBonusEscrow.createFeedbackBonusPool(contentId, 1, BONUS_AMOUNT, block.timestamp + 7 days, funder);
+        vm.stopPrank();
     }
 
     function testCannotAwardSameVoterOrFeedbackHashTwice() public {
