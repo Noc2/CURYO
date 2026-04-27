@@ -69,6 +69,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     uint256 internal constant DEFAULT_MIN_SUBMISSION_REWARD_POOL = 1e6;
     uint256 internal constant MIN_SUBMISSION_REWARD_REQUIRED_VOTERS = 3;
     uint256 internal constant MIN_SUBMISSION_REWARD_SETTLED_ROUNDS = 1;
+    uint256 internal constant MAX_SUBMISSION_REWARD_SETTLED_ROUNDS = 16;
     uint256 public constant MAX_QUESTION_BUNDLE_COUNT = 10;
 
     // Rating safety thresholds
@@ -1307,6 +1308,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         require(rewardTerms.amount >= _minimumSubmissionReward(rewardTerms.asset), "Reward below minimum");
         require(rewardTerms.requiredVoters >= MIN_SUBMISSION_REWARD_REQUIRED_VOTERS, "Too few voters");
         require(rewardTerms.requiredSettledRounds >= MIN_SUBMISSION_REWARD_SETTLED_ROUNDS, "Too few rounds");
+        require(rewardTerms.requiredSettledRounds <= MAX_SUBMISSION_REWARD_SETTLED_ROUNDS, "Too many rounds");
         require(
             rewardTerms.amount >= rewardTerms.requiredSettledRounds * rewardTerms.requiredVoters, "Reward too small"
         );

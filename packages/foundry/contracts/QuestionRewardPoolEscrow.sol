@@ -33,6 +33,7 @@ contract QuestionRewardPoolEscrow is
 
     uint256 internal constant MIN_REQUIRED_VOTERS = 3;
     uint256 internal constant MIN_REQUIRED_SETTLED_ROUNDS = 1;
+    uint256 internal constant MAX_REQUIRED_SETTLED_ROUNDS = 16;
     uint256 internal constant BPS_SCALE = 10_000;
     uint256 internal constant DEFAULT_FRONTEND_FEE_BPS = 300;
     uint256 internal constant MAX_FRONTEND_FEE_BPS = 500;
@@ -323,6 +324,7 @@ contract QuestionRewardPoolEscrow is
         require(asset == REWARD_ASSET_HREP || asset == REWARD_ASSET_USDC, "Invalid asset");
         require(requiredCompleters >= MIN_REQUIRED_VOTERS, "Too few voters");
         require(requiredSettledRounds >= MIN_REQUIRED_SETTLED_ROUNDS, "Too few rounds");
+        require(requiredSettledRounds <= MAX_REQUIRED_SETTLED_ROUNDS, "Too many rounds");
         require(amount >= requiredCompleters * requiredSettledRounds, "Amount too small");
         _requireFutureBountyWindow(bountyClosesAt);
         uint256 normalizedFeedbackClosesAt = _normalizeFeedbackClosesAt(bountyClosesAt, feedbackClosesAt);
@@ -399,6 +401,7 @@ contract QuestionRewardPoolEscrow is
         require(registry.isContentActive(contentId), "Content not active");
         require(requiredVoters >= MIN_REQUIRED_VOTERS, "Too few voters");
         require(requiredSettledRounds >= MIN_REQUIRED_SETTLED_ROUNDS, "Too few rounds");
+        require(requiredSettledRounds <= MAX_REQUIRED_SETTLED_ROUNDS, "Too many rounds");
         require(amount >= requiredSettledRounds * requiredVoters, "Amount too small");
         _requireFutureBountyWindow(bountyClosesAt);
         uint256 normalizedFeedbackClosesAt = _normalizeFeedbackClosesAt(bountyClosesAt, feedbackClosesAt);
