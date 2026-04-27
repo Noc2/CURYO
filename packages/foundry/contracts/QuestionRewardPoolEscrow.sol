@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-import {ContentRegistry} from "./ContentRegistry.sol";
-import {RoundVotingEngine} from "./RoundVotingEngine.sol";
-import {ProtocolConfig} from "./ProtocolConfig.sol";
-import {IVoterIdNFT} from "./interfaces/IVoterIdNFT.sol";
-import {RoundLib} from "./libraries/RoundLib.sol";
-import {QuestionRewardPoolEscrowClaimLib} from "./libraries/QuestionRewardPoolEscrowClaimLib.sol";
+import { ContentRegistry } from "./ContentRegistry.sol";
+import { RoundVotingEngine } from "./RoundVotingEngine.sol";
+import { ProtocolConfig } from "./ProtocolConfig.sol";
+import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
+import { RoundLib } from "./libraries/RoundLib.sol";
+import { QuestionRewardPoolEscrowClaimLib } from "./libraries/QuestionRewardPoolEscrowClaimLib.sol";
 
 /// @title QuestionRewardPoolEscrow
 /// @notice Holds per-question USDC bounties and pays equal per-round rewards to revealed voters.
@@ -360,7 +360,7 @@ contract QuestionRewardPoolEscrow is
             require(contentBundleId[contentId] == 0, "Content bundled");
             contentBundleId[contentId] = bundleId;
             contentBundleIndex[contentId] = i;
-            bundleQuestions[bundleId].push(BundleQuestion({contentId: contentId.toUint64()}));
+            bundleQuestions[bundleId].push(BundleQuestion({ contentId: contentId.toUint64() }));
             unchecked {
                 ++i;
             }
@@ -559,6 +559,16 @@ contract QuestionRewardPoolEscrow is
         // signal with no retry path, permanently locking bundle claims. Caller is restricted
         // to the voting engine, which is already a trusted state machine.
         require(msg.sender == address(votingEngine), "Only engine");
+        _recordBundleQuestionTerminal(contentId, roundId, settled);
+    }
+
+    function syncBundleQuestionTerminal(uint256 contentId, uint256 roundId) external {
+        (RoundLib.RoundState state, uint48 settledAt) = _roundTerminalState(contentId, roundId);
+        require(settledAt != 0, "Round not terminal");
+        _recordBundleQuestionTerminal(contentId, roundId, state == RoundLib.RoundState.Settled);
+    }
+
+    function _recordBundleQuestionTerminal(uint256 contentId, uint256 roundId, bool settled) internal {
         uint256 bundleId = contentBundleId[contentId];
         if (bundleId == 0) return;
 
@@ -997,9 +1007,17 @@ contract QuestionRewardPoolEscrow is
         view
         returns (bool)
     {
-        (, RoundLib.RoundState state,,,,,,,,, uint48 settledAt,,,) = votingEngine.rounds(contentId, roundId);
+        (RoundLib.RoundState state, uint48 settledAt) = _roundTerminalState(contentId, roundId);
         return state == RoundLib.RoundState.Settled && settledAt != 0
             && (bundle.bountyClosesAt == 0 || settledAt <= bundle.bountyClosesAt);
+    }
+
+    function _roundTerminalState(uint256 contentId, uint256 roundId)
+        internal
+        view
+        returns (RoundLib.RoundState state, uint48 settledAt)
+    {
+        (, state,,,,,,,,, settledAt,,,) = votingEngine.rounds(contentId, roundId);
     }
 
     function _requireCompletedBundleRoundSet(uint256 bundleId, uint256 roundSetIndex, address account)
@@ -1036,6 +1054,14 @@ contract QuestionRewardPoolEscrow is
             if (i == 0) {
                 frontend = questionFrontend;
                 firstCommitKey = commitKey;
+            } else if (questionFrontend != frontend) {
+                frontend = address(0);
+            }
+            if (
+                questionFrontend != address(0)
+                    && !votingEngine.frontendEligibleAtCommit(question.contentId, roundId, commitKey)
+            ) {
+                frontend = address(0);
             }
             unchecked {
                 ++i;
