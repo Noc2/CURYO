@@ -2,7 +2,14 @@ import { MCP_SCOPES, McpAuthError, authenticateMcpRequest, getConfiguredMcpAgent
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { after, before, beforeEach, test } from "node:test";
-import { hashMcpBearerToken } from "~~/lib/agent/policies";
+import {
+  AgentPolicyLifecycleError,
+  hashMcpBearerToken,
+  normalizeAgentPolicyInput,
+  rotateAgentPolicyToken,
+  updateAgentPolicyStatus,
+  upsertAgentPolicy,
+} from "~~/lib/agent/policies";
 
 const env = process.env as Record<string, string | undefined>;
 const originalAgents = env.CURYO_MCP_AGENTS;
@@ -123,4 +130,55 @@ test("authenticateMcpRequest accepts active DB-backed policy tokens", async () =
   assert.equal(agent.walletAddress, "0x00000000000000000000000000000000000000bb");
   assert.equal(agent.perAskLimitAtomic, 3_000_000n);
   assert.equal(agent.allowedCategoryIds?.has("6"), true);
+});
+
+test("agent policy token rotation does not revive paused or revoked policies", async () => {
+  const ownerWalletAddress = "0x00000000000000000000000000000000000000aa";
+  const agentWalletAddress = "0x00000000000000000000000000000000000000bb";
+  const createdPolicy = await upsertAgentPolicy(
+    ownerWalletAddress,
+    normalizeAgentPolicyInput({
+      agentId: "research-agent",
+      agentWalletAddress,
+      categories: ["6"],
+      dailyBudgetAtomic: "9000000",
+      perAskLimitAtomic: "3000000",
+      scopes: [MCP_SCOPES.ask, MCP_SCOPES.balance],
+    }),
+  );
+  const pausedPolicy = await updateAgentPolicyStatus({
+    ownerWalletAddress,
+    policyId: createdPolicy.id,
+    status: "paused",
+  });
+
+  const rotated = await rotateAgentPolicyToken({ ownerWalletAddress, policyId: pausedPolicy.id });
+
+  assert.equal(rotated.policy.status, "paused");
+
+  await updateAgentPolicyStatus({ ownerWalletAddress, policyId: createdPolicy.id, status: "revoked" });
+  await assert.rejects(
+    () => rotateAgentPolicyToken({ ownerWalletAddress, policyId: createdPolicy.id }),
+    (error: unknown) => error instanceof AgentPolicyLifecycleError,
+  );
+  await assert.rejects(
+    () => updateAgentPolicyStatus({ ownerWalletAddress, policyId: createdPolicy.id, status: "active" }),
+    (error: unknown) => error instanceof AgentPolicyLifecycleError,
+  );
+  await assert.rejects(
+    () =>
+      upsertAgentPolicy(
+        ownerWalletAddress,
+        normalizeAgentPolicyInput({
+          agentId: "research-agent",
+          agentWalletAddress,
+          categories: ["6"],
+          dailyBudgetAtomic: "9000000",
+          perAskLimitAtomic: "3000000",
+          policyId: createdPolicy.id,
+          scopes: [MCP_SCOPES.ask, MCP_SCOPES.balance],
+        }),
+      ),
+    (error: unknown) => error instanceof AgentPolicyLifecycleError,
+  );
 });

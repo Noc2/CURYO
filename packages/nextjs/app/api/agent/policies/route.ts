@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listAgentPolicies, upsertAgentPolicy } from "~~/lib/agent/policies";
+import { AgentPolicyLifecycleError, listAgentPolicies, upsertAgentPolicy } from "~~/lib/agent/policies";
 import {
   READ_AGENT_POLICIES_ACTION,
   SAVE_AGENT_POLICY_ACTION,
@@ -135,6 +135,9 @@ export async function PUT(request: NextRequest) {
     const policy = await upsertAgentPolicy(normalized.payload.normalizedAddress, normalized.payload.policy);
     return createSignedReadResponse(normalized.payload.normalizedAddress, "agent_policies", { ok: true, policy });
   } catch (error) {
+    if (error instanceof AgentPolicyLifecycleError) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
     console.error("Error saving agent policy:", error);
     return NextResponse.json({ error: "Failed to save agent policy" }, { status: 500 });
   }

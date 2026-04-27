@@ -43,6 +43,13 @@ export type AgentAskSummary = {
   updatedAt: string;
 };
 
+export class AgentPolicyLifecycleError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AgentPolicyLifecycleError";
+  }
+}
+
 export type AgentPolicyInput = {
   agentId: string;
   agentWalletAddress: string;
@@ -245,6 +252,9 @@ export async function upsertAgentPolicy(
     args: [ownerWalletAddress, input.policyId ?? input.agentId],
   });
   const existing = existingResult.rows[0] as Record<string, unknown> | undefined;
+  if (existing && String(existing.status) === "revoked") {
+    throw new AgentPolicyLifecycleError("Revoked managed agents cannot be updated. Create a new agent policy.");
+  }
   const policyId = existing ? String(existing.id) : input.policyId || `agent_policy_${randomUUID()}`;
   const eventType = existing ? "updated" : "created";
 
@@ -254,14 +264,12 @@ export async function upsertAgentPolicy(
         UPDATE agent_wallet_policies
         SET agent_id = ?,
             agent_wallet_address = ?,
-            status = 'active',
             scopes = ?,
             categories = ?,
             daily_budget_atomic = ?,
             per_ask_limit_atomic = ?,
             expires_at = ?,
-            updated_at = ?,
-            revoked_at = NULL
+            updated_at = ?
         WHERE id = ? AND owner_wallet_address = ?
       `,
       args: [
@@ -340,6 +348,12 @@ export async function updateAgentPolicyStatus(params: {
   status: AgentPolicyStatus;
 }): Promise<AgentPolicyRecord> {
   if (!AGENT_POLICY_STATUSES.includes(params.status)) throw new Error("Invalid policy status.");
+  const existing = await getAgentPolicy(params.ownerWalletAddress, params.policyId);
+  if (!existing) throw new Error("Agent policy was not found.");
+  if (existing.status === "revoked" && params.status !== "revoked") {
+    throw new AgentPolicyLifecycleError("Revoked managed agents cannot be reactivated. Create a new agent policy.");
+  }
+
   const now = createAgentPolicyTimestamp();
   const revokedAt = params.status === "revoked" ? now : null;
   await dbClient.execute({
@@ -381,6 +395,12 @@ export async function rotateAgentPolicyToken(params: {
   ownerWalletAddress: `0x${string}`;
   policyId: string;
 }): Promise<{ policy: AgentPolicyRecord; token: string }> {
+  const existing = await getAgentPolicy(params.ownerWalletAddress, params.policyId);
+  if (!existing) throw new Error("Agent policy was not found.");
+  if (existing.status === "revoked") {
+    throw new AgentPolicyLifecycleError("Revoked managed agents cannot receive new tokens. Create a new agent policy.");
+  }
+
   const token = `${TOKEN_PREFIX}${randomBytes(32).toString("base64url")}`;
   const now = createAgentPolicyTimestamp();
   await dbClient.execute({
@@ -389,9 +409,7 @@ export async function rotateAgentPolicyToken(params: {
       SET token_hash = ?,
           token_issued_at = ?,
           token_revoked_at = NULL,
-          status = 'active',
-          updated_at = ?,
-          revoked_at = NULL
+          updated_at = ?
       WHERE owner_wallet_address = ? AND id = ?
     `,
     args: [hashMcpBearerToken(token), now, now, params.ownerWalletAddress, params.policyId],

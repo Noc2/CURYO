@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { type AgentPolicyStatus, updateAgentPolicyStatus } from "~~/lib/agent/policies";
+import { AgentPolicyLifecycleError, type AgentPolicyStatus, updateAgentPolicyStatus } from "~~/lib/agent/policies";
 import {
   PAUSE_AGENT_POLICY_ACTION,
   RESUME_AGENT_POLICY_ACTION,
@@ -73,6 +73,9 @@ export async function POST(request: NextRequest) {
     });
     return createSignedReadResponse(normalized.payload.normalizedAddress, "agent_policies", { ok: true, policy });
   } catch (error) {
+    if (error instanceof AgentPolicyLifecycleError) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
     console.error("Error updating agent policy status:", error);
     return NextResponse.json({ error: "Failed to update agent policy status" }, { status: 500 });
   }

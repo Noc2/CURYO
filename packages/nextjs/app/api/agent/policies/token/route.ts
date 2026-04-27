@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { revokeAgentPolicyToken, rotateAgentPolicyToken } from "~~/lib/agent/policies";
+import { AgentPolicyLifecycleError, revokeAgentPolicyToken, rotateAgentPolicyToken } from "~~/lib/agent/policies";
 import {
   REVOKE_AGENT_POLICY_TOKEN_ACTION,
   ROTATE_AGENT_POLICY_TOKEN_ACTION,
@@ -12,11 +12,11 @@ import { checkRateLimit } from "~~/utils/rateLimit";
 
 const WRITE_RATE_LIMIT = { limit: 20, windowMs: 60_000 };
 
-function buildMcpConfig(token: string) {
+function buildMcpConfig(token: string, request: NextRequest) {
   return {
     mcpServers: {
       curyo: {
-        url: "/api/mcp",
+        url: new URL("/api/mcp", request.url).toString(),
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -78,9 +78,12 @@ export async function POST(request: NextRequest) {
       ok: true,
       policy,
       token,
-      mcpConfig: buildMcpConfig(token),
+      mcpConfig: buildMcpConfig(token, request),
     });
   } catch (error) {
+    if (error instanceof AgentPolicyLifecycleError) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
     console.error("Error rotating agent policy token:", error);
     return NextResponse.json({ error: "Failed to rotate agent policy token" }, { status: 500 });
   }
