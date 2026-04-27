@@ -37,6 +37,7 @@ contract CuryoGovernor is
     /// @notice Protocol-controlled holders whose balances are excluded from quorum calculation.
     address[] private _excludedHolders;
     mapping(address => bool) public isExcludedHolder;
+    mapping(address => uint48) public excludedHolderEffectiveBlock;
     /// @notice Whether excluded holders have been set.
     bool public poolsInitialized;
     /// @notice Bootstrap proposal threshold regardless of early faucet claim sizes (1K HREP with 6 decimals)
@@ -61,7 +62,6 @@ contract CuryoGovernor is
 
     error ExcludedHolderCannotGovern(address holder);
     error InvalidExcludedHolder();
-    error ExcludedHolderHasVotes(address holder);
     error ProposalCooldownActive(address proposer, uint256 nextProposalBlock);
     error InvalidProposalThreshold();
     error InvalidGovernanceTiming();
@@ -88,8 +88,7 @@ contract CuryoGovernor is
 
     /// @notice One-time initialization of protocol-controlled holders excluded from dynamic quorum.
     /// @dev Can only be called once by the deployment initializer.
-    ///      After initialization, governance may only replace a fully drained holder with
-    ///      a zero-vote holder. This preserves quorum during protocol contract migrations.
+    ///      Initial holders are effective for all historical quorum lookups.
     function initializePools(address[] calldata excludedHolders) external {
         require(!poolsInitialized, "Pools already initialized");
         require(msg.sender == poolsInitializer || msg.sender == timelock(), "Only pools initializer");
@@ -101,34 +100,26 @@ contract CuryoGovernor is
             require(holder != address(0), "Invalid address");
             require(!isExcludedHolder[holder], "Duplicate holder");
             isExcludedHolder[holder] = true;
+            excludedHolderEffectiveBlock[holder] = 0;
             _excludedHolders.push(holder);
         }
         poolsInitialized = true;
     }
 
-    /// @notice Replace a drained excluded holder with a new zero-balance protocol holder.
-    /// @dev Timelock-only via Governor.onlyGovernance. Both addresses must have zero
-    ///      current voting power so governance cannot exclude already-circulating HREP.
+    /// @notice Add a migrated protocol holder to future quorum exclusions.
+    /// @dev Timelock-only via Governor.onlyGovernance. The old holder remains excluded so
+    ///      past quorum snapshots keep their original exclusion set and dust cannot block migration.
     function replaceExcludedHolder(address oldHolder, address newHolder) external onlyGovernance {
         if (!poolsInitialized || !isExcludedHolder[oldHolder] || newHolder == address(0) || isExcludedHolder[newHolder])
         {
             revert InvalidExcludedHolder();
         }
-        if (hrepToken.getVotes(oldHolder) != 0) revert ExcludedHolderHasVotes(oldHolder);
-        if (hrepToken.getVotes(newHolder) != 0) revert ExcludedHolderHasVotes(newHolder);
+        require(_excludedHolders.length < MAX_EXCLUDED_HOLDERS, "Too many excluded holders");
 
-        uint256 excludedHoldersLength = _excludedHolders.length;
-        for (uint256 i = 0; i < excludedHoldersLength; i++) {
-            if (_excludedHolders[i] == oldHolder) {
-                _excludedHolders[i] = newHolder;
-                isExcludedHolder[oldHolder] = false;
-                isExcludedHolder[newHolder] = true;
-                emit ExcludedHolderReplaced(oldHolder, newHolder);
-                return;
-            }
-        }
-
-        revert InvalidExcludedHolder();
+        isExcludedHolder[newHolder] = true;
+        excludedHolderEffectiveBlock[newHolder] = uint48(block.number);
+        _excludedHolders.push(newHolder);
+        emit ExcludedHolderReplaced(oldHolder, newHolder);
     }
 
     /// @notice Return the full set of holders excluded from quorum calculations.
@@ -177,7 +168,10 @@ contract CuryoGovernor is
         uint256 locked = 0;
         uint256 excludedHoldersLength = _excludedHolders.length;
         for (uint256 i = 0; i < excludedHoldersLength; i++) {
-            locked += hrepToken.getPastVotes(_excludedHolders[i], blockNumber);
+            address holder = _excludedHolders[i];
+            if (excludedHolderEffectiveBlock[holder] <= blockNumber) {
+                locked += hrepToken.getPastVotes(holder, blockNumber);
+            }
         }
         uint256 circulating = totalSupply > locked ? totalSupply - locked : 0;
         uint256 dynamicQuorum = (circulating * quorumNumerator(blockNumber)) / quorumDenominator();
