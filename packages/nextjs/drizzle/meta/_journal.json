@@ -64,6 +64,20 @@
       "when": 1776774400000,
       "tag": "0008_agent_callback_delivery",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1776778000000,
+      "tag": "0009_x402_submission_tokens",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1776781600000,
+      "tag": "0010_agent_wallet_policies",
+      "breakpoints": true
     }
   ]
 }

@@ -394,6 +394,62 @@ export const mcpAgentDailyBudgetUsage = pgTable(
 export type McpAgentDailyBudgetUsage = typeof mcpAgentDailyBudgetUsage.$inferSelect;
 export type NewMcpAgentDailyBudgetUsage = typeof mcpAgentDailyBudgetUsage.$inferInsert;
 
+export const agentWalletPolicies = pgTable(
+  "agent_wallet_policies",
+  {
+    id: text("id").primaryKey(),
+    ownerWalletAddress: text("owner_wallet_address").notNull(),
+    agentId: text("agent_id").notNull(),
+    agentWalletAddress: text("agent_wallet_address").notNull(),
+    status: text("status").notNull(),
+    scopes: text("scopes").notNull(),
+    categories: text("categories"),
+    dailyBudgetAtomic: text("daily_budget_atomic").notNull(),
+    perAskLimitAtomic: text("per_ask_limit_atomic").notNull(),
+    expiresAt: timestamp("expires_at", { mode: "date", withTimezone: true }),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).notNull(),
+    revokedAt: timestamp("revoked_at", { mode: "date", withTimezone: true }),
+  },
+  table => ({
+    ownerAgentUnique: uniqueIndex("agent_wallet_policies_owner_agent_unique").on(
+      table.ownerWalletAddress,
+      table.agentId,
+    ),
+    ownerStatusIdx: index("agent_wallet_policies_owner_status_idx").on(
+      table.ownerWalletAddress,
+      table.status,
+      table.updatedAt,
+    ),
+    agentWalletIdx: index("agent_wallet_policies_agent_wallet_idx").on(table.agentWalletAddress, table.status),
+  }),
+);
+
+export type AgentWalletPolicy = typeof agentWalletPolicies.$inferSelect;
+export type NewAgentWalletPolicy = typeof agentWalletPolicies.$inferInsert;
+
+export const agentWalletPolicyAuditRecords = pgTable(
+  "agent_wallet_policy_audit_records",
+  {
+    id: serial("id").primaryKey(),
+    policyId: text("policy_id").notNull(),
+    ownerWalletAddress: text("owner_wallet_address").notNull(),
+    agentId: text("agent_id").notNull(),
+    agentWalletAddress: text("agent_wallet_address").notNull(),
+    eventType: text("event_type").notNull(),
+    status: text("status").notNull(),
+    details: text("details"),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
+  },
+  table => ({
+    policyCreatedIdx: index("agent_wallet_policy_audit_policy_created_idx").on(table.policyId, table.createdAt),
+    ownerCreatedIdx: index("agent_wallet_policy_audit_owner_created_idx").on(table.ownerWalletAddress, table.createdAt),
+  }),
+);
+
+export type AgentWalletPolicyAuditRecord = typeof agentWalletPolicyAuditRecords.$inferSelect;
+export type NewAgentWalletPolicyAuditRecord = typeof agentWalletPolicyAuditRecords.$inferInsert;
+
 export const agentCallbackSubscriptions = pgTable(
   "agent_callback_subscriptions",
   {
