@@ -967,17 +967,22 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         vm.stopPrank();
     }
 
-    // --- submitContent: VoterIdNFT no longer gates submissions ---
+    // --- submitContent: VoterIdNFT gates canonical submitter identity ---
 
-    function test_SubmitContentDoesNotRequireVoterIdWhenSet() public {
+    function test_SubmitContentRequiresVoterIdWhenSet() public {
         vm.prank(admin);
         registry.setVoterIdNFT(address(voterNFT));
 
         vm.startPrank(submitter);
         hrep.approve(address(registry), 10e6);
-        uint256 id = _submitContentWithReservation(registry, "https://example.com/nft", "goal", "goal", "tag1", 0);
+        NoMediaQuestionText memory question =
+            NoMediaQuestionText({ url: "https://example.com/nft", title: "goal", description: "goal", tags: "tag1" });
+        bytes32 salt = _contentSubmissionSalt(question.url, submitter);
+        _reserveNoMediaQuestionSubmission(registry, question, 1, salt, submitter);
+        vm.warp(block.timestamp + 1);
+        vm.expectRevert("Voter ID required");
+        _submitNoMediaQuestion(registry, question, 1, salt);
         vm.stopPrank();
-        assertEq(id, 1);
     }
 
     function test_SubmitContentSucceedsWithVoterId() public {

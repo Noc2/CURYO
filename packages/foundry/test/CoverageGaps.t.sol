@@ -814,6 +814,14 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
     function test_OneSidedConsensusWithZeroReserve() public {
         vm.startPrank(owner);
 
+        ContentRegistry regImpl2 = new ContentRegistry();
+        ContentRegistry registry2 = ContentRegistry(
+            address(
+                new ERC1967Proxy(
+                    address(regImpl2), abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(hrep)))
+                )
+            )
+        );
         RoundVotingEngine engImpl2 = new RoundVotingEngine();
         RoundVotingEngine engine2 = RoundVotingEngine(
             address(
@@ -821,7 +829,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
                     address(engImpl2),
                     abi.encodeCall(
                         RoundVotingEngine.initialize,
-                        (owner, address(hrep), address(registry), address(_deployProtocolConfig(owner)))
+                        (owner, address(hrep), address(registry2), address(_deployProtocolConfig(owner)))
                     )
                 )
             )
@@ -833,15 +841,17 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
                 new ERC1967Proxy(
                     address(distImpl2),
                     abi.encodeCall(
-                        RoundRewardDistributor.initialize, (owner, address(hrep), address(engine2), address(registry))
+                        RoundRewardDistributor.initialize, (owner, address(hrep), address(engine2), address(registry2))
                     )
                 )
             )
         );
 
-        registry.setVotingEngine(address(engine2));
+        registry2.setVotingEngine(address(engine2));
         MockCategoryRegistry mockCategoryRegistry2 = new MockCategoryRegistry();
         mockCategoryRegistry2.seedDefaultTestCategories();
+        registry2.setCategoryRegistry(address(mockCategoryRegistry2));
+        registry2.setProtocolConfig(address(engine2.protocolConfig()));
         ProtocolConfig(address(engine2.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry2));
         ProtocolConfig(address(engine2.protocolConfig())).setRewardDistributor(address(dist2));
         ProtocolConfig(address(engine2.protocolConfig())).setTreasury(treasury);
@@ -852,8 +862,8 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         assertEq(engine2.consensusReserve(), 0);
 
         vm.startPrank(submitter);
-        hrep.approve(address(registry), 10e6);
-        _submitContentWithReservation(registry, "https://example.com/zero-reserve", "goal", "goal", "test", 0);
+        hrep.approve(address(registry2), 10e6);
+        _submitContentWithReservation(registry2, "https://example.com/zero-reserve", "goal", "goal", "test", 0);
         vm.stopPrank();
         uint256 contentId = 1;
 
