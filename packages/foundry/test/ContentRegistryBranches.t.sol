@@ -635,6 +635,12 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             rewardPoolExpiresAt
         );
 
+        vm.prank(owner);
+        registry.setVoterIdNFT(address(mockVoterIdNFT));
+        mockVoterIdNFT.setHolder(submitter);
+        vm.prank(submitter);
+        mockVoterIdNFT.setDelegate(agentWallet);
+
         vm.startPrank(agentWallet);
         hrepToken.approve(address(mockQuestionRewardPoolEscrow), rewardAmount);
         _reserveQuestionSubmissionWithRewardTerms(
@@ -669,7 +675,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.stopPrank();
 
         assertEq(registry.getContentSubmitter(id), agentWallet);
-        assertEq(registry.getSubmitterIdentity(id), agentWallet);
+        assertEq(registry.getSubmitterIdentity(id), submitter);
         assertEq(mockQuestionRewardPoolEscrow.lastContentId(), id);
         assertEq(mockQuestionRewardPoolEscrow.lastFunder(), agentWallet);
         assertEq(mockQuestionRewardPoolEscrow.lastAmount(), rewardAmount);
@@ -1141,15 +1147,20 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         );
     }
 
-    function test_SubmitContent_VoterIdConfigured_AllowsWithoutId() public {
+    function test_SubmitContent_VoterIdConfigured_RevertsWithoutId() public {
         vm.prank(owner);
         registry.setVoterIdNFT(address(mockVoterIdNFT));
 
         vm.startPrank(submitter);
         hrepToken.approve(address(registry), 10e6);
-        uint256 id = _submitContentWithReservation(registry, "https://example.com/no-id", "goal", "goal", "tags", 0);
+        NoMediaQuestionText memory question =
+            NoMediaQuestionText({ url: "https://example.com/no-id", title: "goal", description: "goal", tags: "tags" });
+        bytes32 salt = _contentSubmissionSalt(question.url, submitter);
+        _reserveNoMediaQuestionSubmission(registry, question, 1, salt, submitter);
+        vm.warp(block.timestamp + 1);
+        vm.expectRevert("Voter ID required");
+        _submitNoMediaQuestion(registry, question, 1, salt);
         vm.stopPrank();
-        assertEq(id, 1);
     }
 
     function test_SubmitContent_VoterIdConfigured_SucceedsWithId() public {
@@ -1528,7 +1539,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         mockVoterIdNFT.removeDelegate();
 
         vm.prank(delegate);
-        vm.expectRevert("Not submitter");
+        vm.expectRevert("Voter ID required");
         registry.cancelContent(contentId);
 
         vm.prank(submitter);

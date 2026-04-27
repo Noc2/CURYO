@@ -1002,7 +1002,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     /// @dev Resets the activity timer. Max MAX_REVIVALS revivals per content.
     ///      Revival stake is sent to treasury (non-refundable).
     function reviveContent(uint256 contentId) external nonReentrant whenNotPaused {
-        // Revivals still require Voter ID; fresh question submissions are permissionless with a bounty.
+        // Revivals still require the canonical submitter identity while preserving the original submission key.
         if (address(voterIdNFT) != address(0)) {
             require(voterIdNFT.hasVoterId(msg.sender), "Voter ID required");
         }
@@ -1372,13 +1372,12 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
     function _resolveSubmitterIdentity(address submitter) internal view returns (address) {
         if (submitter == address(0)) return address(0);
-        if (address(voterIdNFT) != address(0)) {
-            address resolved = voterIdNFT.resolveHolder(submitter);
-            if (resolved != address(0)) {
-                return resolved;
-            }
+        if (address(voterIdNFT) == address(0)) {
+            return submitter;
         }
-        return submitter;
+        address resolved = voterIdNFT.resolveHolder(submitter);
+        require(resolved != address(0), "Voter ID required");
+        return resolved;
     }
 
     function _getDormancyAnchor(uint256 contentId) internal view returns (uint256) {

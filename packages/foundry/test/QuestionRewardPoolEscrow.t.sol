@@ -1094,7 +1094,8 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         bytes32 salt = keccak256("agent-wallet-usdc-submission-bounty");
         activeTlockContentRegistry = registry;
 
-        voterIdNFT.setHolder(agentWallet);
+        vm.prank(submitter);
+        voterIdNFT.setDelegate(agentWallet);
         usdc.mint(agentWallet, REWARD_POOL_AMOUNT);
 
         (, bytes32 submissionKey) =
@@ -1120,26 +1121,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         uint256 escrowBalanceBefore = usdc.balanceOf(address(rewardPoolEscrow));
         uint256 agentBalanceBefore = usdc.balanceOf(agentWallet);
         uint256 expectedContentId = registry.nextContentId();
-        uint256 expectedRewardPoolId = rewardPoolEscrow.nextRewardPoolId();
-        uint256 agentVoterId = voterIdNFT.getTokenId(agentWallet);
 
-        vm.expectEmit(true, true, true, true, address(rewardPoolEscrow));
-        emit RewardPoolCreated(
-            expectedRewardPoolId,
-            expectedContentId,
-            agentWallet,
-            agentVoterId,
-            rewardTerms.amount,
-            rewardTerms.requiredVoters,
-            rewardTerms.requiredSettledRounds,
-            1,
-            block.timestamp,
-            rewardTerms.bountyClosesAt,
-            rewardTerms.feedbackClosesAt,
-            rewardPoolEscrow.defaultFrontendFeeBps(),
-            REWARD_ASSET_USDC,
-            true
-        );
         uint256 contentId = registry.submitQuestionWithRewardAndRoundConfig(
             contextUrl,
             imageUrls,
@@ -1156,9 +1138,36 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
 
         assertEq(contentId, expectedContentId);
         assertEq(registry.getContentSubmitter(contentId), agentWallet);
-        assertEq(registry.getSubmitterIdentity(contentId), agentWallet);
+        assertEq(registry.getSubmitterIdentity(contentId), submitter);
         assertEq(usdc.balanceOf(address(rewardPoolEscrow)), escrowBalanceBefore + rewardTerms.amount);
         assertEq(usdc.balanceOf(agentWallet), agentBalanceBefore - rewardTerms.amount);
+    }
+
+    function testUndelegatedAgentQuestionSubmissionWithRewardReverts() public {
+        address agentWallet = address(0xA11CE);
+        _submitAgentQuestionWithUsdcReward(agentWallet, "agent-undelegated-revert", true);
+    }
+
+    function testDelegatedAgentSubmitterHolderCannotClaimQuestionReward() public {
+        address agentWallet = address(0xA11CE);
+        vm.prank(submitter);
+        voterIdNFT.setDelegate(agentWallet);
+
+        (uint256 contentId, uint256 rewardPoolId) =
+            _submitAgentQuestionWithUsdcReward(agentWallet, "agent-delegated-claim", false);
+        uint256 roundId = 1;
+        uint256 submitterVoterId = voterIdNFT.getTokenId(submitter);
+
+        _mockSettledRound(contentId, roundId, 4);
+        _mockRevealedCommitForVoterId(contentId, roundId, submitterVoterId, submitter);
+        _mockRevealedCommitForVoterId(contentId, roundId, voterIdNFT.getTokenId(voter1), voter1);
+        _mockRevealedCommitForVoterId(contentId, roundId, voterIdNFT.getTokenId(voter2), voter2);
+        _mockRevealedCommitForVoterId(contentId, roundId, voterIdNFT.getTokenId(voter3), voter3);
+
+        assertEq(rewardPoolEscrow.claimableQuestionReward(rewardPoolId, roundId, submitter), 0);
+        vm.prank(submitter);
+        vm.expectRevert("Excluded voter");
+        rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
     }
 
     function testUnderfundedRoundDoesNotQualifyAndCanBeSkipped() public {
@@ -1303,6 +1312,57 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         vm.warp(block.timestamp + 1);
         contentId = registry.submitQuestionWithRoundConfig(
             "https://example.com/context", imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, salt, roundConfig
+        );
+        vm.stopPrank();
+    }
+
+    function _submitAgentQuestionWithUsdcReward(address agentWallet, string memory path, bool expectVoterIdRevert)
+        internal
+        returns (uint256 contentId, uint256 rewardPoolId)
+    {
+        string memory contextUrl = string(abi.encodePacked("https://example.com/", path));
+        string[] memory imageUrls = new string[](1);
+        imageUrls[0] = string(abi.encodePacked(contextUrl, ".jpg"));
+        RoundLib.RoundConfig memory roundConfig = RoundLib.RoundConfig({
+            epochDuration: uint32(EPOCH_DURATION), maxDuration: uint32(7 days), minVoters: 3, maxVoters: 200
+        });
+        ContentRegistry.SubmissionRewardTerms memory rewardTerms = ContentRegistry.SubmissionRewardTerms({
+            asset: REWARD_ASSET_USDC,
+            amount: REWARD_POOL_AMOUNT,
+            requiredVoters: 3,
+            requiredSettledRounds: 1,
+            bountyClosesAt: block.timestamp + 30 days,
+            feedbackClosesAt: block.timestamp + 30 days
+        });
+        bytes32 salt = keccak256(abi.encodePacked(path, agentWallet));
+        activeTlockContentRegistry = registry;
+
+        usdc.mint(agentWallet, rewardTerms.amount);
+        (, bytes32 submissionKey) =
+            registry.previewQuestionSubmissionKey(contextUrl, imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID);
+        bytes32 revealCommitment = _questionRevealCommitment(
+            submissionKey,
+            _submissionMediaHash(imageUrls, ""),
+            QUESTION,
+            DESCRIPTION,
+            TAGS,
+            CATEGORY_ID,
+            salt,
+            agentWallet,
+            rewardTerms,
+            roundConfig
+        );
+
+        vm.startPrank(agentWallet);
+        usdc.approve(address(rewardPoolEscrow), rewardTerms.amount);
+        registry.reserveSubmission(revealCommitment);
+        vm.warp(block.timestamp + 1);
+        rewardPoolId = rewardPoolEscrow.nextRewardPoolId();
+        if (expectVoterIdRevert) {
+            vm.expectRevert("Voter ID required");
+        }
+        contentId = registry.submitQuestionWithRewardAndRoundConfig(
+            contextUrl, imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, salt, rewardTerms, roundConfig
         );
         vm.stopPrank();
     }
