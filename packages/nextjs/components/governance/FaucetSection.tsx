@@ -694,7 +694,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
               text={`${TIER_LABELS[currentTier] ?? `Tier ${currentTier}`}${claimantsUntilNextTier !== undefined && claimantsUntilNextTier > 0n ? ` — ${Number(claimantsUntilNextTier)} claims left` : ""}`}
             />
           </div>
-          <p className="text-2xl font-bold text-warning">Tier {currentTier}</p>
+          <p className="text-2xl font-bold text-primary">Tier {currentTier}</p>
         </div>
         <div className="bg-base-200 rounded-xl p-4">
           <p className="text-base text-base-content/60">Verification Service</p>
@@ -702,7 +702,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
             href="https://self.xyz"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-2xl font-bold link link-hover"
+            className="text-2xl font-bold text-primary link link-hover"
           >
             Self.xyz
           </a>
