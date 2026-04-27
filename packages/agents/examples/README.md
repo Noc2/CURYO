@@ -61,6 +61,6 @@ That keeps the integration narrow while still exercising quote, ask, wait, resul
 ### Backend workers
 
 - Start from `landing-pitch-review.ts`.
-- Use a managed MCP token with a configured wallet address. The hosted x402 bounty endpoint has been removed; funding goes directly from a user or agent-controlled wallet into protocol escrow.
-- For non-custodial agent-wallet funding, have the agent prepare the ask, execute the approved wallet calls with a user-scoped session key, then confirm the transaction hashes.
+- Use a managed MCP token with a configured wallet address.
+- Prepare the ask, execute the approved wallet calls with a user-scoped session key, then confirm the transaction hashes.
 - Keep live asks stable after submission. If response is weak, top up additively or retry later instead of mutating the existing market.

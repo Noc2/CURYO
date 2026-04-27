@@ -286,8 +286,8 @@ const SmartContracts: NextPage = () => {
           capped at 120 characters, the context/media submission key is checked for duplicates, and the question plus
           description are emitted in the canonical <code>ContentSubmitted</code> event for indexers and alternate
           frontends. The subjective template, rationale, and interpretation data stays off-chain; the contract only
-          commits to its hashes and emits <code>QuestionSpecAnchored</code>. The hosted x402 route uses this same
-          function after settling a Celo USDC payment from the bot wallet.
+          commits to its hashes and emits <code>QuestionSpecAnchored</code>. Agent asks use the same function after the
+          user or scoped agent wallet executes the returned funding and submission calls.
         </li>
         <li>
           <code>submitQuestionBundleWithRewardAndRoundConfig(..., rewardTerms, roundConfig)</code> &mdash; Submit a
