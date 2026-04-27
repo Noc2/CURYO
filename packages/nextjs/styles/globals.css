@@ -16,7 +16,7 @@
   name: "dark";
 
   --color-primary: #d56a3e;
-  --color-primary-content: #f8f2ed;
+  --color-primary-content: #090a0c;
   --color-secondary: #8b858e;
   --color-secondary-content: #f8f2ed;
   --color-accent: #b3341b;
@@ -29,8 +29,11 @@
   --color-base-content: #f5f0eb;
   --color-info: #8b858e;
   --color-success: #d56a3e;
+  --color-success-content: #090a0c;
   --color-warning: #d89a63;
-  --color-error: #bc5a52;
+  --color-warning-content: #090a0c;
+  --color-error: #e46f68;
+  --color-error-content: #090a0c;
 
   --radius-selector: 0.5rem;
   --radius-field: 0.5rem;
@@ -212,7 +215,7 @@ body {
   background: rgb(var(--curyo-surface-nested-rgb) / 0.96);
   box-shadow:
     inset 0 1px 0 rgb(245 240 235 / 0.03),
-    0 0 0 1px rgb(245 240 235 / 0.04);
+    0 0 0 1px rgb(245 240 235 / 0.36);
 }
 
 .input:hover,
@@ -221,7 +224,7 @@ body {
   border-color: transparent !important;
   box-shadow:
     inset 0 1px 0 rgb(245 240 235 / 0.04),
-    0 0 0 1px rgb(245 240 235 / 0.06);
+    0 0 0 1px rgb(245 240 235 / 0.44);
 }
 
 .input:focus,
@@ -234,24 +237,24 @@ body {
   border-color: transparent !important;
   box-shadow:
     inset 0 1px 0 rgb(245 240 235 / 0.04),
-    0 0 0 1.5px rgb(var(--curyo-ember-rgb) / 0.32);
+    0 0 0 2px rgb(var(--curyo-ember-rgb) / 0.8);
 }
 
 .header-search-input {
   box-shadow:
     inset 0 1px 0 rgb(245 240 235 / 0.03),
-    0 0 0 1px rgb(245 240 235 / 0.1),
+    0 0 0 1px rgb(245 240 235 / 0.36),
     0 10px 24px rgb(0 0 0 / 0.18);
 }
 
 .header-search-input::placeholder {
-  color: rgb(245 240 235 / 0.42);
+  color: rgb(245 240 235 / 0.58);
 }
 
 .header-search-input:hover {
   box-shadow:
     inset 0 1px 0 rgb(245 240 235 / 0.04),
-    0 0 0 1px rgb(245 240 235 / 0.14),
+    0 0 0 1px rgb(245 240 235 / 0.44),
     0 12px 26px rgb(0 0 0 / 0.2);
 }
 
@@ -259,7 +262,7 @@ body {
 .header-search-input:focus-within {
   box-shadow:
     inset 0 1px 0 rgb(245 240 235 / 0.04),
-    0 0 0 1.5px rgb(var(--curyo-ember-rgb) / 0.32),
+    0 0 0 2px rgb(var(--curyo-ember-rgb) / 0.8),
     0 14px 28px rgb(0 0 0 / 0.22);
 }
 
@@ -272,7 +275,7 @@ body {
   border-color: transparent !important;
   box-shadow:
     inset 0 1px 0 rgb(245 240 235 / 0.03),
-    0 0 0 1px rgb(248 113 113 / 0.34);
+    0 0 0 2px rgb(228 111 104 / 0.85);
 }
 
 .btn-primary {
@@ -435,7 +438,8 @@ body {
 }
 
 .link:hover {
-  opacity: 80%;
+  color: var(--curyo-ember-hover);
+  opacity: 1;
 }
 
 /* Surface card */
@@ -823,7 +827,8 @@ body {
 }
 
 .prose a:hover {
-  opacity: 0.8;
+  color: var(--curyo-ember-hover);
+  opacity: 1;
 }
 
 .docs-prose a {
@@ -849,7 +854,7 @@ body {
   border-radius: var(--curyo-radius-control);
   background: var(--curyo-ember);
   background-image: none;
-  color: var(--color-neutral-content);
+  color: var(--color-primary-content);
   box-shadow: 0 10px 24px rgb(var(--curyo-ember-rgb) / 0.2);
 }
 
