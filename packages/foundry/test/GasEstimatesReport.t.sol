@@ -73,6 +73,7 @@ contract UserTransactionGasEstimatesTest is RoundIntegrationTest {
     function testGasEstimate_submitContent_logs() public {
         vm.pauseGasMetering();
         uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
+        _ensureDefaultSubmitterVoterId(registry, submitter);
         address rewardEscrow = _ensureDefaultQuestionRewardPoolEscrow(registry);
         vm.startPrank(submitter);
         hrepToken.approve(rewardEscrow, rewardAmount);

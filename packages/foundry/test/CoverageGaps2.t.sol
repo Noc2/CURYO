@@ -1036,6 +1036,7 @@ contract ContentRegistryCoverageTest is VotingTestBase {
 
     function test_CancelContentNotSubmitterReverts() public {
         uint256 id = _submitContent(submitter, "https://example.com/nocancel");
+        MockVoterIdNFT(address(registry.voterIdNFT())).setHolder(other);
         vm.prank(other);
         vm.expectRevert("Not submitter");
         registry.cancelContent(id);
@@ -1135,6 +1136,7 @@ contract ContentRegistryCoverageTest is VotingTestBase {
 
     function test_ReviveContentNotDormantReverts() public {
         uint256 id = _submitContent(submitter, "https://example.com/revive2");
+        MockVoterIdNFT(address(registry.voterIdNFT())).setHolder(other);
         vm.startPrank(other);
         hrep.approve(address(registry), 5e6);
         vm.expectRevert("Not dormant");
