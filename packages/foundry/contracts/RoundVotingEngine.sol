@@ -861,7 +861,6 @@ contract RoundVotingEngine is
     function processUnrevealedVotes(uint256 contentId, uint256 roundId, uint256 startIndex, uint256 count)
         external
         nonReentrant
-        whenNotPaused
     {
         RoundLib.Round storage round = rounds[contentId][roundId];
 

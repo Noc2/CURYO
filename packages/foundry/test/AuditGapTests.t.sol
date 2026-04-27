@@ -264,8 +264,8 @@ contract AuditGapTests is VotingTestBase {
         assertEq(hrepToken.balanceOf(voter4), keeperBalanceBefore, "cancel should not pay keeper rewards");
     }
 
-    /// @notice Verify processUnrevealedVotes respects whenNotPaused
-    function test_Paused_ProcessUnrevealedVotes_Reverts() public {
+    /// @notice processUnrevealedVotes stays open while paused so terminal-round exits are not blocked.
+    function test_Paused_ProcessUnrevealedVotes_StillWorks() public {
         uint256 contentId = _submitContent("https://pause-test-4.com");
         (bytes32 s1, bytes32 ck1) = _commit(voter1, contentId, true, STAKE, address(0));
         (bytes32 s2, bytes32 ck2) = _commit(voter2, contentId, true, STAKE, address(0));
@@ -284,8 +284,8 @@ contract AuditGapTests is VotingTestBase {
         vm.prank(owner);
         votingEngine.pause();
 
-        vm.expectRevert(); // EnforcedPause
         votingEngine.processUnrevealedVotes(contentId, 1, 0, 10);
+        assertEq(votingEngine.roundUnrevealedCleanupRemaining(contentId, 1), 0);
     }
 
     /// @notice claimCancelledRoundRefund does NOT require whenNotPaused (users must always be able to withdraw)
