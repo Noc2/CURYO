@@ -22,10 +22,8 @@ type TlockClient = {
 };
 type TlockEncryptFn = (targetRound: number, payload: Uint8Array, client: unknown) => Promise<string>;
 type TlockDecryptFn = (ciphertext: string, client: unknown) => Promise<Uint8Array>;
-type TlockRoundAtFn = (targetTimeMs: number, chainInfo: TlockChainInfo) => number;
 type TlockModule = {
   mainnetClient: () => TlockClient;
-  roundAt: TlockRoundAtFn;
   timelockEncrypt: TlockEncryptFn;
   timelockDecrypt: TlockDecryptFn;
 };
@@ -80,7 +78,6 @@ const MIN_ENCRYPTED_BODY_LENGTH = 65;
 async function loadTlockModule(): Promise<TlockModule> {
   tlockModulePromise ??= import("tlock-js").then(module => ({
     mainnetClient: module.mainnetClient as TlockModule["mainnetClient"],
-    roundAt: module.roundAt as TlockModule["roundAt"],
     timelockEncrypt: module.timelockEncrypt as TlockModule["timelockEncrypt"],
     timelockDecrypt: module.timelockDecrypt as TlockModule["timelockDecrypt"],
   }));
@@ -341,7 +338,7 @@ async function createTlockVoteArtifacts(
   epochDurationSeconds: number,
   runtime: VoteTlockRuntime = {},
 ): Promise<{ ciphertext: VoteCiphertext; targetRound: bigint; drandChainHash: VoteDrandChainHash }> {
-  const { mainnetClient, roundAt, timelockEncrypt } = await loadTlockModule();
+  const { mainnetClient, timelockEncrypt } = await loadTlockModule();
   const client = runtime.client ?? mainnetClient();
   const now = runtime.now ?? Date.now;
   const encryptFn = runtime.encryptFn ?? timelockEncrypt;
@@ -349,13 +346,30 @@ async function createTlockVoteArtifacts(
   const targetRound =
     runtime.targetRound != null
       ? normalizeTlockTargetRound(runtime.targetRound)
-      : roundAt(now() + epochDurationSeconds * 1000, chainInfo);
+      : roundAtOrAfter(now() + epochDurationSeconds * 1000, chainInfo);
   const armored = await encryptFn(targetRound, Buffer.from(encodeVotePlaintext(isUp, salt)), client);
   return {
     ciphertext: stringToHex(armored) as VoteCiphertext,
     targetRound: BigInt(targetRound),
     drandChainHash: `0x${chainInfo.hash}` as VoteDrandChainHash,
   };
+}
+
+function roundAtOrAfter(targetTimeMs: number, chainInfo: TlockChainInfo): number {
+  if (!Number.isFinite(targetTimeMs)) {
+    throw new Error("Cannot use Infinity or NaN as a beacon time");
+  }
+
+  const genesisTimeMs = chainInfo.genesis_time * 1000;
+  const periodMs = chainInfo.period * 1000;
+  if (!Number.isFinite(genesisTimeMs) || !Number.isFinite(periodMs) || periodMs <= 0) {
+    throw new Error("Invalid tlock chain timing");
+  }
+  if (targetTimeMs < genesisTimeMs) {
+    throw new Error("Cannot request a round before the genesis time");
+  }
+
+  return Math.ceil((targetTimeMs - genesisTimeMs) / periodMs) + 1;
 }
 
 function normalizeTlockTargetRound(targetRound: bigint | number): number {
