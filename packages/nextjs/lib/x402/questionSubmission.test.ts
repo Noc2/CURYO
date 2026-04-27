@@ -4,11 +4,9 @@ import { __setDatabaseResourcesForTests, dbClient } from "~~/lib/db";
 import { createMemoryDatabaseResources } from "~~/lib/db/testMemory";
 import type { X402QuestionPayload } from "~~/lib/x402/questionPayload";
 import {
-  X402QuestionBountyPaymentsDisabledError,
   __setX402QuestionSubmissionTestOverridesForTests,
   completeManagedQuestionSubmissionRequest,
   getX402QuestionSubmissionByClientRequest,
-  handleX402QuestionSubmissionRequest,
   startManagedQuestionSubmissionRequest,
 } from "~~/lib/x402/questionSubmission";
 
@@ -129,29 +127,6 @@ test("startManagedQuestionSubmissionRequest only grants one live execution token
   });
   assert.equal(record?.status, "submitting");
   assert.equal(typeof record?.submissionToken, "string");
-});
-
-test("hosted x402 question bounty payments fail closed before operator custody", async () => {
-  const payload = buildPayload("x402-disabled");
-  await assert.rejects(
-    () =>
-      handleX402QuestionSubmissionRequest({
-        payload,
-        request: new Request("https://curyo.example/api/x402/questions", { method: "POST" }),
-      }),
-    (error: unknown) => {
-      assert.ok(error instanceof X402QuestionBountyPaymentsDisabledError);
-      assert.equal(error.status, 410);
-      assert.match(error.message, /operator executor wallet/i);
-      return true;
-    },
-  );
-
-  const record = await getX402QuestionSubmissionByClientRequest({
-    chainId: payload.chainId,
-    clientRequestId: payload.clientRequestId,
-  });
-  assert.equal(record, null);
 });
 
 test("completeManagedQuestionSubmissionRequest consumes the execution token before submit", async () => {

@@ -118,13 +118,13 @@ test("quoteQuestion uses direct authenticated agent HTTP when apiBaseUrl and tok
   assert.equal(response.fastLane?.pricingConfidence, "medium");
 });
 
-test("quoteQuestion rejects the disabled tokenless hosted x402 path", async () => {
+test("quoteQuestion rejects tokenless hosted asks without agent auth", async () => {
   let fetchCalls = 0;
   const agent = createCuryoAgentClient({
     apiBaseUrl: API_BASE_URL,
     fetchImpl: async () => {
       fetchCalls += 1;
-      throw new Error("disabled x402 quote should not call fetch");
+      throw new Error("tokenless quote should not call fetch");
     },
   });
 
@@ -142,18 +142,18 @@ test("quoteQuestion rejects the disabled tokenless hosted x402 path", async () =
           title: "Launch readiness?",
         },
       }),
-    /Hosted x402 question bounty payments are disabled/i,
+    /agent asks require mcpAccessToken/i,
   );
   assert.equal(fetchCalls, 0);
 });
 
-test("askHumans rejects the disabled tokenless hosted x402 path", async () => {
+test("askHumans rejects tokenless hosted asks without agent auth", async () => {
   let fetchCalls = 0;
   const agent = createCuryoAgentClient({
     apiBaseUrl: API_BASE_URL,
     fetchImpl: async () => {
       fetchCalls += 1;
-      throw new Error("disabled x402 ask should not call fetch");
+      throw new Error("tokenless ask should not call fetch");
     },
   });
 
@@ -173,11 +173,11 @@ test("askHumans rejects the disabled tokenless hosted x402 path", async () => {
 
   await assert.rejects(
     () => agent.askHumans(request),
-    /Hosted x402 question bounty payments are disabled/i,
+    /agent asks require mcpAccessToken/i,
   );
   await assert.rejects(
     () => agent.askHumans({ ...request, transport: "x402" }),
-    /Hosted x402 question bounty payments are disabled/i,
+    /agent asks require mcpAccessToken/i,
   );
   assert.equal(fetchCalls, 0);
 });

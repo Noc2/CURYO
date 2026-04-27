@@ -10,7 +10,7 @@
 ## Current State
 
 - Browser submissions already fund protocol escrow from the connected wallet.
-- Hosted `/api/x402/questions` bounty submission is disabled because the previous path settled USDC to the server executor wallet and then submitted the bounty.
+- The hosted `/api/x402/questions` bounty submission endpoint has been removed because the previous path settled USDC to the server executor wallet and then submitted the bounty.
 - The existing MCP paid ask path still uses the interim server executor after reserving an internal agent budget. Treat it as a migration target, not the final operator non-custodial model.
 - Redeploying contracts is compatible with this plan and gives us a chance to add cleaner agent-wallet primitives instead of preserving the x402 executor pattern.
 
@@ -38,11 +38,11 @@
 
 ## Commit Plan
 
-1. Disable custodial hosted x402 bounty submission.
-   - Return a migration error from `/api/x402/questions`.
+1. Remove custodial hosted x402 bounty submission.
+   - Delete `/api/x402/questions`.
    - Remove the callable operator-custodied x402 settlement helper.
    - Make the SDK stop defaulting tokenless asks into hosted x402.
-   - Add route, x402, and SDK tests.
+   - Add x402 and SDK tests.
 
 2. Update docs, env examples, legal copy, and this plan.
    - Stop advertising hosted x402 bounty submission.

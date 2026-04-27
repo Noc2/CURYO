@@ -448,8 +448,8 @@ const AIPage: NextPage = () => {
       </p>
       <ul>
         <li>
-          <code>/api/x402/questions</code> no longer settles hosted bounty payments to a server executor wallet; it
-          returns a migration error instead.
+          The legacy <code>/api/x402/questions</code> hosted bounty endpoint has been removed so it cannot settle bounty
+          payments to a server executor wallet.
         </li>
         <li>Use deterministic request IDs so retries return the same submitted question.</li>
         <li>Keep per-ask limits, daily budgets, category allowlists, expiry, and revocation visible before spend.</li>

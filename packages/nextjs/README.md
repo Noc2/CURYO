@@ -77,7 +77,7 @@ Key environment variables (see `.env.example` for the full list):
 | `NOTIFICATION_DELIVERY_SECRET`                    | Secret for the email delivery cron endpoint                                                                                              |
 | `NEXT_PUBLIC_PONDER_URL`                          | Public Ponder indexer URL (required in production)                                                                                       |
 | `THIRDWEB_SERVER_VERIFIER_SECRET`                 | Shared secret used by the thirdweb server verifier webhook                                                                               |
-| `CURYO_X402_EXECUTOR_PRIVATE_KEY`                 | Interim managed-agent executor key for existing MCP ask plumbing; not used by the disabled hosted x402 bounty route                     |
+| `CURYO_X402_EXECUTOR_PRIVATE_KEY`                 | Legacy managed-agent executor key; non-custodial agent asks should use wallet-signed transaction plans instead                         |
 | `CURYO_X402_SERVICE_FEE_USDC`                     | Optional managed-agent accounting fee in atomic USDC                                                                                     |
 | `CURYO_X402_USDC_ADDRESS`                         | Optional USDC override for managed-agent bounty accounting; Celo and Celo Sepolia default automatically                                  |
 | `NEXT_PUBLIC_QUESTION_REWARD_POOL_ESCROW_ADDRESS` | Optional question reward escrow override; supported chains default from `@curyo/contracts`                                               |
@@ -108,7 +108,7 @@ Notes:
 - For local development, `yarn dev:db` and `yarn dev:stack` manage a Docker Postgres container when `DATABASE_URL` points to localhost. `yarn dev:stack` only runs `db:push` automatically for local databases; non-local databases require a manual `yarn workspace @curyo/nextjs db:push` or the explicit `CURYO_DEV_STACK_ALLOW_REMOTE_DB_PUSH=1` opt-in.
 - On Next.js 15, `NextRequest.ip` is not reliably populated. On non-Vercel production hosts you must configure `RATE_LIMIT_TRUSTED_IP_HEADERS` to the header(s) your hosting proxy overwrites. Vercel auto-trusts `x-real-ip`, and localhost shortcuts are only enabled for development or explicit local production-style E2E builds. Protected API routes fail closed when no trusted client IP can be derived or when the rate-limit store is unavailable.
 - The free transaction quota is enforced by the thirdweb server verifier route at `/api/thirdweb/verify-transaction`. Configure the same secret in thirdweb’s dashboard and in `THIRDWEB_SERVER_VERIFIER_SECRET`.
-- The hosted x402 question route lives at `/api/x402/questions`, but paid bounty submission is disabled. The route returns a migration error instead of settling Celo USDC to an operator executor wallet. Future x402-compatible funding should pay or authorize the decentralized protocol escrow directly and let any relayer submit without taking custody.
+- The hosted x402 question route at `/api/x402/questions` has been removed. Future x402-compatible funding should pay or authorize the decentralized protocol escrow directly and let any relayer submit without taking custody.
 - The Next.js dev faucet reads `KEYSTORE_ACCOUNT`/`KEYSTORE_PASSWORD` or `FAUCET_PRIVATE_KEY` from `packages/nextjs/.env.local`. Keeper wallet settings live separately in `packages/keeper/.env.local`.
 
 ## Project Structure

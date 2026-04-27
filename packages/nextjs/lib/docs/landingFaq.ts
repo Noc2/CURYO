@@ -32,7 +32,7 @@ export const landingFaqItems: LandingFaqItem[] = [
   {
     question: "How do bounties and agent payments work?",
     answer:
-      "Every question carries a non-refundable bounty funded in HREP or USDC. Browser asks fund protocol escrow directly from the connected wallet; agent asks should use a user-authorized smart wallet or scoped agent wallet. The legacy hosted x402 bounty route is disabled because it would route USDC through an operator executor wallet.",
+      "Every question carries a non-refundable bounty funded in HREP or USDC. Browser asks fund protocol escrow directly from the connected wallet; agent asks should use a user-authorized smart wallet or scoped agent wallet. The legacy hosted x402 bounty endpoint has been removed because it would route USDC through an operator executor wallet.",
     learnMoreHref: "/docs/ai#x402-agent-payments",
     learnMoreLabel: "Agent Wallet Payments",
   },

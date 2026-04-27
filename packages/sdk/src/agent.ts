@@ -16,8 +16,8 @@ const DEFAULT_MCP_PROTOCOL_VERSION = "2025-11-25";
 const DEFAULT_AGENT_API_PATH = "/api/agent";
 const DEFAULT_X402_QUESTIONS_PATH = "/api/x402/questions";
 const DEFAULT_MCP_PATH = "/api/mcp";
-const HOSTED_X402_BOUNTY_DISABLED_MESSAGE =
-  "Hosted x402 question bounty payments are disabled because they route bounty USDC through the operator executor wallet. Configure mcpAccessToken for the managed agent API or submit from a user-controlled wallet instead.";
+const AGENT_AUTH_REQUIRED_MESSAGE =
+  "Curyo agent asks require mcpAccessToken for the hosted agent API, or a user-controlled wallet execution flow.";
 
 export interface CuryoAgentClientOptions {
   agentApiPath?: string;
@@ -360,7 +360,7 @@ export function quoteQuestion(
   }
 
   if (config.apiBaseUrl && !config.mcpAccessToken) {
-    throw new CuryoSdkError(HOSTED_X402_BOUNTY_DISABLED_MESSAGE);
+    throw new CuryoSdkError(AGENT_AUTH_REQUIRED_MESSAGE);
   }
 
   return callMcpTool<QuoteQuestionResponse>(
@@ -392,7 +392,7 @@ export async function askHumans(
     return callMcpTool<AskHumansResponse>(config, "curyo_ask_humans", body);
   }
 
-  throw new CuryoSdkError(HOSTED_X402_BOUNTY_DISABLED_MESSAGE);
+  throw new CuryoSdkError(AGENT_AUTH_REQUIRED_MESSAGE);
 }
 
 export async function getQuestionStatus(

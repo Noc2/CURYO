@@ -101,17 +101,6 @@ export class X402QuestionConflictError extends Error {
   }
 }
 
-export class X402QuestionBountyPaymentsDisabledError extends Error {
-  readonly status = 410;
-
-  constructor() {
-    super(
-      "Hosted x402 question bounty payments are disabled because they route bounty USDC through the operator executor wallet. Use managed agent wallet delegation or submit from a user-controlled wallet instead.",
-    );
-    this.name = "X402QuestionBountyPaymentsDisabledError";
-  }
-}
-
 let x402QuestionSubmissionTestOverrides: X402QuestionSubmissionTestOverrides | null = null;
 
 function sleep(ms: number) {
@@ -922,14 +911,6 @@ export function x402QuestionSubmissionRecordBody(record: X402QuestionSubmissionR
     transactionHashes: parseStoredTransactionHashes(record.transactionHashes),
     updatedAt: record.updatedAt.toISOString(),
   };
-}
-
-export async function handleX402QuestionSubmissionRequest(params: {
-  payload: X402QuestionPayload;
-  request: Request;
-}): Promise<{ body: unknown; headers?: Record<string, string>; status: number }> {
-  void params;
-  throw new X402QuestionBountyPaymentsDisabledError();
 }
 
 export async function handleManagedQuestionSubmissionRequest(params: {
