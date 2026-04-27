@@ -225,7 +225,6 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
     function forfeitExpiredFeedbackBonus(uint256 poolId)
         external
         nonReentrant
-        whenNotPaused
         returns (uint256 forfeitedAmount)
     {
         FeedbackBonusPool storage pool = _getExistingPool(poolId);

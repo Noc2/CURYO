@@ -471,6 +471,25 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
         assertTrue(forfeited);
     }
 
+    function testExpiredRemainderForfeitsWhilePaused() public {
+        uint256 contentId = _submitQuestion("");
+        uint256 poolId = _createFeedbackBonusPool(contentId);
+        _settleRoundWith(_threeVoters(), contentId, _directions(true, true, false));
+
+        vm.prank(funder);
+        feedbackBonusEscrow.awardFeedbackBonus(poolId, voter1, FEEDBACK_HASH, 10e6);
+
+        vm.warp(block.timestamp + 8 days);
+        vm.prank(owner);
+        feedbackBonusEscrow.pause();
+
+        uint256 treasuryBalanceBefore = usdc.balanceOf(treasury);
+        uint256 forfeitedAmount = feedbackBonusEscrow.forfeitExpiredFeedbackBonus(poolId);
+
+        assertEq(forfeitedAmount, 90e6);
+        assertEq(usdc.balanceOf(treasury), treasuryBalanceBefore + 90e6);
+    }
+
     function testAwarderOnlyCanAward() public {
         uint256 contentId = _submitQuestion("");
         uint256 poolId = _createFeedbackBonusPool(contentId);

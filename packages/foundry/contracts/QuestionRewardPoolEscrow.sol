@@ -465,14 +465,13 @@ contract QuestionRewardPoolEscrow is
         );
     }
 
-    function qualifyRound(uint256 rewardPoolId, uint256 roundId) external whenNotPaused {
+    function qualifyRound(uint256 rewardPoolId, uint256 roundId) external {
         RewardPool storage rewardPool = _getIncompleteRewardPoolForQualification(rewardPoolId);
         _qualifyRound(rewardPoolId, rewardPool, roundId);
     }
 
     function advanceQualificationCursor(uint256 rewardPoolId, uint256 maxRounds)
         external
-        whenNotPaused
         returns (uint256 skipped, uint256 nextRoundToEvaluate)
     {
         require(maxRounds > 0, "No rounds");
@@ -494,7 +493,6 @@ contract QuestionRewardPoolEscrow is
     function claimQuestionReward(uint256 rewardPoolId, uint256 roundId)
         external
         nonReentrant
-        whenNotPaused
         returns (uint256 rewardAmount)
     {
         RewardPool storage rewardPool = _getExistingRewardPool(rewardPoolId);
@@ -606,7 +604,6 @@ contract QuestionRewardPoolEscrow is
     function claimQuestionBundleReward(uint256 bundleId, uint256 roundSetIndex)
         external
         nonReentrant
-        whenNotPaused
         returns (uint256 rewardAmount)
     {
         BundleReward storage bundle = _getExistingBundleReward(bundleId);
@@ -718,7 +715,6 @@ contract QuestionRewardPoolEscrow is
     function refundQuestionBundleReward(uint256 bundleId)
         external
         nonReentrant
-        whenNotPaused
         returns (uint256 refundAmount)
     {
         BundleReward storage bundle = _getExistingBundleReward(bundleId);
@@ -756,7 +752,6 @@ contract QuestionRewardPoolEscrow is
     function refundExpiredRewardPool(uint256 rewardPoolId)
         external
         nonReentrant
-        whenNotPaused
         returns (uint256 refundAmount)
     {
         RewardPool storage rewardPool = _getExistingRewardPool(rewardPoolId);
@@ -771,7 +766,6 @@ contract QuestionRewardPoolEscrow is
     function refundInactiveRewardPool(uint256 rewardPoolId)
         external
         nonReentrant
-        whenNotPaused
         returns (uint256 refundAmount)
     {
         RewardPool storage rewardPool = _getExistingRewardPool(rewardPoolId);
