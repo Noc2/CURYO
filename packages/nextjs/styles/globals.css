@@ -16,24 +16,24 @@
   name: "dark";
 
   --color-primary: #d56a3e;
-  --color-primary-content: #090a0c;
+  --color-primary-content: #000000;
   --color-secondary: #8b858e;
   --color-secondary-content: #f8f2ed;
   --color-accent: #b3341b;
   --color-accent-content: #f8f2ed;
   --color-neutral: #1d181e;
   --color-neutral-content: #f5f0eb;
-  --color-base-100: #090a0c;
+  --color-base-100: #000000;
   --color-base-200: #151217;
   --color-base-300: #0d0a0f;
   --color-base-content: #f5f0eb;
   --color-info: #8b858e;
   --color-success: #d56a3e;
-  --color-success-content: #090a0c;
+  --color-success-content: #000000;
   --color-warning: #d89a63;
-  --color-warning-content: #090a0c;
+  --color-warning-content: #000000;
   --color-error: #e46f68;
-  --color-error-content: #090a0c;
+  --color-error-content: #000000;
 
   --radius-selector: 0.5rem;
   --radius-field: 0.5rem;
@@ -75,13 +75,13 @@
 }
 
 :root {
-  background: var(--color-base-100);
+  background: #000000;
   --curyo-ember: #d56a3e;
   --curyo-ember-hover: #e07a4e;
   --curyo-ember-deep: #b3341b;
   --curyo-warm-white: #f5f0eb;
   --curyo-steel: #8b858e;
-  --curyo-surface: #090a0c;
+  --curyo-surface: #000000;
   --curyo-surface-elevated: #151217;
   --curyo-surface-elevated-hover: #1c181e;
   --curyo-surface-mobile-vote: #221d24;
@@ -95,7 +95,7 @@
   --curyo-ember-deep-rgb: 179 52 27;
   --curyo-warm-white-rgb: 245 240 235;
   --curyo-steel-rgb: 139 133 142;
-  --curyo-surface-rgb: 9 10 12;
+  --curyo-surface-rgb: 0 0 0;
   --curyo-surface-elevated-rgb: 21 18 23;
   --curyo-surface-nested-rgb: 13 10 15;
   --curyo-radius-card: 0.5rem;
@@ -108,6 +108,7 @@
 }
 
 body {
+  background: #000000;
   color: var(--color-base-content);
   font-family: var(--font-sans);
   text-rendering: optimizeLegibility;
