@@ -106,6 +106,7 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
     error CallerIsDelegate();
     error NoPendingDelegate();
     error MaxSupplyReached();
+    error InvalidNullifier();
 
     // ====================================================
     // Constructor
@@ -245,6 +246,7 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
     /// @return tokenId The minted token ID
     function mint(address to, uint256 nullifier) external override returns (uint256 tokenId) {
         if (!authorizedMinters[msg.sender]) revert OnlyMinter();
+        if (nullifier == 0) revert InvalidNullifier();
         if (nullifierUsed[nullifier]) revert NullifierAlreadyUsed();
         if (holderToTokenId[to] != 0) revert AlreadyHasVoterId();
 

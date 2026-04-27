@@ -207,6 +207,12 @@ contract VoterIdNFTTest is Test {
         voterIdNFT.mint(user1, NULLIFIER_1);
     }
 
+    function test_Mint_RevertZeroNullifier() public {
+        vm.prank(minterAddr);
+        vm.expectRevert(VoterIdNFT.InvalidNullifier.selector);
+        voterIdNFT.mint(user1, 0);
+    }
+
     function test_Mint_RevertNullifierAlreadyUsed() public {
         vm.startPrank(minterAddr);
         voterIdNFT.mint(user1, NULLIFIER_1);

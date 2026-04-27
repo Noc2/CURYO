@@ -647,6 +647,58 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(claimable, REWARD_POOL_AMOUNT / 3);
     }
 
+    function testBundleFunderNullifierStaysExcludedAfterRemintToDifferentAddress() public {
+        address remintedFunder = address(0xF00D);
+        uint256 nullifier = 222_224;
+        voterIdNFT.mint(funder, nullifier);
+        uint256[] memory contentIds = _submitBundleQuestions();
+        uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, REWARD_POOL_AMOUNT, 3);
+
+        voterIdNFT.revokeVoterId(funder);
+        voterIdNFT.resetNullifier(nullifier);
+        voterIdNFT.mint(remintedFunder, nullifier);
+        vm.prank(owner);
+        hrepToken.mint(remintedFunder, 10_000e6);
+
+        address[] memory voters = new address[](3);
+        voters[0] = remintedFunder;
+        voters[1] = voter2;
+        voters[2] = voter3;
+        bool[] memory directions = _directions(true, true, false);
+
+        _settleRoundWith(voters, contentIds[0], directions);
+        _settleRoundWith(voters, contentIds[1], directions);
+
+        assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, remintedFunder), 0);
+        assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter2), 0);
+    }
+
+    function testBundleSubmitterNullifierStaysExcludedAfterRemintToDifferentAddress() public {
+        address remintedSubmitter = address(0x5A1D);
+        uint256 nullifier = 222_225;
+        voterIdNFT.mint(submitter, nullifier);
+        uint256[] memory contentIds = _submitBundleQuestions();
+        uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, REWARD_POOL_AMOUNT, 3);
+
+        voterIdNFT.revokeVoterId(submitter);
+        voterIdNFT.resetNullifier(nullifier);
+        voterIdNFT.mint(remintedSubmitter, nullifier);
+        vm.prank(owner);
+        hrepToken.mint(remintedSubmitter, 10_000e6);
+
+        address[] memory voters = new address[](3);
+        voters[0] = remintedSubmitter;
+        voters[1] = voter2;
+        voters[2] = voter3;
+        bool[] memory directions = _directions(true, true, false);
+
+        _settleRoundWith(voters, contentIds[0], directions);
+        _settleRoundWith(voters, contentIds[1], directions);
+
+        assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, remintedSubmitter), 0);
+        assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter2), 0);
+    }
+
     function testBundleClaimRecordsOutOfOrderFutureRoundSetTerminal() public {
         uint256[] memory contentIds = _submitBundleQuestions();
         uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, 120e6, 3, 2);

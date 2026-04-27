@@ -21,6 +21,10 @@ contract MockVoterIdNFT is IVoterIdNFT {
         if (tokenIds[holder] == 0) {
             tokenIds[holder] = nextTokenId;
             tokenHolders[nextTokenId] = holder;
+            uint256 nullifier = uint256(uint160(holder));
+            tokenNullifiers[nextTokenId] = nullifier;
+            nullifierTokenIds[nullifier] = nextTokenId;
+            usedNullifiers[nullifier] = true;
             nextTokenId++;
         }
     }

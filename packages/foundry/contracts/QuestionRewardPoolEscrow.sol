@@ -91,6 +91,7 @@ contract QuestionRewardPoolEscrow is
         uint32 completedRoundSets;
         uint32 claimedCount;
         uint16 frontendFeeBps;
+        uint256 funderNullifier;
         uint256 fundedAmount;
         uint256 unallocatedAmount;
         uint256 claimedAmount;
@@ -102,7 +103,8 @@ contract QuestionRewardPoolEscrow is
     }
 
     struct BundleQuestion {
-        uint64 contentId;
+        uint256 contentId;
+        uint256 submitterNullifier;
     }
 
     struct BundleRoundSetSnapshot {
@@ -334,6 +336,7 @@ contract QuestionRewardPoolEscrow is
 
         uint256 fundedAmount = _pullExactToken(funder, asset, amount);
         (uint256 funderVoterId, address funderIdentity) = _resolveFunderIdentity(funder);
+        uint256 funderNullifier = voterIdNFT.getNullifier(funderVoterId);
 
         bundleRewards[bundleId] = BundleReward({
             id: bundleId.toUint64(),
@@ -349,6 +352,7 @@ contract QuestionRewardPoolEscrow is
             completedRoundSets: 0,
             claimedCount: 0,
             frontendFeeBps: defaultFrontendFeeBps,
+            funderNullifier: funderNullifier,
             fundedAmount: fundedAmount,
             unallocatedAmount: fundedAmount,
             claimedAmount: 0,
@@ -365,7 +369,11 @@ contract QuestionRewardPoolEscrow is
             require(contentBundleId[contentId] == 0, "Bundled");
             contentBundleId[contentId] = bundleId;
             contentBundleIndex[contentId] = i;
-            bundleQuestions[bundleId].push(BundleQuestion({ contentId: contentId.toUint64() }));
+            uint256 submitterNullifier =
+                QuestionRewardPoolEscrowQualificationLib.resolveSubmitterNullifier(registry, voterIdNFT, contentId);
+            bundleQuestions[bundleId].push(
+                BundleQuestion({ contentId: contentId, submitterNullifier: submitterNullifier })
+            );
             unchecked {
                 ++i;
             }
@@ -1166,20 +1174,13 @@ contract QuestionRewardPoolEscrow is
         for (uint256 i = 0; i < questions.length;) {
             BundleQuestion storage question = questions[i];
             uint256 roundId = bundleRoundIds[bundleId][i][roundSetIndex];
-            uint256 voterId = _voterIdForRound(question.contentId, roundId, account);
-            if (voterId != 0) {
-                uint256 funderVoterId =
-                    _resolveFunderVoterId(question.contentId, roundId, bundle.funder, bundle.funderIdentity);
-                if (voterId == funderVoterId || voterId == _voterIdForRound(question.contentId, roundId, bundle.funder))
-                {
-                    return true;
-                }
-
-                address submitterIdentity = registry.getSubmitterIdentity(question.contentId);
-                if (submitterIdentity != address(0)) {
-                    uint256 submitterVoterId = _voterIdForRound(question.contentId, roundId, submitterIdentity);
-                    if (voterId == submitterVoterId) return true;
-                }
+            if (QuestionRewardPoolEscrowQualificationLib.isBundleExcludedVoter(
+                    _roundVoterIdNft(question.contentId, roundId),
+                    account,
+                    bundle.funderNullifier,
+                    question.submitterNullifier
+                )) {
+                return true;
             }
             unchecked {
                 ++i;
@@ -1342,18 +1343,6 @@ contract QuestionRewardPoolEscrow is
             rewardPool.submitterVoterIdNFT,
             rewardPoolSubmitterNullifier[rewardPool.id]
         );
-    }
-
-    function _resolveFunderVoterId(uint256 contentId, uint256 roundId, address funder, address funderIdentity)
-        internal
-        view
-        returns (uint256)
-    {
-        if (funderIdentity != address(0)) {
-            uint256 identityVoterId = _voterIdForRound(contentId, roundId, funderIdentity);
-            if (identityVoterId != 0) return identityVoterId;
-        }
-        return _voterIdForRound(contentId, roundId, funder);
     }
 
     function _requireVoterId(IVoterIdNFT voterIdNft_, address account) internal view returns (uint256 voterId) {

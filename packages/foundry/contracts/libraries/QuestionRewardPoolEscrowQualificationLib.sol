@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import { IVoterIdNFT } from "../interfaces/IVoterIdNFT.sol";
+import { ContentRegistry } from "../ContentRegistry.sol";
 import { RoundVotingEngine } from "../RoundVotingEngine.sol";
 import { RoundLib } from "./RoundLib.sol";
 
@@ -62,6 +63,29 @@ library QuestionRewardPoolEscrowQualificationLib {
             submitterVoterIdNFT,
             submitterNullifier
         );
+    }
+
+    function resolveSubmitterNullifier(ContentRegistry registry, IVoterIdNFT voterIdNft, uint256 contentId)
+        external
+        view
+        returns (uint256)
+    {
+        address account = registry.getSubmitterIdentity(contentId);
+        uint256 voterId = voterIdNft.getTokenId(account);
+        return voterId == 0 ? 0 : voterIdNft.getNullifier(voterId);
+    }
+
+    function isBundleExcludedVoter(
+        IVoterIdNFT voterIdNft,
+        address account,
+        uint256 funderNullifier,
+        uint256 submitterNullifier
+    ) external view returns (bool) {
+        uint256 voterId = voterIdNft.getTokenId(account);
+        if (voterId == 0) return false;
+
+        uint256 voterNullifier = voterIdNft.getNullifier(voterId);
+        return voterNullifier != 0 && (voterNullifier == funderNullifier || voterNullifier == submitterNullifier);
     }
 
     function _countEligibleRevealedVoters(QualificationContext memory ctx)
