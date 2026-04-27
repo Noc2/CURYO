@@ -72,6 +72,11 @@ const PrivacyPage: NextPage = () => {
             token material, payload hashes, and creation/expiry timestamps.
           </li>
           <li>
+            <strong>Agent Wallet Data:</strong> Agent policy metadata, wallet addresses, spend caps, category
+            allowlists, operation keys, transaction hashes, callback URLs, delivery status, and audit timestamps needed
+            to prepare, confirm, and recover agent asks.
+          </li>
+          <li>
             <strong>Email Notification Data (Optional):</strong> If you enable email notifications, we process your
             email address, notification preferences, verification status, verification token, and related timestamps.
           </li>
@@ -115,6 +120,7 @@ const PrivacyPage: NextPage = () => {
           <li>Saving and retrieving watched content</li>
           <li>Saving and retrieving followed curator wallets</li>
           <li>Saving and retrieving in-app notification preferences</li>
+          <li>Preparing and confirming agent wallet transaction plans</li>
           <li>Verifying wallet-scoped read and write sessions for protected interface actions</li>
         </ul>
 

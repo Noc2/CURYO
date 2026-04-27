@@ -7,10 +7,9 @@ import { useAccount } from "wagmi";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
 import { ConnectWalletCard } from "~~/components/shared/ConnectWalletCard";
 
-const ContentSubmissionSection = dynamic(
-  () => import("~~/components/submit/ContentSubmissionSection").then(mod => mod.ContentSubmissionSection),
-  { loading: () => <AskSectionLoading /> },
-);
+const AskPageTabs = dynamic(() => import("~~/components/submit/AskPageTabs").then(mod => mod.AskPageTabs), {
+  loading: () => <AskSectionLoading />,
+});
 
 function AskSectionLoading() {
   return (
@@ -32,7 +31,7 @@ const AskPage: NextPage = () => {
 
   return (
     <AppPageShell>
-      <ContentSubmissionSection />
+      <AskPageTabs />
     </AppPageShell>
   );
 };

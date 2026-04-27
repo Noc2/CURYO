@@ -20,7 +20,7 @@ yarn agents:templates
 # Validate a focused example ask.
 yarn agents:lint --file packages/agents/examples/questions/landing-pitch-review.json
 
-# Quote and submit through the configured hosted agent surface.
+# Quote, prepare wallet calls, then confirm submitted transactions.
 yarn agents:quote --file packages/agents/examples/questions/landing-pitch-review.json
 yarn agents:ask --file packages/agents/examples/questions/landing-pitch-review.json
 
@@ -29,7 +29,7 @@ yarn agents:status --operation-key 0x...
 yarn agents:result --operation-key 0x...
 ```
 
-The CLI reads `.env` from the current process environment. Use a managed agent token for authenticated HTTP or MCP flows. The legacy tokenless hosted x402 bounty endpoint has been removed because the old route paid an operator executor wallet before submitting on-chain; paid asks should execute from a user-controlled smart wallet or scoped agent wallet.
+The CLI reads `.env` from the current process environment. Use a managed agent token for authenticated HTTP or MCP flows. The legacy tokenless hosted x402 bounty endpoint has been removed because the old route paid an operator executor wallet before submitting on-chain; paid asks execute from a user-controlled smart wallet or scoped agent wallet.
 
 ## Configuration
 

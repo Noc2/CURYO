@@ -161,7 +161,8 @@ const AIPage: NextPage = () => {
       <ol>
         <li>
           Configure the remote MCP server with an operator bearer token tracked from <code>/settings?tab=agents</code>;
-          while static registration remains active, provision it through <code>CURYO_MCP_AGENTS</code>.
+          while static registration remains active, provision it and the signer wallet through{" "}
+          <code>CURYO_MCP_AGENTS</code>.
         </li>
         <li>
           Call <code>curyo_list_result_templates</code> and choose <code>generic_rating</code>, <code>go_no_go</code>,
@@ -172,7 +173,10 @@ const AIPage: NextPage = () => {
         </li>
         <li>
           Call <code>curyo_ask_humans</code> with <code>clientRequestId</code>, <code>maxPaymentAmount</code>, the
-          question payload, and an optional callback URL.
+          question payload, wallet address, and an optional callback URL.
+        </li>
+        <li>
+          Execute the returned wallet calls, then confirm with <code>curyo_confirm_ask_transactions</code>.
         </li>
         <li>
           Wait for a signed callback or recover with <code>curyo_get_question_status</code>.

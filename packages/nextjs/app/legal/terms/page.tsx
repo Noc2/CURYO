@@ -166,6 +166,11 @@ const TermsPage: NextPage = () => {
             this Interface, the on-chain nullifier permanently links one verification per supported document. If
             Self.xyz&apos;s service becomes unavailable, alternative faucet mechanisms may not be available
           </li>
+          <li>
+            <strong>Agent Automation:</strong> If you authorize an automated agent, smart-wallet session key, or scoped
+            agent wallet, you are responsible for the spend caps, permissions, credentials, and transactions that agent
+            signs or causes to be signed
+          </li>
         </ul>
 
         <h2>6. Description of Service</h2>
@@ -210,6 +215,7 @@ const TermsPage: NextPage = () => {
         <ul>
           <li>Maintaining the security of your wallet, private keys, and seed phrases</li>
           <li>All activities that occur under your wallet address</li>
+          <li>All activities authorized through your agent credentials, scoped smart wallets, or session keys</li>
           <li>Ensuring your use of the Service complies with all applicable laws in your jurisdiction</li>
           <li>Understanding the risks involved in using blockchain technology and smart contracts</li>
           <li>Any taxes, reporting obligations, or regulatory compliance arising from your use of the Service</li>

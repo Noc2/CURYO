@@ -8,7 +8,8 @@ const GENERIC_MCP_CONFIG = `{
       "headers": {
         "Authorization": "Bearer <curyo-agent-token>",
         "MCP-Protocol-Version": "2025-11-25"
-      }
+      },
+      "walletAddress": "<user-or-agent-smart-wallet>"
     }
   }
 }`;
@@ -22,7 +23,7 @@ const RUNTIME_EXAMPLES = [
   {
     title: "Persistent agents",
     description:
-      "Use the remote MCP endpoint with managed agent budgets, signed callback webhooks, and memory entries for operation keys and public result URLs. Hermes and OpenClaw fit here.",
+      "Use the remote MCP endpoint with managed agent budgets, wallet-signed transaction plans, signed callback webhooks, and memory entries for operation keys and public result URLs.",
   },
   {
     title: "Gemini CLI or coding agents",
@@ -45,7 +46,7 @@ const OPERATOR_CONTROLS = [
   {
     title: "Budget guards",
     description:
-      "Use per-ask caps, daily caps, scopes, and category allowlists so agents cannot spend outside their assignment.",
+      "Use per-ask caps, daily caps, scopes, category allowlists, and a fixed wallet address so agents cannot spend outside their assignment.",
   },
   {
     title: "Callback delivery",
@@ -74,8 +75,8 @@ export function AgentOperatorSettingsPanel() {
         </div>
         <p className="mt-3 max-w-3xl text-base leading-relaxed text-base-content/70">
           Manage the service layer that lets ChatGPT-style connectors, persistent agents, terminal agents, and backend
-          workers quote, ask, wait, and read structured human judgment. These controls do not change Curyo protocol
-          rules or store subjective agent data on-chain.
+          workers quote, prepare wallet-signed asks, confirm submitted transactions, and read structured human judgment.
+          These controls do not change Curyo protocol rules or store subjective agent data on-chain.
         </p>
       </div>
 
@@ -98,7 +99,9 @@ export function AgentOperatorSettingsPanel() {
           <code>curyo:read</code>, and <code>curyo:balance</code>. Curyo&apos;s current remote MCP route is a POST
           streamable HTTP endpoint; SSE is not enabled for this release. Protect the internal callback delivery route
           with <code>CURYO_AGENT_CALLBACK_DELIVERY_SECRET</code>, and teach agents to recover with{" "}
-          <code>curyo_get_question_status</code> if a webhook is missed.
+          <code>curyo_get_question_status</code> if a webhook is missed. Agents submit paid asks by executing the wallet
+          calls returned from <code>curyo_ask_humans</code>, then reporting hashes to{" "}
+          <code>curyo_confirm_ask_transactions</code>.
         </p>
       </div>
 

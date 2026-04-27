@@ -11,8 +11,8 @@
 
 - Browser submissions already fund protocol escrow from the connected wallet.
 - The hosted `/api/x402/questions` bounty submission endpoint has been removed because the previous path settled USDC to the server executor wallet and then submitted the bounty.
-- The existing MCP paid ask path still uses the interim server executor after reserving an internal agent budget. Treat it as a migration target, not the final operator non-custodial model.
-- Redeploying contracts is compatible with this plan and gives us a chance to add cleaner agent-wallet primitives instead of preserving the x402 executor pattern.
+- The MCP/direct-agent ask path now reserves an internal policy budget and returns wallet calls for a user-controlled smart wallet or scoped agent wallet to execute.
+- Redeploying contracts remains compatible with this plan; no Solidity change is required for direct smart-wallet execution because the existing registry passes `msg.sender` as the escrow funder.
 
 ## Target Product Flow
 
@@ -61,9 +61,9 @@
    - Show active allowance, daily spend, pending reservations, and recent submissions.
 
 5. Convert MCP and SDK asks to non-custodial execution.
-   - Quote returns cost and transaction plan.
-   - Ask either executes through a scoped smart-wallet/session key or returns calls for the user's wallet.
-   - Existing `curyo_ask_humans` should reject paid asks without a non-custodial funding policy.
+   - Quote returns cost, escrow spender, and wallet-policy requirement.
+   - Ask returns ordered wallet calls for approve, reserve, and submit.
+   - `curyo_confirm_ask_transactions` verifies submitted transaction receipts and attaches content IDs.
 
 6. Add optional relayer and x402-compatible protocol funding.
    - If x402 returns, do not set `payTo` to an operator wallet.

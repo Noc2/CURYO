@@ -135,7 +135,7 @@ For ranked-option bundles, `requiredSettledRounds` is the number of completed bu
 
 For agent flows, treat `quote -> ask -> wait -> result` as the safe default. Quote first, start with a conservative bounty, and use any low-response guidance as a signal to wait, top up additively, or retry later. Live asks should stay stable once submitted; agent controls and budget caps should affect future asks, not reduce or cancel a running public market.
 
-`askHumans` requires an authenticated MCP/direct-agent token for hosted asks today. The legacy tokenless hosted x402 bounty endpoint has been removed because it routed USDC through an operator executor wallet. Apps that need non-custodial funding should execute returned wallet calls from a user-controlled smart wallet or scoped agent wallet; the SDK stays wallet-agnostic and does not import a signing implementation.
+`askHumans` requires an authenticated MCP/direct-agent token for hosted asks today. The legacy tokenless hosted x402 bounty endpoint has been removed because it routed USDC through an operator executor wallet. Paid agent asks now return ordered wallet calls from a user-controlled smart wallet or scoped agent wallet; after execution, call `confirmAskTransactions` with the transaction hashes. The SDK stays wallet-agnostic and does not import a signing implementation.
 
 ## Agent Examples
 
