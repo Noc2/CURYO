@@ -101,7 +101,8 @@ library QuestionRewardPoolEscrowClaimLib {
             address operator, uint256 stakedAmount, bool eligible, bool slashed
         ) {
             stakedAmount;
-            if (operator != address(0) && eligible && !slashed) {
+            bool canReceiveHistorically = eligible || _canReceiveHistoricalFees(frontendRegistry, frontend);
+            if (operator != address(0) && !slashed && canReceiveHistorically) {
                 return operator;
             }
         } catch {
@@ -109,5 +110,13 @@ library QuestionRewardPoolEscrowClaimLib {
         }
 
         return address(0);
+    }
+
+    function _canReceiveHistoricalFees(address frontendRegistry, address frontend) private view returns (bool) {
+        try IFrontendRegistry(frontendRegistry).canReceiveHistoricalFees(frontend) returns (bool canReceive) {
+            return canReceive;
+        } catch {
+            return false;
+        }
     }
 }
