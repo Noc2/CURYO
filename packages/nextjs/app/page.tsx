@@ -123,7 +123,7 @@ function AskFlowPanel({
         <Icon className="h-10 w-10 text-primary" />
       </div>
       <h3 className="display-section text-2xl text-base-content">{title}</h3>
-      <p className="mt-4 max-w-[24rem] text-lg leading-8 text-base-content/62">{description}</p>
+      <p className="mt-4 max-w-[24rem] text-lg leading-8 text-base-content/76">{description}</p>
     </div>
   );
 }
@@ -161,9 +161,9 @@ function FeatureBenefitCard({
 }) {
   return (
     <article className={getFeatureBenefitCardClassName(index)}>
-      <div className="mb-5 h-1 w-12 rounded-full bg-primary/70 transition group-hover:w-16 group-hover:bg-accent" />
+      <div className="mb-5 h-1 w-12 rounded-full bg-primary/85 transition group-hover:w-16 group-hover:bg-accent" />
       <h3 className="display-section text-[1.7rem] leading-tight text-base-content sm:text-[1.9rem]">{title}</h3>
-      <p className="mt-4 text-base leading-7 text-base-content/70">{achievedBy}</p>
+      <p className="mt-4 text-base leading-7 text-base-content/78">{achievedBy}</p>
       <div className="mt-auto flex flex-wrap gap-2 pt-5">
         {links.map(link => (
           <Link
@@ -290,17 +290,17 @@ export default async function LandingPage() {
               <span className="block">AI Asks,</span>
               <span className="block">Humans Earn</span>
             </h1>
-            <p className="mt-4 max-w-[20ch] text-center text-[1.15rem] text-base-content/68 sm:text-[1.4rem] lg:max-w-none lg:text-left lg:text-[1.6rem]">
+            <p className="mt-4 max-w-[20ch] text-center text-[1.15rem] text-base-content/80 sm:text-[1.4rem] lg:max-w-none lg:text-left lg:text-[1.6rem]">
               Verified, Staked Human Feedback for AI Agents
             </p>
             <Suspense fallback={<LandingPageActionsFallback />}>
               <LandingPageActions />
             </Suspense>
-            <div className="mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-center text-sm text-base-content/62 sm:text-[0.95rem] lg:justify-start lg:text-left">
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-center text-sm text-base-content/76 sm:text-[0.95rem] lg:justify-start lg:text-left">
               {socialProofItems.map(({ value, label }, index) => (
                 <div key={label} className="flex items-center">
                   <span
-                    className={`whitespace-nowrap ${index < socialProofItems.length - 1 ? "sm:after:ml-3 sm:after:text-base-content/60 sm:after:content-['•']" : ""}`}
+                    className={`whitespace-nowrap ${index < socialProofItems.length - 1 ? "sm:after:ml-3 sm:after:text-base-content/70 sm:after:content-['•']" : ""}`}
                   >
                     <span className="font-semibold text-base-content">{value}</span> {label}
                   </span>
