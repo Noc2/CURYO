@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import { ProtocolConfig } from "../ProtocolConfig.sol";
-import { RoundLib } from "./RoundLib.sol";
-import { TokenTransferLib } from "./TokenTransferLib.sol";
+import {ProtocolConfig} from "../ProtocolConfig.sol";
+import {IVoterIdNFT} from "../interfaces/IVoterIdNFT.sol";
+import {RoundLib} from "./RoundLib.sol";
+import {TlockVoteLib} from "./TlockVoteLib.sol";
+import {TokenTransferLib} from "./TokenTransferLib.sol";
 
 /// @title RoundCleanupLib
 /// @notice Shared refund and cleanup paths extracted from RoundVotingEngine to reduce runtime size.
@@ -20,35 +22,159 @@ library RoundCleanupLib {
     error VoteNotRevealed();
     error NothingProcessed();
 
+    function targetRoundRevealableAt(
+        mapping(uint256 => bytes32) storage roundDrandChainHashSnapshot,
+        mapping(uint256 => uint64) storage roundDrandGenesisTimeSnapshot,
+        mapping(uint256 => uint64) storage roundDrandPeriodSnapshot,
+        ProtocolConfig protocolConfig,
+        uint256 roundId,
+        uint64 targetRound
+    ) external view returns (uint256) {
+        uint64 genesisTime = roundDrandGenesisTimeSnapshot[roundId];
+        uint64 period = roundDrandPeriodSnapshot[roundId];
+        if (roundDrandChainHashSnapshot[roundId] == bytes32(0) || genesisTime == 0 || period == 0) {
+            genesisTime = protocolConfig.drandGenesisTime();
+            period = protocolConfig.drandPeriod();
+        }
+        if (targetRound == 0 || genesisTime == 0 || period == 0) revert TlockVoteLib.TargetRoundOutOfWindow();
+        return uint256(genesisTime) + (uint256(targetRound) - 1) * uint256(period);
+    }
+
+    function validateCommitTlockData(
+        mapping(uint256 => bytes32) storage roundDrandChainHashSnapshot,
+        mapping(uint256 => uint64) storage roundDrandGenesisTimeSnapshot,
+        mapping(uint256 => uint64) storage roundDrandPeriodSnapshot,
+        ProtocolConfig protocolConfig,
+        uint256 roundId,
+        bytes memory ciphertext,
+        uint64 targetRound,
+        bytes32 drandChainHash,
+        uint256 epochEnd,
+        uint256 epochDuration
+    ) external view {
+        bytes32 chainHash = roundDrandChainHashSnapshot[roundId];
+        uint64 genesisTime = roundDrandGenesisTimeSnapshot[roundId];
+        uint64 period = roundDrandPeriodSnapshot[roundId];
+
+        if (chainHash == bytes32(0) || genesisTime == 0 || period == 0) {
+            chainHash = protocolConfig.drandChainHash();
+            genesisTime = protocolConfig.drandGenesisTime();
+            period = protocolConfig.drandPeriod();
+        }
+
+        TlockVoteLib.validateCommitData(
+            ciphertext, targetRound, drandChainHash, chainHash, epochEnd, epochDuration, genesisTime, period
+        );
+    }
+
+    function resolveClaimCommit(
+        mapping(address => bytes32) storage roundVoterCommitHash,
+        mapping(uint256 => bytes32) storage roundVoterIdCommitKey,
+        mapping(uint256 => bytes32) storage roundVoterNullifierCommitKey,
+        mapping(bytes32 => uint256) storage roundCommitVoterId,
+        address voterIdNftAddress,
+        address account
+    ) external view returns (bytes32 commitKey, address rewardRecipient) {
+        if (voterIdNftAddress != address(0)) {
+            IVoterIdNFT voterIdNft = IVoterIdNFT(voterIdNftAddress);
+            uint256 voterId = voterIdNft.getTokenId(account);
+            if (voterId != 0) {
+                commitKey = roundVoterIdCommitKey[voterId];
+                if (commitKey == bytes32(0)) {
+                    uint256 nullifier = voterIdNft.getNullifier(voterId);
+                    if (nullifier != 0) {
+                        commitKey = roundVoterNullifierCommitKey[nullifier];
+                    }
+                }
+
+                rewardRecipient = voterIdNft.getHolder(voterId);
+                if (rewardRecipient == address(0)) rewardRecipient = account;
+                return (commitKey, rewardRecipient);
+            }
+        }
+
+        bytes32 directCommitHash = roundVoterCommitHash[account];
+        if (directCommitHash != bytes32(0)) {
+            commitKey = keccak256(abi.encodePacked(account, directCommitHash));
+            if (roundCommitVoterId[commitKey] == 0) {
+                return (commitKey, account);
+            }
+        }
+
+        return (bytes32(0), account);
+    }
+
+    function recordCommitIndexes(
+        bytes32[] storage roundCommitHashes,
+        mapping(uint256 => uint256) storage epochUnrevealedCount,
+        mapping(uint256 => uint256) storage lastCommitRevealableAfter,
+        mapping(address => bytes32) storage roundVoterCommitHash,
+        mapping(uint256 => bool) storage contentHasCommits,
+        mapping(uint256 => bool) storage roundHasTokenIdCommitted,
+        mapping(uint256 => bytes32) storage roundVoterIdCommitKey,
+        mapping(bytes32 => uint256) storage roundCommitVoterId,
+        mapping(uint256 => bytes32) storage roundVoterNullifierCommitKey,
+        uint256 contentId,
+        uint256 roundId,
+        bytes32 commitKey,
+        uint256 epochEnd,
+        uint256 effectiveRevealableAfter,
+        address voter,
+        bytes32 commitHash,
+        uint256 voterId,
+        IVoterIdNFT voterIdNft,
+        bool useTokenIdentity
+    ) external {
+        roundCommitHashes.push(commitKey);
+        epochUnrevealedCount[epochEnd]++;
+        if (effectiveRevealableAfter > lastCommitRevealableAfter[roundId]) {
+            lastCommitRevealableAfter[roundId] = effectiveRevealableAfter;
+        }
+
+        roundVoterCommitHash[voter] = commitHash;
+        if (!contentHasCommits[contentId]) {
+            contentHasCommits[contentId] = true;
+        }
+        if (useTokenIdentity) {
+            roundHasTokenIdCommitted[voterId] = true;
+            roundVoterIdCommitKey[voterId] = commitKey;
+            roundCommitVoterId[commitKey] = voterId;
+            uint256 voterNullifier = voterIdNft.getNullifier(voterId);
+            if (voterNullifier != 0) {
+                roundVoterNullifierCommitKey[voterNullifier] = commitKey;
+            }
+        }
+    }
+
     function claimCancelledRoundRefund(
         RoundLib.Round storage round,
         mapping(address => bool) storage refundClaims,
-        mapping(address => bytes32) storage roundVoterCommitHash,
+        mapping(bytes32 => bool) storage refundCommitClaims,
         mapping(bytes32 => RoundLib.Commit) storage roundCommits,
         IERC20 hrepToken,
-        address claimer
-    ) external returns (uint256 refundAmount) {
+        bytes32 commitKey,
+        address recipient
+    ) external returns (uint256 refundAmount, address commitVoter) {
         if (
             round.state != RoundLib.RoundState.Cancelled && round.state != RoundLib.RoundState.Tied
                 && round.state != RoundLib.RoundState.RevealFailed
         ) {
             revert RoundNotCancelledOrTied();
         }
-        if (refundClaims[claimer]) revert AlreadyClaimed();
-
-        bytes32 commitHash = roundVoterCommitHash[claimer];
-        if (commitHash == bytes32(0)) revert NoCommit();
-        bytes32 commitKey = keccak256(abi.encodePacked(claimer, commitHash));
+        if (refundCommitClaims[commitKey]) revert AlreadyClaimed();
 
         RoundLib.Commit storage commit = roundCommits[commitKey];
+        commitVoter = commit.voter;
+        if (refundClaims[commitVoter]) revert AlreadyClaimed();
         refundAmount = commit.stakeAmount;
         if (refundAmount == 0) revert NoStake();
         if (round.state != RoundLib.RoundState.Cancelled && !commit.revealed) revert VoteNotRevealed();
 
         commit.stakeAmount = 0;
-        refundClaims[claimer] = true;
+        refundCommitClaims[commitKey] = true;
+        refundClaims[commitVoter] = true;
 
-        hrepToken.safeTransfer(claimer, refundAmount);
+        hrepToken.safeTransfer(recipient, refundAmount);
     }
 
     function processUnrevealedVotes(
@@ -101,7 +227,7 @@ library RoundCleanupLib {
         if (forfeitedToTreasury > 0) {
             address currentTreasury = protocolConfig.treasury();
             if (currentTreasury != address(0)) {
-                try TokenTransferLib.safeTransfer(hrepToken, currentTreasury, forfeitedToTreasury) { }
+                try TokenTransferLib.safeTransfer(hrepToken, currentTreasury, forfeitedToTreasury) {}
                 catch {
                     updatedConsensusReserve += forfeitedToTreasury;
                 }
