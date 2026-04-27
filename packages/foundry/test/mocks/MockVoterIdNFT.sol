@@ -9,6 +9,7 @@ contract MockVoterIdNFT is IVoterIdNFT {
     mapping(address => uint256) public tokenIds;
     mapping(uint256 => address) public tokenHolders;
     mapping(uint256 => uint256) public tokenNullifiers;
+    mapping(uint256 => uint256) public nullifierTokenIds;
     mapping(uint256 => bool) public usedNullifiers;
     uint256 private nextTokenId = 1;
     mapping(bytes32 => uint256) public stakes;
@@ -35,6 +36,7 @@ contract MockVoterIdNFT is IVoterIdNFT {
         tokenIds[to] = id;
         tokenHolders[id] = to;
         tokenNullifiers[id] = nullifier;
+        nullifierTokenIds[nullifier] = id;
         return id;
     }
 
@@ -72,6 +74,11 @@ contract MockVoterIdNFT is IVoterIdNFT {
 
     function getNullifier(uint256 tokenId) external view returns (uint256) {
         return tokenNullifiers[tokenId];
+    }
+
+    function getTokenIdForNullifier(uint256 nullifier) external view returns (uint256 tokenId) {
+        tokenId = nullifierTokenIds[nullifier];
+        return tokenHolders[tokenId] == address(0) ? 0 : tokenId;
     }
 
     function revokeVoterId(address holder) external {

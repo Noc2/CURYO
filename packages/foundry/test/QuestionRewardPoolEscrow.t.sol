@@ -625,6 +625,28 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         rewardPoolEscrow.claimQuestionBundleReward(bundleId, 0);
     }
 
+    function testBundleRoundSetCountsCompleterAfterVoterIdRemintWithSameNullifier() public {
+        uint256[] memory contentIds = _submitBundleQuestions();
+        uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, REWARD_POOL_AMOUNT, 3);
+        uint256 nullifier = 222_223;
+        voterIdNFT.mint(voter2, nullifier);
+
+        address[] memory voters = new address[](3);
+        voters[0] = voter2;
+        voters[1] = voter3;
+        voters[2] = voter4;
+        bool[] memory directions = _directions(true, true, false);
+
+        _settleRoundWith(voters, contentIds[0], directions);
+        voterIdNFT.revokeVoterId(voter2);
+        voterIdNFT.resetNullifier(nullifier);
+        voterIdNFT.mint(voter2, nullifier);
+        _settleRoundWith(voters, contentIds[1], directions);
+
+        uint256 claimable = rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter2);
+        assertEq(claimable, REWARD_POOL_AMOUNT / 3);
+    }
+
     function testBundleClaimRecordsOutOfOrderFutureRoundSetTerminal() public {
         uint256[] memory contentIds = _submitBundleQuestions();
         uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, 120e6, 3, 2);
@@ -923,7 +945,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
 
         vm.prank(voter2);
         uint256 reward = rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
-        assertGt(reward, 0);
+        assertEq(reward, REWARD_POOL_AMOUNT / 3);
     }
 
     function testSubmitterNullifierStaysExcludedAfterRemint() public {
@@ -949,7 +971,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
 
         vm.prank(voter2);
         uint256 reward = rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
-        assertGt(reward, 0);
+        assertEq(reward, REWARD_POOL_AMOUNT / 3);
     }
 
     function testDelegatedFunderStaysExcludedAfterAgentReassignment() public {
@@ -1462,7 +1484,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
 
         assertEq(rewardPoolEscrow.claimableQuestionReward(rewardPoolId, roundId, submitter), 0);
         vm.prank(submitter);
-        vm.expectRevert("Excluded voter");
+        vm.expectRevert("Too few eligible voters");
         rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
     }
 

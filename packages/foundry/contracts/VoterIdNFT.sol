@@ -41,6 +41,9 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
     /// @notice Mapping from token ID to the nullifier used to mint it
     mapping(uint256 => uint256) private _tokenIdToNullifier;
 
+    /// @notice Current active token ID for a Self.xyz nullifier
+    mapping(uint256 => uint256) private _nullifierToTokenId;
+
     /// @notice Whether a token ID has a recorded nullifier snapshot
     mapping(uint256 => bool) private _tokenIdHasNullifier;
 
@@ -264,6 +267,7 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
         nullifierUsed[nullifier] = true;
         nullifierResettable[nullifier] = false;
         _tokenIdToNullifier[tokenId] = nullifier;
+        _nullifierToTokenId[nullifier] = tokenId;
         _tokenIdHasNullifier[tokenId] = true;
 
         // Update bidirectional mappings
@@ -317,6 +321,12 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
     /// @notice Return the nullifier snapshot for a token ID, including revoked token IDs.
     function getNullifier(uint256 tokenId) external view override returns (uint256) {
         return _tokenIdHasNullifier[tokenId] ? _tokenIdToNullifier[tokenId] : 0;
+    }
+
+    /// @notice Return the currently active token ID for a Self.xyz nullifier.
+    function getTokenIdForNullifier(uint256 nullifier) external view override returns (uint256 tokenId) {
+        tokenId = _nullifierToTokenId[nullifier];
+        return tokenIdToHolder[tokenId] == address(0) ? 0 : tokenId;
     }
 
     // ====================================================

@@ -184,6 +184,7 @@ contract VoterIdNFTTest is Test {
         assertEq(voterIdNFT.tokenIdToHolder(1), user1);
         assertTrue(voterIdNFT.hasVoterId(user1));
         assertTrue(voterIdNFT.nullifierUsed(NULLIFIER_1));
+        assertEq(voterIdNFT.getTokenIdForNullifier(NULLIFIER_1), tokenId);
     }
 
     function test_Mint_SequentialTokenIds() public {
@@ -878,6 +879,7 @@ contract VoterIdNFTTest is Test {
 
         assertTrue(voterIdNFT.hasVoterId(user2));
         assertEq(newTokenId, 2);
+        assertEq(voterIdNFT.getTokenIdForNullifier(NULLIFIER_1), newTokenId);
         assertFalse(voterIdNFT.nullifierResettable(NULLIFIER_1));
     }
 
