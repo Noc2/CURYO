@@ -5,6 +5,7 @@ import { Test } from "forge-std/Test.sol";
 import { DeployCuryo } from "../script/DeployCuryo.s.sol";
 import { HumanReputation } from "../contracts/HumanReputation.sol";
 import { HumanFaucet } from "../contracts/HumanFaucet.sol";
+import { VoterIdNFT } from "../contracts/VoterIdNFT.sol";
 import { MockIdentityVerificationHub } from "../contracts/mocks/MockIdentityVerificationHub.sol";
 import { CuryoGovernor } from "../contracts/governance/CuryoGovernor.sol";
 import { TimelockController } from "@openzeppelin/contracts/governance/TimelockController.sol";
@@ -29,6 +30,13 @@ contract DeployCuryoHarness is DeployCuryo {
         bytes32 expectedConfigId
     ) external view {
         _assertFaucetVerificationConfig(humanFaucet, hubAddress, expectedConfigId);
+    }
+
+    function exposedAssertHumanFaucetLaunchAllocation(HumanReputation hrepToken, HumanFaucet humanFaucet)
+        external
+        view
+    {
+        _assertHumanFaucetLaunchAllocation(hrepToken, humanFaucet);
     }
 
     function exposedAssertExactExcludedHolders(CuryoGovernor governor, address[] memory expectedExcludedHolders)
@@ -265,6 +273,33 @@ contract DeployCuryoCompilationTest is Test {
             )
         );
         deployScript.exposedAssertFaucetVerificationConfig(faucet, address(missingConfigHub), configId);
+    }
+
+    function test_HumanFaucetLaunchAllocation_AllowsMigratedClaims() public {
+        DeployCuryoHarness deployScript = new DeployCuryoHarness();
+        HumanReputation hrepToken = new HumanReputation(address(this), address(0xBEEF));
+        VoterIdNFT voterIdNFT = new VoterIdNFT(address(this), address(this));
+        MockIdentityVerificationHub mockHub = new MockIdentityVerificationHub();
+        HumanFaucet faucet = new HumanFaucet(address(hrepToken), address(mockHub), address(this));
+        voterIdNFT.addMinter(address(faucet));
+        faucet.setVoterIdNFT(address(voterIdNFT));
+        hrepToken.mint(address(faucet), deployScript.FAUCET_POOL_AMOUNT());
+
+        address[] memory users = new address[](1);
+        uint256[] memory nullifiers = new uint256[](1);
+        uint256[] memory amounts = new uint256[](1);
+        address[] memory referrers = new address[](1);
+        uint256[] memory claimantBonuses = new uint256[](1);
+        uint256[] memory referrerRewards = new uint256[](1);
+        users[0] = address(0xA11CE);
+        nullifiers[0] = 123;
+        amounts[0] = 1_000e6;
+
+        faucet.bootstrapMigratedClaims(users, nullifiers, amounts, referrers, claimantBonuses, referrerRewards);
+
+        assertEq(hrepToken.balanceOf(address(faucet)), deployScript.FAUCET_POOL_AMOUNT() - amounts[0]);
+        assertEq(faucet.totalClaimed(), amounts[0]);
+        deployScript.exposedAssertHumanFaucetLaunchAllocation(hrepToken, faucet);
     }
 
     function test_AssertExactExcludedHolders_PassesForExactOrder() public {

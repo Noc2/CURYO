@@ -694,7 +694,14 @@ contract DeployCuryo is ScaffoldETHDeploy {
             hrepToken.balanceOf(address(participationPool)) == PARTICIPATION_POOL_AMOUNT,
             "ParticipationPool launch allocation"
         );
-        _require(hrepToken.balanceOf(address(humanFaucet)) == FAUCET_POOL_AMOUNT, "HumanFaucet launch allocation");
+        _assertHumanFaucetLaunchAllocation(hrepToken, humanFaucet);
+    }
+
+    function _assertHumanFaucetLaunchAllocation(HumanReputation hrepToken, HumanFaucet humanFaucet) internal view {
+        _require(
+            hrepToken.balanceOf(address(humanFaucet)) + humanFaucet.totalClaimed() == FAUCET_POOL_AMOUNT,
+            "HumanFaucet launch allocation"
+        );
     }
 
     function _assertFaucetVerificationConfig(HumanFaucet humanFaucet, address hubAddress, bytes32 expectedConfigId)
