@@ -327,7 +327,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
             console.log("HumanFaucet deployed at:", address(humanFaucet));
             if (!isLocalDev) {
                 humanFaucet.pause();
-                console.log("Paused HumanFaucet until governance opens public claims");
+                console.log("Paused HumanFaucet until final launch checks open public claims");
             }
 
             // Wire VoterIdNFT
@@ -385,8 +385,10 @@ contract DeployCuryo is ScaffoldETHDeploy {
             console.log("Set mock configId on HumanFaucet");
         }
 
-        // Transfer ownership to governance while production public claims remain paused.
+        // Open production public claims only after bootstrap, allocation, and config checks pass.
         if (!isLocalDev) {
+            humanFaucet.unpause();
+            console.log("Opened HumanFaucet public claims");
             humanFaucet.transferOwnership(governance);
             console.log("HumanFaucet ownership transferred to governance");
         }
@@ -1107,7 +1109,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
             _require(targets.humanFaucet.governance() == targets.governance, "HumanFaucet governance");
             _require(targets.humanFaucet.owner() == targets.governance, "HumanFaucet governance owner");
             _require(targets.humanFaucet.migrationBootstrapClosed(), "HumanFaucet migration bootstrap closed");
-            _require(targets.humanFaucet.paused(), "HumanFaucet production claim pause");
+            _require(!targets.humanFaucet.paused(), "HumanFaucet production claims open");
         }
     }
 
