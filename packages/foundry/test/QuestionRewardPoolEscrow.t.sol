@@ -1166,6 +1166,12 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         vm.prank(voter1);
         uint256 reward = rewardPoolEscrow.claimQuestionReward(rewardPoolId, eligibleRoundId);
         assertEq(reward, REWARD_POOL_AMOUNT / 3);
+
+        uint256 funderBalanceBefore = usdc.balanceOf(funder);
+        vm.warp(block.timestamp + 31 days + BUNDLE_CLAIM_GRACE + 1);
+        uint256 refund = rewardPoolEscrow.refundExpiredRewardPool(rewardPoolId);
+        assertEq(refund, REWARD_POOL_AMOUNT - reward);
+        assertEq(usdc.balanceOf(funder), funderBalanceBefore + refund);
     }
 
     function testAdvanceQualificationCursorSkipsIneligibleRoundsInChunks() public {

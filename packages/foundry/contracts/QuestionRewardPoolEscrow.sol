@@ -120,6 +120,7 @@ contract QuestionRewardPoolEscrow is
 
     mapping(uint256 => RewardPool) private rewardPools;
     mapping(uint256 => mapping(uint256 => RoundSnapshot)) private roundSnapshots;
+    mapping(uint256 => uint64[]) private rewardPoolQualifiedRoundIds;
     mapping(uint256 => mapping(uint256 => mapping(uint256 => bool))) private rewardClaimed;
     mapping(uint256 => BundleReward) private bundleRewards;
     mapping(uint256 => BundleQuestion[]) private bundleQuestions;
@@ -805,23 +806,23 @@ contract QuestionRewardPoolEscrow is
         require(!rewardPool.refunded, "Already refunded");
         uint256 claimDeadline = rewardPool.bountyClosesAt;
 
-        for (uint256 roundId = rewardPool.startRoundId; roundId < rewardPool.nextRoundToEvaluate;) {
+        uint64[] storage qualifiedRoundIds = rewardPoolQualifiedRoundIds[rewardPoolId];
+        for (uint256 i = 0; i < qualifiedRoundIds.length;) {
+            uint256 roundId = qualifiedRoundIds[i];
             RoundSnapshot storage snapshot = roundSnapshots[rewardPoolId][roundId];
-            if (snapshot.qualified) {
-                if (claimDeadline == 0) {
-                    (,,,,,,,,,, uint48 settledAt,,,) = votingEngine.rounds(rewardPool.contentId, roundId);
-                    if (settledAt > claimDeadline) claimDeadline = settledAt;
-                }
-                if (snapshot.claimedCount < snapshot.eligibleVoters) {
-                    require(
-                        votingEngine.roundUnrevealedCleanupRemaining(rewardPool.contentId, roundId) == 0,
-                        "Cleanup pending"
-                    );
-                    snapshot.claimedCount = snapshot.eligibleVoters;
-                }
+            if (claimDeadline == 0) {
+                (,,,,,,,,,, uint48 settledAt,,,) = votingEngine.rounds(rewardPool.contentId, roundId);
+                if (settledAt > claimDeadline) claimDeadline = settledAt;
+            }
+            if (snapshot.claimedCount < snapshot.eligibleVoters) {
+                require(
+                    votingEngine.roundUnrevealedCleanupRemaining(rewardPool.contentId, roundId) == 0,
+                    "Cleanup pending"
+                );
+                snapshot.claimedCount = snapshot.eligibleVoters;
             }
             unchecked {
-                ++roundId;
+                ++i;
             }
         }
         require(block.timestamp > claimDeadline + BUNDLE_CLAIM_GRACE, "Grace");
@@ -1283,6 +1284,7 @@ contract QuestionRewardPoolEscrow is
         unchecked {
             rewardPool.qualifiedRounds++;
         }
+        rewardPoolQualifiedRoundIds[rewardPoolId].push(roundId.toUint64());
         rewardPool.nextRoundToEvaluate = (roundId + 1).toUint64();
         rewardPool.unallocatedAmount -= allocation;
 
