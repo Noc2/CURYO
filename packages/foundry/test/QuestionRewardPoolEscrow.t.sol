@@ -340,7 +340,8 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
 
         vm.prank(delegate1);
         uint256 reward = rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
-        assertEq(usdc.balanceOf(delegate1), 1_000e6 + reward);
+        assertEq(usdc.balanceOf(voter1), 1_000e6 + reward);
+        assertEq(usdc.balanceOf(delegate1), 1_000e6);
 
         vm.prank(voter1);
         vm.expectRevert("Already claimed");
