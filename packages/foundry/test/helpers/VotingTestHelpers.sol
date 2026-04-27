@@ -14,6 +14,7 @@ import { RoundVotingEngine } from "../../contracts/RoundVotingEngine.sol";
 import { RatingLib } from "../../contracts/libraries/RatingLib.sol";
 import { RoundLib } from "../../contracts/libraries/RoundLib.sol";
 import { MockQuestionRewardPoolEscrow } from "../mocks/MockQuestionRewardPoolEscrow.sol";
+import { MockVoterIdNFT } from "../mocks/MockVoterIdNFT.sol";
 
 function deployInitializedProtocolConfig(address admin) returns (ProtocolConfig protocolConfig) {
     return deployInitializedProtocolConfig(admin, admin);
@@ -175,6 +176,7 @@ abstract contract ContentSubmissionTestBase {
             HEVM.stopPrank();
         }
         _ensureActiveProtocolConfig(reservation.registry);
+        _ensureDefaultSubmitterVoterId(reservation.registry, reservation.submitter);
         address rewardEscrow = _ensureDefaultQuestionRewardPoolEscrow(reservation.registry);
         if (hasActivePrank) {
             HEVM.startPrank(msgSender, txOrigin);
@@ -435,6 +437,28 @@ abstract contract ContentSubmissionTestBase {
                 return;
             }
         }
+    }
+
+    function _ensureDefaultSubmitterVoterId(ContentRegistry registry, address submitter) internal {
+        if (address(registry.voterIdNFT()) != address(0)) {
+            return;
+        }
+
+        MockVoterIdNFT mockVoterIdNFT = new MockVoterIdNFT();
+        mockVoterIdNFT.setHolder(submitter);
+
+        bytes32 configRole = registry.CONFIG_ROLE();
+        address[8] memory candidates = [
+            address(this), address(1), address(2), address(0xA), address(0xB), address(0xAA), address(0xBB), address(10)
+        ];
+        for (uint256 i = 0; i < candidates.length; i++) {
+            if (registry.hasRole(configRole, candidates[i])) {
+                HEVM.prank(candidates[i]);
+                registry.setVoterIdNFT(address(mockVoterIdNFT));
+                return;
+            }
+        }
+        revert("Voter ID NFT not set");
     }
 
     function _ensureDefaultQuestionRewardPoolEscrow(ContentRegistry registry) internal returns (address rewardEscrow) {

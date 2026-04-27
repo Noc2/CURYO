@@ -1222,7 +1222,23 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             tags: "tags"
         });
         bytes32 salt = _contentSubmissionSalt(question.url, submitter);
-        _reserveNoMediaQuestionSubmission(reg2, question, 1, salt, submitter);
+        (, bytes32 submissionKey) = reg2.previewQuestionSubmissionKey(
+            question.url, _emptyImageUrls(), "", question.title, question.description, question.tags, 1
+        );
+        bytes32 revealCommitment = _defaultQuestionRevealCommitment(
+            reg2,
+            submissionKey,
+            _emptyImageUrls(),
+            "",
+            question.title,
+            question.description,
+            question.tags,
+            1,
+            salt,
+            submitter
+        );
+        hrepToken.approve(address(mockQuestionRewardPoolEscrow), DEFAULT_SUBMISSION_REWARD_POOL);
+        reg2.reserveSubmission(revealCommitment);
         vm.warp(block.timestamp + 1);
         vm.expectRevert("VoterIdNFT not set");
         _submitNoMediaQuestion(reg2, question, 1, salt);
