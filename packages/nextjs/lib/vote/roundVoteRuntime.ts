@@ -20,41 +20,19 @@ export async function resolveRoundVoteRuntime(params: {
   fallbackEpochDuration: number;
 }) {
   const latestBlock = await params.publicClient.getBlock({ blockTag: "latest" });
-  const snapshotBlockNumber = latestBlock.number;
-  const currentRoundId = await params.publicClient.readContract({
-    address: params.votingEngineAddress,
-    abi: RoundVotingEngineAbi,
-    functionName: "currentRoundId",
-    args: [params.contentId],
-    blockNumber: snapshotBlockNumber,
-  });
-
-  let roundStartTimeSeconds: number | null = null;
-  let epochDuration = params.fallbackEpochDuration;
-  if (currentRoundId > 0n) {
-    const [round, roundConfig] = await Promise.all([
-      params.publicClient.readContract({
-        address: params.votingEngineAddress,
-        abi: RoundVotingEngineAbi,
-        functionName: "rounds",
-        args: [params.contentId, currentRoundId],
-        blockNumber: snapshotBlockNumber,
-      }),
-      params.publicClient.readContract({
-        address: params.votingEngineAddress,
-        abi: RoundVotingEngineAbi,
-        functionName: "roundConfigSnapshot",
-        args: [params.contentId, currentRoundId],
-        blockNumber: snapshotBlockNumber,
-      }),
-    ]);
-    const parsedRound = parseRound(round);
-    epochDuration = parseVotingConfig(roundConfig).epochDuration;
-
-    if (parsedRound?.state === 0 && parsedRound.startTime > 0n) {
-      roundStartTimeSeconds = Number(parsedRound.startTime);
-    }
+  let pendingTimestampSeconds = Number(latestBlock.timestamp);
+  let canReadPendingBlock = false;
+  try {
+    const pendingBlock = await params.publicClient.getBlock({ blockTag: "pending" });
+    pendingTimestampSeconds = Number(pendingBlock.timestamp);
+    canReadPendingBlock = true;
+  } catch {
+    pendingTimestampSeconds = Number(latestBlock.timestamp);
   }
+
+  const snapshotBlockNumber = latestBlock.number;
+  const runtimeTimestampSeconds = Math.max(Number(latestBlock.timestamp), pendingTimestampSeconds);
+  const previewBlock = canReadPendingBlock ? { blockTag: "pending" as const } : { blockNumber: snapshotBlockNumber };
 
   const [roundId, roundReferenceRatingBps] = await Promise.all([
     params.publicClient.readContract({
@@ -62,19 +40,46 @@ export async function resolveRoundVoteRuntime(params: {
       abi: roundCommitPreviewAbi,
       functionName: "previewCommitRoundId",
       args: [params.contentId],
-      blockNumber: snapshotBlockNumber,
+      ...previewBlock,
     }),
     params.publicClient.readContract({
       address: params.votingEngineAddress,
       abi: RoundVotingEngineAbi,
       functionName: "previewCommitReferenceRatingBps",
       args: [params.contentId],
-      blockNumber: snapshotBlockNumber,
+      ...previewBlock,
     }),
   ]);
 
+  let roundStartTimeSeconds: number | null = null;
+  let epochDuration = params.fallbackEpochDuration;
+  if (roundId > 0n) {
+    const [round, roundConfig] = await Promise.all([
+      params.publicClient.readContract({
+        address: params.votingEngineAddress,
+        abi: RoundVotingEngineAbi,
+        functionName: "rounds",
+        args: [params.contentId, roundId],
+        blockNumber: snapshotBlockNumber,
+      }),
+      params.publicClient.readContract({
+        address: params.votingEngineAddress,
+        abi: RoundVotingEngineAbi,
+        functionName: "roundConfigSnapshot",
+        args: [params.contentId, roundId],
+        blockNumber: snapshotBlockNumber,
+      }),
+    ]);
+    const parsedRound = parseRound(round);
+
+    if (parsedRound?.state === 0 && parsedRound.startTime > 0n) {
+      epochDuration = parseVotingConfig(roundConfig).epochDuration;
+      roundStartTimeSeconds = Number(parsedRound.startTime);
+    }
+  }
+
   const runtimeNowMs = deriveCommitVoteRuntimeNowMs({
-    latestBlockTimestampSeconds: Number(latestBlock.timestamp),
+    latestBlockTimestampSeconds: runtimeTimestampSeconds,
     epochDurationSeconds: epochDuration,
     roundStartTimeSeconds,
   });
