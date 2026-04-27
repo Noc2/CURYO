@@ -198,9 +198,6 @@ contract RoundVotingEngine is
     ///         from the settled-round replenishment path (`UnrevealedStakeAddedToConsensusReserve`).
     event ForfeitedFundsFallbackToConsensusReserve(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
     event CurrentEpochRefunded(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
-    event UnrevealedCleanupIncentivePaid(
-        uint256 indexed contentId, uint256 indexed roundId, address indexed caller, uint256 amount
-    );
     event TreasuryFeeDistributed(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
     event ConsensusReserveFunded(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
     event ConsensusSubsidyDistributed(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
@@ -924,10 +921,6 @@ contract RoundVotingEngine is
 
         if (addedToConsensusReserve > 0) {
             emit UnrevealedStakeAddedToConsensusReserve(contentId, roundId, addedToConsensusReserve);
-        }
-
-        if (cleanupIncentive > 0) {
-            emit UnrevealedCleanupIncentivePaid(contentId, roundId, msg.sender, cleanupIncentive);
         }
 
         if (processedPastEpochCount > 0) {
