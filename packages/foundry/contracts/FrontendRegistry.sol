@@ -117,6 +117,13 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
     }
 
     /// @inheritdoc IFrontendRegistry
+    function canReceiveHistoricalFees(address frontend) external view override returns (bool) {
+        Frontend storage f = frontends[frontend];
+        return f.operator != address(0) && !f.slashed && uint256(f.stakedAmount) >= STAKE_AMOUNT
+            && _hasActiveOperatorVoterId(frontend);
+    }
+
+    /// @inheritdoc IFrontendRegistry
     function getFrontendInfo(address frontend)
         external
         view

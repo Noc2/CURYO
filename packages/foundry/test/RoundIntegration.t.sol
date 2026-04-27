@@ -2357,6 +2357,33 @@ contract RoundIntegrationTest is VotingTestBase {
         assertEq(hrepToken.balanceOf(treasury), treasuryBalanceBefore + fee, "fee should route to protocol");
     }
 
+    function test_ClaimFrontendFee_RegistryLookupFailureIsConfiscatable() public {
+        (FrontendRegistry frontendReg, address frontendOp) = _setupFrontendRegistry();
+        (uint256 contentId, uint256 roundId) = _settleRoundWithFrontend(frontendOp);
+
+        uint256 feesBefore = frontendReg.getAccumulatedFees(frontendOp);
+        uint256 frontendBalanceBefore = hrepToken.balanceOf(frontendOp);
+        uint256 treasuryBalanceBefore = hrepToken.balanceOf(treasury);
+        uint256 reserveBefore = votingEngine.consensusReserve();
+
+        vm.mockCallRevert(
+            address(frontendReg),
+            abi.encodeWithSelector(IFrontendRegistry.getFrontendInfo.selector, frontendOp),
+            abi.encodeWithSignature("Error(string)", "registry unavailable")
+        );
+
+        vm.expectRevert(RoundRewardDistributor.FrontendFeeNotClaimable.selector);
+        _claimFrontendFeeAsOperator(contentId, roundId, frontendOp);
+        _confiscateFrontendFee(contentId, roundId, frontendOp);
+
+        assertEq(hrepToken.balanceOf(frontendOp), frontendBalanceBefore, "lookup failure must not pay frontend");
+        assertEq(frontendReg.getAccumulatedFees(frontendOp), feesBefore, "lookup failure must not accrue fees");
+        assertTrue(
+            hrepToken.balanceOf(treasury) > treasuryBalanceBefore || votingEngine.consensusReserve() > reserveBefore,
+            "confiscated fee should reach protocol"
+        );
+    }
+
     function test_ClaimFrontendFee_DoubleClaimReverts() public {
         (, address frontendOp) = _setupFrontendRegistry();
         (uint256 contentId, uint256 roundId) = _settleRoundWithFrontend(frontendOp);
@@ -2409,6 +2436,33 @@ contract RoundIntegrationTest is VotingTestBase {
 
         assertEq(hrepToken.balanceOf(frontendOp), frontendBalanceBefore, "slashed frontend must not be paid directly");
         assertEq(frontendReg.getAccumulatedFees(frontendOp), feesBefore, "slashed frontend must not accrue fees");
+        assertTrue(
+            hrepToken.balanceOf(treasury) > treasuryBalanceBefore || votingEngine.consensusReserve() > reserveBefore,
+            "redirected fee should reach protocol"
+        );
+    }
+
+    function test_ClaimFrontendFee_ReroutesHistoricalShareAfterVoterIdRevocation() public {
+        FrontendRegistry frontendReg;
+        MockVoterIdNFT voterIdNFT;
+        (frontendReg, voterIdNFT) = _setupFrontendRegistryWithVoterId();
+        address frontendOp = address(200);
+        _registerFrontend(frontendReg, voterIdNFT, frontendOp);
+        (uint256 contentId, uint256 roundId) = _settleRoundWithFrontend(frontendOp);
+
+        voterIdNFT.removeHolder(frontendOp);
+
+        uint256 feesBefore = frontendReg.getAccumulatedFees(frontendOp);
+        uint256 frontendBalanceBefore = hrepToken.balanceOf(frontendOp);
+        uint256 treasuryBalanceBefore = hrepToken.balanceOf(treasury);
+        uint256 reserveBefore = votingEngine.consensusReserve();
+
+        vm.expectRevert(RoundRewardDistributor.FrontendFeeNotClaimable.selector);
+        _claimFrontendFeeAsOperator(contentId, roundId, frontendOp);
+        _confiscateFrontendFee(contentId, roundId, frontendOp);
+
+        assertEq(hrepToken.balanceOf(frontendOp), frontendBalanceBefore, "revoked frontend must not be paid directly");
+        assertEq(frontendReg.getAccumulatedFees(frontendOp), feesBefore, "revoked frontend must not accrue fees");
         assertTrue(
             hrepToken.balanceOf(treasury) > treasuryBalanceBefore || votingEngine.consensusReserve() > reserveBefore,
             "redirected fee should reach protocol"

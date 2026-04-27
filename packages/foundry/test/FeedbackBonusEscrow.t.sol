@@ -38,6 +38,10 @@ contract SlashedFrontendRegistryMock is IFrontendRegistry {
         return 0;
     }
 
+    function canReceiveHistoricalFees(address) external pure returns (bool) {
+        return false;
+    }
+
     function getFrontendInfo(address frontend_)
         external
         view

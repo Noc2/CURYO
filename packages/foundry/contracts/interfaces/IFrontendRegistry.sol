@@ -25,6 +25,11 @@ interface IFrontendRegistry {
     /// @return hrepFees Accumulated HREP fees
     function getAccumulatedFees(address frontend) external view returns (uint256 hrepFees);
 
+    /// @notice Whether a registered frontend can receive historical fees.
+    /// @dev Intentionally ignores exit-pending status so commit-time eligible frontends can
+    ///      still receive old round fees during voluntary unbonding.
+    function canReceiveHistoricalFees(address frontend) external view returns (bool);
+
     /// @notice Get frontend info
     /// @param frontend The frontend address
     /// @return operator The operator address

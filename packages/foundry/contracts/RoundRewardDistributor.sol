@@ -686,9 +686,20 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
             if (slashed || stakedAmount < snapshotRegistry.STAKE_AMOUNT()) {
                 return (FrontendFeeDisposition.Protocol, frontendOperator, false, snapshotRegistryAddress);
             }
-            return (FrontendFeeDisposition.CreditRegistry, frontendOperator, false, snapshotRegistryAddress);
+            if (_canReceiveHistoricalFees(snapshotRegistry, frontend)) {
+                return (FrontendFeeDisposition.CreditRegistry, frontendOperator, false, snapshotRegistryAddress);
+            }
+            return (FrontendFeeDisposition.Protocol, frontendOperator, false, snapshotRegistryAddress);
         } catch {
-            return (FrontendFeeDisposition.Direct, frontend, true, snapshotRegistryAddress);
+            return (FrontendFeeDisposition.Protocol, frontend, true, snapshotRegistryAddress);
+        }
+    }
+
+    function _canReceiveHistoricalFees(IFrontendRegistry snapshotRegistry, address frontend) internal view returns (bool) {
+        try snapshotRegistry.canReceiveHistoricalFees(frontend) returns (bool canReceive) {
+            return canReceive;
+        } catch {
+            return false;
         }
     }
 
