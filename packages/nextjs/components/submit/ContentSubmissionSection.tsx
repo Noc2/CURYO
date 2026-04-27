@@ -819,10 +819,15 @@ export function ContentSubmissionSection() {
         ? defaultFrontendFeeBps
         : DEFAULT_REWARD_POOL_FRONTEND_FEE_BPS;
   const estimatedBountyAmount = selectedRewardAmount ?? minimumBountyAmount;
-  const estimatedMinimumVoterGrossReward = divideRewardAmount(estimatedBountyAmount, selectedRequiredVoters);
+  const estimatedMinimumVoterClaimDenominator = selectedRequiredVoters * selectedRequiredSettledRounds;
+  const estimatedMinimumVoterGrossReward = divideRewardAmount(
+    estimatedBountyAmount,
+    estimatedMinimumVoterClaimDenominator,
+  );
   const estimatedMinimumVoterReward = applyEstimatedFrontendFee(estimatedMinimumVoterGrossReward, frontendFeeBps);
   const estimatedVoterCap = BigInt(Math.max(0, parsedRoundMaxVoters));
-  const estimatedVoterCapGrossReward = divideRewardAmount(estimatedBountyAmount, estimatedVoterCap);
+  const estimatedVoterCapClaimDenominator = estimatedVoterCap * selectedRequiredSettledRounds;
+  const estimatedVoterCapGrossReward = divideRewardAmount(estimatedBountyAmount, estimatedVoterCapClaimDenominator);
   const estimatedVoterCapReward = applyEstimatedFrontendFee(estimatedVoterCapGrossReward, frontendFeeBps);
   const bountyWindowLabel = formatBountyWindowDuration(bountyWindowSeconds);
   const oneTokenPerMinimumVoterBounty = selectedRequiredVoters * selectedRequiredSettledRounds * 1_000_000n;
@@ -1573,12 +1578,16 @@ export function ContentSubmissionSection() {
     selectedRewardAmount === null
       ? `Using the current minimum until the bounty amount is valid. ${formatFrontendFeePercent(frontendFeeBps)} may be reserved for an eligible frontend operator.`
       : `${formatFrontendFeePercent(frontendFeeBps)} may be reserved for an eligible frontend operator.`;
-  const perPaidCompleterTooltipText = `Estimated total claim after answering all ${questionCount} question${
-    questionCount === 1 ? "" : "s"
-  } across ${selectedRequiredSettledRounds.toString()} settlement round${
-    selectedRequiredSettledRounds === 1n ? "" : "s"
-  }.`;
-  const voterCapEstimateTooltipText = "Estimated per completer if every question fills the selected voter cap.";
+  const minimumClaimEstimateLabel = questionCount === 1 ? "Per voter claim" : "Per completer claim";
+  const voterCapEstimateLabel = questionCount === 1 ? "If each round reaches cap" : "If every question reaches cap";
+  const perPaidCompleterTooltipText =
+    questionCount === 1
+      ? "Estimated claim per eligible voter in each qualified settlement round. A voter can claim once for each round they revealed in."
+      : "Estimated claim per paid completer for one completed settlement round set. A completer can claim once for each set they fully answered.";
+  const voterCapEstimateTooltipText =
+    questionCount === 1
+      ? "Estimated per voter claim if each qualifying settlement round fills the selected voter cap."
+      : "Estimated per completer claim if every bundled question in a round set fills the selected voter cap.";
 
   const bountyDetailsCard = (
     <div className="space-y-5">
@@ -1840,7 +1849,7 @@ export function ContentSubmissionSection() {
 
         <div className="rounded-lg bg-primary/10 p-3">
           <p className="flex items-center gap-1.5 text-sm font-medium uppercase text-primary/80">
-            Per paid completer
+            {minimumClaimEstimateLabel}
             <InfoTooltip text={perPaidCompleterTooltipText} />
           </p>
           <p className="mt-1 text-xl font-semibold text-base-content">
@@ -1850,7 +1859,7 @@ export function ContentSubmissionSection() {
 
         <div className="rounded-lg bg-base-100/70 p-3">
           <p className="flex items-center gap-1.5 text-sm font-medium uppercase text-base-content/45">
-            If every question reaches cap
+            {voterCapEstimateLabel}
             <InfoTooltip text={voterCapEstimateTooltipText} />
           </p>
           <p className="mt-1 text-lg font-semibold text-base-content">
