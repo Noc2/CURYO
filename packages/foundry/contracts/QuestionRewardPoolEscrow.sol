@@ -498,6 +498,7 @@ contract QuestionRewardPoolEscrow is
 
         IVoterIdNFT roundVoterIdNft = _roundVoterIdNft(rewardPool.contentId, roundId);
         uint256 voterId = _requireVoterId(roundVoterIdNft, msg.sender);
+        address rewardRecipient = roundVoterIdNft.getHolder(voterId);
         require(!_isExcludedVoter(rewardPool, roundId, voterId), "Excluded voter");
         require(!rewardClaimed[rewardPoolId][roundId][voterId], "Already claimed");
 
@@ -508,17 +509,21 @@ contract QuestionRewardPoolEscrow is
         require(revealed, "Vote not revealed");
 
         RoundSnapshot storage snapshot = roundSnapshots[rewardPoolId][roundId];
-        uint256 grossAmount = QuestionRewardPoolEscrowClaimLib.nextEqualShare(
-            snapshot.allocation, snapshot.eligibleVoters, snapshot.claimedCount
-        );
-        uint256 reservedFrontendFee = QuestionRewardPoolEscrowClaimLib.nextEqualShare(
-            snapshot.frontendFeeAllocation, snapshot.eligibleVoters, snapshot.claimedCount
-        );
+        uint256 grossAmount;
         uint256 frontendFee;
         address frontendRecipient;
-        (rewardAmount, frontendFee, frontendRecipient) = QuestionRewardPoolEscrowClaimLib.computeClaimSplit(
-            votingEngine, rewardPool.contentId, roundId, commitKey, frontend, grossAmount, reservedFrontendFee
-        );
+        (grossAmount, rewardAmount, frontendFee, frontendRecipient) =
+            QuestionRewardPoolEscrowClaimLib.computeEqualShareClaimSplit(
+                votingEngine,
+                rewardPool.contentId,
+                roundId,
+                commitKey,
+                frontend,
+                snapshot.allocation,
+                snapshot.frontendFeeAllocation,
+                snapshot.eligibleVoters,
+                snapshot.claimedCount
+            );
         require(grossAmount > 0, "No reward");
 
         rewardClaimed[rewardPoolId][roundId][voterId] = true;
@@ -529,7 +534,7 @@ contract QuestionRewardPoolEscrow is
 
         IERC20 rewardToken = _rewardToken(rewardPool.asset);
         if (rewardAmount > 0) {
-            rewardToken.safeTransfer(msg.sender, rewardAmount);
+            rewardToken.safeTransfer(rewardRecipient, rewardAmount);
         }
         if (frontendFee > 0) {
             rewardToken.safeTransfer(frontendRecipient, frontendFee);
@@ -538,7 +543,7 @@ contract QuestionRewardPoolEscrow is
             rewardPoolId,
             rewardPool.contentId,
             roundId,
-            msg.sender,
+            rewardRecipient,
             voterId,
             rewardAmount,
             frontend,
@@ -590,30 +595,29 @@ contract QuestionRewardPoolEscrow is
         uint256 firstRoundId = bundleRoundIds[bundleId][0][roundSetIndex];
         IVoterIdNFT roundVoterIdNft = _roundVoterIdNft(firstQuestion.contentId, firstRoundId);
         uint256 voterId = _requireVoterId(roundVoterIdNft, msg.sender);
+        address rewardRecipient = roundVoterIdNft.getHolder(voterId);
         require(!bundleRoundSetRewardClaimed[bundleId][roundSetIndex][voterId], "Already claimed");
         require(!_isBundleExcludedVoter(bundle, bundleId, roundSetIndex, msg.sender), "Excluded voter");
 
         (address frontend, bytes32 firstCommitKey) =
             _requireCompletedBundleRoundSet(bundleId, roundSetIndex, msg.sender);
         BundleRoundSetSnapshot storage snapshot = bundleRoundSetSnapshots[bundleId][roundSetIndex];
-        uint256 grossAmount = QuestionRewardPoolEscrowClaimLib.nextEqualShare(
-            snapshot.allocation, bundle.requiredCompleters, snapshot.claimedCount
-        );
-        require(grossAmount > 0, "No reward");
-
-        uint256 reservedFrontendFee = QuestionRewardPoolEscrowClaimLib.nextEqualShare(
-            snapshot.frontendFeeAllocation, bundle.requiredCompleters, snapshot.claimedCount
-        );
+        uint256 grossAmount;
+        uint256 reservedFrontendFee;
         address frontendRecipient;
-        (rewardAmount, reservedFrontendFee, frontendRecipient) = QuestionRewardPoolEscrowClaimLib.computeClaimSplit(
-            votingEngine,
-            firstQuestion.contentId,
-            firstRoundId,
-            firstCommitKey,
-            frontend,
-            grossAmount,
-            reservedFrontendFee
-        );
+        (grossAmount, rewardAmount, reservedFrontendFee, frontendRecipient) =
+            QuestionRewardPoolEscrowClaimLib.computeEqualShareClaimSplit(
+                votingEngine,
+                firstQuestion.contentId,
+                firstRoundId,
+                firstCommitKey,
+                frontend,
+                snapshot.allocation,
+                snapshot.frontendFeeAllocation,
+                bundle.requiredCompleters,
+                snapshot.claimedCount
+            );
+        require(grossAmount > 0, "No reward");
 
         bundleRoundSetRewardClaimed[bundleId][roundSetIndex][voterId] = true;
         unchecked {
@@ -624,7 +628,7 @@ contract QuestionRewardPoolEscrow is
 
         IERC20 rewardToken = _rewardToken(bundle.asset);
         if (rewardAmount > 0) {
-            rewardToken.safeTransfer(msg.sender, rewardAmount);
+            rewardToken.safeTransfer(rewardRecipient, rewardAmount);
         }
         if (reservedFrontendFee > 0) {
             rewardToken.safeTransfer(frontendRecipient, reservedFrontendFee);
@@ -633,7 +637,7 @@ contract QuestionRewardPoolEscrow is
         emit QuestionBundleRewardClaimed(
             bundleId,
             roundSetIndex,
-            msg.sender,
+            rewardRecipient,
             voterId,
             rewardAmount,
             frontend,
@@ -665,20 +669,16 @@ contract QuestionRewardPoolEscrow is
         if (!completed) return 0;
 
         BundleRoundSetSnapshot storage snapshot = bundleRoundSetSnapshots[bundleId][roundSetIndex];
-        uint256 grossAmount = QuestionRewardPoolEscrowClaimLib.nextEqualShare(
-            snapshot.allocation, bundle.requiredCompleters, snapshot.claimedCount
-        );
-        uint256 reservedFrontendFee = QuestionRewardPoolEscrowClaimLib.nextEqualShare(
-            snapshot.frontendFeeAllocation, bundle.requiredCompleters, snapshot.claimedCount
-        );
-        (claimableAmount,,) = QuestionRewardPoolEscrowClaimLib.computeClaimSplit(
+        (, claimableAmount,,) = QuestionRewardPoolEscrowClaimLib.computeEqualShareClaimSplit(
             votingEngine,
             firstQuestion.contentId,
             firstRoundId,
             firstCommitKey,
             frontend,
-            grossAmount,
-            reservedFrontendFee
+            snapshot.allocation,
+            snapshot.frontendFeeAllocation,
+            bundle.requiredCompleters,
+            snapshot.claimedCount
         );
     }
 
@@ -844,30 +844,30 @@ contract QuestionRewardPoolEscrow is
             uint256 allocation = _previewRoundAllocation(rewardPool);
             if (allocation == 0) return 0;
             if (allocation < eligibleVoters) return 0;
-            uint256 previewGrossAmount = QuestionRewardPoolEscrowClaimLib.nextEqualShare(allocation, eligibleVoters, 0);
-            uint256 previewReservedFrontendFee = QuestionRewardPoolEscrowClaimLib.nextEqualShare(
-                _frontendFeeAllocation(rewardPool, allocation), eligibleVoters, 0
-            );
-            (claimableAmount,,) = QuestionRewardPoolEscrowClaimLib.computeClaimSplit(
+            (, claimableAmount,,) = QuestionRewardPoolEscrowClaimLib.computeEqualShareClaimSplit(
                 votingEngine,
                 rewardPool.contentId,
                 roundId,
                 commitKey,
                 frontend,
-                previewGrossAmount,
-                previewReservedFrontendFee
+                allocation,
+                _frontendFeeAllocation(rewardPool, allocation),
+                eligibleVoters,
+                0
             );
             return claimableAmount;
         }
         if (snapshot.eligibleVoters == 0 || snapshot.claimedCount >= snapshot.eligibleVoters) return 0;
-        uint256 grossAmount = QuestionRewardPoolEscrowClaimLib.nextEqualShare(
-            snapshot.allocation, snapshot.eligibleVoters, snapshot.claimedCount
-        );
-        uint256 reservedFrontendFee = QuestionRewardPoolEscrowClaimLib.nextEqualShare(
-            snapshot.frontendFeeAllocation, snapshot.eligibleVoters, snapshot.claimedCount
-        );
-        (claimableAmount,,) = QuestionRewardPoolEscrowClaimLib.computeClaimSplit(
-            votingEngine, rewardPool.contentId, roundId, commitKey, frontend, grossAmount, reservedFrontendFee
+        (, claimableAmount,,) = QuestionRewardPoolEscrowClaimLib.computeEqualShareClaimSplit(
+            votingEngine,
+            rewardPool.contentId,
+            roundId,
+            commitKey,
+            frontend,
+            snapshot.allocation,
+            snapshot.frontendFeeAllocation,
+            snapshot.eligibleVoters,
+            snapshot.claimedCount
         );
     }
 
@@ -1171,8 +1171,12 @@ contract QuestionRewardPoolEscrow is
             uint256 roundId = bundleRoundIds[bundleId][i][roundSetIndex];
             uint256 voterId = _voterIdForRound(question.contentId, roundId, account);
             if (voterId != 0) {
-                uint256 funderVoterId = _funderVoterIdForBundleQuestion(bundle, question.contentId, roundId);
-                if (voterId == funderVoterId) return true;
+                uint256 funderVoterId =
+                    _resolveFunderVoterId(question.contentId, roundId, bundle.funder, bundle.funderIdentity);
+                if (voterId == funderVoterId || voterId == _voterIdForRound(question.contentId, roundId, bundle.funder))
+                {
+                    return true;
+                }
 
                 address submitterIdentity = registry.getSubmitterIdentity(question.contentId);
                 if (submitterIdentity != address(0)) {
@@ -1185,14 +1189,6 @@ contract QuestionRewardPoolEscrow is
             }
         }
         return false;
-    }
-
-    function _funderVoterIdForBundleQuestion(BundleReward storage bundle, uint256 contentId, uint256 roundId)
-        internal
-        view
-        returns (uint256)
-    {
-        return _resolveFunderVoterId(contentId, roundId, bundle.funder, bundle.funderIdentity);
     }
 
     function _getIncompleteRewardPoolForQualification(uint256 rewardPoolId)
@@ -1271,7 +1267,14 @@ contract QuestionRewardPoolEscrow is
         if (funderVoterId != 0 && _hasRevealedCommit(rewardPool.contentId, roundId, funderVoterId)) {
             eligibleVoters--;
         }
-        if (_submitterHasRevealedCommit(rewardPool, roundId, funderVoterId)) {
+        uint256 currentFunderVoterId = _voterIdForRound(rewardPool.contentId, roundId, rewardPool.funder);
+        if (
+            currentFunderVoterId != 0 && currentFunderVoterId != funderVoterId
+                && _hasRevealedCommit(rewardPool.contentId, roundId, currentFunderVoterId)
+        ) {
+            eligibleVoters--;
+        }
+        if (_submitterHasRevealedCommit(rewardPool, roundId, funderVoterId, currentFunderVoterId)) {
             eligibleVoters--;
         }
         canQualify = eligibleVoters >= rewardPool.requiredVoters;
@@ -1354,6 +1357,7 @@ contract QuestionRewardPoolEscrow is
     {
         return voterId != 0
             && (voterId == _funderVoterIdForRound(rewardPool, roundId)
+                || voterId == _voterIdForRound(rewardPool.contentId, roundId, rewardPool.funder)
                 || _isSubmitterVoterIdForRound(rewardPool, roundId, voterId));
     }
 
@@ -1366,25 +1370,22 @@ contract QuestionRewardPoolEscrow is
         view
         returns (uint256)
     {
-        uint256 funderVoterId = _voterIdForRound(contentId, roundId, funder);
-        if (funderVoterId != 0) return funderVoterId;
-
         if (funderIdentity != address(0)) {
             uint256 identityVoterId = _voterIdForRound(contentId, roundId, funderIdentity);
             if (identityVoterId != 0) return identityVoterId;
         }
-
-        return 0;
+        return _voterIdForRound(contentId, roundId, funder);
     }
 
-    function _submitterHasRevealedCommit(RewardPool storage rewardPool, uint256 roundId, uint256 funderVoterId)
-        internal
-        view
-        returns (bool)
-    {
+    function _submitterHasRevealedCommit(
+        RewardPool storage rewardPool,
+        uint256 roundId,
+        uint256 funderVoterId,
+        uint256 currentFunderVoterId
+    ) internal view returns (bool) {
         uint256 currentVoterId = _currentSubmitterVoterId(rewardPool, roundId);
         if (
-            currentVoterId != 0 && currentVoterId != funderVoterId
+            currentVoterId != 0 && currentVoterId != funderVoterId && currentVoterId != currentFunderVoterId
                 && _hasRevealedCommit(rewardPool.contentId, roundId, currentVoterId)
         ) {
             return true;
@@ -1393,6 +1394,7 @@ contract QuestionRewardPoolEscrow is
         uint256 snapshotVoterId = rewardPool.submitterVoterId;
         return _submitterSnapshotAppliesToRound(rewardPool, roundId) && snapshotVoterId != 0
             && snapshotVoterId != currentVoterId && snapshotVoterId != funderVoterId
+            && snapshotVoterId != currentFunderVoterId
             && _hasRevealedCommit(rewardPool.contentId, roundId, snapshotVoterId);
     }
 

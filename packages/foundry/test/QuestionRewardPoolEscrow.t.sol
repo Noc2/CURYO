@@ -678,6 +678,40 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(claimable, REWARD_POOL_AMOUNT / 3);
     }
 
+    function testBundleRewardPaysVoterIdHolderWhenNewDelegateClaims() public {
+        address newDelegate = address(0xD1E);
+        uint256[] memory contentIds = _submitBundleQuestions();
+        uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, REWARD_POOL_AMOUNT, 3);
+        vm.prank(owner);
+        hrepToken.mint(delegate1, 10_000e6);
+
+        vm.prank(voter1);
+        voterIdNFT.setDelegate(delegate1);
+
+        address[] memory voters = new address[](3);
+        voters[0] = delegate1;
+        voters[1] = voter2;
+        voters[2] = voter3;
+        bool[] memory directions = _directions(true, true, false);
+        _settleRoundWith(voters, contentIds[0], directions);
+        _settleRoundWith(voters, contentIds[1], directions);
+
+        vm.prank(voter1);
+        voterIdNFT.removeDelegate();
+        vm.prank(voter1);
+        voterIdNFT.setDelegate(newDelegate);
+
+        uint256 holderBalanceBefore = usdc.balanceOf(voter1);
+        uint256 delegateBalanceBefore = usdc.balanceOf(newDelegate);
+
+        vm.prank(newDelegate);
+        uint256 reward = rewardPoolEscrow.claimQuestionBundleReward(bundleId, 0);
+
+        assertEq(reward, REWARD_POOL_AMOUNT / 3);
+        assertEq(usdc.balanceOf(voter1), holderBalanceBefore + reward);
+        assertEq(usdc.balanceOf(newDelegate), delegateBalanceBefore);
+    }
+
     function testFunderAndSubmitterVoterIdsAreExcludedFromRewardPoolClaims() public {
         uint256 contentId = _submitQuestion("");
         uint256 rewardPoolId = _createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1);
@@ -748,6 +782,47 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(reward, REWARD_POOL_AMOUNT / 3);
     }
 
+    function testDelegatedFunderStaysExcludedAfterAgentReassignment() public {
+        uint256 contentId = _submitQuestion("");
+
+        vm.prank(voter1);
+        voterIdNFT.setDelegate(delegate1);
+        uint256 rewardPoolId = _createRewardPoolAs(delegate1, contentId, REWARD_POOL_AMOUNT, 3, 1);
+        vm.prank(voter1);
+        voterIdNFT.removeDelegate();
+        vm.prank(voter3);
+        voterIdNFT.setDelegate(delegate1);
+
+        address[] memory voters = new address[](5);
+        voters[0] = voter1;
+        voters[1] = voter3;
+        voters[2] = voter2;
+        voters[3] = voter4;
+        voters[4] = funder;
+        bool[] memory directions = new bool[](5);
+        directions[0] = true;
+        directions[1] = true;
+        directions[2] = true;
+        directions[3] = true;
+        directions[4] = false;
+        uint256 roundId = _settleRoundWith(voters, contentId, directions);
+
+        assertEq(rewardPoolEscrow.claimableQuestionReward(rewardPoolId, roundId, voter1), 0);
+        assertEq(rewardPoolEscrow.claimableQuestionReward(rewardPoolId, roundId, voter3), 0);
+
+        vm.prank(voter1);
+        vm.expectRevert("Excluded voter");
+        rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
+
+        vm.prank(voter3);
+        vm.expectRevert("Excluded voter");
+        rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
+
+        vm.prank(voter2);
+        uint256 reward = rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
+        assertEq(reward, REWARD_POOL_AMOUNT / 3);
+    }
+
     function testDelegatedFunderCannotQualifyRoundAfterDelegateRemoval() public {
         uint256 contentId = _submitQuestion("");
 
@@ -797,6 +872,38 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         vm.prank(voter1);
         uint256 reward = rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
         assertEq(reward, REWARD_POOL_AMOUNT / 3);
+    }
+
+    function testQuestionRewardPaysVoterIdHolderWhenNewDelegateClaims() public {
+        address newDelegate = address(0xD1E);
+        uint256 contentId = _submitQuestion("");
+        uint256 rewardPoolId = _createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1);
+
+        vm.prank(owner);
+        hrepToken.mint(delegate1, 10_000e6);
+        vm.prank(voter1);
+        voterIdNFT.setDelegate(delegate1);
+
+        address[] memory voters = new address[](3);
+        voters[0] = delegate1;
+        voters[1] = voter2;
+        voters[2] = voter3;
+        uint256 roundId = _settleRoundWith(voters, contentId, _directions(true, true, false));
+
+        vm.prank(voter1);
+        voterIdNFT.removeDelegate();
+        vm.prank(voter1);
+        voterIdNFT.setDelegate(newDelegate);
+
+        uint256 holderBalanceBefore = usdc.balanceOf(voter1);
+        uint256 delegateBalanceBefore = usdc.balanceOf(newDelegate);
+
+        vm.prank(newDelegate);
+        uint256 reward = rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
+
+        assertEq(reward, REWARD_POOL_AMOUNT / 3);
+        assertEq(usdc.balanceOf(voter1), holderBalanceBefore + reward);
+        assertEq(usdc.balanceOf(newDelegate), delegateBalanceBefore);
     }
 
     function testSettledRoundCanQualifyAfterPoolExpires() public {
@@ -1123,16 +1230,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         uint256 expectedContentId = registry.nextContentId();
 
         uint256 contentId = registry.submitQuestionWithRewardAndRoundConfig(
-            contextUrl,
-            imageUrls,
-            "",
-            title,
-            description,
-            tags,
-            CATEGORY_ID,
-            salt,
-            rewardTerms,
-            roundConfig
+            contextUrl, imageUrls, "", title, description, tags, CATEGORY_ID, salt, rewardTerms, roundConfig
         );
         vm.stopPrank();
 

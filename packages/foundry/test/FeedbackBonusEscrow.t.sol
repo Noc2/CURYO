@@ -69,6 +69,7 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
     address public voter2 = address(5);
     address public voter3 = address(6);
     address public voter4 = address(7);
+    address public delegate1 = address(8);
     address public frontend1 = address(9);
     address public treasury = address(100);
 
@@ -218,6 +219,7 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
             hrepToken.mint(humans[i], 10_000e6);
             usdc.mint(humans[i], 1_000e6);
         }
+        hrepToken.mint(delegate1, 10_000e6);
 
         vm.stopPrank();
     }
@@ -332,6 +334,36 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
         vm.prank(funder);
         vm.expectRevert("No commit");
         feedbackBonusEscrow.awardFeedbackBonus(poolId, voter4, FEEDBACK_HASH, 10e6);
+    }
+
+    function testAwardPaysVoterIdHolderWhenNewDelegateIsRecipient() public {
+        address newDelegate = address(0xD1E);
+        uint256 contentId = _submitQuestion("");
+        uint256 poolId = _createFeedbackBonusPool(contentId);
+
+        vm.prank(voter1);
+        voterIdNFT.setDelegate(delegate1);
+
+        address[] memory voters = new address[](3);
+        voters[0] = delegate1;
+        voters[1] = voter2;
+        voters[2] = voter3;
+        _settleRoundWith(voters, contentId, _directions(true, true, false));
+
+        vm.prank(voter1);
+        voterIdNFT.removeDelegate();
+        vm.prank(voter1);
+        voterIdNFT.setDelegate(newDelegate);
+
+        uint256 holderBalanceBefore = usdc.balanceOf(voter1);
+        uint256 delegateBalanceBefore = usdc.balanceOf(newDelegate);
+
+        vm.prank(funder);
+        uint256 recipientAmount = feedbackBonusEscrow.awardFeedbackBonus(poolId, newDelegate, FEEDBACK_HASH, 10e6);
+
+        assertEq(recipientAmount, 10e6);
+        assertEq(usdc.balanceOf(voter1), holderBalanceBefore + recipientAmount);
+        assertEq(usdc.balanceOf(newDelegate), delegateBalanceBefore);
     }
 
     function testCannotAwardSameVoterOrFeedbackHashTwice() public {

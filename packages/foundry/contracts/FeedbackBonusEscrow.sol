@@ -184,7 +184,7 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
         require(grossAmount > 0 && grossAmount <= pool.remainingAmount, "Invalid amount");
         require(!feedbackHashAwarded[poolId][feedbackHash], "Feedback already awarded");
 
-        uint256 voterId = _requireRevealedIndependentVoter(pool, recipient);
+        (uint256 voterId, address rewardRecipient) = _requireRevealedIndependentVoter(pool, recipient);
         require(!voterIdAwarded[poolId][voterId], "Voter already awarded");
 
         bytes32 commitKey = votingEngine.voterIdCommitKey(pool.contentId, pool.roundId, voterId);
@@ -204,7 +204,7 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
         feedbackHashAwarded[poolId][feedbackHash] = true;
 
         if (recipientAmount > 0) {
-            usdcToken.safeTransfer(recipient, recipientAmount);
+            usdcToken.safeTransfer(rewardRecipient, recipientAmount);
         }
         if (frontendFee > 0) {
             usdcToken.safeTransfer(frontendRecipient, frontendFee);
@@ -214,7 +214,7 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
             poolId,
             pool.contentId,
             pool.roundId,
-            recipient,
+            rewardRecipient,
             voterId,
             feedbackHash,
             grossAmount,
@@ -293,7 +293,7 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
     function _requireRevealedIndependentVoter(FeedbackBonusPool storage pool, address recipient)
         internal
         view
-        returns (uint256 voterId)
+        returns (uint256 voterId, address rewardRecipient)
     {
         require(recipient != address(0), "Invalid recipient");
         (, RoundLib.RoundState state,,,,,,,,,,,,) = votingEngine.rounds(pool.contentId, pool.roundId);
@@ -306,6 +306,7 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
         IVoterIdNFT roundVoterIdNft = _roundVoterIdNft(pool.contentId, pool.roundId);
         voterId = roundVoterIdNft.getTokenId(recipient);
         require(voterId != 0, "Voter ID required");
+        rewardRecipient = roundVoterIdNft.getHolder(voterId);
         require(!_isExcludedVoter(pool, voterId), "Excluded voter");
 
         bytes32 commitKey = votingEngine.voterIdCommitKey(pool.contentId, pool.roundId, voterId);
