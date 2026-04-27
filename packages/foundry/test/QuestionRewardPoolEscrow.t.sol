@@ -51,6 +51,23 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
     uint8 internal constant REWARD_ASSET_USDC = 1;
     uint256 internal constant BUNDLE_CLAIM_GRACE = 7 days;
 
+    event RewardPoolCreated(
+        uint256 indexed rewardPoolId,
+        uint256 indexed contentId,
+        address indexed funder,
+        uint256 funderVoterId,
+        uint256 amount,
+        uint256 requiredVoters,
+        uint256 requiredSettledRounds,
+        uint256 startRoundId,
+        uint256 bountyOpensAt,
+        uint256 bountyClosesAt,
+        uint256 feedbackClosesAt,
+        uint256 frontendFeeBps,
+        uint8 asset,
+        bool nonRefundable
+    );
+
     function _tlockDrandChainHash() internal pure override returns (bytes32) {
         return DEFAULT_DRAND_CHAIN_HASH;
     }
@@ -1053,6 +1070,95 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         vm.expectRevert("Amount too small");
         rewardPoolEscrow.createRewardPool(contentId, 199, 3, 1, block.timestamp + 30 days, 0);
         vm.stopPrank();
+    }
+
+    function testAgentWalletQuestionSubmissionFundsEscrowFromSigningWallet() public {
+        address agentWallet = address(0xA11CE);
+        string memory contextUrl = "https://example.com/agent-funded-context";
+        string memory title = "Which supplier should the agent shortlist?";
+        string memory description = "Check that direct agent submissions fund escrow from the signer.";
+        string memory tags = "agents,bounty";
+        string[] memory imageUrls = new string[](1);
+        imageUrls[0] = "https://example.com/agent-funded-context.jpg";
+        RoundLib.RoundConfig memory roundConfig = RoundLib.RoundConfig({
+            epochDuration: uint32(EPOCH_DURATION), maxDuration: uint32(7 days), minVoters: 3, maxVoters: 200
+        });
+        ContentRegistry.SubmissionRewardTerms memory rewardTerms = ContentRegistry.SubmissionRewardTerms({
+            asset: REWARD_ASSET_USDC,
+            amount: REWARD_POOL_AMOUNT,
+            requiredVoters: 3,
+            requiredSettledRounds: 1,
+            bountyClosesAt: block.timestamp + 30 days,
+            feedbackClosesAt: block.timestamp + 30 days
+        });
+        bytes32 salt = keccak256("agent-wallet-usdc-submission-bounty");
+        activeTlockContentRegistry = registry;
+
+        voterIdNFT.setHolder(agentWallet);
+        usdc.mint(agentWallet, REWARD_POOL_AMOUNT);
+
+        (, bytes32 submissionKey) =
+            registry.previewQuestionSubmissionKey(contextUrl, imageUrls, "", title, description, tags, CATEGORY_ID);
+        bytes32 revealCommitment = _questionRevealCommitment(
+            submissionKey,
+            _submissionMediaHash(imageUrls, ""),
+            title,
+            description,
+            tags,
+            CATEGORY_ID,
+            salt,
+            agentWallet,
+            rewardTerms,
+            roundConfig
+        );
+
+        vm.startPrank(agentWallet);
+        usdc.approve(address(rewardPoolEscrow), rewardTerms.amount);
+        registry.reserveSubmission(revealCommitment);
+        vm.warp(block.timestamp + 1);
+
+        uint256 escrowBalanceBefore = usdc.balanceOf(address(rewardPoolEscrow));
+        uint256 agentBalanceBefore = usdc.balanceOf(agentWallet);
+        uint256 expectedContentId = registry.nextContentId();
+        uint256 expectedRewardPoolId = rewardPoolEscrow.nextRewardPoolId();
+        uint256 agentVoterId = voterIdNFT.getTokenId(agentWallet);
+
+        vm.expectEmit(true, true, true, true, address(rewardPoolEscrow));
+        emit RewardPoolCreated(
+            expectedRewardPoolId,
+            expectedContentId,
+            agentWallet,
+            agentVoterId,
+            rewardTerms.amount,
+            rewardTerms.requiredVoters,
+            rewardTerms.requiredSettledRounds,
+            1,
+            block.timestamp,
+            rewardTerms.bountyClosesAt,
+            rewardTerms.feedbackClosesAt,
+            rewardPoolEscrow.defaultFrontendFeeBps(),
+            REWARD_ASSET_USDC,
+            true
+        );
+        uint256 contentId = registry.submitQuestionWithRewardAndRoundConfig(
+            contextUrl,
+            imageUrls,
+            "",
+            title,
+            description,
+            tags,
+            CATEGORY_ID,
+            salt,
+            rewardTerms,
+            roundConfig
+        );
+        vm.stopPrank();
+
+        assertEq(contentId, expectedContentId);
+        assertEq(registry.getContentSubmitter(contentId), agentWallet);
+        assertEq(registry.getSubmitterIdentity(contentId), agentWallet);
+        assertEq(usdc.balanceOf(address(rewardPoolEscrow)), escrowBalanceBefore + rewardTerms.amount);
+        assertEq(usdc.balanceOf(agentWallet), agentBalanceBefore - rewardTerms.amount);
     }
 
     function testUnderfundedRoundDoesNotQualifyAndCanBeSkipped() public {

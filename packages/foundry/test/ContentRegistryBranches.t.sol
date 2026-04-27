@@ -616,6 +616,65 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         assertEq(mockQuestionRewardPoolEscrow.lastFeedbackClosesAt(), rewardPoolExpiresAt);
     }
 
+    function test_SubmitQuestionWithReward_UsesAgentWalletAsEscrowFunder() public {
+        address agentWallet = address(0xA11CE);
+        string memory contextUrl = "https://example.com/agent-funded-bounty";
+        string memory title = "Which vendor should the agent research next?";
+        string memory description = "Confirm that the wallet signing the ask funds the reward pool.";
+        string memory tags = "Agents,Bounty";
+        uint256 categoryId = 1;
+        bytes32 salt = keccak256("agent-wallet-submission-bounty");
+        string[] memory imageUrls = _emptyImageUrls();
+        uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
+        uint256 rewardPoolExpiresAt = block.timestamp + 14 days;
+        ContentRegistry.SubmissionRewardTerms memory rewardTerms = _submissionRewardTerms(
+            DEFAULT_SUBMISSION_REWARD_ASSET_HREP,
+            rewardAmount,
+            DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+            DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+            rewardPoolExpiresAt
+        );
+
+        vm.startPrank(agentWallet);
+        hrepToken.approve(address(mockQuestionRewardPoolEscrow), rewardAmount);
+        _reserveQuestionSubmissionWithRewardTerms(
+            contextUrl,
+            imageUrls,
+            "",
+            title,
+            description,
+            tags,
+            categoryId,
+            salt,
+            agentWallet,
+            DEFAULT_SUBMISSION_REWARD_ASSET_HREP,
+            rewardAmount,
+            DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+            DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+            rewardPoolExpiresAt
+        );
+        vm.warp(block.timestamp + 1);
+        uint256 id = registry.submitQuestionWithRewardAndRoundConfig(
+            contextUrl,
+            imageUrls,
+            "",
+            title,
+            description,
+            tags,
+            categoryId,
+            salt,
+            rewardTerms,
+            _defaultContentRoundConfig()
+        );
+        vm.stopPrank();
+
+        assertEq(registry.getContentSubmitter(id), agentWallet);
+        assertEq(registry.getSubmitterIdentity(id), agentWallet);
+        assertEq(mockQuestionRewardPoolEscrow.lastContentId(), id);
+        assertEq(mockQuestionRewardPoolEscrow.lastFunder(), agentWallet);
+        assertEq(mockQuestionRewardPoolEscrow.lastAmount(), rewardAmount);
+    }
+
     function test_SubmitQuestionWithRewardAndRoundConfig_StoresConfigAndSnapshotsRound() public {
         string memory contextUrl = "https://example.com/custom-round";
         string memory title = "How quickly should this bounty settle?";
