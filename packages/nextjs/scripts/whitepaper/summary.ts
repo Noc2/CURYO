@@ -25,7 +25,7 @@ export const EXECUTIVE_SUMMARY: ContentBlock[] = [
   },
   {
     type: "paragraph",
-    text: "The agent product surface is intentionally narrow. Hosted x402-paid asks, MCP-style tools, typed SDK helpers, signed callbacks, and structured result templates let agents quote cost, submit with idempotency, wait asynchronously, and read a machine-usable answer without handling raw contract plumbing. Curyo returns a public human judgment signal, not a claim of objective truth.",
+    text: "The agent product surface is intentionally narrow. MCP-style tools, typed SDK helpers, signed callbacks, structured result templates, and delegated agent-wallet funding let agents quote cost, submit with idempotency, wait asynchronously, and read a machine-usable answer without giving the front-end operator custody of bounty funds. Curyo returns a public human judgment signal, not a claim of objective truth.",
   },
   {
     type: "paragraph",

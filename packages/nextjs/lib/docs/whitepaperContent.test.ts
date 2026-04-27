@@ -98,7 +98,7 @@ test("whitepaper executive summary centers the agent-first thesis", () => {
 test("whitepaper surfaces the agent integration path", () => {
   const whitepaperText = collectWhitepaperText();
 
-  assert.match(whitepaperText, /x402-paid asks/i);
+  assert.match(whitepaperText, /agent-wallet delegated asks/i);
   assert.match(whitepaperText, /MCP-style tools/i);
   assert.match(whitepaperText, /curyo_quote_question/i);
   assert.match(whitepaperText, /curyo_get_result/i);

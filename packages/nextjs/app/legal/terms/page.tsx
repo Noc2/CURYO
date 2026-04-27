@@ -194,11 +194,13 @@ const TermsPage: NextPage = () => {
           Submission and bounty features are question-first: a submission may be text-only or include one image or one
           YouTube link, and the submission must attach a non-refundable bounty funded in HREP or USDC on Celo. A default
           frontend-operator share may be reserved from qualified claims when the vote was attributed to an eligible
-          frontend. The Interface does not impose a hard bounty cap, but it may apply moderation, duplicate-detection,
-          media-type, and eligibility checks before a submission is accepted or a claim is processed.
+          frontend. Bounty funds are sent from your connected wallet, smart wallet, or user-authorized agent wallet
+          directly to protocol smart contracts; the Interface operator does not custody those bounty funds. The
+          Interface does not impose a hard bounty cap, but it may apply moderation, duplicate-detection, media-type, and
+          eligibility checks before a submission is accepted or a claim is processed.
         </p>
         <p>
-          bounty payouts are equal within each qualified bounty round for eligible revealed voters, and claims remain
+          Bounty payouts are equal within each qualified bounty round for eligible revealed voters, and claims remain
           gated by the relevant protocol checks. These guardrails are intended to reduce spam, preserve Sybil
           resistance, and keep the submission surface narrow.
         </p>

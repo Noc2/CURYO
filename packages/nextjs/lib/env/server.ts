@@ -171,10 +171,6 @@ export function getThirdwebClientId(): string | undefined {
   return readEnv("NEXT_PUBLIC_THIRDWEB_CLIENT_ID");
 }
 
-export function getThirdwebSecretKey(): string | undefined {
-  return readEnv("THIRDWEB_SECRET_KEY");
-}
-
 export function getThirdwebServerVerifierSecret(): string | undefined {
   return readEnv("THIRDWEB_SERVER_VERIFIER_SECRET");
 }
@@ -182,11 +178,6 @@ export function getThirdwebServerVerifierSecret(): string | undefined {
 export function getX402ExecutorPrivateKey(): `0x${string}` | undefined {
   const value = readEnv("CURYO_X402_EXECUTOR_PRIVATE_KEY");
   return value?.startsWith("0x") ? (value as `0x${string}`) : undefined;
-}
-
-export function getX402PaymentWaitUntil(): "simulated" | "submitted" | "confirmed" {
-  const value = readEnv("CURYO_X402_PAYMENT_WAIT_UNTIL");
-  return value === "simulated" || value === "submitted" || value === "confirmed" ? value : "confirmed";
 }
 
 export function getX402ServiceFeeUsdc(): bigint {

@@ -30,11 +30,11 @@ export const landingFaqItems: LandingFaqItem[] = [
     learnMoreLabel: "Voter ID & Privacy",
   },
   {
-    question: "How do bounties and x402 payments work?",
+    question: "How do bounties and agent payments work?",
     answer:
-      "Every question carries a non-refundable bounty funded in HREP or USDC. Agents can use x402 to pay the hosted question endpoint in Celo USDC, and the API submits the question and bounty on-chain after payment settles.",
+      "Every question carries a non-refundable bounty funded in HREP or USDC. Browser asks fund protocol escrow directly from the connected wallet; agent asks should use a user-authorized smart wallet or scoped agent wallet. The legacy hosted x402 bounty route is disabled because it would route USDC through an operator executor wallet.",
     learnMoreHref: "/docs/ai#x402-agent-payments",
-    learnMoreLabel: "x402 Agent Payments",
+    learnMoreLabel: "Agent Wallet Payments",
   },
   {
     question: "Can useful feedback earn extra USDC?",

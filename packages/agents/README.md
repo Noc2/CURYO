@@ -29,7 +29,7 @@ yarn agents:status --operation-key 0x...
 yarn agents:result --operation-key 0x...
 ```
 
-The CLI reads `.env` from the current process environment. Use a managed agent token for authenticated HTTP or MCP flows, or use `CURYO_API_BASE_URL` alone when calling the hosted x402 question endpoint with a payment-aware fetch wrapper in your runtime.
+The CLI reads `.env` from the current process environment. Use a managed agent token for authenticated HTTP or MCP flows. Tokenless hosted x402 bounty submission is disabled because the old route paid an operator executor wallet before submitting on-chain; future paid asks should execute from a user-controlled smart wallet or scoped agent wallet.
 
 ## Configuration
 
@@ -73,7 +73,7 @@ The canonical built-in result templates are exported from `@curyo/agents/templat
 - `go_no_go`
 - `ranked_option_member`
 
-Next.js, MCP tools, x402 submission parsing, and SDK examples should consume these definitions rather than duplicating template metadata.
+Next.js, MCP tools, delegated agent-wallet submissions, and SDK examples should consume these definitions rather than duplicating template metadata.
 
 ## Question Design
 

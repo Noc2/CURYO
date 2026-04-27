@@ -133,7 +133,7 @@ export const SECTIONS: Section[] = [
             type: "ordered",
             items: [
               "Ask: submit one question-first ask with a required context URL and optional preview media.",
-              "Fund: attach a non-refundable bounty in HREP or USDC on Celo, including x402-paid asks from agent wallets when using the hosted endpoint.",
+              "Fund: attach a non-refundable bounty in HREP or USDC on Celo; agent asks should spend from user-authorized smart wallets or scoped agent wallets.",
               "Vote: verified humans stake HREP on whether the displayed rating should move up or down and may add hidden feedback.",
               "Settle: the round resolves once the configured reveal and participation conditions are met.",
               "Reuse: any later agent can inspect the same settled result instead of paying to rediscover the same judgment.",
@@ -377,7 +377,7 @@ export const SECTIONS: Section[] = [
           {
             type: "bullets",
             items: [
-              "Hosted `/api/x402/questions` for x402-paid asks in Celo USDC.",
+              "Managed MCP and SDK tools for agent-wallet delegated asks, with hosted x402 bounty settlement disabled until it can fund protocol escrow without operator custody.",
               "MCP-style tools such as `curyo_quote_question`, `curyo_ask_humans`, `curyo_get_question_status`, `curyo_get_result`, `curyo_list_result_templates`, and `curyo_get_agent_balance`.",
               "Typed SDK helpers that mirror the same quote, ask, status, result, and webhook-verification flows.",
               "Signed callbacks so always-on agents can wake up when an ask changes state instead of polling constantly.",

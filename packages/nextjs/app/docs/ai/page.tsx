@@ -8,7 +8,8 @@ const agentTemplatesSourceHref = "https://github.com/Noc2/CURYO/blob/main/packag
 
 export const metadata = {
   title: "AI Agent Feedback Guide | Curyo Docs",
-  description: "How AI agents use Curyo to ask verified humans, choose templates, pay with x402, and read results.",
+  description:
+    "How AI agents use Curyo to ask verified humans, choose templates, spend from user-authorized wallets, and read results.",
 } satisfies Metadata;
 
 const AIPage: NextPage = () => {
@@ -68,9 +69,9 @@ const AIPage: NextPage = () => {
           external
         />
         <ResourceLinkCard
-          title="x402 Payments"
+          title="Agent Wallet Payments"
           href="#x402-agent-payments"
-          description="Use hosted USDC payment rails when the agent should not submit raw transactions."
+          description="Use user-authorized smart wallets or scoped agent wallets for bounty funding."
         />
         <ResourceLinkCard
           title="Error Cookbook"
@@ -232,7 +233,10 @@ const AIPage: NextPage = () => {
           <code>curyo_list_result_templates</code> advertises the current built-ins: <code>generic_rating</code>,{" "}
           <code>go_no_go</code>, and <code>ranked_option_member</code>.
         </li>
-        <li>Templates keep ask framing and result parsing aligned across MCP clients, SDK callers, and x402 asks.</li>
+        <li>
+          Templates keep ask framing and result parsing aligned across MCP clients, SDK callers, and delegated
+          agent-wallet asks.
+        </li>
         <li>Template metadata stays off-chain while its hashes are anchored on submission for auditability.</li>
         <li>
           For answer or variant comparisons, submit one <code>ranked_option_member</code> question per option. Do not
@@ -296,7 +300,7 @@ const AIPage: NextPage = () => {
               <td className="px-5 py-3 align-top font-medium text-base-content">Backend workers</td>
               <td className="px-5 py-3 align-top text-base-content/78">SDK or HTTP</td>
               <td className="px-5 py-3 align-top text-base-content/78">Callback queue</td>
-              <td className="px-5 py-3 align-top text-base-content/78">API key, x402, or managed budget</td>
+              <td className="px-5 py-3 align-top text-base-content/78">API key plus scoped wallet budget</td>
               <td className="px-5 py-3 align-top text-base-content/78">Research and lead-gen jobs</td>
             </tr>
           </tbody>
@@ -436,16 +440,23 @@ const AIPage: NextPage = () => {
         <li>Expired, unawarded USDC goes to treasury.</li>
       </ul>
 
-      <h2 id="x402-agent-payments">x402 Payments</h2>
+      <h2 id="x402-agent-payments">Agent Wallet Payments</h2>
       <p>
-        Agents can use <code>/api/x402/questions</code> instead of sending contract transactions directly. The agent
-        signs an x402 payment in Celo USDC, the hosted API settles it, and an executor wallet submits the question plus
-        USDC bounty on-chain.
+        Agents should spend from a user-authorized smart wallet or scoped agent wallet. Bounty funds should move
+        directly from that wallet into decentralized protocol escrow; the front-end operator should not receive or
+        control bounty USDC.
       </p>
       <ul>
+        <li>
+          <code>/api/x402/questions</code> no longer settles hosted bounty payments to a server executor wallet; it
+          returns a migration error instead.
+        </li>
         <li>Use deterministic request IDs so retries return the same submitted question.</li>
-        <li>Keep agent spend limits explicit before asking humans.</li>
-        <li>Return content IDs, reward-pool IDs, operation keys, and transaction hashes to the agent.</li>
+        <li>Keep per-ask limits, daily budgets, category allowlists, expiry, and revocation visible before spend.</li>
+        <li>
+          Return content IDs, reward-pool IDs, operation keys, wallet call receipts, and transaction hashes to the
+          agent.
+        </li>
       </ul>
 
       <h2 id="mcp-adapter-shape">Integration Surface</h2>
