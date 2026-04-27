@@ -432,7 +432,10 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
     function removeDelegate() external {
         address oldDelegate = delegateTo[msg.sender];
         address pendingDelegate = pendingDelegateTo[msg.sender];
-        if (oldDelegate == address(0) && pendingDelegate == address(0)) revert NoDelegateSet();
+        address pendingDelegator = pendingDelegateOf[msg.sender];
+        if (oldDelegate == address(0) && pendingDelegate == address(0) && pendingDelegator == address(0)) {
+            revert NoDelegateSet();
+        }
 
         if (oldDelegate != address(0)) {
             delete delegateTo[msg.sender];
@@ -443,6 +446,11 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
         if (pendingDelegate != address(0)) {
             delete pendingDelegateTo[msg.sender];
             delete pendingDelegateOf[pendingDelegate];
+        }
+
+        if (pendingDelegator != address(0)) {
+            delete pendingDelegateOf[msg.sender];
+            delete pendingDelegateTo[pendingDelegator];
         }
     }
 
