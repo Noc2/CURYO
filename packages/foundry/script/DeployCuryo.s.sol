@@ -50,6 +50,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
     uint256 public constant PARTICIPATION_POOL_AMOUNT = 12_000_000 * 1e6;
     uint256 public constant FAUCET_POOL_AMOUNT =
         TOTAL_SUPPLY_CAP - CONSENSUS_POOL_AMOUNT - TREASURY_AMOUNT - PARTICIPATION_POOL_AMOUNT;
+    uint256 public constant MAX_FAUCET_CLAIMANTS_WITHOUT_REFERRALS = 41_110_000;
 
     // Self.xyz IdentityVerificationHub addresses
     address constant CELO_MAINNET_HUB = 0xe57F4773bd9c9d8b6Cd70431117d353298B9f5BF;
@@ -334,7 +335,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
             voterIdNFT.addMinter(address(humanFaucet));
             humanFaucet.setVoterIdNFT(address(voterIdNFT));
 
-            // Fund the faucet with the full remaining launch allocation so launch minting reaches MAX_SUPPLY.
+            // Fund the faucet with the full remaining launch allocation.
             hrepToken.mint(address(humanFaucet), FAUCET_POOL_AMOUNT);
             console.log("Minted 52,000,000 HREP to HumanFaucet");
 
@@ -369,7 +370,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
             console.log("Governor excluded holders initialized for dynamic quorum");
         }
 
-        _verifyLaunchMintAllocation(hrepToken, governance, votingEngine, participationPool, humanFaucet);
+        _verifyLaunchMintAllocation(hrepToken, governance, votingEngine, participationPool, humanFaucet, voterIdNFT);
 
         // Set verification config only after launch allocation and migration bootstrap checks pass.
         if (!isFaucetMock) {
@@ -680,10 +681,15 @@ contract DeployCuryo is ScaffoldETHDeploy {
         address governance,
         RoundVotingEngine votingEngine,
         ParticipationPool participationPool,
-        HumanFaucet humanFaucet
+        HumanFaucet humanFaucet,
+        VoterIdNFT voterIdNFT
     ) internal view {
         _require(address(humanFaucet) != address(0), "HumanFaucet deployed");
         _require(hrepToken.MAX_SUPPLY() == TOTAL_SUPPLY_CAP, "HREP max supply constant");
+        _require(
+            voterIdNFT.MAX_SUPPLY() >= MAX_FAUCET_CLAIMANTS_WITHOUT_REFERRALS,
+            "VoterIdNFT faucet claim capacity"
+        );
         _require(hrepToken.totalSupply() == TOTAL_SUPPLY_CAP, "HREP full launch mint");
         _require(votingEngine.consensusReserve() == CONSENSUS_POOL_AMOUNT, "Consensus reserve launch allocation");
         _require(

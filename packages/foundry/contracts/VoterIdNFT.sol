@@ -16,8 +16,8 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
     /// @notice Maximum stake per Voter ID per content per epoch (100 HREP with 6 decimals)
     uint256 public constant MAX_STAKE_PER_VOTER = 100e6;
 
-    /// @notice Maximum supply of Voter IDs (defense-in-depth against compromised identity provider)
-    uint256 public constant MAX_SUPPLY = 10_000_000;
+    /// @notice Maximum supply of Voter IDs; matches the 52M HREP faucet's no-referral claimant capacity.
+    uint256 public constant MAX_SUPPLY = 41_110_000;
 
     // ====================================================
     // Storage Variables
@@ -235,7 +235,7 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
 
     /// @notice Mint a new Voter ID NFT
     /// @dev Supply is bounded by unique passport nullifiers from Self.xyz (one per real human)
-    ///      plus an on-chain MAX_SUPPLY cap (10M) as defense-in-depth. If the recipient was
+    ///      plus an on-chain MAX_SUPPLY cap as defense-in-depth. If the recipient was
     ///      previously assigned as someone else's delegate, direct ownership wins and the
     ///      inbound delegation is cleared before minting.
     /// @param to The address to mint to
