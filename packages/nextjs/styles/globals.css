@@ -868,6 +868,19 @@ body {
   border-color: transparent;
 }
 
+.tab-control.pill-inactive,
+.tab-control.pill-filter {
+  background: rgb(var(--curyo-surface-elevated-rgb) / 0.96);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.tab-control.pill-inactive:hover,
+.tab-control.pill-filter:hover {
+  background: var(--curyo-surface-elevated-hover);
+  border-color: transparent;
+}
+
 .pill-inactive-muted {
   border-radius: var(--curyo-radius-control);
   background: var(--curyo-control-idle-muted);

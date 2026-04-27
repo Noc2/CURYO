@@ -29,16 +29,14 @@
 
 .secondary {
   color: var(--color-base-content);
-  background: rgb(var(--curyo-surface-elevated-rgb) / 0.98);
-  box-shadow:
-    inset 0 1px 0 rgb(245 240 235 / 0.03),
-    0 14px 28px rgb(9 10 12 / 0.2);
+  background: var(--curyo-control-idle);
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .secondary:hover {
   color: var(--color-base-content);
-  background: var(--curyo-surface-elevated-hover);
-  box-shadow:
-    inset 0 1px 0 rgb(245 240 235 / 0.04),
-    0 16px 30px rgb(9 10 12 / 0.24);
+  background: var(--curyo-control-idle-hover);
+  border-color: transparent;
+  box-shadow: none;
 }
