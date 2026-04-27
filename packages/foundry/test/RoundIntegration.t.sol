@@ -3252,7 +3252,7 @@ contract RoundIntegrationTest is VotingTestBase {
         assertEq(balAfter - balBefore, 4_500_000, "backfill should repair rate snapshot failures");
     }
 
-    function test_Settlement_RevertsIfRegistryVotingEngineRotatedBeforeSettlement() public {
+    function test_RegistryVotingEngineCannotRotateAfterInitialWiring() public {
         uint256 contentId = _submitContent();
         address[] memory voters = new address[](3);
         voters[0] = voter1;
@@ -3267,10 +3267,11 @@ contract RoundIntegrationTest is VotingTestBase {
         uint256 roundId = _getActiveOrLatestRoundId(contentId);
 
         vm.prank(owner);
+        vm.expectRevert("VotingEngine already set");
         registry.setVotingEngine(address(0xBEEF));
 
-        vm.expectRevert("Only VotingEngine");
         votingEngine.settleRound(contentId, roundId);
+        assertEq(uint8(RoundEngineReadHelpers.round(votingEngine, contentId, roundId).state), uint8(RoundLib.RoundState.Settled));
     }
 
     // =========================================================================

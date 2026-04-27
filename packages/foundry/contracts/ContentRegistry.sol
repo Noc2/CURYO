@@ -317,6 +317,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     /// @notice Set the VotingEngine address (can only be called by CONFIG_ROLE).
     function setVotingEngine(address _votingEngine) external onlyRole(CONFIG_ROLE) {
         require(_votingEngine != address(0), "Invalid address");
+        require(votingEngine == address(0), "VotingEngine already set");
         votingEngine = _votingEngine;
     }
 
