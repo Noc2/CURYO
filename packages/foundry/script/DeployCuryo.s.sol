@@ -99,6 +99,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         VoterIdNFT voterIdNFT;
         ParticipationPool participationPool;
         HumanFaucet humanFaucet;
+        bool humanFaucetOpen;
     }
 
     function _preBroadcastChecks() internal view override {
@@ -397,14 +398,6 @@ contract DeployCuryo is ScaffoldETHDeploy {
             console.log("Set mock configId on HumanFaucet");
         }
 
-        // Open production public claims only after bootstrap, allocation, and config checks pass.
-        if (!isLocalDev) {
-            humanFaucet.unpause();
-            console.log("Opened HumanFaucet public claims");
-            humanFaucet.transferOwnership(governance);
-            console.log("HumanFaucet ownership transferred to governance");
-        }
-
         // 12e. Mint test tokens and Voter IDs for localhost development
         if (isLocalDev) {
             uint256 testAmount = 1000 * 1e6;
@@ -494,10 +487,37 @@ contract DeployCuryo is ScaffoldETHDeploy {
                     categoryRegistry: categoryRegistry,
                     voterIdNFT: voterIdNFT,
                     participationPool: participationPool,
-                    humanFaucet: humanFaucet
+                    humanFaucet: humanFaucet,
+                    humanFaucetOpen: false
                 })
             );
-            console.log("Verified governance ownership and deployer role renunciation");
+            console.log("Verified governance ownership, deployer role renunciation, and paused faucet pre-launch");
+
+            humanFaucet.openClaimsAndTransferOwnership();
+            console.log("Opened HumanFaucet public claims and transferred ownership to governance");
+
+            _verifyProductionDeploymentRoles(
+                ProductionDeploymentRoleVerification({
+                    deployerAddress: deployer,
+                    governance: governance,
+                    governorAddr: governorAddr,
+                    hrepToken: hrepToken,
+                    registry: registry,
+                    votingEngine: votingEngine,
+                    protocolConfig: protocolConfig,
+                    rewardDistributor: rewardDistributor,
+                    questionRewardPoolEscrow: questionRewardPoolEscrow,
+                    feedbackBonusEscrow: feedbackBonusEscrow,
+                    frontendRegistry: frontendRegistry,
+                    profileRegistry: profileRegistry,
+                    categoryRegistry: categoryRegistry,
+                    voterIdNFT: voterIdNFT,
+                    participationPool: participationPool,
+                    humanFaucet: humanFaucet,
+                    humanFaucetOpen: true
+                })
+            );
+            console.log("Verified HumanFaucet final launch state");
         } else {
             // Local dev: just revoke MINTER_ROLE as before
             hrepToken.revokeRole(hrepToken.MINTER_ROLE(), deployer);
@@ -599,6 +619,8 @@ contract DeployCuryo is ScaffoldETHDeploy {
     function _loadMigrationBootstrapConfig() internal view returns (MigrationBootstrapConfig memory migrationConfig) {
         string memory filePath = vm.envOr("MIGRATION_BOOTSTRAP_FILE", string(""));
         if (bytes(filePath).length == 0) {
+            bool explicitSkip = vm.envOr("MIGRATION_BOOTSTRAP_SKIP", false);
+            _require(block.chainid == 31337 || explicitSkip, "Migration bootstrap file or skip required");
             return migrationConfig;
         }
 
@@ -675,6 +697,12 @@ contract DeployCuryo is ScaffoldETHDeploy {
         for (uint256 i = 0; i < claimCount; ++i) {
             _require(migrationConfig.users[i] != address(0), "Migration user zero");
             _require(migrationConfig.nullifiers[i] != 0, "Migration nullifier zero");
+            for (uint256 j = 0; j < i; ++j) {
+                _require(migrationConfig.users[j] != migrationConfig.users[i], "Migration duplicate user");
+                _require(
+                    migrationConfig.nullifiers[j] != migrationConfig.nullifiers[i], "Migration duplicate nullifier"
+                );
+            }
             uint256 baseAmount = _migrationBaseClaimAmount(i);
             uint256 expectedClaimantBonus;
             uint256 expectedReferrerReward;
@@ -695,12 +723,10 @@ contract DeployCuryo is ScaffoldETHDeploy {
                 expectedClaimantBonus = _migrationReferralAmount(baseAmount);
                 expectedReferrerReward = expectedClaimantBonus;
                 _require(
-                    migrationConfig.claimantBonuses[i] == expectedClaimantBonus,
-                    "Migration claimant bonus mismatch"
+                    migrationConfig.claimantBonuses[i] == expectedClaimantBonus, "Migration claimant bonus mismatch"
                 );
                 _require(
-                    migrationConfig.referrerRewards[i] == expectedReferrerReward,
-                    "Migration referrer reward mismatch"
+                    migrationConfig.referrerRewards[i] == expectedReferrerReward, "Migration referrer reward mismatch"
                 );
             }
 
@@ -720,10 +746,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
     ) internal view {
         _require(address(humanFaucet) != address(0), "HumanFaucet deployed");
         _require(hrepToken.MAX_SUPPLY() == TOTAL_SUPPLY_CAP, "HREP max supply constant");
-        _require(
-            voterIdNFT.MAX_SUPPLY() >= MAX_FAUCET_CLAIMANTS_WITHOUT_REFERRALS,
-            "VoterIdNFT faucet claim capacity"
-        );
+        _require(voterIdNFT.MAX_SUPPLY() >= MAX_FAUCET_CLAIMANTS_WITHOUT_REFERRALS, "VoterIdNFT faucet claim capacity");
         _require(hrepToken.totalSupply() == TOTAL_SUPPLY_CAP, "HREP full launch mint");
         _require(votingEngine.consensusReserve() == CONSENSUS_POOL_AMOUNT, "Consensus reserve launch allocation");
         _require(
@@ -1154,9 +1177,16 @@ contract DeployCuryo is ScaffoldETHDeploy {
             _require(address(targets.humanFaucet.hrepToken()) == address(targets.hrepToken), "HumanFaucet HREP token");
             _require(address(targets.humanFaucet.voterIdNFT()) == address(targets.voterIdNFT), "HumanFaucet voterIdNFT");
             _require(targets.humanFaucet.governance() == targets.governance, "HumanFaucet governance");
-            _require(targets.humanFaucet.owner() == targets.governance, "HumanFaucet governance owner");
             _require(targets.humanFaucet.migrationBootstrapClosed(), "HumanFaucet migration bootstrap closed");
-            _require(!targets.humanFaucet.paused(), "HumanFaucet production claims open");
+            if (targets.humanFaucetOpen) {
+                _require(targets.humanFaucet.owner() == targets.governance, "HumanFaucet governance owner");
+                _require(!targets.humanFaucet.paused(), "HumanFaucet production claims open");
+            } else {
+                _require(
+                    targets.humanFaucet.owner() == targets.deployerAddress, "HumanFaucet deployer owner pre-launch"
+                );
+                _require(targets.humanFaucet.paused(), "HumanFaucet paused pre-launch");
+            }
         }
     }
 

@@ -331,6 +331,16 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
         _unpause();
     }
 
+    /// @notice Final production launch step: open public claims and hand ownership to governance atomically.
+    function openClaimsAndTransferOwnership() external onlyOwner {
+        require(paused(), "Pause required");
+        require(migrationBootstrapClosed, "Bootstrap open");
+        require(verificationConfigId != bytes32(0), "Config not set");
+        require(address(voterIdNFT) != address(0), "VoterIdNFT not set");
+        _unpause();
+        transferOwnership(governance);
+    }
+
     // --- View Functions ---
 
     /// @notice Check if an address has already claimed

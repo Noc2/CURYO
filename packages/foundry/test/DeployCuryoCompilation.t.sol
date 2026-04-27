@@ -56,13 +56,7 @@ contract DeployCuryoHarness is DeployCuryo {
         address frontendRegistry
     ) external pure returns (address[] memory) {
         return _buildQuorumExcludedHolders(
-            humanFaucet,
-            participationPool,
-            rewardDistributor,
-            votingEngine,
-            treasury,
-            contentRegistry,
-            frontendRegistry
+            humanFaucet, participationPool, rewardDistributor, votingEngine, treasury, contentRegistry, frontendRegistry
         );
     }
 
@@ -130,11 +124,28 @@ contract DeployCuryoCompilationTest is Test {
 
     function test_PreBroadcastChecks_AllowSupportedCeloChains() public {
         DeployCuryoHarness deployScript = new DeployCuryoHarness();
+        vm.setEnv("MIGRATION_BOOTSTRAP_SKIP", "true");
 
         vm.chainId(42220);
         deployScript.exposedPreBroadcastChecks();
 
         vm.chainId(11142220);
+        deployScript.exposedPreBroadcastChecks();
+
+        vm.setEnv("MIGRATION_BOOTSTRAP_SKIP", "false");
+    }
+
+    function test_PreBroadcastChecks_RequireMigrationManifestOrExplicitSkipOnSupportedChains() public {
+        DeployCuryoHarness deployScript = new DeployCuryoHarness();
+
+        vm.chainId(42220);
+        vm.setEnv("MIGRATION_BOOTSTRAP_FILE", "");
+        vm.setEnv("MIGRATION_BOOTSTRAP_SKIP", "false");
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                DeployCuryo.DeploymentRoleVerificationFailed.selector, "Migration bootstrap file or skip required"
+            )
+        );
         deployScript.exposedPreBroadcastChecks();
     }
 
@@ -186,6 +197,40 @@ contract DeployCuryoCompilationTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(DeployCuryo.DeploymentRoleVerificationFailed.selector, "Migration amounts length")
+        );
+        deployScript.exposedValidateMigrationBootstrapConfig(
+            users, nullifiers, amounts, referrers, claimantBonuses, referrerRewards
+        );
+    }
+
+    function test_MigrationBootstrapValidation_RejectsDuplicateUsersAndNullifiers() public {
+        DeployCuryoHarness deployScript = new DeployCuryoHarness();
+        address[] memory users = new address[](2);
+        users[0] = address(1);
+        users[1] = address(1);
+        uint256[] memory nullifiers = new uint256[](2);
+        nullifiers[0] = 123456;
+        nullifiers[1] = 789012;
+        uint256[] memory amounts = new uint256[](2);
+        amounts[0] = 10_000e6;
+        amounts[1] = 10_000e6;
+        address[] memory referrers = new address[](2);
+        uint256[] memory claimantBonuses = new uint256[](2);
+        uint256[] memory referrerRewards = new uint256[](2);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(DeployCuryo.DeploymentRoleVerificationFailed.selector, "Migration duplicate user")
+        );
+        deployScript.exposedValidateMigrationBootstrapConfig(
+            users, nullifiers, amounts, referrers, claimantBonuses, referrerRewards
+        );
+
+        users[1] = address(2);
+        nullifiers[1] = nullifiers[0];
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                DeployCuryo.DeploymentRoleVerificationFailed.selector, "Migration duplicate nullifier"
+            )
         );
         deployScript.exposedValidateMigrationBootstrapConfig(
             users, nullifiers, amounts, referrers, claimantBonuses, referrerRewards
