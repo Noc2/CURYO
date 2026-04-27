@@ -386,11 +386,21 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
         try IFrontendRegistry(frontendRegistry).getFrontendInfo(frontend) returns (
             address operator, uint256 stakedAmount, bool eligible, bool slashed
         ) {
-            if (eligible && !slashed && stakedAmount > 0 && operator != address(0)) {
+            stakedAmount;
+            bool canReceiveHistorically = eligible || _canReceiveHistoricalFees(frontendRegistry, frontend);
+            if (operator != address(0) && !slashed && canReceiveHistorically) {
                 frontendRecipient = operator;
             }
         } catch {
             return address(0);
+        }
+    }
+
+    function _canReceiveHistoricalFees(address frontendRegistry, address frontend) internal view returns (bool) {
+        try IFrontendRegistry(frontendRegistry).canReceiveHistoricalFees(frontend) returns (bool canReceive) {
+            return canReceive;
+        } catch {
+            return false;
         }
     }
 
