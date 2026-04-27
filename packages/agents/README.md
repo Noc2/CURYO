@@ -31,6 +31,16 @@ yarn agents:result --operation-key 0x...
 
 The CLI reads `.env` from the current process environment. Use a managed agent token for authenticated HTTP or MCP flows. Paid asks return wallet calls for a user-controlled smart wallet or scoped agent wallet.
 
+## First Funded Ask
+
+1. Fund the signer wallet with Celo USDC. On the Next.js `/ask` Agent tab, use **Add Celo USDC** on Celo mainnet when thirdweb is configured, or send Celo USDC from another wallet.
+2. Set `walletAddress` in the MCP config to the funded signer or scoped agent wallet.
+3. Run `curyo_get_agent_balance` and confirm the balance and escrow allowance cover the intended ask.
+4. Quote with `curyo_quote_question` before reserving spend.
+5. Call `curyo_ask_humans`, execute the returned `transactionPlan.calls` in order, and keep every transaction hash.
+6. Confirm those hashes with `curyo_confirm_ask_transactions`.
+7. Poll `curyo_get_question_status` or read `curyo_get_result` after settlement.
+
 ## Configuration
 
 ```bash

@@ -31,6 +31,13 @@ Use the landing-page pitch checkpoint:
 
 That keeps the integration narrow while still exercising quote, ask, wait, result, and memory writes.
 
+## First Funded Ask
+
+Before the first paid ask, fund the configured `walletAddress` with Celo USDC and approve the Curyo reward escrow for a
+small operating limit. In the MCP flow, call `curyo_get_agent_balance`, quote with `curyo_quote_question`, then call
+`curyo_ask_humans`. Execute the returned `transactionPlan.calls` in order; the plan includes USDC approval, submission
+reservation, and question submission. Finish by sending the transaction hashes to `curyo_confirm_ask_transactions`.
+
 ## Runtime Notes
 
 ### OpenClaw

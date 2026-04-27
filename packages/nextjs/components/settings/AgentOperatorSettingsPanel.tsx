@@ -60,6 +60,14 @@ const OPERATOR_CONTROLS = [
   },
 ] as const;
 
+const FIRST_SESSION_STEPS = [
+  "Fund the signer wallet with Celo USDC, then approve the reward escrow for a small first-run allowance.",
+  "Run curyo_get_agent_balance before asking so the agent can see balance, allowance, and walletAddress.",
+  "Quote with curyo_quote_question and keep the returned payment amount under the per-ask cap.",
+  "Ask with curyo_ask_humans, execute the returned wallet calls in order, then confirm hashes with curyo_confirm_ask_transactions.",
+  "Recover with curyo_get_question_status and curyo_get_result if the callback is missed.",
+] as const;
+
 export function AgentOperatorSettingsPanel() {
   return (
     <section className="space-y-5">
@@ -103,6 +111,15 @@ export function AgentOperatorSettingsPanel() {
           calls returned from <code>curyo_ask_humans</code>, then reporting hashes to{" "}
           <code>curyo_confirm_ask_transactions</code>.
         </p>
+      </div>
+
+      <div className="surface-card rounded-lg p-5">
+        <h3 className="text-lg font-semibold">First funded ask</h3>
+        <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm leading-relaxed text-base-content/70">
+          {FIRST_SESSION_STEPS.map(step => (
+            <li key={step}>{step}</li>
+          ))}
+        </ol>
       </div>
 
       <div className="surface-card rounded-lg p-5">

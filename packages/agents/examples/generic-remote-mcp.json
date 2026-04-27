@@ -4,8 +4,10 @@
       "url": "https://curyo.example/api/mcp",
       "transport": "streamable-http",
       "headers": {
-        "Authorization": "Bearer ${CURYO_MCP_TOKEN}"
-      }
+        "Authorization": "Bearer ${CURYO_MCP_TOKEN}",
+        "MCP-Protocol-Version": "2025-11-25"
+      },
+      "walletAddress": "${CURYO_MCP_WALLET_ADDRESS}"
     }
   }
 }
