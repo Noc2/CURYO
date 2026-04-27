@@ -283,7 +283,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     /// @notice Claim frontend fees for a settled round.
     /// @dev AUDIT NOTE: This path intentionally crystallizes historical frontend fees against the
     ///      frontend's current slash/bond status. Permissionless callers can therefore finalize an
-    ///      old round while a frontend is still slashed or underbonded.
+    ///      old round while a frontend is still slashed, underbonded, or deregistered.
     function claimFrontendFee(uint256 contentId, uint256 roundId, address frontend)
         external
         nonReentrant
@@ -679,9 +679,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         try snapshotRegistry.getFrontendInfo(frontend) returns (
             address frontendOperator, uint256 stakedAmount, bool eligible, bool slashed
         ) {
-            if (frontendOperator == address(0)) {
-                return (FrontendFeeDisposition.Direct, frontend, false, snapshotRegistryAddress);
-            }
+            if (frontendOperator == address(0)) return (FrontendFeeDisposition.Protocol, frontend, false, snapshotRegistryAddress);
             if (eligible) {
                 return (FrontendFeeDisposition.CreditRegistry, frontendOperator, false, snapshotRegistryAddress);
             }

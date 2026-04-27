@@ -2369,7 +2369,7 @@ contract RoundIntegrationTest is VotingTestBase {
         _claimFrontendFeeAsOperator(contentId, roundId, frontendOp);
     }
 
-    function test_ClaimFrontendFee_PaysDeregisteredFrontendDirectly() public {
+    function test_ClaimFrontendFee_ReroutesHistoricalShareAfterDeregister() public {
         (FrontendRegistry frontendReg, address frontendOp) = _setupFrontendRegistry();
         (uint256 contentId, uint256 roundId) = _settleRoundWithFrontend(frontendOp);
 
@@ -2379,11 +2379,18 @@ contract RoundIntegrationTest is VotingTestBase {
 
         uint256 feesBefore = frontendReg.getAccumulatedFees(frontendOp);
         uint256 frontendBalanceBefore = hrepToken.balanceOf(frontendOp);
-        _claimFrontendFeeAsOperator(contentId, roundId, frontendOp);
+        uint256 treasuryBalanceBefore = hrepToken.balanceOf(treasury);
+        uint256 reserveBefore = votingEngine.consensusReserve();
 
-        assertGt(hrepToken.balanceOf(frontendOp) - frontendBalanceBefore, 0);
-        assertEq(
-            frontendReg.getAccumulatedFees(frontendOp), feesBefore, "deregistered frontend should bypass fee crediting"
+        vm.expectRevert(RoundRewardDistributor.FrontendFeeNotClaimable.selector);
+        _claimFrontendFeeAsOperator(contentId, roundId, frontendOp);
+        _confiscateFrontendFee(contentId, roundId, frontendOp);
+
+        assertEq(hrepToken.balanceOf(frontendOp), frontendBalanceBefore, "deregistered frontend must not be paid");
+        assertEq(frontendReg.getAccumulatedFees(frontendOp), feesBefore, "deregistered frontend must not accrue fees");
+        assertTrue(
+            hrepToken.balanceOf(treasury) > treasuryBalanceBefore || votingEngine.consensusReserve() > reserveBefore,
+            "redirected fee should reach protocol"
         );
     }
 
