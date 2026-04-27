@@ -103,14 +103,14 @@ export function BalanceHistory({ address: addressProp }: { address?: `0x${string
       </div>
       {isLoading ? (
         <div className="h-[160px] flex items-center justify-center">
-          <span className="loading loading-spinner loading-sm text-base-content/20"></span>
+          <span className="loading loading-spinner loading-sm text-base-content/60"></span>
         </div>
       ) : fetchError ? (
-        <div className="h-[100px] flex items-center justify-center text-base text-error/60">
+        <div className="h-[100px] flex items-center justify-center text-base text-error">
           Failed to load balance history
         </div>
       ) : dataPoints.length < 2 ? (
-        <div className="h-[100px] flex items-center justify-center text-base text-base-content/40">
+        <div className="h-[100px] flex items-center justify-center text-base text-base-content/60">
           Not enough history yet
         </div>
       ) : (

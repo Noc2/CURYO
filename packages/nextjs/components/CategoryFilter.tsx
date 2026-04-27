@@ -282,7 +282,7 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
                   <label htmlFor={mobileSearchInputId} className="sr-only">
                     Search categories
                   </label>
-                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-base-content/40" />
+                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-base-content/60" />
                   <input
                     id={mobileSearchInputId}
                     ref={mobileSearchInputRef}
@@ -315,7 +315,7 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
                       );
                     })
                   ) : (
-                    <div className="px-2 py-3 text-sm text-base-content/40">No matches</div>
+                    <div className="px-2 py-3 text-sm text-base-content/60">No matches</div>
                   )}
                 </div>
               </div>
@@ -372,7 +372,7 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
                         <label htmlFor={desktopSearchInputId} className="sr-only">
                           Search categories
                         </label>
-                        <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/40" />
+                        <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/60" />
                         <input
                           id={desktopSearchInputId}
                           ref={searchInputRef}
@@ -405,7 +405,7 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
                           </li>
                         ))
                       ) : (
-                        <li className="text-base-content/40 text-sm px-3 py-2">No matches</li>
+                        <li className="text-base-content/60 text-sm px-3 py-2">No matches</li>
                       )}
                     </ul>
                   </div>,

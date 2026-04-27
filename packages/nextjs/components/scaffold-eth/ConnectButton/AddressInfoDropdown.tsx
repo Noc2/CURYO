@@ -67,7 +67,7 @@ function FreeTransactionAllowanceText({ className }: { className?: string }) {
       <span className="tabular-nums">
         {remaining}/{limit}
       </span>
-      <span className="text-base-content/48">free tx</span>
+      <span className="text-base-content/60">free tx</span>
       <InfoTooltip text={`Curyo Wallet gets ${limit} sponsored app transactions after ID verification.`} />
     </div>
   );
@@ -80,7 +80,7 @@ function WinRateSummaryText({ address, className }: { address: Address; classNam
   return (
     <div className={`flex items-center gap-1.5 text-sm font-medium leading-5 text-base-content/62 ${className ?? ""}`}>
       <span className="tabular-nums">{winRateLabel}</span>
-      <span className="whitespace-nowrap text-base-content/48">win rate</span>
+      <span className="whitespace-nowrap text-base-content/60">win rate</span>
       <InfoTooltip text={AVATAR_WIN_RATE_TOOLTIP} position="bottom" />
     </div>
   );

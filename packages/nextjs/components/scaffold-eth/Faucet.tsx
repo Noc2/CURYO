@@ -519,7 +519,7 @@ export const FaucetModal = () => {
 
             {/* Mock USDC Faucet Section */}
             <div className="bg-accent/10 rounded-xl p-4 space-y-3">
-              <h4 className="font-semibold text-accent">Claim Mock USDC</h4>
+              <h4 className="font-semibold text-primary">Claim Mock USDC</h4>
               <p className="text-base text-base-content/60">Fund local bounties without using real USDC.</p>
               <div className="flex gap-2">
                 <input
@@ -533,7 +533,7 @@ export const FaucetModal = () => {
                 <span className="self-center text-base font-medium">USDC</span>
               </div>
               <button
-                className="h-10 btn btn-accent btn-sm px-4 rounded-full w-full"
+                className="h-10 btn btn-primary btn-sm px-4 rounded-full w-full"
                 onClick={claimUSDC}
                 disabled={usdcLoading || !usdcAmount || !inputAddress || !mockUsdcTokenAddress}
               >

@@ -45,18 +45,18 @@ export function VotingFlowDiagram() {
               {step.label}
             </span>
             <span className="mb-2 inline-flex h-14 w-14 items-center justify-center rounded-full border border-primary/15 bg-primary/10 shadow-[0_0_24px_rgba(242,100,38,0.12)]">
-              <step.Icon className="h-7 w-7 text-primary/85" aria-hidden="true" />
+              <step.Icon className="h-7 w-7 text-primary/90" aria-hidden="true" />
             </span>
             <span className="text-base text-base-content/60 leading-tight">{step.description}</span>
-            {step.duration && <span className="mt-1 text-sm font-mono text-primary/70">{step.duration}</span>}
+            {step.duration && <span className="mt-1 text-sm font-mono text-primary/90">{step.duration}</span>}
           </div>
           {i < STEPS.length - 1 && (
-            <div className="hidden shrink-0 px-1 text-primary/40 sm:block" aria-hidden="true">
+            <div className="hidden shrink-0 px-1 text-primary/90 sm:block" aria-hidden="true">
               <ArrowLongRightIcon className="h-6 w-8" strokeWidth={2.4} />
             </div>
           )}
           {i < STEPS.length - 1 && (
-            <div className="shrink-0 self-center py-1 text-primary/40 sm:hidden" aria-hidden="true">
+            <div className="shrink-0 self-center py-1 text-primary/90 sm:hidden" aria-hidden="true">
               <ArrowLongDownIcon className="h-8 w-6" strokeWidth={2.4} />
             </div>
           )}

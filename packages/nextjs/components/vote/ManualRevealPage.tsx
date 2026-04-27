@@ -34,7 +34,7 @@ function RevealVoteCard({
         </div>
         <div className="text-sm text-base-content/75">
           {stake} HREP
-          <span className="mx-2 text-base-content/45">·</span>
+          <span className="mx-2 text-base-content/60">·</span>
           Epoch {vote.epochIndex + 1}
         </div>
       </div>

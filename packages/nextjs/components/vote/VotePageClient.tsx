@@ -1512,7 +1512,7 @@ const HomeInner = () => {
                 if (cat === BROKEN_FILTER) {
                   return isActive
                     ? "bg-warning/20 text-warning border border-warning/40"
-                    : "pill-inactive text-warning/70 hover:bg-warning/10";
+                    : "pill-inactive text-warning/80 hover:bg-warning/10";
                 }
                 if (cat === EXPIRED_BOUNTY_FILTER) {
                   return isActive
@@ -1741,7 +1741,7 @@ const HomeInner = () => {
                           <span className="loading loading-spinner loading-lg text-primary"></span>
                         </div>
                       ) : displayFeed.length === 0 ? (
-                        <div className="py-16 text-center text-base text-base-content/30 xl:flex xl:h-full xl:items-center xl:justify-center xl:py-10">
+                        <div className="py-16 text-center text-base text-base-content/60 xl:flex xl:h-full xl:items-center xl:justify-center xl:py-10">
                           {emptyStateMessage}
                         </div>
                       ) : (

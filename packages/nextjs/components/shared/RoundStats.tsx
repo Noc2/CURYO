@@ -140,7 +140,7 @@ export function RoundStats({ categoryId, snapshot }: RoundStatsProps) {
       )}
 
       {phase === "settled" && (
-        <div className="flex items-center gap-1 text-success/80">
+        <div className="flex items-center gap-1 text-success">
           <span>Rewards distributed</span>
           <InfoTooltip
             text="Rewards are proportional to phase-weighted stake. Blind votes earned the 4× early-voter advantage."

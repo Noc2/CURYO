@@ -65,7 +65,7 @@ export function StakeBreakdown({
               >
                 <span className="text-base-content/50">{e.label}</span>
                 <span className="font-mono tabular-nums">{format(e.amount)}</span>
-                <span className="text-base-content/40 font-mono tabular-nums">· next {e.deadline}</span>
+                <span className="text-base-content/60 font-mono tabular-nums">· next {e.deadline}</span>
               </div>
             ) : (
               <div
@@ -79,7 +79,7 @@ export function StakeBreakdown({
           )}
         </div>
       ) : (
-        <div className="rounded-2xl bg-base-content/[0.04] px-4 py-8 text-center text-base text-base-content/45">
+        <div className="rounded-2xl bg-base-content/[0.04] px-4 py-8 text-center text-base text-base-content/60">
           No active stakes
         </div>
       )}

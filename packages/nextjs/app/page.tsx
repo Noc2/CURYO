@@ -99,11 +99,11 @@ function WorkflowHeading({
     <div className="mb-8 text-center sm:mb-10">
       {Icon ? (
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-base-300 shadow-[0_14px_28px_rgba(9,10,12,0.24)]">
-          <Icon className="h-8 w-8 text-accent" />
+          <Icon className="h-8 w-8 text-primary" />
         </div>
       ) : null}
       <h2 className="display-section text-4xl text-base-content sm:text-5xl">{title}</h2>
-      {subtitle ? <p className="mt-2 text-lg font-semibold text-primary/80">{subtitle}</p> : null}
+      {subtitle ? <p className="mt-2 text-lg font-semibold text-primary/90">{subtitle}</p> : null}
     </div>
   );
 }
@@ -169,7 +169,7 @@ function FeatureBenefitCard({
           <Link
             key={`${title}-${link.href}`}
             href={link.href}
-            className="rounded-md border border-primary/18 bg-base-100/35 px-3 py-1.5 text-xs font-semibold text-primary transition hover:border-accent/35 hover:text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="rounded-md border border-primary/18 bg-base-100/35 px-3 py-1.5 text-xs font-semibold text-primary transition hover:border-accent/35 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {link.label}
           </Link>
@@ -300,7 +300,7 @@ export default async function LandingPage() {
               {socialProofItems.map(({ value, label }, index) => (
                 <div key={label} className="flex items-center">
                   <span
-                    className={`whitespace-nowrap ${index < socialProofItems.length - 1 ? "sm:after:ml-3 sm:after:text-base-content/28 sm:after:content-['•']" : ""}`}
+                    className={`whitespace-nowrap ${index < socialProofItems.length - 1 ? "sm:after:ml-3 sm:after:text-base-content/60 sm:after:content-['•']" : ""}`}
                   >
                     <span className="font-semibold text-base-content">{value}</span> {label}
                   </span>

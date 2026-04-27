@@ -256,7 +256,7 @@ export function RatingOrb({ rating, size = 196, className = "", showGlow = true 
             {displayedScore}
           </span>
           <span
-            className={`${scoreGapClassName} mb-[0.12em] shrink-0 font-medium leading-[0.92] text-base-content/46`}
+            className={`${scoreGapClassName} mb-[0.12em] shrink-0 font-medium leading-[0.92] text-base-content/60`}
             style={{ fontSize: scaleFontSize }}
           >
             /10

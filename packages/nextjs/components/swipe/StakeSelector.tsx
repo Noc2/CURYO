@@ -186,7 +186,7 @@ export function StakeSelector({
               </span>
             </h3>
 
-            <div className="mb-5 space-y-1 text-center text-base text-base-content/40">
+            <div className="mb-5 space-y-1 text-center text-base text-base-content/60">
               <p>
                 Balance: {balanceFormatted.toLocaleString(undefined, { maximumFractionDigits: 0 })} {symbol}
               </p>
@@ -224,7 +224,7 @@ export function StakeSelector({
                 disabled={isConfirming || maxStake < 1}
                 aria-label="Stake amount"
               />
-              <div className="mt-1 flex justify-between text-base text-base-content/30">
+              <div className="mt-1 flex justify-between text-base text-base-content/60">
                 <span>1</span>
                 <span>{sliderMax}</span>
               </div>
@@ -232,7 +232,7 @@ export function StakeSelector({
 
             <div className="my-5 text-center">
               <span className="text-4xl font-bold tabular-nums">{amount}</span>
-              <span className="ml-2 text-base text-base-content/40">{symbol}</span>
+              <span className="ml-2 text-base text-base-content/60">{symbol}</span>
               {isCapacityLimited && (
                 <span
                   className="tooltip tooltip-top ml-2 inline-block cursor-help align-middle"

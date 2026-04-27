@@ -1493,7 +1493,7 @@ export function ContentSubmissionSection() {
           aria-label={`Go to question ${index + 1}`}
           onClick={() => setActiveQuestionPage(index)}
           title={`Go to question ${index + 1}`}
-          className={`cursor-pointer rounded-md border px-2 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
+          className={`cursor-pointer rounded-md border px-2 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/80 ${
             submissionStep === "question" && activeQuestionIndex === index
               ? "border-primary/40 bg-primary/10 text-primary hover:bg-primary/15"
               : "step-control-inactive"
@@ -1509,7 +1509,7 @@ export function ContentSubmissionSection() {
         aria-label="Go to bounty details"
         onClick={handleGoToBountyStep}
         title="Go to bounty details"
-        className={`cursor-pointer rounded-md border px-2 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
+        className={`cursor-pointer rounded-md border px-2 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/80 ${
           submissionStep === "bounty"
             ? "border-primary/40 bg-primary/10 text-primary hover:bg-primary/15"
             : "step-control-inactive"
@@ -1523,7 +1523,7 @@ export function ContentSubmissionSection() {
   const questionPreviewCard =
     previewUrl || title || description ? (
       <div className="surface-card rounded-2xl p-4 space-y-3">
-        <p className="text-base font-medium uppercase tracking-wider text-base-content/40">Preview</p>
+        <p className="text-base font-medium uppercase tracking-wider text-base-content/60">Preview</p>
         {title ? <h3 className="line-clamp-2 text-lg font-semibold text-base-content">{title}</h3> : null}
         {previewUrl ? (
           <ContentEmbed
@@ -1547,7 +1547,7 @@ export function ContentSubmissionSection() {
       </div>
     ) : (
       <div className="surface-card rounded-2xl p-4 space-y-3">
-        <p className="text-base font-medium uppercase tracking-wider text-base-content/40">Preview</p>
+        <p className="text-base font-medium uppercase tracking-wider text-base-content/60">Preview</p>
         <p className="text-base text-base-content/50">
           Add the question and context link to preview how it will appear.
         </p>
@@ -1841,14 +1841,14 @@ export function ContentSubmissionSection() {
     <div className="space-y-4">
       <div className="surface-card rounded-2xl p-4 space-y-4">
         <div>
-          <p className="flex items-center gap-1.5 text-base font-medium uppercase tracking-wider text-base-content/40">
+          <p className="flex items-center gap-1.5 text-base font-medium uppercase tracking-wider text-base-content/60">
             Bounty estimate
             <InfoTooltip text={bountyEstimateTooltipText} />
           </p>
         </div>
 
         <div className="rounded-lg bg-primary/10 p-3">
-          <p className="flex items-center gap-1.5 text-sm font-medium uppercase text-primary/80">
+          <p className="flex items-center gap-1.5 text-sm font-medium uppercase text-primary/90">
             {minimumClaimEstimateLabel}
             <InfoTooltip text={perPaidCompleterTooltipText} />
           </p>
@@ -1858,7 +1858,7 @@ export function ContentSubmissionSection() {
         </div>
 
         <div className="rounded-lg bg-base-100/70 p-3">
-          <p className="flex items-center gap-1.5 text-sm font-medium uppercase text-base-content/45">
+          <p className="flex items-center gap-1.5 text-sm font-medium uppercase text-base-content/60">
             {voterCapEstimateLabel}
             <InfoTooltip text={voterCapEstimateTooltipText} />
           </p>
@@ -1962,7 +1962,7 @@ export function ContentSubmissionSection() {
                   ) : null}
                   {titleError ? <p className="mt-1 text-base text-error">{titleError}</p> : null}
                   <div className="mt-1 text-right">
-                    <span className="text-base text-base-content/30">
+                    <span className="text-base text-base-content/60">
                       {title.length}/{MAX_QUESTION_LENGTH}
                     </span>
                   </div>
@@ -1970,7 +1970,7 @@ export function ContentSubmissionSection() {
 
                 <div>
                   <label className="mb-2 block text-base font-medium">
-                    Description <span className="text-base-content/45">(optional)</span>
+                    Description <span className="text-base-content/60">(optional)</span>
                   </label>
                   <textarea
                     placeholder="Add context voters should consider"
@@ -1983,7 +1983,7 @@ export function ContentSubmissionSection() {
                   />
                   {descriptionError ? <p className="mt-1 text-base text-error">{descriptionError}</p> : null}
                   <div className="mt-1 text-right">
-                    <span className="text-base text-base-content/30">
+                    <span className="text-base text-base-content/60">
                       {description.length}/{MAX_CONTENT_DESCRIPTION_LENGTH}
                     </span>
                   </div>
@@ -2020,8 +2020,8 @@ export function ContentSubmissionSection() {
                       imageMediaMissing || videoMediaMissing ? "text-error" : ""
                     }`}
                   >
-                    Media <span className="font-normal text-base-content/40">(optional)</span>
-                    <span className="font-normal text-base-content/40">
+                    Media <span className="font-normal text-base-content/60">(optional)</span>
+                    <span className="font-normal text-base-content/60">
                       {mediaMode === "images" ? `(1-${MAX_SUBMISSION_IMAGE_URLS} images)` : "(YouTube)"}
                     </span>
                     <InfoTooltip text={mediaMode === "images" ? urlConfig.imageHint : urlConfig.videoHint} />
@@ -2220,7 +2220,7 @@ export function ContentSubmissionSection() {
                         questionStepAttempted && selectedSubcategories.length === 0 ? "text-error" : ""
                       }`}
                     >
-                      Select Categories <span className="font-normal text-base-content/40">(1-3)</span>
+                      Select Categories <span className="font-normal text-base-content/60">(1-3)</span>
                     </label>
                     <div className="flex flex-wrap gap-2">
                       {selectedCategory.subcategories.map(subcat => {

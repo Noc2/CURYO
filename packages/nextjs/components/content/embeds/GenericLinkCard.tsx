@@ -22,7 +22,7 @@ function ContextPlaceholderArtwork({ hostname, compact }: { hostname: string; co
           <LinkIcon className="h-6 w-6" />
         </div>
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary/85">Context</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary/90">Context</p>
           <p className={`${compact ? "text-base" : "text-lg"} mt-1 truncate font-semibold text-base-content`}>
             {hostname}
           </p>

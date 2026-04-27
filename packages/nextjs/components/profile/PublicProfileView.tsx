@@ -538,7 +538,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
                   type="button"
                   onClick={openAvatarEditor}
                   aria-label="Edit profile avatar"
-                  className="group relative shrink-0 rounded-3xl transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                  className="group relative shrink-0 rounded-3xl transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/80"
                 >
                   <img
                     src={fallbackImageUrl}
@@ -592,7 +592,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
                         ) : null}
                         {nameIsAvailable && !isOwnName ? <p className="text-success">Name is available</p> : null}
                       </div>
-                      <span className="shrink-0 text-base-content/40">{nameInput.length}/20</span>
+                      <span className="shrink-0 text-base-content/60">{nameInput.length}/20</span>
                     </div>
                   </>
                 ) : (
@@ -673,13 +673,13 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
                   </span>
                   <InfoTooltip text={AVATAR_WIN_RATE_TOOLTIP} position="bottom" />
                 </span>
-                <span className="text-base-content/35">&bull;</span>
+                <span className="text-base-content/60">&bull;</span>
                 <span>Daily Streak {dailyStreakLabel}</span>
-                <span className="text-base-content/35">&bull;</span>
+                <span className="text-base-content/60">&bull;</span>
                 <span>{profileLoading ? "..." : `${totalVotes} votes`}</span>
-                <span className="text-base-content/35">&bull;</span>
+                <span className="text-base-content/60">&bull;</span>
                 <span>{resolvedVotesLabel} resolved</span>
-                <span className="text-base-content/35">&bull;</span>
+                <span className="text-base-content/60">&bull;</span>
                 <span>
                   {voterIdLoading
                     ? "Loading Voter ID..."
@@ -702,7 +702,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
             <div className="mt-6 rounded-2xl bg-base-content/[0.04] px-5 py-4">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <div className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">
+                  <div className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/90">
                     Audience context
                   </div>
                   <p className="mt-2 max-w-3xl text-sm leading-6 text-base-content/55">
@@ -881,14 +881,14 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
               </div>
 
               <div className="mt-4 flex justify-end">
-                <span className="text-sm text-base-content/40">
+                <span className="text-sm text-base-content/60">
                   {selfReportInputLength}/{MAX_PROFILE_SELF_REPORT_LENGTH}
                 </span>
               </div>
             </div>
           ) : hasCurrentSelfReport ? (
             <div className="mt-6 rounded-2xl bg-base-content/[0.04] px-5 py-4">
-              <div className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">Audience context</div>
+              <div className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/90">Audience context</div>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-base-content/55">{PROFILE_SELF_REPORT_NOTICE}</p>
               <div className="mt-4 grid gap-3 md:grid-cols-2">
                 {currentSelfReportGroups.map(group => (
@@ -910,7 +910,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
             </div>
           ) : ownProfile ? (
             <div className="mt-6 rounded-2xl border border-dashed border-base-content/15 px-5 py-4">
-              <div className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">Audience context</div>
+              <div className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/90">Audience context</div>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-base-content/55">{PROFILE_SELF_REPORT_NOTICE}</p>
               {!hasVoterId ? (
                 <Link
@@ -963,13 +963,13 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
 
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="rounded-2xl bg-base-content/[0.05] px-4 py-3">
-                      <div className="text-base text-base-content/45">Stake won</div>
+                      <div className="text-base text-base-content/60">Stake won</div>
                       <div className="mt-1 text-xl font-semibold text-success">
                         {formatHrepString(stats.totalStakeWon)} HREP
                       </div>
                     </div>
                     <div className="rounded-2xl bg-base-content/[0.05] px-4 py-3">
-                      <div className="text-base text-base-content/45">Stake lost</div>
+                      <div className="text-base text-base-content/60">Stake lost</div>
                       <div className="mt-1 text-xl font-semibold text-error">
                         {formatHrepString(stats.totalStakeLost)} HREP
                       </div>
@@ -993,7 +993,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
               <span className="text-base font-medium text-base-content/60">Recent questions</span>
               <InfoTooltip text="Latest questions this curator has asked. This is the clearest payoff from following them." />
             </div>
-            <span className="text-base tabular-nums text-base-content/45">
+            <span className="text-base tabular-nums text-base-content/60">
               {profileLoading ? "..." : recentSubmissions.length}
             </span>
           </div>
@@ -1019,7 +1019,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <div className="text-sm font-semibold uppercase tracking-wide text-primary/80">
+                        <div className="text-sm font-semibold uppercase tracking-wide text-primary/90">
                           {categoryName}
                         </div>
                         <div className="mt-1 line-clamp-2 text-lg font-semibold leading-7">{submission.title}</div>
@@ -1053,7 +1053,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
               <span className="text-base font-medium text-base-content/60">Recent votes</span>
               <InfoTooltip text="Latest 20 vote commits for this wallet. Outcomes appear once rounds settle." />
             </div>
-            <span className="text-base tabular-nums text-base-content/45">
+            <span className="text-base tabular-nums text-base-content/60">
               {profileLoading ? "..." : recentVotes.length}
             </span>
           </div>
@@ -1092,7 +1092,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
                           >
                             Content #{vote.contentId}
                           </Link>
-                          <div className="text-base text-base-content/45">Round #{vote.roundId}</div>
+                          <div className="text-base text-base-content/60">Round #{vote.roundId}</div>
                         </td>
                         <td>
                           <span className={`font-medium ${direction.className}`}>{direction.label}</span>
@@ -1239,11 +1239,11 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
 
               <div className="mt-6 grid gap-3 sm:grid-cols-2">
                 <div className="rounded-2xl bg-base-content/[0.04] px-5 py-4">
-                  <div className="text-base text-base-content/45">Successful referrals</div>
+                  <div className="text-base text-base-content/60">Successful referrals</div>
                   <div className="mt-1 text-3xl font-semibold tabular-nums">{referralCountLabel}</div>
                 </div>
                 <div className="rounded-2xl bg-base-content/[0.04] px-5 py-4">
-                  <div className="text-base text-base-content/45">Total received</div>
+                  <div className="text-base text-base-content/60">Total received</div>
                   <div className="mt-1 text-3xl font-semibold tabular-nums text-primary">
                     {formatReferralAmount(totalEarned)} HREP
                   </div>

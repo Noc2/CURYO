@@ -16,7 +16,7 @@ export function LandingFaq() {
             >
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-5 text-left marker:content-none [&::-webkit-details-marker]:hidden">
                 <span className="text-lg font-semibold text-base-content sm:text-xl">{item.question}</span>
-                <ChevronDownIcon className="h-5 w-5 shrink-0 text-primary/70 transition-transform duration-200 group-open:rotate-180 group-open:text-primary" />
+                <ChevronDownIcon className="h-5 w-5 shrink-0 text-primary/90 transition-transform duration-200 group-open:rotate-180 group-open:text-primary" />
               </summary>
 
               <div className="border-t border-white/6 px-6 pt-4 pb-6 text-base leading-7 text-base-content/80 sm:text-[1.05rem]">

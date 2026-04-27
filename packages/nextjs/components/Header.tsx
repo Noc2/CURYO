@@ -271,7 +271,7 @@ const HeaderSearchBar = ({ className }: { className?: string }) => {
       <label htmlFor={searchInputId} className="sr-only">
         Search content
       </label>
-      <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/45 pointer-events-none" />
+      <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/60 pointer-events-none" />
       <input
         id={searchInputId}
         name="vote-search"
@@ -335,7 +335,7 @@ const MobileHeaderSearch = ({ onClose }: { onClose: () => void }) => {
         <label htmlFor={searchInputId} className="sr-only">
           Search content
         </label>
-        <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-base-content/30" />
+        <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-base-content/60" />
         <input
           id={searchInputId}
           name="vote-search-mobile"

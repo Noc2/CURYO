@@ -77,11 +77,11 @@ function getActivityToneClassName(tone: ActivityTone) {
 function getActivityDetailToneClassName(tone: ActivityTone) {
   switch (tone) {
     case "success":
-      return "text-success/80";
+      return "text-success";
     case "warning":
       return "text-warning";
     case "primary":
-      return "text-primary/80";
+      return "text-primary/90";
     case "neutral":
     default:
       return "text-base-content/75";
@@ -194,7 +194,7 @@ function LiveRoundActivity({
 
       <div className={`grid grid-cols-3 ${condensed ? "mt-2.5 gap-1.5" : "mt-3 gap-2"}`}>
         <div className={`rounded-lg bg-base-content/[0.04] ${condensed ? "px-2 py-1.5" : "px-3 py-2"}`}>
-          <p className="text-[0.64rem] font-semibold uppercase tracking-[0.16em] text-base-content/40">Committed</p>
+          <p className="text-[0.64rem] font-semibold uppercase tracking-[0.16em] text-base-content/60">Committed</p>
           <p
             className={`font-semibold tabular-nums text-base-content ${condensed ? "mt-0.5 text-sm" : "mt-1 text-base"}`}
           >
@@ -202,7 +202,7 @@ function LiveRoundActivity({
           </p>
         </div>
         <div className={`rounded-lg bg-base-content/[0.04] ${condensed ? "px-2 py-1.5" : "px-3 py-2"}`}>
-          <p className="text-[0.64rem] font-semibold uppercase tracking-[0.16em] text-base-content/40">Revealed</p>
+          <p className="text-[0.64rem] font-semibold uppercase tracking-[0.16em] text-base-content/60">Revealed</p>
           <p
             className={`font-semibold tabular-nums text-base-content ${condensed ? "mt-0.5 text-sm" : "mt-1 text-base"}`}
           >
@@ -210,7 +210,7 @@ function LiveRoundActivity({
           </p>
         </div>
         <div className={`rounded-lg bg-base-content/[0.04] ${condensed ? "px-2 py-1.5" : "px-3 py-2"}`}>
-          <p className="text-[0.64rem] font-semibold uppercase tracking-[0.16em] text-base-content/40">Staked</p>
+          <p className="text-[0.64rem] font-semibold uppercase tracking-[0.16em] text-base-content/60">Staked</p>
           <p
             className={`font-semibold tabular-nums text-base-content ${condensed ? "mt-0.5 text-sm" : "mt-1 text-base"}`}
           >
@@ -245,7 +245,7 @@ function RewardAmountDisplay({
       <span>
         <span className="tabular-nums">{amountLabel}</span> {label}
       </span>
-      <InfoTooltip text={tooltip} position="bottom" className="[&>svg]:text-primary/70 [&>svg]:hover:text-primary" />
+      <InfoTooltip text={tooltip} position="bottom" className="[&>svg]:text-primary/90 [&>svg]:hover:text-primary" />
     </div>
   );
 }

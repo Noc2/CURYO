@@ -71,7 +71,7 @@ function getDeadlineChipClassName(tone: "active" | "ended") {
 
 function getDeadlineTooltipClassName(tone: "active" | "ended") {
   return tone === "active"
-    ? "[&>svg]:text-primary/70 [&>svg]:hover:text-primary"
+    ? "[&>svg]:text-primary/90 [&>svg]:hover:text-primary"
     : "[&>svg]:text-base-content/50 [&>svg]:hover:text-base-content/75";
 }
 

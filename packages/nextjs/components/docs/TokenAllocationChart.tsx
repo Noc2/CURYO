@@ -97,7 +97,7 @@ export function TokenAllocationChart() {
             <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: slice.color }} />
             <span className="text-base-content/70">
               <span className="font-mono font-medium text-base-content/90">{slice.percentLabel}</span> {slice.label}{" "}
-              <span className="text-base-content/40">({slice.amountLabel})</span>
+              <span className="text-base-content/60">({slice.amountLabel})</span>
             </span>
           </div>
         ))}

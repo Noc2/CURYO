@@ -44,7 +44,7 @@ function FeedbackItem({ item }: { item: ContentFeedbackItem }) {
       <div className="flex min-w-0 items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-sm font-semibold leading-tight text-base-content">{item.feedbackTypeLabel}</p>
-          <p className="mt-1 text-xs leading-none text-base-content/48">
+          <p className="mt-1 text-xs leading-none text-base-content/60">
             {shortenAddress(item.authorAddress)} · {formatFeedbackDate(item.createdAt)}
           </p>
         </div>
@@ -154,7 +154,7 @@ export function ContentFeedbackPanel({ item, variant = "rail", onRequestConnect 
             </p>
           ) : null}
           {!feedback.settlementComplete && ownHiddenCopy ? (
-            <p className="text-xs leading-relaxed text-base-content/45">{ownHiddenCopy}</p>
+            <p className="text-xs leading-relaxed text-base-content/60">{ownHiddenCopy}</p>
           ) : null}
         </div>
       ) : null}
@@ -204,7 +204,7 @@ export function ContentFeedbackPanel({ item, variant = "rail", onRequestConnect 
         />
 
         <div className="flex items-center justify-between gap-3">
-          <span className="text-xs tabular-nums text-base-content/42">
+          <span className="text-xs tabular-nums text-base-content/60">
             {bodyLength}/{CONTENT_FEEDBACK_BODY_MAX_LENGTH}
           </span>
           <TooltipAnchor text={submitTooltip} position="top" className="rounded-full">
@@ -241,7 +241,7 @@ export function ContentFeedbackPanel({ item, variant = "rail", onRequestConnect 
             ))}
           </ul>
         ) : feedback.settlementComplete ? (
-          <p className="rounded-lg border border-dashed border-base-content/12 px-3 py-3 text-sm leading-relaxed text-base-content/48">
+          <p className="rounded-lg border border-dashed border-base-content/12 px-3 py-3 text-sm leading-relaxed text-base-content/60">
             No feedback yet.
           </p>
         ) : null}

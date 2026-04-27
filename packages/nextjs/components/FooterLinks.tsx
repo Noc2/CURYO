@@ -31,7 +31,7 @@ export function FooterLinks({
   className = "",
   listClassName = "",
   linkClassName = "link link-hover",
-  separatorClassName = "text-base-content/40",
+  separatorClassName = "text-base-content/60",
 }: FooterLinksProps) {
   return (
     <nav aria-label="Footer" className={className}>

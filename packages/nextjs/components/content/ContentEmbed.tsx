@@ -9,7 +9,7 @@ import { detectPlatform } from "~~/utils/platforms";
 
 const EmbedSpinner = () => (
   <div className="flex h-full w-full items-center justify-center p-8">
-    <span className="loading loading-spinner loading-md text-base-content/30" />
+    <span className="loading loading-spinner loading-md text-base-content/60" />
   </div>
 );
 
@@ -73,7 +73,7 @@ export function ContentEmbed({
     return (
       <div className={`flex h-full min-h-[12rem] flex-col justify-center bg-base-100 ${compact ? "p-4" : "p-6"}`}>
         {showTextHeading && title ? (
-          <p className="text-sm font-semibold uppercase text-base-content/45">Question</p>
+          <p className="text-sm font-semibold uppercase text-base-content/60">Question</p>
         ) : null}
         {showTextHeading && title ? (
           <h3 className="mt-2 text-xl font-semibold leading-tight text-base-content">{title}</h3>
