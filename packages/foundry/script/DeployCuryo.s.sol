@@ -312,17 +312,23 @@ contract DeployCuryo is ScaffoldETHDeploy {
 
         // 12c. Deploy and fund HumanFaucet (52,000,000 HREP, Self.xyz identity verification)
         HumanFaucet humanFaucet;
+        address humanFaucetHubAddress;
+        bool isFaucetMock;
         {
-            (address hubAddress, bool isFaucetMock) = _resolveHumanFaucetConfig(isLocalDev);
+            (humanFaucetHubAddress, isFaucetMock) = _resolveHumanFaucetConfig(isLocalDev);
 
             if (isFaucetMock) {
                 MockIdentityVerificationHub mockHub = new MockIdentityVerificationHub();
-                hubAddress = address(mockHub);
-                console.log("MockIdentityVerificationHub deployed at:", hubAddress);
+                humanFaucetHubAddress = address(mockHub);
+                console.log("MockIdentityVerificationHub deployed at:", humanFaucetHubAddress);
             }
 
-            humanFaucet = new HumanFaucet(address(hrepToken), hubAddress, governance);
+            humanFaucet = new HumanFaucet(address(hrepToken), humanFaucetHubAddress, governance);
             console.log("HumanFaucet deployed at:", address(humanFaucet));
+            if (!isLocalDev) {
+                humanFaucet.pause();
+                console.log("Paused HumanFaucet until governance opens public claims");
+            }
 
             // Wire VoterIdNFT
             voterIdNFT.addMinter(address(humanFaucet));
@@ -331,20 +337,6 @@ contract DeployCuryo is ScaffoldETHDeploy {
             // Fund the faucet with the full remaining launch allocation so launch minting reaches MAX_SUPPLY.
             hrepToken.mint(address(humanFaucet), FAUCET_POOL_AMOUNT);
             console.log("Minted 52,000,000 HREP to HumanFaucet");
-
-            // Set verification config
-            if (!isFaucetMock) {
-                SelfStructs.VerificationConfigV2 memory config = _buildFaucetVerificationConfig();
-                bytes32 configId = IIdentityVerificationHubV2(hubAddress).setVerificationConfigV2(config);
-                humanFaucet.setConfigId(configId);
-                _assertFaucetVerificationConfig(humanFaucet, hubAddress, configId);
-                console.log("Set verification config on HumanFaucet");
-            } else {
-                bytes32 mockConfigId = MockIdentityVerificationHub(hubAddress).MOCK_CONFIG_ID();
-                humanFaucet.setConfigId(mockConfigId);
-                _assertFaucetVerificationConfig(humanFaucet, hubAddress, mockConfigId);
-                console.log("Set mock configId on HumanFaucet");
-            }
 
             MigrationBootstrapConfig memory migrationConfig = _loadMigrationBootstrapConfig();
             if (migrationConfig.users.length > 0) {
@@ -360,12 +352,6 @@ contract DeployCuryo is ScaffoldETHDeploy {
             }
             humanFaucet.closeMigrationBootstrap();
             console.log("Closed HumanFaucet migration bootstrap");
-
-            // Transfer ownership to governance (production only)
-            if (!isLocalDev) {
-                humanFaucet.transferOwnership(governance);
-                console.log("HumanFaucet ownership transferred to governance");
-            }
         }
 
         // 12d. Initialize Governor excluded holders for dynamic quorum (production only)
@@ -384,6 +370,26 @@ contract DeployCuryo is ScaffoldETHDeploy {
         }
 
         _verifyLaunchMintAllocation(hrepToken, governance, votingEngine, participationPool, humanFaucet);
+
+        // Set verification config only after launch allocation and migration bootstrap checks pass.
+        if (!isFaucetMock) {
+            SelfStructs.VerificationConfigV2 memory config = _buildFaucetVerificationConfig();
+            bytes32 configId = IIdentityVerificationHubV2(humanFaucetHubAddress).setVerificationConfigV2(config);
+            humanFaucet.setConfigId(configId);
+            _assertFaucetVerificationConfig(humanFaucet, humanFaucetHubAddress, configId);
+            console.log("Set verification config on HumanFaucet");
+        } else {
+            bytes32 mockConfigId = MockIdentityVerificationHub(humanFaucetHubAddress).MOCK_CONFIG_ID();
+            humanFaucet.setConfigId(mockConfigId);
+            _assertFaucetVerificationConfig(humanFaucet, humanFaucetHubAddress, mockConfigId);
+            console.log("Set mock configId on HumanFaucet");
+        }
+
+        // Transfer ownership to governance while production public claims remain paused.
+        if (!isLocalDev) {
+            humanFaucet.transferOwnership(governance);
+            console.log("HumanFaucet ownership transferred to governance");
+        }
 
         // 12e. Mint test tokens and Voter IDs for localhost development
         if (isLocalDev) {
@@ -1101,6 +1107,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
             _require(targets.humanFaucet.governance() == targets.governance, "HumanFaucet governance");
             _require(targets.humanFaucet.owner() == targets.governance, "HumanFaucet governance owner");
             _require(targets.humanFaucet.migrationBootstrapClosed(), "HumanFaucet migration bootstrap closed");
+            _require(targets.humanFaucet.paused(), "HumanFaucet production claim pause");
         }
     }
 
