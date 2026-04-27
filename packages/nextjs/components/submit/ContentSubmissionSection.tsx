@@ -389,7 +389,7 @@ export function ContentSubmissionSection() {
   const getContextUrlValidationError = (value: string): string | null => {
     const trimmedValue = value.trim();
     if (!trimmedValue) {
-      return "Add a context link before asking.";
+      return "Add a context link before submitting.";
     }
 
     const sanitizedUrl = sanitizeExternalUrl(trimmedValue);
@@ -420,8 +420,8 @@ export function ContentSubmissionSection() {
     if (!trimmedValue) {
       return options.required
         ? expectedType === "video"
-          ? "Add a YouTube URL before asking."
-          : "Add at least one image URL before asking."
+          ? "Add a YouTube URL before submitting."
+          : "Add at least one image URL before submitting."
         : null;
     }
 
@@ -1077,20 +1077,20 @@ export function ContentSubmissionSection() {
       setQuestionStepAttempted(true);
       validateQuestionSection(invalidDraft, true);
       setSubmissionStep("question");
-      notification.warning("Fill in every question page before asking.");
+      notification.warning("Fill in every question page before submitting.");
       return;
     }
 
     setQuestionDrafts(syncedDrafts);
     setBountyStepAttempted(true);
     if (!selectedRewardAmount) {
-      notification.warning("Please fix the highlighted fields before asking.");
+      notification.warning("Please fix the highlighted fields before submitting.");
       return;
     }
 
     if (!bountySettingsValid) {
       setSubmissionStep("bounty");
-      notification.warning("Please fix the bounty details before asking.");
+      notification.warning("Please fix the bounty details before submitting.");
       return;
     }
 
@@ -1120,7 +1120,7 @@ export function ContentSubmissionSection() {
       );
       if (rewardPoolExpiresAt <= 0n) {
         setSubmissionStep("bounty");
-        notification.warning("Choose a bounty window before asking.");
+        notification.warning("Choose a bounty window before submitting.");
         return;
       }
       const feedbackClosesAt = rewardPoolExpiresAt;
@@ -1384,7 +1384,7 @@ export function ContentSubmissionSection() {
 
       statusToast.dismiss();
       notification.success(
-        `${questionCount === 1 ? "Question" : "Question bundle"} asked with a ${formatSubmissionRewardAmount(
+        `${questionCount === 1 ? "Question" : "Question bundle"} submitted with a ${formatSubmissionRewardAmount(
           selectedRewardAmount,
           rewardAsset,
         )} voter bounty.`,
@@ -1436,7 +1436,7 @@ export function ContentSubmissionSection() {
       setBountyStepAttempted(false);
       setSubmissionStep("question");
     } catch (e: unknown) {
-      console.error("Ask failed:", e);
+      console.error("Submit failed:", e);
       if (reservedRevealCommitment && cancelReservedSubmission) {
         try {
           await cancelReservedSubmission(reservedRevealCommitment);
@@ -1452,14 +1452,14 @@ export function ContentSubmissionSection() {
       } else if (isWalletRpcOverloadedError(e)) {
         showWalletRpcOverloadNotification();
       } else if (isReservationNotFoundError(e)) {
-        notification.warning("Reservation expired. Retry asking.");
+        notification.warning("Reservation expired. Retry submitting.");
       } else if (isReservationExistsError(e)) {
-        notification.warning("Reservation saved. Retry asking.");
+        notification.warning("Reservation saved. Retry submitting.");
       } else {
         notification.error(
           (e as { shortMessage?: string; message?: string } | undefined)?.shortMessage ||
             (e as { shortMessage?: string; message?: string } | undefined)?.message ||
-            "Failed to ask question",
+            "Failed to submit question",
         );
       }
     } finally {
@@ -1475,7 +1475,7 @@ export function ContentSubmissionSection() {
   const contextMissing = questionStepAttempted && !normalizedContextUrl;
   const imageMediaMissing = false;
   const videoMediaMissing = false;
-  const pageHeading = submissionStep === "question" ? "Ask Question" : "Bounty";
+  const pageHeading = submissionStep === "question" ? "Submit Question" : "Bounty";
   const pageContext =
     submissionStep === "question"
       ? `Question ${activeQuestionIndex + 1} of ${questionCount}`
@@ -1558,7 +1558,7 @@ export function ContentSubmissionSection() {
     <div className="rounded-lg bg-error/10 p-4">
       <p className="mb-2 text-base font-medium text-error">Prohibited Content</p>
       <p className="text-base text-base-content/70">
-        Do not ask questions with illegal or harmful content. This includes but is not limited to: child exploitation
+        Do not submit questions with illegal or harmful content. This includes but is not limited to: child exploitation
         material, non-consensual intimate imagery, content promoting violence or terrorism, doxxing, or
         copyright-infringing material. Violations may result in removal, blocked access, and potential legal action.
       </p>
@@ -1917,7 +1917,7 @@ export function ContentSubmissionSection() {
           >
             <span className="flex items-center gap-2">
               Number of Questions
-              <InfoTooltip text="Choose how many separate questions voters must answer in this ask. The bounty is split across all questions." />
+              <InfoTooltip text="Choose how many separate questions voters must answer in this submission. The bounty is split across all questions." />
             </span>
             <input
               type="number"
@@ -1949,7 +1949,7 @@ export function ContentSubmissionSection() {
                   </label>
                   <input
                     type="text"
-                    placeholder="Ask something subjective that voters can rate"
+                    placeholder="Write a subjective question voters can rate"
                     className={`input input-bordered w-full bg-base-100 ${
                       titleError || (questionStepAttempted && !title.trim()) ? "input-error" : ""
                     }`}
@@ -2009,7 +2009,7 @@ export function ContentSubmissionSection() {
                     onBlur={() => setContextUrlError(getContextUrlValidationError(contextUrl))}
                   />
                   {contextMissing && !contextUrlError ? (
-                    <p className="mt-1 text-base text-error">Add a context link before asking.</p>
+                    <p className="mt-1 text-base text-error">Add a context link before submitting.</p>
                   ) : null}
                   {contextUrlError ? <p className="mt-1 text-base text-error">{contextUrlError}</p> : null}
                 </div>
@@ -2083,7 +2083,7 @@ export function ContentSubmissionSection() {
                         ) : null,
                       )}
                       {imageMediaMissing && !imageUrlErrors.some(Boolean) ? (
-                        <p className="text-base text-error">Add at least one image URL before asking.</p>
+                        <p className="text-base text-error">Add at least one image URL before submitting.</p>
                       ) : null}
                       <button
                         type="button"
@@ -2108,7 +2108,7 @@ export function ContentSubmissionSection() {
                       />
                       {videoUrlError ? <p className="mt-1 text-base text-error">{videoUrlError}</p> : null}
                       {videoMediaMissing && !videoUrlError ? (
-                        <p className="mt-1 text-base text-error">Add a YouTube URL before asking.</p>
+                        <p className="mt-1 text-base text-error">Add a YouTube URL before submitting.</p>
                       ) : null}
                     </div>
                   )}
@@ -2146,7 +2146,7 @@ export function ContentSubmissionSection() {
                         />
                       </button>
                       {questionStepAttempted && !selectedCategory ? (
-                        <p className="mt-1 text-base text-error">Select a category before asking.</p>
+                        <p className="mt-1 text-base text-error">Select a category before submitting.</p>
                       ) : null}
 
                       {isCategoryDropdownOpen ? (
@@ -2291,7 +2291,7 @@ export function ContentSubmissionSection() {
                       <p className="mt-2 text-base text-error">{customSubcategoryError}</p>
                     ) : null}
                     {questionStepAttempted && selectedSubcategories.length === 0 ? (
-                      <p className="mt-2 text-base text-error">Pick at least one category before asking.</p>
+                      <p className="mt-2 text-base text-error">Pick at least one category before submitting.</p>
                     ) : null}
                   </div>
                 ) : null}

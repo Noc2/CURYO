@@ -306,7 +306,7 @@ export function AgentSubmissionPanel() {
               <input className="input input-bordered mt-1 font-mono" placeholder="0x..." />
             </label>
             <label className="form-control">
-              <span className="label-text text-sm font-medium">Per ask cap</span>
+              <span className="label-text text-sm font-medium">Per submission cap</span>
               <input className="input input-bordered mt-1" defaultValue="2.00 USDC" />
             </label>
             <label className="form-control">
@@ -334,7 +334,7 @@ export function AgentSubmissionPanel() {
           </div>
           <dl className="mt-4 space-y-3 text-sm">
             <div className="flex items-center justify-between gap-4">
-              <dt className="text-base-content/60">Ask tool</dt>
+              <dt className="text-base-content/60">Submit tool</dt>
               <dd className="font-mono">curyo_ask_humans</dd>
             </div>
             <div className="flex items-center justify-between gap-4">

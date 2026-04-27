@@ -7,7 +7,12 @@ import {
   waitForPonderSync,
 } from "../helpers/admin-helpers";
 import { ANVIL_ACCOUNTS, DEPLOYER } from "../helpers/anvil-accounts";
-import { continueToBountyStep, selectAskCategory, selectAskSubcategory, selectBountyRewardAsset } from "../helpers/ask-form";
+import {
+  continueToBountyStep,
+  selectAskCategory,
+  selectAskSubcategory,
+  selectBountyRewardAsset,
+} from "../helpers/ask-form";
 import { newE2EContext } from "../helpers/browser-context";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
 import { waitForSettlementIndexed } from "../helpers/keeper";
@@ -59,7 +64,7 @@ test.describe("Tied round lifecycle", () => {
     await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey);
 
     await gotoWithRetry(page, "/ask", { ensureWalletConnected: true });
-    await expect(page.getByRole("heading", { name: "Ask Question" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Submit Question" })).toBeVisible({ timeout: 15_000 });
 
     // Select Media category — handle "No categories available" if categories are not loaded.
     const hasCategories = await selectAskCategory(page);
@@ -91,7 +96,7 @@ test.describe("Tied round lifecycle", () => {
       return;
     }
 
-    // Ask
+    // Submit
     await continueToBountyStep(page);
     await selectBountyRewardAsset(page, "hrep");
     const submitBtn = page.getByRole("button", { name: /^Submit/i });
@@ -99,7 +104,7 @@ test.describe("Tied round lifecycle", () => {
     await expect(submitBtn).toBeEnabled({ timeout: 5_000 });
     await submitBtn.click();
 
-    await expect(page.getByRole("heading", { name: /Question Asked/i })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("heading", { name: /Question Submitted/i })).toBeVisible({ timeout: 30_000 });
 
     await context.close();
 

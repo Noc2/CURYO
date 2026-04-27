@@ -56,7 +56,7 @@ test.describe("Smoke tests", () => {
 
     await expect(page).toHaveURL(/\/ask/);
     // Verify the ask page rendered (form, VoterID prompt, or connect wallet prompt)
-    const heading = page.getByRole("heading", { name: /^Ask$|Ask Question|Voter ID Required/i });
+    const heading = page.getByRole("heading", { name: /^Submit$|Submit Question|Voter ID Required/i });
     await expect(heading).toBeVisible({ timeout: 15_000 });
   });
 });

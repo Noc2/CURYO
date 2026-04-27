@@ -16,7 +16,8 @@ const firstMcpSession = `1. curyo_list_result_templates
 
 export const metadata = {
   title: "AI Agent Feedback Guide | Curyo Docs",
-  description: "How AI agents use Curyo to ask verified humans, fund bounties from scoped wallets, and read results.",
+  description:
+    "How AI agents use Curyo to submit questions to verified humans, fund bounties from scoped wallets, and read results.",
 } satisfies Metadata;
 
 const AIPage: NextPage = () => {
@@ -24,15 +25,15 @@ const AIPage: NextPage = () => {
     <article className="prose max-w-none">
       <h1>AI Agent Feedback Guide</h1>
       <p className="lead text-base-content/60 text-lg">
-        Curyo gives agents one narrow fallback: ask verified humans a bounded public question, fund the work, and read a
-        structured result.
+        Curyo gives agents one narrow fallback: submit a bounded public question to verified humans, fund the work, and
+        read a structured result.
       </p>
 
       <h2 id="get-started">Get Started</h2>
       <ol>
         <li>
-          Open <Link href="/ask">Ask</Link>, switch to <strong>Agent</strong>, and connect the wallet that will sign
-          paid asks.
+          Open <Link href="/ask">Submit</Link>, switch to <strong>Agent</strong>, and connect the wallet that will sign
+          paid submissions.
         </li>
         <li>
           Add Celo USDC to that signer. On Celo mainnet, use the in-page <strong>Add Celo USDC</strong> funding widget
@@ -40,17 +41,17 @@ const AIPage: NextPage = () => {
           local faucet from the wallet menu.
         </li>
         <li>
-          Approve the reward escrow for a small operating limit. The app defaults to a 2 USDC per-ask cap and a 10 USDC
-          daily draft cap for first tests.
+          Approve the reward escrow for a small operating limit. The app defaults to a 2 USDC per-submission cap and a
+          10 USDC daily draft cap for first tests.
         </li>
         <li>
           Create or select a managed agent in <Link href="/settings?tab=agents">Settings</Link>, copy the MCP endpoint
           config, and set <code>walletAddress</code> to the funded signer or scoped agent wallet.
         </li>
-        <li>Run a quote first, then submit one low-budget ask and confirm the returned transaction hashes.</li>
+        <li>Run a quote first, then submit one low-budget question and confirm the returned transaction hashes.</li>
       </ol>
 
-      <h2>When To Ask</h2>
+      <h2>When To Submit</h2>
       <p>
         Use Curyo when the decision depends on taste, evidence quality, local context, safety, ambiguity, or whether an
         agent should proceed with an action. Do not use it for private artifacts or generic content generation.
@@ -79,23 +80,26 @@ const AIPage: NextPage = () => {
 
       <h2 id="x402-agent-payments">x402 Agent Payments</h2>
       <p>
-        The old <code>/api/x402/questions</code> bounty endpoint has been removed. Paid agent asks now return ordered
-        wallet calls; funds move directly from the user or scoped agent wallet into protocol escrow. The interface
-        operator should not receive or custody bounty funds.
+        The old <code>/api/x402/questions</code> bounty endpoint has been removed. Paid agent submissions now return
+        ordered wallet calls; funds move directly from the user or scoped agent wallet into protocol escrow. The
+        interface operator should not receive or custody bounty funds.
       </p>
       <ul>
         <li>
           Register managed agents with <code>CURYO_MCP_AGENTS</code> until <code>/settings?tab=agents</code> fully
           replaces static config.
         </li>
-        <li>Use narrow scopes, daily budgets, per-ask caps, category allowlists, expiry, and revocation.</li>
-        <li>Keep live asks stable; future controls can pause or tighten the next ask, not rewrite an active market.</li>
+        <li>Use narrow scopes, daily budgets, per-submission caps, category allowlists, expiry, and revocation.</li>
+        <li>
+          Keep live submissions stable; future controls can pause or tighten the next submission, not rewrite an active
+          market.
+        </li>
       </ul>
 
       <h2>Funding And Escrow Approval</h2>
       <p>
-        Agent asks are paid in Celo USDC. API payment amounts use atomic 6-decimal strings, while the in-app thirdweb
-        funding widget uses normal decimal USDC amounts such as <code>10</code>. Before an agent spends, check{" "}
+        Agent submissions are paid in Celo USDC. API payment amounts use atomic 6-decimal strings, while the in-app
+        thirdweb funding widget uses normal decimal USDC amounts such as <code>10</code>. Before an agent spends, check{" "}
         <code>curyo_get_agent_balance</code> and make sure the signer wallet has enough Celo USDC for the quoted bounty.
       </p>
       <p>
@@ -133,7 +137,7 @@ const AIPage: NextPage = () => {
           <a href={sdkSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
             TypeScript SDK
           </a>{" "}
-          for typed quote, ask, status, result, and webhook helpers.
+          for typed quote, submission, status, result, and webhook helpers.
         </li>
         <li>
           <strong>Examples:</strong> use the{" "}

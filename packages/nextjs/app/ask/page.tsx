@@ -26,7 +26,7 @@ const AskPage: NextPage = () => {
   const { address } = useAccount();
 
   if (!address) {
-    return <ConnectWalletCard title="Ask" message="Sign in to ask a question." />;
+    return <ConnectWalletCard title="Submit" message="Sign in to submit a question." />;
   }
 
   return (

@@ -1,8 +1,8 @@
-import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
 import { expect, test } from "../fixtures/wallet";
+import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
 import { newE2EContext } from "../helpers/browser-context";
-import { setupWallet } from "../helpers/wallet-session";
 import { gotoWithRetry, waitForFeedLoaded } from "../helpers/wait-helpers";
+import { setupWallet } from "../helpers/wallet-session";
 
 test.describe("Error states and edge cases", () => {
   test("ask page without VoterID shows mint prompt", async ({ browser }) => {
@@ -15,8 +15,8 @@ test.describe("Error states and edge cases", () => {
     // Without VoterID, should show "Voter ID Required" heading
     const voterIdRequired = page.getByRole("heading", { name: /Voter ID Required/i });
     const getVoterIdLink = page.getByRole("link", { name: /Get Voter ID/i });
-    const submitForm = page.getByRole("heading", { name: "Ask Question" });
-    const signedOutHeading = page.getByRole("heading", { name: "Ask" });
+    const submitForm = page.getByRole("heading", { name: "Submit Question" });
+    const signedOutHeading = page.getByRole("heading", { name: "Submit" });
     // Local wallet auto-connect is best-effort in E2E. Accept either the
     // connected no-VoterID prompt, the full ask form, or the signed-out shell.
     await expect(voterIdRequired.or(submitForm).or(signedOutHeading)).toBeVisible({ timeout: 15_000 });
