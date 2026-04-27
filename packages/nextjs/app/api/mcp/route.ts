@@ -219,7 +219,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const agent = authenticateMcpRequest(request);
+    const agent = await authenticateMcpRequest(request);
 
     if (body.method === "initialize") {
       return jsonRpcResult(
@@ -267,7 +267,7 @@ export async function POST(request: NextRequest) {
       if (!requiredScope) {
         return jsonRpcError(body.id, -32602, `Unknown tool: ${name || "missing"}`, request);
       }
-      authenticateMcpRequest(request, requiredScope);
+      await authenticateMcpRequest(request, requiredScope);
 
       const result = await callCuryoMcpTool({
         agent,

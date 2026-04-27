@@ -406,6 +406,9 @@ export const agentWalletPolicies = pgTable(
     categories: text("categories"),
     dailyBudgetAtomic: text("daily_budget_atomic").notNull(),
     perAskLimitAtomic: text("per_ask_limit_atomic").notNull(),
+    tokenHash: text("token_hash"),
+    tokenIssuedAt: timestamp("token_issued_at", { mode: "date", withTimezone: true }),
+    tokenRevokedAt: timestamp("token_revoked_at", { mode: "date", withTimezone: true }),
     expiresAt: timestamp("expires_at", { mode: "date", withTimezone: true }),
     createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
     updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).notNull(),
@@ -422,6 +425,7 @@ export const agentWalletPolicies = pgTable(
       table.updatedAt,
     ),
     agentWalletIdx: index("agent_wallet_policies_agent_wallet_idx").on(table.agentWalletAddress, table.status),
+    tokenHashUnique: uniqueIndex("agent_wallet_policies_token_hash_unique").on(table.tokenHash),
   }),
 );
 

@@ -1,4 +1,5 @@
 import { createHash } from "crypto";
+import { getMcpAgentFromPolicyTokenHash, hashMcpBearerToken } from "~~/lib/agent/policies";
 
 export const MCP_SCOPES = {
   ask: "curyo:ask",
@@ -123,26 +124,45 @@ export function buildMcpAuthChallenge(params: { metadataUrl: string; scope?: str
   return `Bearer realm="curyo-mcp", resource_metadata="${params.metadataUrl}"${scope}`;
 }
 
-export function authenticateMcpRequest(request: Request, requiredScope?: string): McpAgentAuth {
-  const agents = getConfiguredMcpAgents();
-  if (agents.length === 0) {
-    throw new McpAuthError("MCP agent authentication is not configured.", 503, requiredScope);
+function assertRequiredScope(agent: McpAgentAuth, requiredScope?: string) {
+  if (requiredScope && !agent.scopes.has(requiredScope)) {
+    throw new McpAuthError(`Missing required scope: ${requiredScope}.`, 403, requiredScope);
   }
+}
 
+export async function authenticateMcpRequest(request: Request, requiredScope?: string): Promise<McpAgentAuth> {
   const token = readBearerToken(request);
   if (!token) {
     throw new McpAuthError("Missing bearer token.", 401, requiredScope);
   }
 
-  const tokenHash = sha256(token);
+  const agents = getConfiguredMcpAgents();
+  const tokenHash = hashMcpBearerToken(token);
   const agent = agents.find(candidate => candidate.tokenHash === tokenHash);
-  if (!agent) {
-    throw new McpAuthError("Invalid bearer token.", 401, requiredScope);
+  if (agent) {
+    assertRequiredScope(agent, requiredScope);
+    return agent;
   }
 
-  if (requiredScope && !agent.scopes.has(requiredScope)) {
-    throw new McpAuthError(`Missing required scope: ${requiredScope}.`, 403, requiredScope);
+  let policyAgent: McpAgentAuth | null = null;
+  if (process.env.DATABASE_URL) {
+    try {
+      policyAgent = await getMcpAgentFromPolicyTokenHash(tokenHash);
+    } catch (error) {
+      if (agents.length === 0) {
+        console.warn("[mcp-auth] DB-backed agent lookup failed", error);
+        throw new McpAuthError("MCP agent authentication is unavailable.", 503, requiredScope);
+      }
+    }
+  }
+  if (policyAgent) {
+    assertRequiredScope(policyAgent, requiredScope);
+    return policyAgent;
   }
 
-  return agent;
+  if (agents.length === 0 && !process.env.DATABASE_URL) {
+    throw new McpAuthError("MCP agent authentication is not configured.", 503, requiredScope);
+  }
+
+  throw new McpAuthError("Invalid bearer token.", 401, requiredScope);
 }

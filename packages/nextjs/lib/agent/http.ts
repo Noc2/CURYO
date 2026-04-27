@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import {
   MCP_SCOPES,
+  type McpAgentAuth,
   McpAuthError,
   type McpScope,
   authenticateMcpRequest,
@@ -15,7 +16,7 @@ type AgentRouteRateLimit = {
 };
 
 type AgentRouteContext = {
-  agent: ReturnType<typeof authenticateMcpRequest>;
+  agent: McpAgentAuth;
   scheduleBackgroundTask: (task: () => Promise<void> | void) => void;
 };
 
@@ -57,9 +58,9 @@ export async function handleAgentRoute(params: AgentRouteOptions) {
   });
   if (limited) return limited;
 
-  let agent: ReturnType<typeof authenticateMcpRequest>;
+  let agent: McpAgentAuth;
   try {
-    agent = authenticateMcpRequest(params.request, params.requiredScope);
+    agent = await authenticateMcpRequest(params.request, params.requiredScope);
   } catch (error) {
     if (error instanceof McpAuthError) {
       return NextResponse.json(authErrorBody(error), {
