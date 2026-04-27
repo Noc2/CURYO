@@ -37,8 +37,9 @@ interface IQuestionBundleRoundObserver {
 ///      finalizeRevealFailedRound().
 ///      Rounds accumulate votes across 20-minute epochs. After each epoch, keepers normally derive reveal plaintext
 ///      off-chain from drand/tlock and submit reveals, while voters can also self-reveal if needed.
-///      The contract enforces lightweight tlock metadata guardrails on chain but does not prove on-chain that the
-///      ciphertext itself was honestly decryptable.
+///      Accepted tlock tradeoff: the contract enforces lightweight tlock metadata guardrails on chain but does not
+///      prove that the ciphertext decrypts to the committed plaintext. Invalid or withheld ciphertexts are handled
+///      economically: unrevealed votes lose reward eligibility and their stake is forfeited after final reveal grace.
 ///      If 1 week passes below commit quorum the round cancels with refunds; once commit quorum exists,
 ///      any unrevealed vote can finalize as RevealFailed only after the round stops accepting votes
 ///      and the final reveal grace deadline has passed.
