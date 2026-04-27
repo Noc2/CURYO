@@ -4,9 +4,32 @@ import type { Metadata, NextPage } from "next";
 const agentsSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/agents";
 const sdkSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/sdk";
 const agentTemplatesSourceHref = "https://github.com/Noc2/CURYO/blob/main/packages/agents/src/templates.ts";
-const genericRatingTemplateHref = `${agentTemplatesSourceHref}#L43-L73`;
-const goNoGoTemplateHref = `${agentTemplatesSourceHref}#L75-L108`;
-const rankedOptionMemberTemplateHref = `${agentTemplatesSourceHref}#L110-L145`;
+const agentFlowTemplateLinks = [
+  { href: `${agentTemplatesSourceHref}#L49-L84`, id: "generic_rating" },
+  { href: `${agentTemplatesSourceHref}#L86-L124`, id: "go_no_go" },
+  { href: `${agentTemplatesSourceHref}#L126-L165`, id: "ranked_option_member" },
+  { href: `${agentTemplatesSourceHref}#L167-L200`, id: "llm_answer_quality" },
+  { href: `${agentTemplatesSourceHref}#L202-L236`, id: "rag_grounding_check" },
+  { href: `${agentTemplatesSourceHref}#L238-L269`, id: "claim_verification" },
+  { href: `${agentTemplatesSourceHref}#L271-L304`, id: "source_credibility_check" },
+  { href: `${agentTemplatesSourceHref}#L306-L344`, id: "agent_action_go_no_go" },
+  { href: `${agentTemplatesSourceHref}#L346-L380`, id: "proposal_review" },
+  { href: `${agentTemplatesSourceHref}#L382-L418`, id: "pairwise_output_preference" },
+] as const;
+
+const genericMcpConfig = `{
+  "mcpServers": {
+    "curyo": {
+      "transport": "streamable-http",
+      "url": "https://curyo.xyz/api/mcp",
+      "headers": {
+        "Authorization": "Bearer <curyo-agent-token>",
+        "MCP-Protocol-Version": "2025-11-25"
+      },
+      "walletAddress": "<user-or-agent-smart-wallet>"
+    }
+  }
+}`;
 
 const firstMcpSession = `1. curyo_list_result_templates
 2. curyo_get_agent_balance
@@ -16,6 +39,60 @@ const firstMcpSession = `1. curyo_list_result_templates
 6. curyo_confirm_ask_transactions
 7. curyo_get_question_status
 8. curyo_get_result`;
+
+const firstFundedAskSteps = [
+  "Fund the signer wallet with Celo USDC, then approve the reward escrow for a small first-run allowance.",
+  "Run curyo_get_agent_balance before asking so the agent can see balance, allowance, and walletAddress.",
+  "Quote with curyo_quote_question and keep the returned payment amount under the per-ask cap.",
+  "Ask with curyo_ask_humans, execute the returned wallet calls in order, then confirm hashes with curyo_confirm_ask_transactions.",
+  "Recover with curyo_get_question_status and curyo_get_result if the callback is missed.",
+] as const;
+
+const operatorControls = [
+  {
+    title: "Token lifecycle",
+    description:
+      "Create separate MCP bearer tokens per autonomous agent, then revoke or rotate them without touching contracts.",
+  },
+  {
+    title: "Budget guards",
+    description:
+      "Use per-ask caps, daily caps, scopes, category allowlists, and a fixed wallet address so agents cannot spend outside their assignment.",
+  },
+  {
+    title: "Callback delivery",
+    description:
+      "Attach signed webhooks to asks, protect the delivery worker with CURYO_AGENT_CALLBACK_DELIVERY_SECRET, and inspect callbackDeliveries when an agent waits for humans asynchronously.",
+  },
+  {
+    title: "Audit trail",
+    description:
+      "Track every ask by client request id, payload hash, payment, public result URL, and callback outcome.",
+  },
+] as const;
+
+const runtimeExamples = [
+  {
+    title: "ChatGPT or Claude",
+    description:
+      "Use a remote connector or MCP server entry. Prefer explicit spend confirmation and poll-safe result reads because the chat session may not stay alive for callbacks.",
+  },
+  {
+    title: "Persistent agents",
+    description:
+      "Use the remote MCP endpoint with managed agent budgets, wallet-signed transaction plans, signed callback webhooks, and memory entries for operation keys and public result URLs.",
+  },
+  {
+    title: "Gemini CLI or coding agents",
+    description:
+      "Use the same mcpServers shape from the local workspace config. Keep the bearer token scoped to quote, ask, read, and balance.",
+  },
+  {
+    title: "Backend workers",
+    description:
+      "Use SDK or HTTP helpers when MCP is unnecessary, and reserve callbacks for durable server-side queues.",
+  },
+] as const;
 
 export const metadata = {
   title: "AI Agent Feedback Guide | Curyo Docs",
@@ -48,8 +125,8 @@ const AIPage: NextPage = () => {
           10 USDC daily draft cap for first tests.
         </li>
         <li>
-          Create or select a managed agent in <Link href="/settings?tab=agents">Settings</Link>, copy the MCP endpoint
-          config, and set <code>walletAddress</code> to the funded signer or scoped agent wallet.
+          Copy the <a href="#generic-mcp-config">MCP endpoint config</a>, and set <code>walletAddress</code> to the
+          funded signer or scoped agent wallet.
         </li>
         <li>Run a quote first, then submit one low-budget question and confirm the returned transaction hashes.</li>
       </ol>
@@ -64,22 +141,14 @@ const AIPage: NextPage = () => {
       <ol>
         <li>
           Choose a template:{" "}
-          <a href={genericRatingTemplateHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
-            <code>generic_rating</code>
-          </a>
-          ,{" "}
-          <a href={goNoGoTemplateHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
-            <code>go_no_go</code>
-          </a>
-          , or{" "}
-          <a
-            href={rankedOptionMemberTemplateHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="link link-primary"
-          >
-            <code>ranked_option_member</code>
-          </a>
+          {agentFlowTemplateLinks.map((template, index) => (
+            <span key={template.id}>
+              {index > 0 ? (index === agentFlowTemplateLinks.length - 1 ? ", or " : ", ") : null}
+              <a href={template.href} target="_blank" rel="noopener noreferrer" className="link link-primary">
+                <code>{template.id}</code>
+              </a>
+            </span>
+          ))}
           .
         </li>
         <li>Quote before spending, with a stable client request ID and conservative bounty cap.</li>
@@ -106,8 +175,8 @@ const AIPage: NextPage = () => {
       </p>
       <ul>
         <li>
-          Register managed agents with <code>CURYO_MCP_AGENTS</code> until <code>/settings?tab=agents</code> fully
-          replaces static config.
+          Register managed agents with <code>CURYO_MCP_AGENTS</code> or equivalent server-side records until durable
+          agent settings exist.
         </li>
         <li>Use narrow scopes, daily budgets, per-submission caps, category allowlists, expiry, and revocation.</li>
         <li>
@@ -129,6 +198,54 @@ const AIPage: NextPage = () => {
         hashes, then submit those hashes to <code>curyo_confirm_ask_transactions</code>.
       </p>
 
+      <h2 id="operator-controls">Operator Controls</h2>
+      <p>
+        Agent operator controls belong in a durable service layer today, not in user settings. They are off-chain guard
+        rails for connectors, persistent agents, terminal agents, and backend workers; they do not change Curyo protocol
+        rules or store subjective agent data on-chain.
+      </p>
+      <div className="not-prose grid gap-4 md:grid-cols-2">
+        {operatorControls.map(control => (
+          <article key={control.title} className="surface-card rounded-lg p-4">
+            <h3 className="text-base font-semibold">{control.title}</h3>
+            <p className="mt-2 text-sm leading-relaxed text-base-content/70">{control.description}</p>
+          </article>
+        ))}
+      </div>
+
+      <h2 id="generic-mcp-config">Generic MCP Agent Config</h2>
+      <pre className="bg-base-200 p-4 rounded-lg overflow-x-auto">
+        <code>{genericMcpConfig}</code>
+      </pre>
+      <p>
+        Tokens should carry only the scopes each agent needs: <code>curyo:quote</code>, <code>curyo:ask</code>,{" "}
+        <code>curyo:read</code>, and <code>curyo:balance</code>. Curyo&apos;s current remote MCP route is a POST
+        streamable HTTP endpoint; SSE is not enabled for this release. Protect the internal callback delivery route with{" "}
+        <code>CURYO_AGENT_CALLBACK_DELIVERY_SECRET</code>, and teach agents to recover with{" "}
+        <code>curyo_get_question_status</code> if a webhook is missed.
+      </p>
+
+      <h2 id="first-funded-ask">First Funded Ask</h2>
+      <ol>
+        {firstFundedAskSteps.map(step => (
+          <li key={step}>{step}</li>
+        ))}
+      </ol>
+
+      <h2 id="runtime-fit">Runtime Fit</h2>
+      <div className="not-prose overflow-x-auto">
+        <table className="table table-zebra [&_td]:align-top [&_td]:text-sm [&_th]:text-sm">
+          <tbody>
+            {runtimeExamples.map(example => (
+              <tr key={example.title}>
+                <th className="min-w-36">{example.title}</th>
+                <td className="text-base-content/70">{example.description}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
       <h2 id="templates">Templates And Results</h2>
       <p>
         <code>curyo_get_result</code> returns the protocol state plus an agent-friendly decision package: readiness,
@@ -141,7 +258,8 @@ const AIPage: NextPage = () => {
         <a href={agentTemplatesSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
           template source
         </a>
-        .
+        . New AI evaluation templates keep the same binary staked rating flow and only change the rubric metadata and
+        result interpretation hints.
       </p>
 
       <h2 id="mcp-adapter-shape">MCP Adapter Shape</h2>

@@ -6,17 +6,15 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useAccount } from "wagmi";
 import { DelegationSection } from "~~/components/profile/DelegationSection";
 import { CuryoConnectButton } from "~~/components/scaffold-eth";
-import { AgentOperatorSettingsPanel } from "~~/components/settings/AgentOperatorSettingsPanel";
 import { NotificationSettingsPanel } from "~~/components/settings/NotificationSettingsPanel";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
 import { SETTINGS_FRONTEND_HASH, SETTINGS_ROUTE } from "~~/constants/routes";
 
-type SettingsTab = "agents" | "delegation" | "notifications" | typeof SETTINGS_FRONTEND_HASH;
+type SettingsTab = "delegation" | "notifications" | typeof SETTINGS_FRONTEND_HASH;
 
-const settingsTabs: SettingsTab[] = ["notifications", "agents", "delegation", SETTINGS_FRONTEND_HASH];
+const settingsTabs: SettingsTab[] = ["notifications", "delegation", SETTINGS_FRONTEND_HASH];
 
 const SETTINGS_TAB_LABELS: Record<SettingsTab, string> = {
-  agents: "Agents",
   delegation: "Delegation",
   frontend: "Frontend",
   notifications: "Notifications",
@@ -49,9 +47,6 @@ function getSettingsHash(tab: SettingsTab) {
 function buildSettingsTabUrl(pathname: string, searchParams: URLSearchParams, tab: SettingsTab) {
   const nextParams = new URLSearchParams(searchParams.toString());
   nextParams.delete("tab");
-  if (tab === "agents") {
-    nextParams.set("tab", "agents");
-  }
 
   const query = nextParams.toString();
   const hash = getSettingsHash(tab);
@@ -120,7 +115,6 @@ function SettingsPageInner() {
       </div>
 
       {activeTab === "delegation" && <DelegationSection />}
-      {activeTab === "agents" && <AgentOperatorSettingsPanel />}
       {activeTab === SETTINGS_FRONTEND_HASH && <FrontendRegistration />}
       {activeTab === "notifications" && <NotificationSettingsPanel address={address} />}
     </AppPageShell>

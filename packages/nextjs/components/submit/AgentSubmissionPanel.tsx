@@ -202,7 +202,7 @@ export function AgentSubmissionPanel() {
                 Docs
                 <ArrowTopRightOnSquareIcon className="h-4 w-4" />
               </Link>
-              <Link href="/settings?tab=agents" className="btn btn-outline btn-sm">
+              <Link href="/docs/ai#generic-mcp-config" className="btn btn-outline btn-sm">
                 MCP setup
                 <ArrowTopRightOnSquareIcon className="h-4 w-4" />
               </Link>
