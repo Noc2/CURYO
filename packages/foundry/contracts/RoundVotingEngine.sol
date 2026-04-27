@@ -535,12 +535,10 @@ contract RoundVotingEngine is
         if (frontend == address(0)) {
             return;
         }
-        IFrontendRegistry currentFrontendRegistry = _getFrontendRegistry();
-        if (VotePreflightLib.isFrontendEligible(currentFrontendRegistry, frontend)) {
+        address snapshotRegistry = roundFrontendRegistrySnapshot[contentId][roundId];
+        IFrontendRegistry frontendRegistry = IFrontendRegistry(snapshotRegistry);
+        if (VotePreflightLib.isFrontendEligible(frontendRegistry, frontend)) {
             frontendEligibleAtCommit[contentId][roundId][commitKey] = true;
-            if (roundFrontendRegistrySnapshot[contentId][roundId] == address(0)) {
-                roundFrontendRegistrySnapshot[contentId][roundId] = address(currentFrontendRegistry);
-            }
         }
     }
 
@@ -631,6 +629,7 @@ contract RoundVotingEngine is
         roundDrandGenesisTimeSnapshot[contentId][roundId] = protocolConfig.drandGenesisTime();
         roundDrandPeriodSnapshot[contentId][roundId] = protocolConfig.drandPeriod();
         roundVoterIdNFTSnapshot[contentId][roundId] = protocolConfig.voterIdNFT();
+        roundFrontendRegistrySnapshot[contentId][roundId] = protocolConfig.frontendRegistry();
         emit RoundConfigSnapshotted(
             contentId, roundId, roundCfg.epochDuration, roundCfg.maxDuration, roundCfg.minVoters, roundCfg.maxVoters
         );
@@ -989,10 +988,6 @@ contract RoundVotingEngine is
         }
 
         return nextRoundId[contentId] + 1;
-    }
-
-    function _getFrontendRegistry() internal view returns (IFrontendRegistry) {
-        return IFrontendRegistry(protocolConfig.frontendRegistry());
     }
 
     function _getCategoryRegistry() internal view returns (ICategoryRegistry) {

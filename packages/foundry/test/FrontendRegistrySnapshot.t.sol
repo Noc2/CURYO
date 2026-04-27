@@ -31,6 +31,7 @@ contract FrontendRegistrySnapshotTest is VotingTestBase {
     address public voter2 = address(4);
     address public voter3 = address(5);
     address public frontendOp = address(200);
+    address public replacementOnlyFrontend = address(201);
 
     uint256 public constant STAKE = 5e6;
 
@@ -115,6 +116,7 @@ contract FrontendRegistrySnapshotTest is VotingTestBase {
         hrepToken.mint(voter2, 10_000e6);
         hrepToken.mint(voter3, 10_000e6);
         hrepToken.mint(frontendOp, 5_000e6);
+        hrepToken.mint(replacementOnlyFrontend, 5_000e6);
         originalVoterIdNFT.setHolder(frontendOp);
 
         vm.stopPrank();
@@ -171,7 +173,43 @@ contract FrontendRegistrySnapshotTest is VotingTestBase {
         assertEq(replacementRegistry.getAccumulatedFees(frontendOp), replacementFeesBefore);
     }
 
+    function test_MidRoundFrontendRegistryRotation_KeepsEligibilityOnRoundSnapshot() public {
+        FrontendRegistry originalRegistry = FrontendRegistry(ProtocolConfig(address(protocolConfig)).frontendRegistry());
+        uint256 contentId = _submitContent();
+
+        _commit(voter1, contentId, true);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
+        assertEq(votingEngine.roundFrontendRegistrySnapshot(contentId, roundId), address(originalRegistry));
+
+        FrontendRegistry replacementRegistry = _deployFrontendRegistry();
+        vm.startPrank(owner);
+        replacementRegistry.setVotingEngine(address(votingEngine));
+        replacementRegistry.addFeeCreditor(address(rewardDistributor));
+        MockVoterIdNFT replacementVoterIdNFT = new MockVoterIdNFT();
+        replacementRegistry.setVoterIdNFT(address(replacementVoterIdNFT));
+        replacementVoterIdNFT.setHolder(replacementOnlyFrontend);
+        ProtocolConfig(address(protocolConfig)).setFrontendRegistry(address(replacementRegistry));
+        vm.stopPrank();
+
+        vm.startPrank(replacementOnlyFrontend);
+        hrepToken.approve(address(replacementRegistry), 1000e6);
+        replacementRegistry.register();
+        vm.stopPrank();
+
+        (bytes32 replacementCommitKey,) = _commitWithFrontend(voter2, contentId, true, replacementOnlyFrontend);
+
+        assertEq(votingEngine.roundFrontendRegistrySnapshot(contentId, roundId), address(originalRegistry));
+        assertFalse(votingEngine.frontendEligibleAtCommit(contentId, roundId, replacementCommitKey));
+    }
+
     function _commit(address voter, uint256 contentId, bool isUp) internal returns (bytes32 commitKey, bytes32 salt) {
+        return _commitWithFrontend(voter, contentId, isUp, frontendOp);
+    }
+
+    function _commitWithFrontend(address voter, uint256 contentId, bool isUp, address frontend)
+        internal
+        returns (bytes32 commitKey, bytes32 salt)
+    {
         salt = keccak256(abi.encodePacked(voter, contentId, isUp, block.timestamp));
         bytes32 commitHash = _commitHash(isUp, salt, voter, contentId);
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
@@ -186,7 +224,7 @@ contract FrontendRegistrySnapshotTest is VotingTestBase {
             commitHash,
             ciphertext,
             STAKE,
-            frontendOp
+            frontend
         );
         vm.stopPrank();
 
