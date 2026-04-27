@@ -221,6 +221,82 @@ contract DeployCuryoCompilationTest is Test {
         );
     }
 
+    function test_MigrationBootstrapValidation_AcceptsScheduledReferralAmounts() public {
+        DeployCuryoHarness deployScript = new DeployCuryoHarness();
+        address[] memory users = new address[](2);
+        users[0] = address(0x1111);
+        users[1] = address(0x2222);
+        uint256[] memory nullifiers = new uint256[](2);
+        nullifiers[0] = 123456;
+        nullifiers[1] = 789012;
+        uint256[] memory amounts = new uint256[](2);
+        amounts[0] = 10_000e6;
+        amounts[1] = 15_000e6;
+        address[] memory referrers = new address[](2);
+        referrers[0] = address(0);
+        referrers[1] = users[0];
+        uint256[] memory claimantBonuses = new uint256[](2);
+        claimantBonuses[0] = 0;
+        claimantBonuses[1] = 5_000e6;
+        uint256[] memory referrerRewards = new uint256[](2);
+        referrerRewards[0] = 0;
+        referrerRewards[1] = 5_000e6;
+
+        deployScript.exposedValidateMigrationBootstrapConfig(
+            users, nullifiers, amounts, referrers, claimantBonuses, referrerRewards
+        );
+    }
+
+    function test_MigrationBootstrapValidation_RejectsWrongScheduledAmount() public {
+        DeployCuryoHarness deployScript = new DeployCuryoHarness();
+        address[] memory users = new address[](1);
+        users[0] = address(0x1111);
+        uint256[] memory nullifiers = new uint256[](1);
+        nullifiers[0] = 123456;
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = 10_001e6;
+        address[] memory referrers = new address[](1);
+        referrers[0] = address(0);
+        uint256[] memory claimantBonuses = new uint256[](1);
+        uint256[] memory referrerRewards = new uint256[](1);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(DeployCuryo.DeploymentRoleVerificationFailed.selector, "Migration amount mismatch")
+        );
+        deployScript.exposedValidateMigrationBootstrapConfig(
+            users, nullifiers, amounts, referrers, claimantBonuses, referrerRewards
+        );
+    }
+
+    function test_MigrationBootstrapValidation_RejectsWrongReferralBonus() public {
+        DeployCuryoHarness deployScript = new DeployCuryoHarness();
+        address[] memory users = new address[](2);
+        users[0] = address(0x1111);
+        users[1] = address(0x2222);
+        uint256[] memory nullifiers = new uint256[](2);
+        nullifiers[0] = 123456;
+        nullifiers[1] = 789012;
+        uint256[] memory amounts = new uint256[](2);
+        amounts[0] = 10_000e6;
+        amounts[1] = 15_000e6;
+        address[] memory referrers = new address[](2);
+        referrers[0] = address(0);
+        referrers[1] = users[0];
+        uint256[] memory claimantBonuses = new uint256[](2);
+        claimantBonuses[1] = 4_999e6;
+        uint256[] memory referrerRewards = new uint256[](2);
+        referrerRewards[1] = 5_000e6;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                DeployCuryo.DeploymentRoleVerificationFailed.selector, "Migration claimant bonus mismatch"
+            )
+        );
+        deployScript.exposedValidateMigrationBootstrapConfig(
+            users, nullifiers, amounts, referrers, claimantBonuses, referrerRewards
+        );
+    }
+
     function test_MigrationBootstrapParser_RejectsOversizedHexUint() public {
         DeployCuryoHarness deployScript = new DeployCuryoHarness();
 

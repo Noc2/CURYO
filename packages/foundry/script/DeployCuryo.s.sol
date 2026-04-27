@@ -51,6 +51,17 @@ contract DeployCuryo is ScaffoldETHDeploy {
     uint256 public constant FAUCET_POOL_AMOUNT =
         TOTAL_SUPPLY_CAP - CONSENSUS_POOL_AMOUNT - TREASURY_AMOUNT - PARTICIPATION_POOL_AMOUNT;
     uint256 public constant MAX_FAUCET_CLAIMANTS_WITHOUT_REFERRALS = 41_110_000;
+    uint256 internal constant MIGRATION_TIER_0_THRESHOLD = 10;
+    uint256 internal constant MIGRATION_TIER_1_THRESHOLD = 1_000;
+    uint256 internal constant MIGRATION_TIER_2_THRESHOLD = 10_000;
+    uint256 internal constant MIGRATION_TIER_3_THRESHOLD = 1_000_000;
+    uint256 internal constant MIGRATION_TIER_0_AMOUNT = 10_000e6;
+    uint256 internal constant MIGRATION_TIER_1_AMOUNT = 1_000e6;
+    uint256 internal constant MIGRATION_TIER_2_AMOUNT = 100e6;
+    uint256 internal constant MIGRATION_TIER_3_AMOUNT = 10e6;
+    uint256 internal constant MIGRATION_TIER_4_AMOUNT = 1e6;
+    uint256 internal constant MIGRATION_REFERRAL_RATIO_BPS = 5_000;
+    uint256 internal constant MIGRATION_BPS_SCALE = 10_000;
 
     // Self.xyz IdentityVerificationHub addresses
     address constant CELO_MAINNET_HUB = 0xe57F4773bd9c9d8b6Cd70431117d353298B9f5BF;
@@ -640,6 +651,18 @@ contract DeployCuryo is ScaffoldETHDeploy {
         return type(uint8).max;
     }
 
+    function _migrationBaseClaimAmount(uint256 claimIndex) internal pure returns (uint256) {
+        if (claimIndex < MIGRATION_TIER_0_THRESHOLD) return MIGRATION_TIER_0_AMOUNT;
+        if (claimIndex < MIGRATION_TIER_1_THRESHOLD) return MIGRATION_TIER_1_AMOUNT;
+        if (claimIndex < MIGRATION_TIER_2_THRESHOLD) return MIGRATION_TIER_2_AMOUNT;
+        if (claimIndex < MIGRATION_TIER_3_THRESHOLD) return MIGRATION_TIER_3_AMOUNT;
+        return MIGRATION_TIER_4_AMOUNT;
+    }
+
+    function _migrationReferralAmount(uint256 baseAmount) internal pure returns (uint256) {
+        return baseAmount * MIGRATION_REFERRAL_RATIO_BPS / MIGRATION_BPS_SCALE;
+    }
+
     function _validateMigrationBootstrapConfig(MigrationBootstrapConfig memory migrationConfig) internal pure {
         uint256 claimCount = migrationConfig.users.length;
         _require(migrationConfig.nullifiers.length == claimCount, "Migration nullifiers length");
@@ -648,18 +671,17 @@ contract DeployCuryo is ScaffoldETHDeploy {
         _require(migrationConfig.claimantBonuses.length == claimCount, "Migration claimant bonuses length");
         _require(migrationConfig.referrerRewards.length == claimCount, "Migration referrer rewards length");
 
+        uint256 totalMigratedClaimed;
         for (uint256 i = 0; i < claimCount; ++i) {
             _require(migrationConfig.users[i] != address(0), "Migration user zero");
             _require(migrationConfig.nullifiers[i] != 0, "Migration nullifier zero");
-            _require(migrationConfig.amounts[i] > 0, "Migration amount zero");
-            _require(
-                migrationConfig.claimantBonuses[i] <= migrationConfig.amounts[i],
-                "Migration claimant bonus exceeds amount"
-            );
+            uint256 baseAmount = _migrationBaseClaimAmount(i);
+            uint256 expectedClaimantBonus;
+            uint256 expectedReferrerReward;
 
             if (migrationConfig.referrers[i] == address(0)) {
-                _require(migrationConfig.claimantBonuses[i] == 0, "Migration bonus without referrer");
-                _require(migrationConfig.referrerRewards[i] == 0, "Migration reward without referrer");
+                _require(migrationConfig.claimantBonuses[i] == 0, "Migration claimant bonus mismatch");
+                _require(migrationConfig.referrerRewards[i] == 0, "Migration referrer reward mismatch");
             } else {
                 _require(migrationConfig.referrers[i] != migrationConfig.users[i], "Migration self referral");
                 bool referrerSeen;
@@ -670,10 +692,22 @@ contract DeployCuryo is ScaffoldETHDeploy {
                     }
                 }
                 _require(referrerSeen, "Migration referrer order");
-                _require(migrationConfig.claimantBonuses[i] > 0, "Migration referral bonus zero");
-                _require(migrationConfig.referrerRewards[i] > 0, "Migration referral reward zero");
+                expectedClaimantBonus = _migrationReferralAmount(baseAmount);
+                expectedReferrerReward = expectedClaimantBonus;
+                _require(
+                    migrationConfig.claimantBonuses[i] == expectedClaimantBonus,
+                    "Migration claimant bonus mismatch"
+                );
+                _require(
+                    migrationConfig.referrerRewards[i] == expectedReferrerReward,
+                    "Migration referrer reward mismatch"
+                );
             }
+
+            _require(migrationConfig.amounts[i] == baseAmount + expectedClaimantBonus, "Migration amount mismatch");
+            totalMigratedClaimed += migrationConfig.amounts[i] + expectedReferrerReward;
         }
+        _require(totalMigratedClaimed <= FAUCET_POOL_AMOUNT, "Migration faucet allocation");
     }
 
     function _verifyLaunchMintAllocation(
