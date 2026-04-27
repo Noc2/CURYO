@@ -274,6 +274,20 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertGt(reward, 0);
     }
 
+    function testQualifyRoundWaitsForUnrevealedCleanup() public {
+        uint256 contentId = _submitQuestion("");
+        uint256 rewardPoolId = _createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1);
+        uint256 roundId = _settleRoundWithOneUnrevealed(contentId);
+
+        vm.expectRevert("Cleanup pending");
+        rewardPoolEscrow.qualifyRound(rewardPoolId, roundId);
+
+        votingEngine.processUnrevealedVotes(contentId, roundId, 0, 0);
+
+        rewardPoolEscrow.qualifyRound(rewardPoolId, roundId);
+        assertEq(rewardPoolEscrow.claimableQuestionReward(rewardPoolId, roundId, voter1), REWARD_POOL_AMOUNT / 3);
+    }
+
     function testRefundableRewardPoolAmountUsesQuestionSelectedVoterCap() public {
         RoundLib.RoundConfig memory roundConfig =
             RoundLib.RoundConfig({ epochDuration: 10 minutes, maxDuration: 1 hours, minVoters: 3, maxVoters: 4 });
