@@ -1496,7 +1496,7 @@ export function ContentSubmissionSection() {
           className={`cursor-pointer rounded-md border px-2 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
             submissionStep === "question" && activeQuestionIndex === index
               ? "border-primary/40 bg-primary/10 text-primary hover:bg-primary/15"
-              : "border-transparent hover:border-base-content/25 hover:bg-base-200 hover:text-base-content"
+              : "step-control-inactive"
           }`}
         >
           Q{index + 1}
@@ -1512,7 +1512,7 @@ export function ContentSubmissionSection() {
         className={`cursor-pointer rounded-md border px-2 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
           submissionStep === "bounty"
             ? "border-primary/40 bg-primary/10 text-primary hover:bg-primary/15"
-            : "border-transparent hover:border-base-content/25 hover:bg-base-200 hover:text-base-content"
+            : "step-control-inactive"
         }`}
       >
         Bounty
@@ -2174,7 +2174,7 @@ export function ContentSubmissionSection() {
                             </div>
                           </div>
 
-                          <div className="max-h-60 overflow-y-auto">
+                          <div className="max-h-60 space-y-1 overflow-y-auto p-1">
                             {filteredCategories.length > 0 ? (
                               filteredCategories.map(cat => {
                                 const isSelected = selectedCategory?.id === cat.id;
@@ -2187,8 +2187,8 @@ export function ContentSubmissionSection() {
                                       setIsCategoryDropdownOpen(false);
                                       setCategorySearch("");
                                     }}
-                                    className={`flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors ${
-                                      isSelected ? "bg-primary/10 text-primary" : "text-base-content hover:bg-base-200"
+                                    className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors ${
+                                      isSelected ? "choice-row-active" : "choice-row-inactive"
                                     }`}
                                   >
                                     <CategoryIcon name={cat.name} />

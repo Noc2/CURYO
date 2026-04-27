@@ -174,9 +174,7 @@ export function FeedScopeFilter({ value, groups, onChange, label = "View" }: Fee
                     }}
                     title={option.description}
                     className={`flex w-full items-center justify-between rounded-lg px-4 py-3 text-left text-base font-medium transition-colors sm:px-3 sm:py-2 ${
-                      isActive
-                        ? "bg-primary/10 text-primary"
-                        : "text-base-content/80 hover:bg-base-200 hover:text-base-content sm:hover:bg-base-300"
+                      isActive ? "choice-row-active" : "choice-row-inactive"
                     }`}
                   >
                     <span>{option.label}</span>

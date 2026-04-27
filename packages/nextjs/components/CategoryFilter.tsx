@@ -306,9 +306,7 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
                           type="button"
                           onClick={() => handleSelect(category)}
                           className={`flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left text-base font-medium transition-colors ${
-                            isActive
-                              ? "bg-primary/10 text-primary"
-                              : "text-base-content/80 hover:bg-base-300 hover:text-base-content"
+                            isActive ? "choice-row-active" : "choice-row-inactive"
                           }`}
                         >
                           <span className="min-w-0 leading-tight">{category}</span>
