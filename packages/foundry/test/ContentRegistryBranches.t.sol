@@ -732,6 +732,38 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         assertEq(snapshottedConfig.maxVoters, roundConfig.maxVoters);
     }
 
+    function test_SubmitQuestionWithRewardAndRoundConfig_RejectsRequiredVotersAboveMaxVoters() public {
+        string memory contextUrl = "https://example.com/impossible-round";
+        string memory title = "Can this bounty ever qualify?";
+        string memory description = "The requested reward voter count exceeds the round cap.";
+        string memory tags = "Products,Bounty";
+        uint256 categoryId = 1;
+        bytes32 salt = keccak256("impossible-round-config");
+        string[] memory imageUrls = _emptyImageUrls();
+        ContentRegistry.SubmissionRewardTerms memory rewardTerms = ContentRegistry.SubmissionRewardTerms({
+            asset: DEFAULT_SUBMISSION_REWARD_ASSET_HREP,
+            amount: 100e6,
+            requiredVoters: 5,
+            requiredSettledRounds: 1,
+            bountyClosesAt: block.timestamp + 14 days,
+            feedbackClosesAt: block.timestamp + 14 days
+        });
+        RoundLib.RoundConfig memory roundConfig =
+            RoundLib.RoundConfig({ epochDuration: 1 hours, maxDuration: 2 hours, minVoters: 3, maxVoters: 4 });
+
+        vm.startPrank(submitter);
+        hrepToken.approve(address(mockQuestionRewardPoolEscrow), rewardTerms.amount);
+        _reserveQuestionSubmissionWithRewardTermsAndRoundConfig(
+            contextUrl, imageUrls, "", title, description, tags, categoryId, salt, submitter, rewardTerms, roundConfig
+        );
+        vm.warp(block.timestamp + 1);
+        vm.expectRevert("Reward voters exceed max");
+        registry.submitQuestionWithRewardAndRoundConfig(
+            contextUrl, imageUrls, "", title, description, tags, categoryId, salt, rewardTerms, roundConfig
+        );
+        vm.stopPrank();
+    }
+
     function test_SubmitQuestionWithRoundConfig_BindsReservationToSelectedConfig() public {
         string memory contextUrl = "https://example.com/round-config-commitment";
         string memory title = "Should this resolve with a tight cap?";

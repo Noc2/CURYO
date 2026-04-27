@@ -270,6 +270,18 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(usdc.balanceOf(address(rewardPoolEscrow)), 4);
     }
 
+    function testRewardPoolRejectsRequiredVotersAboveQuestionCap() public {
+        RoundLib.RoundConfig memory roundConfig =
+            RoundLib.RoundConfig({ epochDuration: 10 minutes, maxDuration: 1 hours, minVoters: 3, maxVoters: 4 });
+        uint256 contentId = _submitQuestionWithRoundConfig("https://example.com/impossible-cap.jpg", roundConfig);
+
+        vm.startPrank(funder);
+        usdc.approve(address(rewardPoolEscrow), REWARD_POOL_AMOUNT);
+        vm.expectRevert("Reward voters exceed max");
+        rewardPoolEscrow.createRewardPool(contentId, REWARD_POOL_AMOUNT, 5, 1, block.timestamp + 30 days, 0);
+        vm.stopPrank();
+    }
+
     function testEligibleFrontendReceivesThreePercentFromQuestionRewardClaims() public {
         _registerFrontend(frontend1);
 

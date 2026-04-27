@@ -836,6 +836,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         // reveal hash carries caller-supplied randomness.
         require(salt != bytes32(0), "Salt required");
         _validateSubmissionReward(rewardTerms);
+        require(rewardTerms.requiredVoters <= roundConfig.maxVoters, "Reward voters exceed max");
 
         bytes32 mediaHash = _submissionMediaHash(imageUrls, videoUrl);
         bytes32 revealCommitment = _computeRevealCommitment(

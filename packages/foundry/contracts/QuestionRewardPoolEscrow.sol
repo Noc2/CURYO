@@ -405,8 +405,9 @@ contract QuestionRewardPoolEscrow is
         require(amount >= requiredSettledRounds * requiredVoters, "Amount too small");
         _requireFutureBountyWindow(bountyClosesAt);
         uint256 normalizedFeedbackClosesAt = _normalizeFeedbackClosesAt(bountyClosesAt, feedbackClosesAt);
+        RoundLib.RoundConfig memory contentCfg = registry.getContentRoundConfig(contentId);
+        require(requiredVoters <= contentCfg.maxVoters, "Reward voters exceed max");
         if (!nonRefundable) {
-            RoundLib.RoundConfig memory contentCfg = registry.getContentRoundConfig(contentId);
             require(amount >= requiredSettledRounds * uint256(contentCfg.maxVoters), "Amount too small");
             require(bountyClosesAt > block.timestamp, "Invalid bounty close");
         }
