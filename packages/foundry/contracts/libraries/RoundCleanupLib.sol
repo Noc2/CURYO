@@ -15,6 +15,9 @@ import {TokenTransferLib} from "./TokenTransferLib.sol";
 library RoundCleanupLib {
     using SafeERC20 for IERC20;
 
+    uint256 internal constant CLEANUP_INCENTIVE_BPS = 100; // 1%
+    uint256 internal constant CLEANUP_INCENTIVE_MAX = 5e6; // 5 HREP
+
     error RoundNotCancelledOrTied();
     error AlreadyClaimed();
     error NoCommit();
@@ -184,6 +187,7 @@ library RoundCleanupLib {
         IERC20 hrepToken,
         ProtocolConfig protocolConfig,
         uint256 consensusReserve,
+        address cleanupCaller,
         uint256 startIndex,
         uint256 count
     )
@@ -193,6 +197,7 @@ library RoundCleanupLib {
             uint256 addedToConsensusReserve,
             uint256 refundedHrep,
             uint256 processedPastEpochCount,
+            uint256 cleanupIncentive,
             uint256 updatedConsensusReserve
         )
     {
@@ -224,6 +229,20 @@ library RoundCleanupLib {
             }
         }
 
+        cleanupIncentive = _cleanupIncentive(forfeitedToTreasury + addedToConsensusReserve);
+        if (cleanupIncentive > 0) {
+            uint256 fromReserve = addedToConsensusReserve < cleanupIncentive ? addedToConsensusReserve : cleanupIncentive;
+            if (fromReserve > 0) {
+                addedToConsensusReserve -= fromReserve;
+                updatedConsensusReserve -= fromReserve;
+            }
+            uint256 fromTreasuryForfeiture = cleanupIncentive - fromReserve;
+            if (fromTreasuryForfeiture > 0) {
+                forfeitedToTreasury -= fromTreasuryForfeiture;
+            }
+            hrepToken.safeTransfer(cleanupCaller, cleanupIncentive);
+        }
+
         if (forfeitedToTreasury > 0) {
             address currentTreasury = protocolConfig.treasury();
             if (currentTreasury != address(0)) {
@@ -236,8 +255,13 @@ library RoundCleanupLib {
             }
         }
 
-        if (forfeitedToTreasury == 0 && addedToConsensusReserve == 0 && refundedHrep == 0) {
+        if (forfeitedToTreasury == 0 && addedToConsensusReserve == 0 && refundedHrep == 0 && cleanupIncentive == 0) {
             revert NothingProcessed();
         }
+    }
+
+    function _cleanupIncentive(uint256 forfeitedAmount) private pure returns (uint256 incentive) {
+        incentive = forfeitedAmount * CLEANUP_INCENTIVE_BPS / 10_000;
+        if (incentive > CLEANUP_INCENTIVE_MAX) incentive = CLEANUP_INCENTIVE_MAX;
     }
 }

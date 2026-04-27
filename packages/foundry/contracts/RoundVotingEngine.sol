@@ -197,6 +197,9 @@ contract RoundVotingEngine is
     ///         from the settled-round replenishment path (`UnrevealedStakeAddedToConsensusReserve`).
     event ForfeitedFundsFallbackToConsensusReserve(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
     event CurrentEpochRefunded(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
+    event UnrevealedCleanupIncentivePaid(
+        uint256 indexed contentId, uint256 indexed roundId, address indexed caller, uint256 amount
+    );
     event TreasuryFeeDistributed(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
     event ConsensusReserveFunded(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
     event ConsensusSubsidyDistributed(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
@@ -666,6 +669,7 @@ contract RoundVotingEngine is
     function _markRoundRevealFailed(uint256 contentId, uint256 roundId, RoundLib.Round storage round) internal {
         round.state = RoundLib.RoundState.RevealFailed;
         round.settledAt = block.timestamp.toUint48();
+        roundUnrevealedCleanupRemaining[contentId][roundId] = round.voteCount - round.revealedCount;
         _notifyBundleRoundTerminal(contentId, roundId, false);
         emit RoundRevealFailed(contentId, roundId);
     }
@@ -879,6 +883,7 @@ contract RoundVotingEngine is
             uint256 addedToConsensusReserve,
             uint256 refundedHrep,
             uint256 processedPastEpochCount,
+            uint256 cleanupIncentive,
             uint256 updatedConsensusReserve
         ) = RoundCleanupLib.processUnrevealedVotes(
             round,
@@ -887,6 +892,7 @@ contract RoundVotingEngine is
             hrepToken,
             protocolConfig,
             consensusReserve,
+            msg.sender,
             startIndex,
             count
         );
@@ -895,7 +901,7 @@ contract RoundVotingEngine is
         if (updatedConsensusReserve != previousConsensusReserve) {
             consensusReserve = updatedConsensusReserve;
         }
-        uint256 paidOut = refundedHrep;
+        uint256 paidOut = refundedHrep + cleanupIncentive;
         if (forfeitedToTreasury > 0 && updatedConsensusReserve == previousConsensusReserve + addedToConsensusReserve) {
             paidOut += forfeitedToTreasury;
         }
@@ -917,6 +923,10 @@ contract RoundVotingEngine is
 
         if (addedToConsensusReserve > 0) {
             emit UnrevealedStakeAddedToConsensusReserve(contentId, roundId, addedToConsensusReserve);
+        }
+
+        if (cleanupIncentive > 0) {
+            emit UnrevealedCleanupIncentivePaid(contentId, roundId, msg.sender, cleanupIncentive);
         }
 
         if (processedPastEpochCount > 0) {
