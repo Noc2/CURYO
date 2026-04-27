@@ -1037,9 +1037,9 @@ contract HumanFaucetTest is Test {
     }
 
     /// @dev Set totalClaimants directly via vm.store to avoid expensive loops for higher tiers.
-    ///      Storage slot 6 determined via `forge inspect HumanFaucet storage`.
+    ///      Storage slot 8 determined via `forge inspect HumanFaucet storage`.
     function _setTotalClaimants(uint256 value) internal {
-        vm.store(address(faucet), bytes32(uint256(6)), bytes32(value));
+        vm.store(address(faucet), bytes32(uint256(8)), bytes32(value));
     }
 
     function _buildProofPayload(bytes32 attestationId, bytes memory userContextData)

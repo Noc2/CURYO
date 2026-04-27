@@ -669,7 +669,7 @@ contract HumanFaucetTierEdgeCaseTest is Test {
     }
 
     function _setTotalClaimants(uint256 value) internal {
-        vm.store(address(faucet), bytes32(uint256(6)), bytes32(value));
+        vm.store(address(faucet), bytes32(uint256(8)), bytes32(value));
     }
 
     function _drainFaucet(uint256 amount) internal {
