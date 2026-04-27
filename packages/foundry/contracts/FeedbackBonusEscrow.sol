@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-import {ContentRegistry} from "./ContentRegistry.sol";
-import {RoundVotingEngine} from "./RoundVotingEngine.sol";
-import {ProtocolConfig} from "./ProtocolConfig.sol";
-import {IFrontendRegistry} from "./interfaces/IFrontendRegistry.sol";
-import {IVoterIdNFT} from "./interfaces/IVoterIdNFT.sol";
-import {RoundLib} from "./libraries/RoundLib.sol";
+import { ContentRegistry } from "./ContentRegistry.sol";
+import { RoundVotingEngine } from "./RoundVotingEngine.sol";
+import { ProtocolConfig } from "./ProtocolConfig.sol";
+import { IFrontendRegistry } from "./interfaces/IFrontendRegistry.sol";
+import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
+import { RoundLib } from "./libraries/RoundLib.sol";
 
 /// @title FeedbackBonusEscrow
 /// @notice Holds optional USDC bonuses for useful voter feedback and pays awarded feedback hashes after a round ends.
@@ -55,6 +55,8 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
     uint16 public defaultFrontendFeeBps;
 
     mapping(uint256 => FeedbackBonusPool) public feedbackBonusPools;
+    mapping(uint256 => uint256) private poolFunderNullifier;
+    mapping(uint256 => uint256) private poolSubmitterNullifier;
     mapping(uint256 => mapping(uint256 => bool)) public voterIdAwarded;
     mapping(uint256 => mapping(bytes32 => bool)) public feedbackHashAwarded;
 
@@ -139,12 +141,14 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
         uint256 receivedAmount = _pullUsdc(msg.sender, amount);
         uint256 funderVoterId = voterIdNFT.getTokenId(msg.sender);
         require(funderVoterId != 0, "Voter ID required");
+        uint256 funderNullifier = voterIdNFT.getNullifier(funderVoterId);
         address funderIdentity = voterIdNFT.getHolder(funderVoterId);
         if (funderIdentity == address(0)) {
             funderIdentity = msg.sender;
         }
         address submitterIdentity = registry.getSubmitterIdentity(contentId);
         uint256 submitterVoterId = submitterIdentity == address(0) ? 0 : voterIdNFT.getTokenId(submitterIdentity);
+        uint256 submitterNullifier = submitterVoterId == 0 ? 0 : voterIdNFT.getNullifier(submitterVoterId);
 
         poolId = nextFeedbackBonusPoolId++;
         feedbackBonusPools[poolId] = FeedbackBonusPool({
@@ -164,6 +168,8 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
             forfeited: false,
             frontendFeeBps: defaultFrontendFeeBps
         });
+        poolFunderNullifier[poolId] = funderNullifier;
+        poolSubmitterNullifier[poolId] = submitterNullifier;
 
         emit FeedbackBonusPoolCreated(
             poolId, contentId, roundId, msg.sender, awarder, receivedAmount, feedbackClosesAt, defaultFrontendFeeBps
@@ -222,11 +228,7 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
         );
     }
 
-    function forfeitExpiredFeedbackBonus(uint256 poolId)
-        external
-        nonReentrant
-        returns (uint256 forfeitedAmount)
-    {
+    function forfeitExpiredFeedbackBonus(uint256 poolId) external nonReentrant returns (uint256 forfeitedAmount) {
         FeedbackBonusPool storage pool = _getExistingPool(poolId);
         require(!pool.forfeited, "Already forfeited");
         require(block.timestamp > pool.feedbackClosesAt, "Not expired");
@@ -316,6 +318,13 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
 
     function _isExcludedVoter(FeedbackBonusPool storage pool, uint256 voterId) internal view returns (bool) {
         if (voterId == 0) return true;
+        uint256 voterNullifier = _roundVoterIdNft(pool.contentId, pool.roundId).getNullifier(voterId);
+        if (
+            voterNullifier != 0
+                && (voterNullifier == poolFunderNullifier[pool.id] || voterNullifier == poolSubmitterNullifier[pool.id])
+        ) {
+            return true;
+        }
         if (
             pool.voterIdNFTSnapshot == address(_roundVoterIdNft(pool.contentId, pool.roundId))
                 && (voterId == pool.funderVoterId || voterId == pool.submitterVoterId)

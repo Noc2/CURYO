@@ -397,22 +397,23 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         address newEngine = address(0xBEEF);
 
         vm.prank(owner);
-        vm.expectRevert();
-        rewardPoolEscrow.setVotingEngine(newEngine);
+        (bool ok,) = address(rewardPoolEscrow).call(abi.encodeWithSignature("setVotingEngine(address)", newEngine));
+        assertFalse(ok);
 
         assertEq(address(rewardPoolEscrow.votingEngine()), address(votingEngine));
     }
 
     function testSetVotingEngineRejectsZeroAddress() public {
         vm.prank(owner);
-        vm.expectRevert();
-        rewardPoolEscrow.setVotingEngine(address(0));
+        (bool ok,) = address(rewardPoolEscrow).call(abi.encodeWithSignature("setVotingEngine(address)", address(0)));
+        assertFalse(ok);
     }
 
     function testSetVotingEngineAlwaysReverts() public {
         vm.prank(voter1);
-        vm.expectRevert();
-        rewardPoolEscrow.setVotingEngine(address(0xBEEF));
+        (bool ok,) =
+            address(rewardPoolEscrow).call(abi.encodeWithSignature("setVotingEngine(address)", address(0xBEEF)));
+        assertFalse(ok);
     }
 
     function testDelegateCanClaimByUnderlyingVoterIdOnlyOnce() public {
@@ -897,6 +898,58 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         vm.prank(voter2);
         uint256 reward = rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
         assertEq(reward, REWARD_POOL_AMOUNT / 3);
+    }
+
+    function testFunderNullifierStaysExcludedAfterRemint() public {
+        voterIdNFT.mint(funder, 333_001);
+        uint256 contentId = _submitQuestion("");
+        uint256 rewardPoolId = _createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1);
+
+        voterIdNFT.revokeVoterId(funder);
+        voterIdNFT.resetNullifier(333_001);
+        voterIdNFT.mint(voter1, 333_001);
+
+        address[] memory voters = new address[](4);
+        voters[0] = voter1;
+        voters[1] = voter2;
+        voters[2] = voter3;
+        voters[3] = voter4;
+        uint256 roundId = _settleRoundWith(voters, contentId, _directions(true, true, true, false));
+
+        assertEq(rewardPoolEscrow.claimableQuestionReward(rewardPoolId, roundId, voter1), 0);
+        vm.prank(voter1);
+        vm.expectRevert("Excluded voter");
+        rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
+
+        vm.prank(voter2);
+        uint256 reward = rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
+        assertGt(reward, 0);
+    }
+
+    function testSubmitterNullifierStaysExcludedAfterRemint() public {
+        voterIdNFT.mint(submitter, 333_002);
+        uint256 contentId = _submitQuestion("");
+        uint256 rewardPoolId = _createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1);
+
+        voterIdNFT.revokeVoterId(submitter);
+        voterIdNFT.resetNullifier(333_002);
+        voterIdNFT.mint(voter1, 333_002);
+
+        address[] memory voters = new address[](4);
+        voters[0] = voter1;
+        voters[1] = voter2;
+        voters[2] = voter3;
+        voters[3] = voter4;
+        uint256 roundId = _settleRoundWith(voters, contentId, _directions(true, true, true, false));
+
+        assertEq(rewardPoolEscrow.claimableQuestionReward(rewardPoolId, roundId, voter1), 0);
+        vm.prank(voter1);
+        vm.expectRevert("Excluded voter");
+        rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
+
+        vm.prank(voter2);
+        uint256 reward = rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
+        assertGt(reward, 0);
     }
 
     function testDelegatedFunderStaysExcludedAfterAgentReassignment() public {
@@ -1428,7 +1481,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
 
         assertEq(rewardPoolEscrow.claimableQuestionReward(rewardPoolId, underfundedRoundId, voter1), 0);
         vm.prank(voter1);
-        vm.expectRevert("Reward allocation too small");
+        vm.expectRevert("Small allocation");
         rewardPoolEscrow.claimQuestionReward(rewardPoolId, underfundedRoundId);
 
         vm.warp(block.timestamp + 25 hours);
@@ -1764,6 +1817,21 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
             address(votingEngine),
             abi.encodeWithSignature("voterIdCommitKey(uint256,uint256,uint256)", contentId, roundId, voterId),
             abi.encode(commitKey)
+        );
+        uint256 nullifier = voterIdNFT.getNullifier(voterId);
+        if (nullifier != 0) {
+            vm.mockCall(
+                address(votingEngine),
+                abi.encodeWithSignature(
+                    "voterNullifierCommitKey(uint256,uint256,uint256)", contentId, roundId, nullifier
+                ),
+                abi.encode(commitKey)
+            );
+        }
+        vm.mockCall(
+            address(votingEngine),
+            abi.encodeWithSignature("commitVoterId(uint256,uint256,bytes32)", contentId, roundId, commitKey),
+            abi.encode(voterId)
         );
         vm.mockCall(
             address(votingEngine),

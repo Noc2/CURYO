@@ -127,6 +127,8 @@ contract QuestionRewardPoolEscrow is
     mapping(uint256 => mapping(uint256 => mapping(uint256 => uint64))) private bundleRoundIds;
     mapping(uint256 => mapping(uint256 => BundleRoundSetSnapshot)) private bundleRoundSetSnapshots;
     mapping(uint256 => mapping(uint256 => mapping(bytes32 => bool))) private bundleRoundSetRewardClaimed;
+    mapping(uint256 => uint256) private rewardPoolFunderNullifier;
+    mapping(uint256 => uint256) private rewardPoolSubmitterNullifier;
     mapping(uint256 => uint256) private contentBundleId;
     mapping(uint256 => uint256) private contentBundleIndex;
     uint16 public defaultFrontendFeeBps;
@@ -359,7 +361,7 @@ contract QuestionRewardPoolEscrow is
         for (uint256 i = 0; i < contentIds.length;) {
             uint256 contentId = contentIds[i];
             require(registry.isContentActive(contentId), "Content not active");
-            require(contentBundleId[contentId] == 0, "Content bundled");
+            require(contentBundleId[contentId] == 0, "Bundled");
             contentBundleId[contentId] = bundleId;
             contentBundleIndex[contentId] = i;
             bundleQuestions[bundleId].push(BundleQuestion({ contentId: contentId.toUint64() }));
@@ -419,6 +421,8 @@ contract QuestionRewardPoolEscrow is
         (uint256 funderVoterId, address funderIdentity) = _resolveFunderIdentity(funder);
         address submitterIdentity = registry.getSubmitterIdentity(contentId);
         uint256 submitterVoterId = submitterIdentity == address(0) ? 0 : voterIdNFT.getTokenId(submitterIdentity);
+        uint256 funderNullifier = voterIdNFT.getNullifier(funderVoterId);
+        uint256 submitterNullifier = submitterVoterId == 0 ? 0 : voterIdNFT.getNullifier(submitterVoterId);
 
         rewardPoolId = nextRewardPoolId++;
         rewardPools[rewardPoolId] = RewardPool({
@@ -445,6 +449,8 @@ contract QuestionRewardPoolEscrow is
             frontendFeeBps: defaultFrontendFeeBps,
             nonRefundable: nonRefundable
         });
+        rewardPoolFunderNullifier[rewardPoolId] = funderNullifier;
+        rewardPoolSubmitterNullifier[rewardPoolId] = submitterNullifier;
 
         emit RewardPoolCreated(
             rewardPoolId,
@@ -694,11 +700,7 @@ contract QuestionRewardPoolEscrow is
         );
     }
 
-    function refundQuestionBundleReward(uint256 bundleId)
-        external
-        nonReentrant
-        returns (uint256 refundAmount)
-    {
+    function refundQuestionBundleReward(uint256 bundleId) external nonReentrant returns (uint256 refundAmount) {
         BundleReward storage bundle = _getExistingBundleReward(bundleId);
         require(!bundle.refunded, "Already refunded");
         // Refund conditions: bounty window expired, or all configured round sets were fully claimed.
@@ -731,11 +733,7 @@ contract QuestionRewardPoolEscrow is
         }
     }
 
-    function refundExpiredRewardPool(uint256 rewardPoolId)
-        external
-        nonReentrant
-        returns (uint256 refundAmount)
-    {
+    function refundExpiredRewardPool(uint256 rewardPoolId) external nonReentrant returns (uint256 refundAmount) {
         RewardPool storage rewardPool = _getExistingRewardPool(rewardPoolId);
         if (rewardPool.qualifiedRounds >= rewardPool.requiredSettledRounds) {
             refundAmount = _refundCompleteRewardPool(rewardPoolId, rewardPool);
@@ -745,11 +743,7 @@ contract QuestionRewardPoolEscrow is
         }
     }
 
-    function refundInactiveRewardPool(uint256 rewardPoolId)
-        external
-        nonReentrant
-        returns (uint256 refundAmount)
-    {
+    function refundInactiveRewardPool(uint256 rewardPoolId) external nonReentrant returns (uint256 refundAmount) {
         RewardPool storage rewardPool = _getExistingRewardPool(rewardPoolId);
         require(!registry.isContentActive(rewardPool.contentId), "Content active");
         // If the content is Dormant, the original submitter still has an exclusive 24-hour
@@ -757,7 +751,7 @@ contract QuestionRewardPoolEscrow is
         // markDormant + refundInactiveRewardPool to strip the bounty before the submitter
         // can recover it. Wait until the revival window closes. Cancelled / non-dormant
         // content has dormantKeyReleasableAt == 0 so this check is a no-op there.
-        require(block.timestamp > registry.dormantKeyReleasableAt(rewardPool.contentId), "Revival window active");
+        require(block.timestamp > registry.dormantKeyReleasableAt(rewardPool.contentId), "Revival active");
         refundAmount = _refundUnallocatedRewardPool(rewardPoolId, rewardPool);
     }
 
@@ -840,7 +834,7 @@ contract QuestionRewardPoolEscrow is
                 commitKey,
                 frontend,
                 allocation,
-                _frontendFeeAllocation(rewardPool, allocation),
+                (allocation * rewardPool.frontendFeeBps) / BPS_SCALE,
                 eligibleVoters,
                 0
             );
@@ -865,13 +859,9 @@ contract QuestionRewardPoolEscrow is
         voterIdNFT = IVoterIdNFT(voterIdNFT_);
     }
 
-    function setVotingEngine(address) external pure {
-        revert();
-    }
-
     function setDefaultFrontendFeeBps(uint256 frontendFeeBps_) external onlyRole(CONFIG_ROLE) {
         require(frontendFeeBps_ <= MAX_FRONTEND_FEE_BPS, "Fee too high");
-        defaultFrontendFeeBps = frontendFeeBps_.toUint16();
+        defaultFrontendFeeBps = uint16(frontendFeeBps_);
     }
 
     function pause() external onlyRole(PAUSER_ROLE) {
@@ -900,7 +890,7 @@ contract QuestionRewardPoolEscrow is
         uint256 balanceBefore = token.balanceOf(address(this));
         token.safeTransferFrom(funder, address(this), amount);
         receivedAmount = token.balanceOf(address(this)) - balanceBefore;
-        require(receivedAmount == amount, "Fee token unsupported");
+        require(receivedAmount == amount, "Bad token");
     }
 
     function _requireFutureBountyWindow(uint256 bountyClosesAt) internal view {
@@ -917,24 +907,19 @@ contract QuestionRewardPoolEscrow is
         if (feedbackClosesAt == 0) {
             return bountyClosesAt;
         }
-        require(feedbackClosesAt > block.timestamp, "Invalid feedback close");
+        require(feedbackClosesAt > block.timestamp, "Bad feedback close");
         if (bountyClosesAt != 0) {
-            require(feedbackClosesAt <= bountyClosesAt, "Feedback after bounty");
+            require(feedbackClosesAt <= bountyClosesAt, "Late feedback");
         }
         return feedbackClosesAt;
     }
 
     function _rewardToken(uint8 asset) internal view returns (IERC20 token) {
-        if (asset == REWARD_ASSET_HREP) return hrepToken;
-        if (asset == REWARD_ASSET_USDC) return usdcToken;
-        revert("Invalid asset");
+        return asset == REWARD_ASSET_HREP ? hrepToken : usdcToken;
     }
 
     function _protocolTreasury() internal view returns (address treasury) {
-        ProtocolConfig cfg = votingEngine.protocolConfig();
-        if (address(cfg) != address(0)) {
-            treasury = cfg.treasury();
-        }
+        return votingEngine.protocolConfig().treasury();
     }
 
     function _getExistingRewardPool(uint256 rewardPoolId) internal view returns (RewardPool storage rewardPool) {
@@ -1070,7 +1055,7 @@ contract QuestionRewardPoolEscrow is
 
         uint256 allocation = _previewBundleRoundSetAllocation(bundle);
         require(allocation > 0 && allocation <= bundle.unallocatedAmount, "No allocation");
-        require(allocation >= bundle.requiredCompleters, "Reward allocation too small");
+        require(allocation >= bundle.requiredCompleters, "Small allocation");
         uint256 frontendFeeAllocation = (allocation * bundle.frontendFeeBps) / BPS_SCALE;
 
         unchecked {
@@ -1232,8 +1217,8 @@ contract QuestionRewardPoolEscrow is
 
         uint256 allocation = _previewRoundAllocation(rewardPool);
         require(allocation > 0 && allocation <= rewardPool.unallocatedAmount, "No allocation");
-        require(allocation >= eligibleVoters, "Reward allocation too small");
-        uint256 frontendFeeAllocation = _frontendFeeAllocation(rewardPool, allocation);
+        require(allocation >= eligibleVoters, "Small allocation");
+        uint256 frontendFeeAllocation = (allocation * rewardPool.frontendFeeBps) / BPS_SCALE;
 
         unchecked {
             rewardPool.qualifiedRounds++;
@@ -1317,7 +1302,7 @@ contract QuestionRewardPoolEscrow is
         (bool roundFinished, bool canQualify,) = _roundQualificationStatus(rewardPool, nextRoundToEvaluate);
         if (!roundFinished) return;
         if (canQualify) revert("Bounty has qualifying round");
-        revert("Advance qualification cursor");
+        revert("Advance cursor");
     }
 
     function _roundSettledWithinPoolWindow(RewardPool storage rewardPool, uint48 settledAt)
@@ -1359,19 +1344,22 @@ contract QuestionRewardPoolEscrow is
         return (voter != address(0) && commitRevealed, commitFrontend);
     }
 
-    function _frontendFeeAllocation(RewardPool storage rewardPool, uint256 allocation) internal view returns (uint256) {
-        return (allocation * rewardPool.frontendFeeBps) / BPS_SCALE;
-    }
-
     function _isExcludedVoter(RewardPool storage rewardPool, uint256 roundId, uint256 voterId)
         internal
         view
         returns (bool)
     {
-        return voterId != 0
-            && (voterId == _funderVoterIdForRound(rewardPool, roundId)
+        if (
+            voterId == _funderVoterIdForRound(rewardPool, roundId)
                 || voterId == _voterIdForRound(rewardPool.contentId, roundId, rewardPool.funder)
-                || _isSubmitterVoterIdForRound(rewardPool, roundId, voterId));
+                || _isSubmitterVoterIdForRound(rewardPool, roundId, voterId)
+        ) {
+            return true;
+        }
+        uint256 voterNullifier = _roundVoterIdNft(rewardPool.contentId, roundId).getNullifier(voterId);
+        if (voterNullifier == 0) return false;
+        return voterNullifier == rewardPoolFunderNullifier[rewardPool.id]
+            || voterNullifier == rewardPoolSubmitterNullifier[rewardPool.id];
     }
 
     function _funderVoterIdForRound(RewardPool storage rewardPool, uint256 roundId) internal view returns (uint256) {
