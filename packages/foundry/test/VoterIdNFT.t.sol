@@ -754,6 +754,23 @@ contract VoterIdNFTTest is Test {
         assertEq(voterIdNFT.delegateOf(user2), user3);
     }
 
+    function test_RemoveDelegate_DelegateCanResignAfterAcceptance() public {
+        vm.prank(minterAddr);
+        voterIdNFT.mint(user1, NULLIFIER_1);
+
+        _requestAndAcceptDelegate(user1, user2);
+
+        vm.prank(user2);
+        vm.expectEmit(true, true, true, true);
+        emit VoterIdNFT.DelegateRemoved(user1, user2);
+        voterIdNFT.removeDelegate();
+
+        assertEq(voterIdNFT.delegateTo(user1), address(0));
+        assertEq(voterIdNFT.delegateOf(user2), address(0));
+        assertFalse(voterIdNFT.hasVoterId(user2));
+        assertEq(voterIdNFT.resolveHolder(user2), address(0));
+    }
+
     function test_RemoveDelegate_RevertNoDelegateSet() public {
         vm.prank(minterAddr);
         voterIdNFT.mint(user1, NULLIFIER_1);
