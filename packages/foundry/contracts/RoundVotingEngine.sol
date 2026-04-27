@@ -1,30 +1,30 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import { IERC1363Receiver } from "@openzeppelin/contracts/interfaces/IERC1363Receiver.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {IERC1363Receiver} from "@openzeppelin/contracts/interfaces/IERC1363Receiver.sol";
 
-import { ContentRegistry } from "./ContentRegistry.sol";
-import { ProtocolConfig } from "./ProtocolConfig.sol";
-import { RoundLib } from "./libraries/RoundLib.sol";
-import { RatingLib } from "./libraries/RatingLib.sol";
-import { RoundSettlementSideEffectsLib } from "./libraries/RoundSettlementSideEffectsLib.sol";
-import { RoundSettlementDistributionLib } from "./libraries/RoundSettlementDistributionLib.sol";
-import { RoundCleanupLib } from "./libraries/RoundCleanupLib.sol";
-import { RoundRevealLib } from "./libraries/RoundRevealLib.sol";
-import { TlockVoteLib } from "./libraries/TlockVoteLib.sol";
-import { VotePreflightLib } from "./libraries/VotePreflightLib.sol";
-import { IFrontendRegistry } from "./interfaces/IFrontendRegistry.sol";
-import { ICategoryRegistry } from "./interfaces/ICategoryRegistry.sol";
-import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
-import { IRoundVotingEngine } from "./interfaces/IRoundVotingEngine.sol";
-import { IParticipationPool } from "./interfaces/IParticipationPool.sol";
+import {ContentRegistry} from "./ContentRegistry.sol";
+import {ProtocolConfig} from "./ProtocolConfig.sol";
+import {RoundLib} from "./libraries/RoundLib.sol";
+import {RatingLib} from "./libraries/RatingLib.sol";
+import {RoundSettlementSideEffectsLib} from "./libraries/RoundSettlementSideEffectsLib.sol";
+import {RoundSettlementDistributionLib} from "./libraries/RoundSettlementDistributionLib.sol";
+import {RoundCleanupLib} from "./libraries/RoundCleanupLib.sol";
+import {RoundRevealLib} from "./libraries/RoundRevealLib.sol";
+import {TlockVoteLib} from "./libraries/TlockVoteLib.sol";
+import {VotePreflightLib} from "./libraries/VotePreflightLib.sol";
+import {IFrontendRegistry} from "./interfaces/IFrontendRegistry.sol";
+import {ICategoryRegistry} from "./interfaces/ICategoryRegistry.sol";
+import {IVoterIdNFT} from "./interfaces/IVoterIdNFT.sol";
+import {IRoundVotingEngine} from "./interfaces/IRoundVotingEngine.sol";
+import {IParticipationPool} from "./interfaces/IParticipationPool.sol";
 
 interface IQuestionBundleRoundObserver {
     function recordBundleQuestionTerminal(uint256 contentId, uint256 roundId, bool settled) external;
@@ -130,6 +130,7 @@ contract RoundVotingEngine is
 
     // Cancelled/tied round refund claims: contentId => roundId => voter => claimed
     mapping(uint256 => mapping(uint256 => mapping(address => bool))) public cancelledRoundRefundClaimed;
+    mapping(uint256 => mapping(uint256 => mapping(bytes32 => bool))) public cancelledRoundRefundCommitClaimed;
 
     // Fast zero/non-zero indicator for content vote history.
     mapping(uint256 => bool) internal contentHasCommits;
@@ -659,8 +660,8 @@ contract RoundVotingEngine is
         address bundleEscrow = registry.questionRewardPoolEscrow();
         if (bundleEscrow == address(0)) return;
 
-        try IQuestionBundleRoundObserver(bundleEscrow).recordBundleQuestionTerminal(contentId, roundId, settled) { }
-            catch { }
+        try IQuestionBundleRoundObserver(bundleEscrow).recordBundleQuestionTerminal(contentId, roundId, settled) {}
+            catch {}
     }
 
     // =========================================================================
@@ -809,17 +810,29 @@ contract RoundVotingEngine is
     ///      belong to voters indefinitely. Adding a deadline would create a governance extraction vector.
     function claimCancelledRoundRefund(uint256 contentId, uint256 roundId) external nonReentrant {
         RoundLib.Round storage round = rounds[contentId][roundId];
-        uint256 refundAmount = RoundCleanupLib.claimCancelledRoundRefund(
-            round,
-            cancelledRoundRefundClaimed[contentId][roundId],
-            voterCommitHash[contentId][roundId],
-            commits[contentId][roundId],
-            hrepToken,
-            msg.sender
-        );
+        if (
+            round.state != RoundLib.RoundState.Cancelled && round.state != RoundLib.RoundState.Tied
+                && round.state != RoundLib.RoundState.RevealFailed
+        ) {
+            revert RoundCleanupLib.RoundNotCancelledOrTied();
+        }
+
+        (bytes32 commitKey, address refundRecipient) = _resolveClaimCommit(contentId, roundId, msg.sender);
+        if (commitKey == bytes32(0)) revert RoundCleanupLib.NoCommit();
+        if (cancelledRoundRefundCommitClaimed[contentId][roundId][commitKey]) revert RoundCleanupLib.AlreadyClaimed();
+
+        RoundLib.Commit storage commit = commits[contentId][roundId][commitKey];
+        uint256 refundAmount = commit.stakeAmount;
+        if (refundAmount == 0) revert RoundCleanupLib.NoStake();
+        if (round.state != RoundLib.RoundState.Cancelled && !commit.revealed) revert RoundCleanupLib.VoteNotRevealed();
+
+        commit.stakeAmount = 0;
+        cancelledRoundRefundCommitClaimed[contentId][roundId][commitKey] = true;
+        cancelledRoundRefundClaimed[contentId][roundId][commit.voter] = true;
+        hrepToken.safeTransfer(refundRecipient, refundAmount);
         accountedHrepBalance -= refundAmount;
 
-        emit CancelledRoundRefundClaimed(contentId, roundId, msg.sender, refundAmount);
+        emit CancelledRoundRefundClaimed(contentId, roundId, refundRecipient, refundAmount);
     }
 
     // =========================================================================
@@ -1022,6 +1035,42 @@ contract RoundVotingEngine is
 
     function _buildCommitKey(address voter, bytes32 commitHash) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(voter, commitHash));
+    }
+
+    function _resolveClaimCommit(uint256 contentId, uint256 roundId, address account)
+        internal
+        view
+        returns (bytes32 commitKey, address rewardRecipient)
+    {
+        address voterIdNftAddress = roundVoterIdNFTSnapshot[contentId][roundId];
+        if (voterIdNftAddress == address(0)) voterIdNftAddress = protocolConfig.voterIdNFT();
+        if (voterIdNftAddress != address(0)) {
+            IVoterIdNFT voterIdNft = IVoterIdNFT(voterIdNftAddress);
+            uint256 voterId = voterIdNft.getTokenId(account);
+            if (voterId != 0) {
+                commitKey = voterIdCommitKey[contentId][roundId][voterId];
+                if (commitKey == bytes32(0)) {
+                    uint256 nullifier = voterIdNft.getNullifier(voterId);
+                    if (nullifier != 0) {
+                        commitKey = voterNullifierCommitKey[contentId][roundId][nullifier];
+                    }
+                }
+
+                rewardRecipient = voterIdNft.getHolder(voterId);
+                if (rewardRecipient == address(0)) rewardRecipient = account;
+                return (commitKey, rewardRecipient);
+            }
+        }
+
+        bytes32 directCommitHash = voterCommitHash[contentId][roundId][account];
+        if (directCommitHash != bytes32(0)) {
+            commitKey = _buildCommitKey(account, directCommitHash);
+            if (commitVoterId[contentId][roundId][commitKey] == 0) {
+                return (commitKey, account);
+            }
+        }
+
+        return (bytes32(0), account);
     }
 
     function _getRevealFailedFinalizationTime(uint256 contentId, uint256 roundId, RoundLib.Round storage round)

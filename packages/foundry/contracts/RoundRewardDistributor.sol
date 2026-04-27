@@ -1,19 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import { RoundVotingEngine } from "./RoundVotingEngine.sol";
-import { ContentRegistry } from "./ContentRegistry.sol";
-import { ProtocolConfig } from "./ProtocolConfig.sol";
-import { IFrontendRegistry } from "./interfaces/IFrontendRegistry.sol";
-import { IParticipationPool } from "./interfaces/IParticipationPool.sol";
-import { RoundLib } from "./libraries/RoundLib.sol";
-import { RewardMath } from "./libraries/RewardMath.sol";
+import {RoundVotingEngine} from "./RoundVotingEngine.sol";
+import {ContentRegistry} from "./ContentRegistry.sol";
+import {ProtocolConfig} from "./ProtocolConfig.sol";
+import {IFrontendRegistry} from "./interfaces/IFrontendRegistry.sol";
+import {IParticipationPool} from "./interfaces/IParticipationPool.sol";
+import {IVoterIdNFT} from "./interfaces/IVoterIdNFT.sol";
+import {RoundLib} from "./libraries/RoundLib.sol";
+import {RewardMath} from "./libraries/RewardMath.sol";
 
 /// @title RoundRewardDistributor
 /// @notice Pull-based reward claiming for settled rounds.
@@ -66,6 +67,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
 
     // Track claimed rewards: contentId => roundId => voter => claimed
     mapping(uint256 => mapping(uint256 => mapping(address => bool))) public rewardClaimed;
+    mapping(uint256 => mapping(uint256 => mapping(bytes32 => bool))) public rewardCommitClaimed;
 
     // Track aggregate voter reward claim progress so the final winner receives the dust remainder.
     mapping(uint256 => mapping(uint256 => uint256)) public roundVoterRewardClaimedCount;
@@ -85,6 +87,8 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     // Track participation reward claims: contentId => roundId => voter => claimed/paid
     mapping(uint256 => mapping(uint256 => mapping(address => bool))) public participationRewardClaimed;
     mapping(uint256 => mapping(uint256 => mapping(address => uint256))) public participationRewardPaid;
+    mapping(uint256 => mapping(uint256 => mapping(bytes32 => bool))) public participationRewardCommitClaimed;
+    mapping(uint256 => mapping(uint256 => mapping(bytes32 => uint256))) public participationRewardCommitPaid;
     mapping(uint256 => mapping(uint256 => address)) public roundParticipationRewardPool;
     mapping(uint256 => mapping(uint256 => uint256)) public roundParticipationRewardRateBps;
     mapping(uint256 => mapping(uint256 => uint256)) public roundParticipationRewardOwed;
@@ -207,18 +211,22 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     /// @param contentId The content ID.
     /// @param roundId The round ID.
     function claimReward(uint256 contentId, uint256 roundId) external nonReentrant {
-        require(!rewardClaimed[contentId][roundId][msg.sender], "Already claimed");
-
         RoundLib.Round memory round = _readRound(contentId, roundId);
         require(round.state == RoundLib.RoundState.Settled, "Round not settled");
         _requireNoPendingUnrevealedCleanup(contentId, roundId);
 
-        // Find voter's commit
-        RoundLib.Commit memory commit = _findVoterCommit(contentId, roundId, msg.sender);
-        require(commit.voter == msg.sender, "No vote found");
+        (bytes32 commitKey, address rewardRecipient) = _resolveClaimCommit(contentId, roundId, msg.sender);
+        require(commitKey != bytes32(0), "No vote found");
+
+        RoundLib.Commit memory commit = _readCommit(contentId, roundId, commitKey);
+        require(commit.voter != address(0), "No vote found");
+        if (rewardCommitClaimed[contentId][roundId][commitKey] || rewardClaimed[contentId][roundId][commit.voter]) {
+            revert("Already claimed");
+        }
         require(commit.revealed, "Vote not revealed");
 
-        rewardClaimed[contentId][roundId][msg.sender] = true;
+        rewardCommitClaimed[contentId][roundId][commitKey] = true;
+        rewardClaimed[contentId][roundId][commit.voter] = true;
 
         bool voterWon = (commit.isUp == round.upWins);
 
@@ -241,10 +249,10 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
             roundLoserRebateClaimedCount[contentId][roundId] = loserClaimedCount + 1;
             roundLoserRebateClaimedAmount[contentId][roundId] = loserClaimedAmount + refund;
             if (refund > 0) {
-                votingEngine.transferReward(msg.sender, refund);
+                votingEngine.transferReward(rewardRecipient, refund);
             }
 
-            emit RewardClaimed(contentId, roundId, msg.sender, 0, refund);
+            emit RewardClaimed(contentId, roundId, rewardRecipient, 0, refund);
             return;
         }
 
@@ -273,9 +281,9 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         // Total payout = original stake return + reward from voter pool
         uint256 totalPayout = commit.stakeAmount + reward;
 
-        votingEngine.transferReward(msg.sender, totalPayout);
+        votingEngine.transferReward(rewardRecipient, totalPayout);
 
-        emit RewardClaimed(contentId, roundId, msg.sender, commit.stakeAmount, reward);
+        emit RewardClaimed(contentId, roundId, rewardRecipient, commit.stakeAmount, reward);
     }
 
     // --- Frontend Fee Claims ---
@@ -472,9 +480,9 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         nonReentrant
         returns (uint256 paidReward)
     {
-        address voter = msg.sender;
-        if (participationRewardClaimed[contentId][roundId][voter]) revert AlreadyClaimed();
-        if (roundParticipationRewardFinalized[contentId][roundId]) revert ParticipationRewardsAlreadyFinalized();
+        if (roundParticipationRewardFinalized[contentId][roundId]) {
+            revert ParticipationRewardsAlreadyFinalized();
+        }
 
         RoundLib.Round memory round = _readRound(contentId, roundId);
         if (round.state != RoundLib.RoundState.Settled) revert RoundNotSettled();
@@ -486,8 +494,16 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         uint256 reservedReward = roundParticipationRewardReserved[contentId][roundId];
         if (rewardPoolAddress == address(0)) revert NoPool();
 
-        RoundLib.Commit memory commit = _findVoterCommit(contentId, roundId, voter);
-        if (commit.voter != voter) revert NoCommit();
+        (bytes32 commitKey, address rewardRecipient) = _resolveClaimCommit(contentId, roundId, msg.sender);
+        if (commitKey == bytes32(0)) revert NoCommit();
+        RoundLib.Commit memory commit = _readCommit(contentId, roundId, commitKey);
+        if (commit.voter == address(0)) revert NoCommit();
+        if (
+            participationRewardCommitClaimed[contentId][roundId][commitKey]
+                || participationRewardClaimed[contentId][roundId][commit.voter]
+        ) {
+            revert AlreadyClaimed();
+        }
         if (!commit.revealed) revert VoteNotRevealed();
         if (commit.stakeAmount == 0) revert NoStake();
 
@@ -496,7 +512,8 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
 
         uint256 reward = commit.stakeAmount * rateBps / 10000;
         if (reward == 0) {
-            participationRewardClaimed[contentId][roundId][voter] = true;
+            participationRewardCommitClaimed[contentId][roundId][commitKey] = true;
+            participationRewardClaimed[contentId][roundId][commit.voter] = true;
             roundParticipationRewardFullyClaimedCount[contentId][roundId] += 1;
             return 0;
         }
@@ -507,22 +524,24 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         }
         if (currentlyClaimable == 0) revert PoolDepleted();
 
-        uint256 alreadyPaid = participationRewardPaid[contentId][roundId][voter];
+        uint256 alreadyPaid = participationRewardCommitPaid[contentId][roundId][commitKey];
         if (alreadyPaid >= currentlyClaimable) revert AlreadyClaimed();
 
         uint256 remainingReward = currentlyClaimable - alreadyPaid;
-        paidReward = IParticipationPool(rewardPoolAddress).withdrawReservedReward(voter, remainingReward);
+        paidReward = IParticipationPool(rewardPoolAddress).withdrawReservedReward(rewardRecipient, remainingReward);
         if (paidReward == 0) revert PoolDepleted();
 
         uint256 totalPaid = alreadyPaid + paidReward;
-        participationRewardPaid[contentId][roundId][voter] = totalPaid;
+        participationRewardCommitPaid[contentId][roundId][commitKey] = totalPaid;
+        participationRewardPaid[contentId][roundId][commit.voter] = totalPaid;
         roundParticipationRewardPaidTotal[contentId][roundId] += paidReward;
         if (totalPaid == reward) {
-            participationRewardClaimed[contentId][roundId][voter] = true;
+            participationRewardCommitClaimed[contentId][roundId][commitKey] = true;
+            participationRewardClaimed[contentId][roundId][commit.voter] = true;
             roundParticipationRewardFullyClaimedCount[contentId][roundId] += 1;
         }
 
-        emit ParticipationRewardClaimed(contentId, roundId, voter, paidReward);
+        emit ParticipationRewardClaimed(contentId, roundId, rewardRecipient, paidReward);
     }
 
     /// @notice Release participation-reward dust, or stale unclaimed reservations after the finalization delay.
@@ -576,6 +595,47 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         }
         bytes32 commitKey = keccak256(abi.encodePacked(voter, commitHash));
         return _readCommit(contentId, roundId, commitKey);
+    }
+
+    function _resolveClaimCommit(uint256 contentId, uint256 roundId, address account)
+        internal
+        view
+        returns (bytes32 commitKey, address rewardRecipient)
+    {
+        address voterIdNftAddress = _roundVoterIdNftAddress(contentId, roundId);
+        if (voterIdNftAddress != address(0)) {
+            IVoterIdNFT voterIdNft = IVoterIdNFT(voterIdNftAddress);
+            uint256 voterId = voterIdNft.getTokenId(account);
+            if (voterId != 0) {
+                commitKey = votingEngine.voterIdCommitKey(contentId, roundId, voterId);
+                if (commitKey == bytes32(0)) {
+                    uint256 nullifier = voterIdNft.getNullifier(voterId);
+                    if (nullifier != 0) {
+                        commitKey = votingEngine.voterNullifierCommitKey(contentId, roundId, nullifier);
+                    }
+                }
+
+                rewardRecipient = voterIdNft.getHolder(voterId);
+                if (rewardRecipient == address(0)) rewardRecipient = account;
+                return (commitKey, rewardRecipient);
+            }
+        }
+
+        bytes32 directCommitHash = votingEngine.voterCommitHash(contentId, roundId, account);
+        if (directCommitHash != bytes32(0)) {
+            commitKey = keccak256(abi.encodePacked(account, directCommitHash));
+            if (votingEngine.commitVoterId(contentId, roundId, commitKey) == 0) {
+                return (commitKey, account);
+            }
+        }
+
+        return (bytes32(0), account);
+    }
+
+    function _roundVoterIdNftAddress(uint256 contentId, uint256 roundId) internal view returns (address) {
+        address snapshot = votingEngine.roundVoterIdNFTSnapshot(contentId, roundId);
+        if (snapshot != address(0)) return snapshot;
+        return votingEngine.protocolConfig().voterIdNFT();
     }
 
     function _readRound(uint256 contentId, uint256 roundId) internal view returns (RoundLib.Round memory round) {
@@ -679,7 +739,9 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         try snapshotRegistry.getFrontendInfo(frontend) returns (
             address frontendOperator, uint256 stakedAmount, bool eligible, bool slashed
         ) {
-            if (frontendOperator == address(0)) return (FrontendFeeDisposition.Protocol, frontend, false, snapshotRegistryAddress);
+            if (frontendOperator == address(0)) {
+                return (FrontendFeeDisposition.Protocol, frontend, false, snapshotRegistryAddress);
+            }
             if (eligible) {
                 return (FrontendFeeDisposition.CreditRegistry, frontendOperator, false, snapshotRegistryAddress);
             }
@@ -695,7 +757,11 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         }
     }
 
-    function _canReceiveHistoricalFees(IFrontendRegistry snapshotRegistry, address frontend) internal view returns (bool) {
+    function _canReceiveHistoricalFees(IFrontendRegistry snapshotRegistry, address frontend)
+        internal
+        view
+        returns (bool)
+    {
         try snapshotRegistry.canReceiveHistoricalFees(frontend) returns (bool canReceive) {
             return canReceive;
         } catch {
