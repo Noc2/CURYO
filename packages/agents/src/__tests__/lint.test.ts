@@ -98,4 +98,30 @@ describe("agent question linting", () => {
       ]),
     );
   });
+
+  it("accepts pairwise output bundles without ranked-option warnings", () => {
+    const findings = lintAgentAskRequest({
+      ...VALID_REQUEST,
+      question: undefined,
+      questions: [
+        {
+          ...VALID_REQUEST.question,
+          templateId: "pairwise_output_preference",
+          title: "Rate answer A for the refund response",
+        },
+        {
+          ...VALID_REQUEST.question,
+          templateId: "pairwise_output_preference",
+          title: "Rate answer B for the refund response",
+        },
+      ],
+      templateId: "pairwise_output_preference",
+    });
+
+    expect(summarizeLintFindings(findings)).toEqual({
+      errorCount: 0,
+      ok: true,
+      warningCount: 0,
+    });
+  });
 });

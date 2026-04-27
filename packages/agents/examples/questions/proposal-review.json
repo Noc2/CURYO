@@ -1,0 +1,26 @@
+{
+  "clientRequestId": "proposal-review-demo",
+  "chainId": 42220,
+  "templateId": "proposal_review",
+  "maxPaymentAmount": "1000000",
+  "bounty": {
+    "asset": "USDC",
+    "amount": "1000000",
+    "requiredVoters": "3",
+    "requiredSettledRounds": "1"
+  },
+  "question": {
+    "templateId": "proposal_review",
+    "templateInputs": {
+      "decisionStage": "pre-vote review",
+      "proposalId": "curyo-governance-12",
+      "riskFocus": "deployment safety and treasury impact",
+      "successCriteria": "Clear scope, credible plan, and acceptable downside risk."
+    },
+    "title": "Is this proposal ready to advance?",
+    "description": "Review the linked proposal. Vote up only if it is clear, actionable, and reasonable to advance to the next governance step.",
+    "contextUrl": "https://example.com/proposal-review",
+    "categoryId": "2",
+    "tags": ["agent", "proposal", "governance"]
+  }
+}

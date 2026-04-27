@@ -11,6 +11,16 @@ These examples keep one loop stable across runtimes:
 ## Files
 
 - `landing-pitch-review.ts`: canonical backend-worker loop using `@curyo/sdk/agent`
+- `questions/landing-pitch-review.json`: generic rating demo for landing-page clarity
+- `questions/llm-answer-quality.json`: LLM answer quality review
+- `questions/rag-grounding-check.json`: RAG groundedness review
+- `questions/claim-verification.json`: factual claim verification
+- `questions/source-credibility-check.json`: source credibility screening
+- `questions/action-go-no-go.json`: agent action gate
+- `questions/proposal-review.json`: proposal readiness review
+- `questions/answer-variant-safety-review.json`: candidate answer preference bundle
+- `questions/generated-image-choice.json`: ranked image-option bundle
+- `questions/local-context-check.json`: local-context sanity check
 - `generic-remote-mcp.json`: baseline remote MCP config for clients that read an `mcpServers` object
 - `openclaw.mcpServers.json`: OpenClaw-oriented `mcpServers` example
 - `openclaw.md`: OpenClaw-specific setup notes and loop guidance

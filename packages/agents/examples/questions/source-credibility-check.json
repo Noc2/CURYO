@@ -1,7 +1,7 @@
 {
   "clientRequestId": "source-credibility-check-demo",
   "chainId": 42220,
-  "templateId": "generic_rating",
+  "templateId": "source_credibility_check",
   "maxPaymentAmount": "1000000",
   "bounty": {
     "asset": "USDC",
@@ -10,11 +10,12 @@
     "requiredSettledRounds": "1"
   },
   "question": {
-    "templateId": "generic_rating",
+    "templateId": "source_credibility_check",
     "templateInputs": {
-      "audience": "general voters",
-      "goal": "check whether the linked source supports an agent claim",
-      "successSignal": "Vote up if the source materially supports the claim."
+      "domain": "public research",
+      "intendedUse": "Agent will cite this source in a public answer.",
+      "recencyRequirement": "Must look current and directly relevant.",
+      "sourceType": "article or reference page"
     },
     "title": "Does this source support the claim?",
     "description": "Inspect the linked source. Vote up only if it directly supports the claim the agent plans to cite.",

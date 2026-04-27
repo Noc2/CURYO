@@ -2,6 +2,7 @@ import { findAgentResultTemplate } from "../templates";
 import type { AgentAskExample, AgentQuestionExample, JsonObject, QuestionLintFinding } from "./types";
 
 const CLIENT_REQUEST_ID_PATTERN = /^[A-Za-z0-9._:-]{4,160}$/;
+const RANK_BY_RATING_TEMPLATE_IDS = new Set(["ranked_option_member", "pairwise_output_preference"]);
 
 function isObject(value: unknown): value is JsonObject {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -81,12 +82,12 @@ export function lintAgentQuestion(
   if (question.templateId && !findAgentResultTemplate(question.templateId)) {
     pushFinding(findings, "error", `${path}.templateId`, `Unknown result template: ${question.templateId}.`);
   }
-  if (templateId === "ranked_option_member" && /\bwhich\s+(answer|option|variant|candidate|response)\b/i.test(title)) {
+  if (templateId && RANK_BY_RATING_TEMPLATE_IDS.has(templateId) && /\bwhich\s+(answer|option|variant|candidate|response)\b/i.test(title)) {
     pushFinding(
       findings,
       "warning",
       `${path}.title`,
-      "Ranked option members should ask voters to rate one shown option, then compare ratings later.",
+      "Rank-by-rating members should ask voters to rate one shown option, then compare ratings later.",
     );
   }
   if (question.imageUrls !== undefined && hasInvalidHttpsUrlList(question.imageUrls)) {
@@ -136,12 +137,12 @@ export function lintAgentAskRequest(input: unknown): QuestionLintFinding[] {
     );
   });
 
-  if (findings.length === 0 && questions.length > 1 && request.templateId !== "ranked_option_member") {
+  if (findings.length === 0 && questions.length > 1 && (!request.templateId || !RANK_BY_RATING_TEMPLATE_IDS.has(request.templateId))) {
     pushFinding(
       findings,
       "warning",
       "templateId",
-      "Multi-question asks usually need ranked_option_member template metadata.",
+      "Multi-question asks usually need ranked_option_member or pairwise_output_preference template metadata.",
     );
   }
 

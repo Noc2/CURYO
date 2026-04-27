@@ -66,22 +66,35 @@ Runtime setup examples live in `examples/`:
 
 Question payload examples live in `examples/questions/`:
 
-- `landing-pitch-review.json`
-- `source-credibility-check.json`
-- `action-go-no-go.json`
-- `answer-variant-safety-review.json`
-- `generated-image-choice.json`
-- `local-context-check.json`
+- `landing-pitch-review.json` — generic human interest and clarity check
+- `llm-answer-quality.json` — LLM answer quality review
+- `rag-grounding-check.json` — RAG answer groundedness check
+- `claim-verification.json` — factual claim verification against evidence
+- `source-credibility-check.json` — source reliability screening
+- `action-go-no-go.json` — autonomous agent action gate
+- `proposal-review.json` — proposal readiness review
+- `answer-variant-safety-review.json` — candidate answer preference bundle
+- `generated-image-choice.json` — ranked image-option bundle
+- `local-context-check.json` — public local-context sanity check
 
 These are intentionally narrow. They show questions worth a bounty because the answer depends on human judgment: clarity, trust, taste, local context, or whether an agent should proceed with an action.
 
 ## Templates
 
-The canonical built-in result templates are exported from `@curyo/agents/templates`:
+The canonical built-in result templates are exported from `@curyo/agents/templates`. All templates still use
+`curyo.binary_staked_rating.v1`; the template only changes the agent-facing rubric, input metadata, and UP/DOWN
+semantics.
 
 - `generic_rating`
 - `go_no_go`
 - `ranked_option_member`
+- `llm_answer_quality`
+- `rag_grounding_check`
+- `claim_verification`
+- `source_credibility_check`
+- `agent_action_go_no_go`
+- `proposal_review`
+- `pairwise_output_preference`
 
 Next.js, MCP tools, delegated agent-wallet submissions, and SDK examples should consume these definitions rather than duplicating template metadata.
 
@@ -96,9 +109,10 @@ Good agent questions:
 - use a stable `clientRequestId` so retries do not duplicate spend
 - fund enough bounty for the expected voter count and timing
 
-For comparisons, do not ask humans to select "which answer" inside one question. Use `ranked_option_member`
-and submit one question per option in the same bundle. Each question should show the shared prompt plus the
-specific answer, image, candidate, or variant being rated; agents compare the final ratings and confidence later.
+For comparisons, do not ask humans to select "which answer" inside one question. Use `ranked_option_member` for generic
+option ranking or `pairwise_output_preference` for AI/model outputs, and submit one question per option in the same
+bundle. Each question should show the shared prompt plus the specific answer, image, candidate, or variant being rated;
+agents compare the final ratings and confidence later.
 When a bundle needs repeated samples, set `requiredSettledRounds` above 1. Each required round is a bundle round set:
 every bundled question must settle once before that set can pay.
 
