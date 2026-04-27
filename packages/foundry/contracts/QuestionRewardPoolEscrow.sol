@@ -563,7 +563,7 @@ contract QuestionRewardPoolEscrow is
         uint256 bundleIndex = contentBundleIndex[contentId];
         uint256 roundSetIndex = bundleQuestionRecordedRounds[bundleId][bundleIndex];
         if (roundSetIndex >= bundle.requiredSettledRounds) return;
-        if (roundSetIndex != bundle.completedRoundSets) return;
+        if (roundSetIndex < bundle.completedRoundSets) return;
 
         bool settledWithinWindow = settled && _bundleRoundSettledWithinWindow(bundle, contentId, roundId);
         if (!settledWithinWindow) return;
@@ -572,7 +572,7 @@ contract QuestionRewardPoolEscrow is
         bundleQuestionRecordedRounds[bundleId][bundleIndex] = (roundSetIndex + 1).toUint32();
         emit QuestionBundleRoundRecorded(bundleId, contentId, roundId, bundleIndex, roundSetIndex);
 
-        if (_isBundleRoundSetComplete(bundleId, roundSetIndex)) {
+        if (roundSetIndex == bundle.completedRoundSets && _isBundleRoundSetComplete(bundleId, roundSetIndex)) {
             _qualifyBundleRoundSet(bundleId, bundle, roundSetIndex);
         }
     }
@@ -1056,7 +1056,6 @@ contract QuestionRewardPoolEscrow is
 
     function _qualifyBundleRoundSet(uint256 bundleId, BundleReward storage bundle, uint256 roundSetIndex) internal {
         if (bundleRoundSetSnapshots[bundleId][roundSetIndex].qualified) return;
-        require(roundSetIndex == bundle.completedRoundSets, "Round set out of order");
 
         if (_bundleRoundSetCompleterCount(bundleId, bundle, roundSetIndex) < bundle.requiredCompleters) {
             _resetBundleRoundSet(bundleId, roundSetIndex);
@@ -1138,10 +1137,14 @@ contract QuestionRewardPoolEscrow is
     function _resetBundleRoundSet(uint256 bundleId, uint256 roundSetIndex) internal {
         BundleQuestion[] storage questions = bundleQuestions[bundleId];
         for (uint256 i = 0; i < questions.length;) {
-            if (bundleRoundIds[bundleId][i][roundSetIndex] != 0) {
-                delete bundleRoundIds[bundleId][i][roundSetIndex];
-                bundleQuestionRecordedRounds[bundleId][i] = roundSetIndex.toUint32();
+            uint256 recordedRoundSets = bundleQuestionRecordedRounds[bundleId][i];
+            while (recordedRoundSets > roundSetIndex) {
+                unchecked {
+                    --recordedRoundSets;
+                }
+                delete bundleRoundIds[bundleId][i][recordedRoundSets];
             }
+            bundleQuestionRecordedRounds[bundleId][i] = roundSetIndex.toUint32();
             unchecked {
                 ++i;
             }

@@ -490,6 +490,38 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(usdc.balanceOf(voter2), 1_000e6 + firstReward + secondReward);
     }
 
+    function testBundleClaimRecordsOutOfOrderFutureRoundSetTerminal() public {
+        uint256[] memory contentIds = _submitBundleQuestions();
+        uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, 120e6, 3, 2);
+
+        address[] memory firstSetVoters = new address[](3);
+        firstSetVoters[0] = voter2;
+        firstSetVoters[1] = voter3;
+        firstSetVoters[2] = voter4;
+        address[] memory secondSetVoters = new address[](3);
+        secondSetVoters[0] = address(20);
+        secondSetVoters[1] = address(21);
+        secondSetVoters[2] = address(22);
+        vm.startPrank(owner);
+        for (uint256 i = 0; i < secondSetVoters.length; i++) {
+            voterIdNFT.setHolder(secondSetVoters[i]);
+            hrepToken.mint(secondSetVoters[i], 10_000e6);
+        }
+        vm.stopPrank();
+        bool[] memory directions = _directions(true, true, false);
+
+        _settleRoundWith(firstSetVoters, contentIds[0], directions);
+        _settleRoundWith(secondSetVoters, contentIds[0], directions);
+        assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter2), 0);
+
+        _settleRoundWith(firstSetVoters, contentIds[1], directions);
+        assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter2), 20e6);
+        assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 1, secondSetVoters[0]), 0);
+
+        _settleRoundWith(secondSetVoters, contentIds[1], directions);
+        assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 1, secondSetVoters[0]), 20e6);
+    }
+
     function testBundleRoundSetDoesNotQualifyWithoutRequiredCompleterIntersection() public {
         uint256[] memory contentIds = _submitBundleQuestions();
         uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, REWARD_POOL_AMOUNT, 3);
