@@ -267,6 +267,25 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
         assertEq(remainingAmount, 90e6);
     }
 
+    function testAwardAfterRemintUsesOriginalCommitKeyForFrontendFee() public {
+        _registerFrontend(frontend1);
+        uint256 nullifier = 333_333;
+        voterIdNFT.mint(voter1, nullifier);
+        uint256 contentId = _submitQuestion("");
+        uint256 poolId = _createFeedbackBonusPool(contentId);
+        _settleRoundWithFrontend(_threeVoters(), contentId, _directions(true, true, false), frontend1);
+
+        voterIdNFT.resetNullifier(nullifier);
+        voterIdNFT.mint(voter1, nullifier);
+
+        vm.prank(funder);
+        uint256 recipientAmount = feedbackBonusEscrow.awardFeedbackBonus(poolId, voter1, FEEDBACK_HASH, 10e6);
+
+        assertEq(recipientAmount, 9_700_000);
+        assertEq(usdc.balanceOf(voter1), 1_009_700_000);
+        assertEq(usdc.balanceOf(frontend1), 1_000_300_000);
+    }
+
     function testAwardPaysExitPendingHistoricalFrontend() public {
         _registerFrontend(frontend1);
         uint256 contentId = _submitQuestion("");
@@ -412,6 +431,25 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
         vm.expectRevert("Feedback already awarded");
         feedbackBonusEscrow.awardFeedbackBonus(poolId, voter2, FEEDBACK_HASH, 10e6);
         vm.stopPrank();
+    }
+
+    function testCannotAwardSameCommittedVoterAfterRemint() public {
+        uint256 nullifier = 444_444;
+        voterIdNFT.mint(voter1, nullifier);
+        uint256 contentId = _submitQuestion("");
+        uint256 poolId = _createFeedbackBonusPool(contentId);
+        _settleRoundWith(_threeVoters(), contentId, _directions(true, true, false));
+
+        vm.startPrank(funder);
+        feedbackBonusEscrow.awardFeedbackBonus(poolId, voter1, FEEDBACK_HASH, 10e6);
+        vm.stopPrank();
+
+        voterIdNFT.resetNullifier(nullifier);
+        voterIdNFT.mint(voter1, nullifier);
+
+        vm.prank(funder);
+        vm.expectRevert("Voter already awarded");
+        feedbackBonusEscrow.awardFeedbackBonus(poolId, voter1, keccak256("second-feedback"), 10e6);
     }
 
     function testExpiredRemainderForfeitsToTreasury() public {

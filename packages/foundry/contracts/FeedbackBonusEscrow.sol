@@ -185,23 +185,19 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
         require(grossAmount > 0 && grossAmount <= pool.remainingAmount, "Invalid amount");
         require(!feedbackHashAwarded[poolId][feedbackHash], "Feedback already awarded");
 
-        (uint256 voterId, address rewardRecipient) = _requireRevealedIndependentVoter(pool, recipient);
-        require(!voterIdAwarded[poolId][voterId], "Voter already awarded");
-
-        bytes32 commitKey = votingEngine.voterIdCommitKey(pool.contentId, pool.roundId, voterId);
-        // Use the narrow commitCore getter so we don't pay memory expansion for the
-        // unused `bytes ciphertext` blob on every award call.
-        (address commitVoter,, address frontend,, bool commitRevealed,,) =
-            votingEngine.commitCore(pool.contentId, pool.roundId, commitKey);
-        commitVoter;
-        commitRevealed;
+        (uint256 voterId, address rewardRecipient, bytes32 commitKey, address frontend) =
+            _requireRevealedIndependentVoter(pool, recipient);
+        uint256 awardVoterId = votingEngine.commitVoterId(pool.contentId, pool.roundId, commitKey);
+        if (awardVoterId == 0) awardVoterId = voterId;
+        require(!voterIdAwarded[poolId][voterId] && !voterIdAwarded[poolId][awardVoterId], "Voter already awarded");
 
         uint256 frontendFee;
         address frontendRecipient;
         (recipientAmount, frontendFee, frontendRecipient) = _splitAward(pool, commitKey, frontend, grossAmount);
 
         pool.remainingAmount -= grossAmount;
-        voterIdAwarded[poolId][voterId] = true;
+        voterIdAwarded[poolId][awardVoterId] = true;
+        if (awardVoterId != voterId) voterIdAwarded[poolId][voterId] = true;
         feedbackHashAwarded[poolId][feedbackHash] = true;
 
         if (recipientAmount > 0) {
@@ -294,7 +290,7 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
     function _requireRevealedIndependentVoter(FeedbackBonusPool storage pool, address recipient)
         internal
         view
-        returns (uint256 voterId, address rewardRecipient)
+        returns (uint256 voterId, address rewardRecipient, bytes32 commitKey, address frontend)
     {
         require(recipient != address(0), "Invalid recipient");
         (, RoundLib.RoundState state,,,,,,,,,,,,) = votingEngine.rounds(pool.contentId, pool.roundId);
@@ -310,12 +306,12 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
         rewardRecipient = roundVoterIdNft.getHolder(voterId);
         require(!_isExcludedVoter(pool, voterId), "Excluded voter");
 
-        bytes32 commitKey = _commitKeyForVoter(pool.contentId, pool.roundId, roundVoterIdNft, voterId);
+        commitKey = _commitKeyForVoter(pool.contentId, pool.roundId, roundVoterIdNft, voterId);
         require(commitKey != bytes32(0), "No commit");
 
         (address voter,, address commitFrontend,, bool revealed,,) =
             votingEngine.commitCore(pool.contentId, pool.roundId, commitKey);
-        commitFrontend;
+        frontend = commitFrontend;
         require(voter != address(0) && revealed, "Vote not revealed");
     }
 

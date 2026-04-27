@@ -503,10 +503,15 @@ contract QuestionRewardPoolEscrow is
         uint256 voterId = _requireVoterId(roundVoterIdNft, msg.sender);
         address rewardRecipient = roundVoterIdNft.getHolder(voterId);
         require(!_isExcludedVoter(rewardPool, roundId, voterId), "Excluded voter");
-        require(!rewardClaimed[rewardPoolId][roundId][voterId], "Already claimed");
 
         bytes32 commitKey = _commitKeyForVoter(rewardPool.contentId, roundId, roundVoterIdNft, voterId);
         require(commitKey != bytes32(0), "No commit");
+        uint256 claimVoterId = votingEngine.commitVoterId(rewardPool.contentId, roundId, commitKey);
+        if (claimVoterId == 0) claimVoterId = voterId;
+        require(
+            !rewardClaimed[rewardPoolId][roundId][voterId] && !rewardClaimed[rewardPoolId][roundId][claimVoterId],
+            "Already claimed"
+        );
 
         (bool revealed, address frontend) = _revealedCommitFrontend(rewardPool.contentId, roundId, commitKey);
         require(revealed, "Vote not revealed");
@@ -529,7 +534,8 @@ contract QuestionRewardPoolEscrow is
             );
         require(grossAmount > 0, "No reward");
 
-        rewardClaimed[rewardPoolId][roundId][voterId] = true;
+        rewardClaimed[rewardPoolId][roundId][claimVoterId] = true;
+        if (claimVoterId != voterId) rewardClaimed[rewardPoolId][roundId][voterId] = true;
         unchecked {
             snapshot.claimedCount++;
         }
@@ -609,11 +615,17 @@ contract QuestionRewardPoolEscrow is
         IVoterIdNFT roundVoterIdNft = _roundVoterIdNft(firstQuestion.contentId, firstRoundId);
         uint256 voterId = _requireVoterId(roundVoterIdNft, msg.sender);
         address rewardRecipient = roundVoterIdNft.getHolder(voterId);
-        require(!bundleRoundSetRewardClaimed[bundleId][roundSetIndex][voterId], "Already claimed");
         require(!_isBundleExcludedVoter(bundle, bundleId, roundSetIndex, msg.sender), "Excluded voter");
 
         (address frontend, bytes32 firstCommitKey) =
             _requireCompletedBundleRoundSet(bundleId, roundSetIndex, msg.sender);
+        uint256 claimVoterId = votingEngine.commitVoterId(firstQuestion.contentId, firstRoundId, firstCommitKey);
+        if (claimVoterId == 0) claimVoterId = voterId;
+        require(
+            !bundleRoundSetRewardClaimed[bundleId][roundSetIndex][voterId]
+                && !bundleRoundSetRewardClaimed[bundleId][roundSetIndex][claimVoterId],
+            "Already claimed"
+        );
         BundleRoundSetSnapshot storage snapshot = bundleRoundSetSnapshots[bundleId][roundSetIndex];
         uint256 grossAmount;
         uint256 reservedFrontendFee;
@@ -632,7 +644,8 @@ contract QuestionRewardPoolEscrow is
             );
         require(grossAmount > 0, "No reward");
 
-        bundleRoundSetRewardClaimed[bundleId][roundSetIndex][voterId] = true;
+        bundleRoundSetRewardClaimed[bundleId][roundSetIndex][claimVoterId] = true;
+        if (claimVoterId != voterId) bundleRoundSetRewardClaimed[bundleId][roundSetIndex][voterId] = true;
         unchecked {
             snapshot.claimedCount++;
             bundle.claimedCount++;
@@ -671,15 +684,20 @@ contract QuestionRewardPoolEscrow is
         BundleQuestion storage firstQuestion = bundleQuestions[bundleId][0];
         uint256 firstRoundId = bundleRoundIds[bundleId][0][roundSetIndex];
         uint256 voterId = _roundVoterIdNft(firstQuestion.contentId, firstRoundId).getTokenId(account);
-        if (
-            voterId == 0 || bundleRoundSetRewardClaimed[bundleId][roundSetIndex][voterId]
-                || _isBundleExcludedVoter(bundle, bundleId, roundSetIndex, account)
-        ) {
+        if (voterId == 0 || _isBundleExcludedVoter(bundle, bundleId, roundSetIndex, account)) {
             return 0;
         }
         (bool completed, address frontend, bytes32 firstCommitKey) =
             _completedBundleRoundSetCommit(bundleId, roundSetIndex, account);
         if (!completed) return 0;
+        uint256 claimVoterId = votingEngine.commitVoterId(firstQuestion.contentId, firstRoundId, firstCommitKey);
+        if (claimVoterId == 0) claimVoterId = voterId;
+        if (
+            bundleRoundSetRewardClaimed[bundleId][roundSetIndex][voterId]
+                || bundleRoundSetRewardClaimed[bundleId][roundSetIndex][claimVoterId]
+        ) {
+            return 0;
+        }
 
         BundleRoundSetSnapshot storage snapshot = bundleRoundSetSnapshots[bundleId][roundSetIndex];
         (, claimableAmount,,) = QuestionRewardPoolEscrowClaimLib.computeEqualShareClaimSplit(
@@ -835,15 +853,19 @@ contract QuestionRewardPoolEscrow is
 
         IVoterIdNFT roundVoterIdNft = _roundVoterIdNft(rewardPool.contentId, roundId);
         uint256 voterId = roundVoterIdNft.getTokenId(account);
-        if (
-            voterId == 0 || _isExcludedVoter(rewardPool, roundId, voterId)
-                || rewardClaimed[rewardPoolId][roundId][voterId]
-        ) {
+        if (voterId == 0 || _isExcludedVoter(rewardPool, roundId, voterId)) {
             return 0;
         }
 
         bytes32 commitKey = _commitKeyForVoter(rewardPool.contentId, roundId, roundVoterIdNft, voterId);
         if (commitKey == bytes32(0)) return 0;
+        uint256 claimVoterId = votingEngine.commitVoterId(rewardPool.contentId, roundId, commitKey);
+        if (claimVoterId == 0) claimVoterId = voterId;
+        if (
+            rewardClaimed[rewardPoolId][roundId][voterId] || rewardClaimed[rewardPoolId][roundId][claimVoterId]
+        ) {
+            return 0;
+        }
         (bool revealed, address frontend) = _revealedCommitFrontend(rewardPool.contentId, roundId, commitKey);
         if (!revealed) return 0;
 

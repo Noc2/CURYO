@@ -218,6 +218,29 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(usdc.balanceOf(address(rewardPoolEscrow)), 0);
     }
 
+    function testQuestionRewardCannotReplayAfterVoterIdRemintWithSameNullifier() public {
+        uint256 contentId = _submitQuestion("");
+        uint256 rewardPoolId = _createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1);
+        uint256 nullifier = 111_111;
+        voterIdNFT.mint(voter1, nullifier);
+
+        address[] memory voters = _threeVoters();
+        bool[] memory directions = _directions(true, true, false);
+        uint256 roundId = _settleRoundWith(voters, contentId, directions);
+
+        vm.prank(voter1);
+        uint256 firstReward = rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
+        assertEq(firstReward, REWARD_POOL_AMOUNT / 3);
+
+        voterIdNFT.resetNullifier(nullifier);
+        voterIdNFT.mint(voter1, nullifier);
+
+        assertEq(rewardPoolEscrow.claimableQuestionReward(rewardPoolId, roundId, voter1), 0);
+        vm.prank(voter1);
+        vm.expectRevert("Already claimed");
+        rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
+    }
+
     function testQuestionRewardClaimWaitsForUnrevealedCleanup() public {
         uint256 contentId = _submitQuestion("");
         uint256 rewardPoolId = _createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1);
@@ -529,6 +552,34 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(firstReward, 20e6);
         assertEq(secondReward, 20e6);
         assertEq(usdc.balanceOf(voter2), 1_000e6 + firstReward + secondReward);
+    }
+
+    function testBundleRewardCannotReplayAfterVoterIdRemintWithSameNullifier() public {
+        uint256[] memory contentIds = _submitBundleQuestions();
+        uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, REWARD_POOL_AMOUNT, 3);
+        uint256 nullifier = 222_222;
+        voterIdNFT.mint(voter2, nullifier);
+
+        address[] memory voters = new address[](3);
+        voters[0] = voter2;
+        voters[1] = voter3;
+        voters[2] = voter4;
+        bool[] memory directions = _directions(true, true, false);
+
+        _settleRoundWith(voters, contentIds[0], directions);
+        _settleRoundWith(voters, contentIds[1], directions);
+
+        vm.prank(voter2);
+        uint256 firstReward = rewardPoolEscrow.claimQuestionBundleReward(bundleId, 0);
+        assertEq(firstReward, REWARD_POOL_AMOUNT / 3);
+
+        voterIdNFT.resetNullifier(nullifier);
+        voterIdNFT.mint(voter2, nullifier);
+
+        assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter2), 0);
+        vm.prank(voter2);
+        vm.expectRevert("Already claimed");
+        rewardPoolEscrow.claimQuestionBundleReward(bundleId, 0);
     }
 
     function testBundleClaimRecordsOutOfOrderFutureRoundSetTerminal() public {
