@@ -44,6 +44,11 @@ interface IVoterIdNFT {
     /// @return True if the nullifier has been used
     function isNullifierUsed(uint256 nullifier) external view returns (bool);
 
+    /// @notice Return the Self.xyz nullifier that minted a Voter ID token
+    /// @param tokenId The Voter ID token
+    /// @return The nullifier, or 0 when the token has no nullifier snapshot
+    function getNullifier(uint256 tokenId) external view returns (uint256);
+
     /// @notice Revoke a Voter ID (governance action for collusion enforcement)
     /// @param holder The address whose Voter ID should be revoked
     function revokeVoterId(address holder) external;

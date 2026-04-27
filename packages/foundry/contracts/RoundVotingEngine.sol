@@ -151,6 +151,7 @@ contract RoundVotingEngine is
     // Voter ID keyed commit lookups for stablecoin bounties through delegated wallets.
     mapping(uint256 => mapping(uint256 => mapping(uint256 => bytes32))) public voterIdCommitKey;
     mapping(uint256 => mapping(uint256 => mapping(bytes32 => uint256))) public commitVoterId;
+    mapping(uint256 => mapping(uint256 => mapping(uint256 => bytes32))) public voterNullifierCommitKey;
 
     // Frontend fee aggregation (computed incrementally during revealVote for O(1) settlement)
     mapping(uint256 => mapping(uint256 => uint256)) public roundStakeWithEligibleFrontend;
@@ -426,6 +427,7 @@ contract RoundVotingEngine is
             epochIdx,
             commitHash,
             voterId,
+            roundVoterIdNft,
             useTokenIdentity
         );
         _recordCommitAccounting(
@@ -483,6 +485,7 @@ contract RoundVotingEngine is
         uint8 epochIdx,
         bytes32 commitHash,
         uint256 voterId,
+        IVoterIdNFT roundVoterIdNft,
         bool useTokenIdentity
     ) internal {
         _writeCommitStruct(
@@ -499,7 +502,9 @@ contract RoundVotingEngine is
             epochIdx
         );
         _markFrontendEligibility(contentId, roundId, commitKey, frontend);
-        _recordCommitIndexes(contentId, roundId, commitKey, epochEnd, voter, commitHash, voterId, useTokenIdentity);
+        _recordCommitIndexes(
+            contentId, roundId, commitKey, epochEnd, voter, commitHash, voterId, roundVoterIdNft, useTokenIdentity
+        );
     }
 
     function _writeCommitStruct(
@@ -550,6 +555,7 @@ contract RoundVotingEngine is
         address voter,
         bytes32 commitHash,
         uint256 voterId,
+        IVoterIdNFT roundVoterIdNft,
         bool useTokenIdentity
     ) internal {
         roundCommitHashes[contentId][roundId].push(commitKey);
@@ -566,6 +572,10 @@ contract RoundVotingEngine is
             hasTokenIdCommitted[contentId][roundId][voterId] = true;
             voterIdCommitKey[contentId][roundId][voterId] = commitKey;
             commitVoterId[contentId][roundId][commitKey] = voterId;
+            uint256 voterNullifier = roundVoterIdNft.getNullifier(voterId);
+            if (voterNullifier != 0) {
+                voterNullifierCommitKey[contentId][roundId][voterNullifier] = commitKey;
+            }
         }
     }
 

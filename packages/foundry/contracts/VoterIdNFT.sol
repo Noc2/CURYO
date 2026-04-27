@@ -207,11 +207,10 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
             nullifierResettable[_tokenIdToNullifier[tokenId]] = true;
         }
 
-        // Clear bidirectional mappings
+        // Clear bidirectional holder mappings. Keep the token->nullifier snapshot so
+        // historical reward exclusions can still follow the same human after a reset/remint.
         delete holderToTokenId[holder];
         delete tokenIdToHolder[tokenId];
-        delete _tokenIdToNullifier[tokenId];
-        delete _tokenIdHasNullifier[tokenId];
 
         // Burn the NFT (calls _update with to=address(0))
         _burn(tokenId);
@@ -313,6 +312,11 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
     /// @return True if the nullifier has been used
     function isNullifierUsed(uint256 nullifier) external view override returns (bool) {
         return nullifierUsed[nullifier];
+    }
+
+    /// @notice Return the nullifier snapshot for a token ID, including revoked token IDs.
+    function getNullifier(uint256 tokenId) external view override returns (uint256) {
+        return _tokenIdHasNullifier[tokenId] ? _tokenIdToNullifier[tokenId] : 0;
     }
 
     // ====================================================

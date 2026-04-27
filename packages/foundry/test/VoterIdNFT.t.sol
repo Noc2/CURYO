@@ -932,7 +932,7 @@ contract VoterIdNFTTest is Test {
         assertEq(voterIdNFT.getRemainingStakeCapacity(1, 100, newTokenId), 0);
     }
 
-    function test_RevokeVoterId_ClearsRevokedTokenNullifierSnapshot() public {
+    function test_RevokeVoterId_KeepsRevokedTokenNullifierSnapshot() public {
         vm.prank(minterAddr);
         voterIdNFT.mint(user1, NULLIFIER_1);
 
@@ -948,7 +948,8 @@ contract VoterIdNFTTest is Test {
         vm.prank(recorderAddr);
         voterIdNFT.recordStake(1, 100, newTokenId, 50e6);
 
-        assertEq(voterIdNFT.getEpochContentStake(1, 100, 1), 0);
+        assertEq(voterIdNFT.getNullifier(1), NULLIFIER_1);
+        assertEq(voterIdNFT.getEpochContentStake(1, 100, 1), 50e6);
         assertEq(voterIdNFT.getEpochContentStake(1, 100, newTokenId), 50e6);
     }
 
