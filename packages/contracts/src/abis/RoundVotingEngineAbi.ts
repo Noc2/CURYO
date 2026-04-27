@@ -32,6 +32,19 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "function",
+    "name": "accountedHrepBalance",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "addToConsensusReserve",
     "inputs": [
       {
@@ -1307,6 +1320,35 @@ export const RoundVotingEngineAbi = [
     "stateMutability": "view"
   },
   {
+    "type": "function",
+    "name": "voterNullifierCommitKey",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
     "type": "event",
     "name": "CancelledRoundRefundClaimed",
     "inputs": [
@@ -1996,6 +2038,11 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "error",
+    "name": "NoCommit",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "NoStake",
     "inputs": []
   },
@@ -2032,6 +2079,11 @@ export const RoundVotingEngineAbi = [
   {
     "type": "error",
     "name": "RoundNotAccepting",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "RoundNotCancelledOrTied",
     "inputs": []
   },
   {

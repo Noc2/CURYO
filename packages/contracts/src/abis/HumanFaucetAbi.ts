@@ -35,6 +35,19 @@ export const HumanFaucetAbi = [
   },
   {
     "type": "function",
+    "name": "FAUCET_CLAIM_AUTHORIZATION_TYPEHASH",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "KYC_ATTESTATION_ID",
     "inputs": [],
     "outputs": [
@@ -284,6 +297,49 @@ export const HumanFaucetAbi = [
     "inputs": [],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "eip712Domain",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "fields",
+        "type": "bytes1",
+        "internalType": "bytes1"
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "version",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "chainId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "verifyingContract",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "salt",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "extensions",
+        "type": "uint256[]",
+        "internalType": "uint256[]"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -618,6 +674,13 @@ export const HumanFaucetAbi = [
   },
   {
     "type": "function",
+    "name": "openClaimsAndTransferOwnership",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "owner",
     "inputs": [],
     "outputs": [
@@ -639,6 +702,38 @@ export const HumanFaucetAbi = [
   {
     "type": "function",
     "name": "paused",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "recipientAuthorizationNonces",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "recipientAuthorizationRequired",
     "inputs": [],
     "outputs": [
       {
@@ -783,6 +878,19 @@ export const HumanFaucetAbi = [
         "name": "newGovernance",
         "type": "address",
         "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setRecipientAuthorizationRequired",
+    "inputs": [
+      {
+        "name": "required",
+        "type": "bool",
+        "internalType": "bool"
       }
     ],
     "outputs": [],
@@ -962,6 +1070,12 @@ export const HumanFaucetAbi = [
   },
   {
     "type": "event",
+    "name": "EIP712DomainChanged",
+    "inputs": [],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "GovernanceUpdated",
     "inputs": [
       {
@@ -1056,6 +1170,19 @@ export const HumanFaucetAbi = [
         "type": "address",
         "indexed": false,
         "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RecipientAuthorizationRequiredSet",
+    "inputs": [
+      {
+        "name": "required",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
       }
     ],
     "anonymous": false
@@ -1218,6 +1345,11 @@ export const HumanFaucetAbi = [
   },
   {
     "type": "error",
+    "name": "ClaimAuthorizationExpired",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "EnforcedPause",
     "inputs": []
   },
@@ -1238,6 +1370,11 @@ export const HumanFaucetAbi = [
   },
   {
     "type": "error",
+    "name": "InvalidClaimAuthorization",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "InvalidDataFormat",
     "inputs": []
   },
@@ -1249,6 +1386,11 @@ export const HumanFaucetAbi = [
   {
     "type": "error",
     "name": "InvalidMigrationReferrer",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidShortString",
     "inputs": []
   },
   {
@@ -1269,6 +1411,11 @@ export const HumanFaucetAbi = [
   {
     "type": "error",
     "name": "MinimumAgeNotMet",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "MissingClaimAuthorization",
     "inputs": []
   },
   {
@@ -1313,6 +1460,17 @@ export const HumanFaucetAbi = [
     "type": "error",
     "name": "SanctionsCheckFailed",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "StringTooLong",
+    "inputs": [
+      {
+        "name": "str",
+        "type": "string",
+        "internalType": "string"
+      }
+    ]
   },
   {
     "type": "error",

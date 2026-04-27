@@ -99,6 +99,45 @@ export const CuryoGovernorAbi = [
   },
   {
     "type": "function",
+    "name": "MAX_PROPOSAL_THRESHOLD",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MAX_VOTING_DELAY_BLOCKS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint48",
+        "internalType": "uint48"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MAX_VOTING_PERIOD_BLOCKS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "MINIMUM_QUORUM",
     "inputs": [],
     "outputs": [
@@ -106,6 +145,19 @@ export const CuryoGovernorAbi = [
         "name": "",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MIN_VOTING_PERIOD_BLOCKS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint32",
+        "internalType": "uint32"
       }
     ],
     "stateMutability": "view"
@@ -374,6 +426,25 @@ export const CuryoGovernorAbi = [
         "name": "extensions",
         "type": "uint256[]",
         "internalType": "uint256[]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "excludedHolderEffectiveBlock",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint48",
+        "internalType": "uint48"
       }
     ],
     "stateMutability": "view"
@@ -1117,6 +1188,24 @@ export const CuryoGovernorAbi = [
   },
   {
     "type": "function",
+    "name": "replaceExcludedHolder",
+    "inputs": [
+      {
+        "name": "oldHolder",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "newHolder",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "setProposalThreshold",
     "inputs": [
       {
@@ -1287,6 +1376,25 @@ export const CuryoGovernorAbi = [
     "type": "event",
     "name": "EIP712DomainChanged",
     "inputs": [],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ExcludedHolderReplaced",
+    "inputs": [
+      {
+        "name": "oldHolder",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "newHolder",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
     "anonymous": false
   },
   {
@@ -1809,6 +1917,16 @@ export const CuryoGovernorAbi = [
         "internalType": "uint256"
       }
     ]
+  },
+  {
+    "type": "error",
+    "name": "InvalidExcludedHolder",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidGovernanceTiming",
+    "inputs": []
   },
   {
     "type": "error",

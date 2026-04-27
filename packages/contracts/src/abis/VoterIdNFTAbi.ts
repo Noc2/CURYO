@@ -224,6 +224,25 @@ export const VoterIdNFTAbi = [
   },
   {
     "type": "function",
+    "name": "getNullifier",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getRemainingStakeCapacity",
     "inputs": [
       {
@@ -264,6 +283,25 @@ export const VoterIdNFTAbi = [
     "outputs": [
       {
         "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getTokenIdForNullifier",
+    "inputs": [
+      {
+        "name": "nullifier",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "tokenId",
         "type": "uint256",
         "internalType": "uint256"
       }

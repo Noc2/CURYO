@@ -642,19 +642,6 @@ export const QuestionRewardPoolEscrowAbi = [
   },
   {
     "type": "function",
-    "name": "setVotingEngine",
-    "inputs": [
-      {
-        "name": "votingEngine_",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "supportsInterface",
     "inputs": [
       {
@@ -671,6 +658,24 @@ export const QuestionRewardPoolEscrowAbi = [
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "syncBundleQuestionTerminal",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "roundId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",

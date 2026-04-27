@@ -230,7 +230,7 @@ export const FeedbackBonusEscrowAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "submitterVoterIdNFT",
+        "name": "voterIdNFTSnapshot",
         "type": "address",
         "internalType": "address"
       },
@@ -507,13 +507,13 @@ export const FeedbackBonusEscrowAbi = [
     "name": "setVotingEngine",
     "inputs": [
       {
-        "name": "votingEngine_",
+        "name": "",
         "type": "address",
         "internalType": "address"
       }
     ],
     "outputs": [],
-    "stateMutability": "nonpayable"
+    "stateMutability": "view"
   },
   {
     "type": "function",
