@@ -276,16 +276,15 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
         );
     }
 
-    function test_SetVotingEngine_RevertsUntilCurrentEngineDrained() public {
+    function test_SetVotingEngine_RevertsForReplacement() public {
         address newEngine = address(0xBEEF);
-        assertEq(votingEngine.accountedHrepBalance(), 500_000e6);
 
         vm.prank(owner);
-        vm.expectRevert(RoundRewardDistributor.VotingEngineNotDrained.selector);
+        vm.expectRevert("Voting engine immutable");
         rewardDistributor.setVotingEngine(newEngine);
     }
 
-    function test_SetVotingEngine_IgnoresUnaccountedDustAfterDrain() public {
+    function test_SetVotingEngine_RevertsForReplacementAfterDrainAndDust() public {
         RoundVotingEngine engineImpl = new RoundVotingEngine();
         RoundVotingEngine emptyOldEngine = RoundVotingEngine(
             address(
@@ -316,11 +315,17 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
         assertEq(emptyOldEngine.accountedHrepBalance(), 0);
 
         vm.prank(owner);
-        vm.expectEmit(false, false, false, true);
-        emit RoundRewardDistributor.VotingEngineUpdated(newEngine);
+        vm.expectRevert("Voting engine immutable");
         freshDistributor.setVotingEngine(newEngine);
 
-        assertEq(address(freshDistributor.votingEngine()), newEngine);
+        assertEq(address(freshDistributor.votingEngine()), address(emptyOldEngine));
+    }
+
+    function test_SetVotingEngine_AllowsCurrentEngineNoop() public {
+        vm.prank(owner);
+        rewardDistributor.setVotingEngine(address(votingEngine));
+
+        assertEq(address(rewardDistributor.votingEngine()), address(votingEngine));
     }
 
     function test_SetVotingEngine_ZeroAddressReverts() public {

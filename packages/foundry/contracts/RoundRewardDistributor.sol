@@ -189,12 +189,12 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         emit StrandedHrepSwept(treasury, amount);
     }
 
-    /// @notice Update the voting engine used for future rounds after old-engine rewards have been drained.
+    /// @notice The voting engine is immutable for this distributor.
+    /// @dev Claim accounting is keyed by contentId/roundId, so a fresh engine with reused round IDs
+    ///      must use a fresh distributor instead of reusing this stateful instance.
     function setVotingEngine(address _votingEngine) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(_votingEngine != address(0), "Invalid voting engine");
-        if (votingEngine.accountedHrepBalance() != 0) revert VotingEngineNotDrained();
-        votingEngine = RoundVotingEngine(_votingEngine);
-        emit VotingEngineUpdated(_votingEngine);
+        require(_votingEngine == address(votingEngine), "Voting engine immutable");
     }
 
     // --- Voter Reward Claiming ---
