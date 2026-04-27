@@ -83,6 +83,12 @@
   --curyo-surface-elevated-hover: #1c181e;
   --curyo-surface-mobile-vote: #221d24;
   --curyo-surface-nested: #0d0a0f;
+  --curyo-control-idle: rgb(245 240 235 / 0.08);
+  --curyo-control-idle-hover: rgb(245 240 235 / 0.13);
+  --curyo-control-idle-muted: rgb(245 240 235 / 0.055);
+  --curyo-control-idle-muted-hover: rgb(245 240 235 / 0.095);
+  --curyo-control-idle-border: rgb(245 240 235 / 0.1);
+  --curyo-control-idle-border-hover: rgb(245 240 235 / 0.17);
   --curyo-ember-rgb: 213 106 62;
   --curyo-ember-hover-rgb: 224 122 78;
   --curyo-ember-deep-rgb: 179 52 27;
@@ -316,6 +322,32 @@ body {
 
 .btn.btn-ghost:hover {
   background: rgb(245 240 235 / 0.04);
+}
+
+.btn.btn-outline {
+  color: var(--color-base-content);
+  background: var(--curyo-control-idle);
+  border-color: var(--curyo-control-idle-border);
+  box-shadow:
+    inset 0 1px 0 rgb(245 240 235 / 0.035),
+    0 0 0 1px rgb(245 240 235 / 0.025);
+}
+
+.btn.btn-outline:hover {
+  color: var(--color-base-content);
+  background: var(--curyo-control-idle-hover);
+  border-color: var(--curyo-control-idle-border-hover);
+  box-shadow:
+    inset 0 1px 0 rgb(245 240 235 / 0.045),
+    0 0 0 1px rgb(245 240 235 / 0.04);
+}
+
+.btn.btn-outline:disabled,
+.btn.btn-outline.btn-disabled {
+  color: rgb(245 240 235 / 0.36);
+  background: var(--curyo-control-idle-muted);
+  border-color: rgb(245 240 235 / 0.06);
+  box-shadow: none;
 }
 
 @layer utilities {
@@ -830,28 +862,30 @@ body {
 .pill-inactive,
 .pill-filter {
   border-radius: var(--curyo-radius-control);
-  background: rgb(var(--curyo-surface-elevated-rgb) / 0.96);
+  background: var(--curyo-control-idle);
   color: var(--color-base-content);
-  border: none;
-  box-shadow: none;
+  border: 1px solid var(--curyo-control-idle-border);
+  box-shadow: inset 0 1px 0 rgb(245 240 235 / 0.03);
 }
 
 .pill-inactive:hover,
 .pill-filter:hover {
-  background: var(--curyo-surface-elevated-hover);
+  background: var(--curyo-control-idle-hover);
+  border-color: var(--curyo-control-idle-border-hover);
 }
 
 .pill-inactive-muted {
   border-radius: var(--curyo-radius-control);
-  background: rgb(var(--curyo-surface-elevated-rgb) / 0.96);
-  color: rgb(245 240 235 / 0.6);
-  border: none;
-  box-shadow: none;
+  background: var(--curyo-control-idle-muted);
+  color: rgb(245 240 235 / 0.72);
+  border: 1px solid rgb(245 240 235 / 0.075);
+  box-shadow: inset 0 1px 0 rgb(245 240 235 / 0.025);
 }
 
 .pill-inactive-muted:hover {
-  background: var(--curyo-surface-elevated-hover);
-  color: rgb(245 240 235 / 0.8);
+  background: var(--curyo-control-idle-muted-hover);
+  border-color: rgb(245 240 235 / 0.13);
+  color: rgb(245 240 235 / 0.86);
 }
 
 .tab-control {
