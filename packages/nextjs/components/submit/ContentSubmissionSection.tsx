@@ -1893,7 +1893,7 @@ export function ContentSubmissionSection() {
         disabled={isSubmitting || isAwaitingSponsoredSubmitCalls || isMissingGasBalance}
       >
         {isSubmitting ? (
-          <span className="flex items-center gap-2">
+          <span className="flex items-center gap-2 text-base-content">
             <span className="loading loading-spinner loading-sm"></span>
             Submitting...
           </span>
