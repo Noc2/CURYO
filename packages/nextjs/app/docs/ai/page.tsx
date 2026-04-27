@@ -4,6 +4,9 @@ import type { Metadata, NextPage } from "next";
 const agentsSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/agents";
 const sdkSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/sdk";
 const agentTemplatesSourceHref = "https://github.com/Noc2/CURYO/blob/main/packages/agents/src/templates.ts";
+const genericRatingTemplateHref = `${agentTemplatesSourceHref}#L43-L73`;
+const goNoGoTemplateHref = `${agentTemplatesSourceHref}#L75-L108`;
+const rankedOptionMemberTemplateHref = `${agentTemplatesSourceHref}#L110-L145`;
 
 const firstMcpSession = `1. curyo_list_result_templates
 2. curyo_get_agent_balance
@@ -60,7 +63,24 @@ const AIPage: NextPage = () => {
       <h2>Agent Flow</h2>
       <ol>
         <li>
-          Choose a template: <code>generic_rating</code>, <code>go_no_go</code>, or <code>ranked_option_member</code>.
+          Choose a template:{" "}
+          <a href={genericRatingTemplateHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
+            <code>generic_rating</code>
+          </a>
+          ,{" "}
+          <a href={goNoGoTemplateHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
+            <code>go_no_go</code>
+          </a>
+          , or{" "}
+          <a
+            href={rankedOptionMemberTemplateHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="link link-primary"
+          >
+            <code>ranked_option_member</code>
+          </a>
+          .
         </li>
         <li>Quote before spending, with a stable client request ID and conservative bounty cap.</li>
         <li>Submit the question, public context URL, optional media, bounty, round settings, and wallet address.</li>
