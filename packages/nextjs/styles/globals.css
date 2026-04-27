@@ -83,10 +83,10 @@
   --curyo-surface-elevated-hover: #1c181e;
   --curyo-surface-mobile-vote: #221d24;
   --curyo-surface-nested: #0d0a0f;
-  --curyo-control-idle: rgb(245 240 235 / 0.08);
-  --curyo-control-idle-hover: rgb(245 240 235 / 0.13);
-  --curyo-control-idle-muted: rgb(245 240 235 / 0.055);
-  --curyo-control-idle-muted-hover: rgb(245 240 235 / 0.095);
+  --curyo-control-idle: rgb(245 240 235 / 0.13);
+  --curyo-control-idle-hover: rgb(245 240 235 / 0.18);
+  --curyo-control-idle-muted: rgb(245 240 235 / 0.08);
+  --curyo-control-idle-muted-hover: rgb(245 240 235 / 0.13);
   --curyo-ember-rgb: 213 106 62;
   --curyo-ember-hover-rgb: 224 122 78;
   --curyo-ember-deep-rgb: 179 52 27;
