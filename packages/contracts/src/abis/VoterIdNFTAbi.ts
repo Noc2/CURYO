@@ -1310,6 +1310,11 @@ export const VoterIdNFTAbi = [
   },
   {
     "type": "error",
+    "name": "InvalidNullifier",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "MaxSupplyReached",
     "inputs": []
   },
