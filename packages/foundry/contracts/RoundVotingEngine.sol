@@ -386,6 +386,7 @@ contract RoundVotingEngine is
         bytes32 commitKey = VotePreflightLib.prepareCommit(
             voterCommitHash,
             hasTokenIdCommitted,
+            voterNullifierCommitKey,
             lastVoteTimestamp,
             lastVoteTimestampByToken,
             roundVoterIdNft,
@@ -403,7 +404,6 @@ contract RoundVotingEngine is
                 maxVoters: roundCfg.maxVoters
             })
         );
-        if (commits[contentId][roundId][commitKey].voter != address(0)) revert AlreadyCommitted();
         (uint256 epochEnd, uint8 epochIdx) = _computeCommitEpoch(round, roundCfg);
         _validateCommitTlockData(
             contentId, roundId, ciphertext, targetRound, drandChainHash, epochEnd, roundCfg.epochDuration

@@ -75,7 +75,12 @@ contract MockVoterIdNFT is IVoterIdNFT {
     }
 
     function revokeVoterId(address holder) external {
+        uint256 tokenId = tokenIds[holder];
         holders[holder] = false;
+        delete tokenIds[holder];
+        if (tokenId != 0) {
+            delete tokenHolders[tokenId];
+        }
     }
 
     function setDelegate(address delegate) external {

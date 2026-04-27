@@ -601,6 +601,47 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         vm.stopPrank();
     }
 
+    function test_CommitSameNullifierAfterRemint_SameRound_RevertsAlreadyCommitted() public {
+        vm.prank(owner);
+        registry.setVoterIdNFT(address(mockVoterIdNFT));
+        vm.prank(owner);
+        ProtocolConfig(protocolConfigAddress).setVoterIdNFT(address(mockVoterIdNFT));
+
+        mockVoterIdNFT.mint(submitter, 9_001);
+        mockVoterIdNFT.mint(voter1, 42);
+
+        uint256 contentId = _submitContent();
+        (bytes32 originalCommitKey,) = _commit(voter1, contentId, true, STAKE);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
+
+        mockVoterIdNFT.revokeVoterId(voter1);
+        mockVoterIdNFT.resetNullifier(42);
+        mockVoterIdNFT.mint(voter2, 42);
+
+        vm.warp(block.timestamp + 25 hours);
+
+        bytes32 salt2 = keccak256(abi.encodePacked(voter2, block.timestamp, "remint"));
+        bytes32 commitHash2 = _commitHash(false, salt2, contentId);
+        bytes memory ciphertext2 = _testCiphertext(false, salt2, contentId);
+
+        vm.startPrank(voter2);
+        hrepToken.approve(address(engine), STAKE);
+        vm.expectRevert(RoundVotingEngine.AlreadyCommitted.selector);
+        engine.commitVote(
+            contentId,
+            _defaultRatingReferenceBps(),
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            commitHash2,
+            ciphertext2,
+            STAKE,
+            address(0)
+        );
+        vm.stopPrank();
+
+        assertEq(engine.voterNullifierCommitKey(contentId, roundId, 42), originalCommitKey);
+    }
+
     // =========================================================================
     // 4. CANNOT REVEAL BEFORE EPOCH ENDS (EpochNotEnded)
     // =========================================================================

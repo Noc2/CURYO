@@ -144,7 +144,9 @@ library RoundCleanupLib {
             roundCommitVoterId[commitKey] = voterId;
             uint256 voterNullifier = voterIdNft.getNullifier(voterId);
             if (voterNullifier != 0) {
-                roundVoterNullifierCommitKey[voterNullifier] = commitKey;
+                if (roundVoterNullifierCommitKey[voterNullifier] == bytes32(0)) {
+                    roundVoterNullifierCommitKey[voterNullifier] = commitKey;
+                }
             }
         }
     }

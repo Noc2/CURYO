@@ -69,6 +69,7 @@ library VotePreflightLib {
     function prepareCommit(
         mapping(uint256 => mapping(uint256 => mapping(address => bytes32))) storage voterCommitHash,
         mapping(uint256 => mapping(uint256 => mapping(uint256 => bool))) storage hasTokenIdCommitted,
+        mapping(uint256 => mapping(uint256 => mapping(uint256 => bytes32))) storage voterNullifierCommitKey,
         mapping(uint256 => mapping(address => uint256)) storage lastVoteTimestamp,
         mapping(uint256 => mapping(uint256 => uint256)) storage lastVoteTimestampByToken,
         IVoterIdNFT voterIdNft,
@@ -93,6 +94,8 @@ library VotePreflightLib {
             params.voterId,
             params.useTokenIdentity,
             params.commitHash,
+            voterNullifierCommitKey,
+            voterIdNft,
             params.roundVoteCount,
             params.maxVoters
         );
@@ -136,11 +139,19 @@ library VotePreflightLib {
         uint256 voterId,
         bool useTokenIdentity,
         bytes32 commitHash,
+        mapping(uint256 => mapping(uint256 => mapping(uint256 => bytes32))) storage voterNullifierCommitKey,
+        IVoterIdNFT voterIdNft,
         uint256 roundVoteCount,
         uint256 maxVoters
     ) private view returns (bytes32 commitKey) {
         if (voterCommitHash[contentId][roundId][voter] != bytes32(0)) revert AlreadyCommitted();
         if (useTokenIdentity && hasTokenIdCommitted[contentId][roundId][voterId]) revert AlreadyCommitted();
+        if (useTokenIdentity) {
+            uint256 nullifier = voterIdNft.getNullifier(voterId);
+            if (nullifier != 0 && voterNullifierCommitKey[contentId][roundId][nullifier] != bytes32(0)) {
+                revert AlreadyCommitted();
+            }
+        }
         if (roundVoteCount >= maxVoters) revert MaxVotersReached();
 
         commitKey = keccak256(abi.encodePacked(voter, commitHash));
