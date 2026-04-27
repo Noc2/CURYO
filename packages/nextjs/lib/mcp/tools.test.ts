@@ -2,6 +2,8 @@ import type { McpAgentAuth } from "./auth";
 import { __setMcpToolTestOverridesForTests, callCuryoMcpTool } from "./tools";
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, mock, test } from "node:test";
+import { __setDatabaseResourcesForTests } from "~~/lib/db";
+import { createMemoryDatabaseResources } from "~~/lib/db/testMemory";
 import { __setUrlSafetyDnsResolversForTests } from "~~/utils/urlSafety";
 
 const AGENT: McpAgentAuth = {
@@ -11,6 +13,7 @@ const AGENT: McpAgentAuth = {
   perAskLimitAtomic: 2_000_000n,
   scopes: new Set(["curyo:ask"]),
   tokenHash: "a".repeat(64),
+  walletAddress: "0x00000000000000000000000000000000000000aa",
 };
 const RESTRICTED_AGENT: McpAgentAuth = {
   ...AGENT,
@@ -72,6 +75,8 @@ function quoteOverrides() {
     reserveMcpAgentBudget: async () => budgetReservation(),
     resolveX402QuestionConfig: () =>
       ({
+        questionRewardPoolEscrowAddress: "0x0000000000000000000000000000000000000002",
+        serviceFeeAmount: 0n,
         usdcAddress: "0x0000000000000000000000000000000000000001",
       }) as never,
   };
@@ -88,6 +93,7 @@ function managedBudgetSummary() {
 }
 
 beforeEach(() => {
+  __setDatabaseResourcesForTests(createMemoryDatabaseResources());
   __setUrlSafetyDnsResolversForTests({
     resolve4: async () => ["93.184.216.34"],
     resolve6: async () => [],
@@ -96,39 +102,43 @@ beforeEach(() => {
 
 afterEach(() => {
   mock.reset();
+  __setDatabaseResourcesForTests(null);
   __setUrlSafetyDnsResolversForTests(null);
   __setMcpToolTestOverridesForTests(null);
 });
 
-test("curyo_ask_humans does not mark failed after submitted ask bookkeeping fails", async () => {
+test("curyo_ask_humans returns a wallet transaction plan without submitting from the server", async () => {
   mock.method(console, "error", () => {});
-  const reservationUpdates: string[] = [];
+  const prepared: unknown[] = [];
 
   __setMcpToolTestOverridesForTests({
-    getMcpAgentBudgetSummary: async () => {
-      throw new Error("summary offline");
-    },
-    handleManagedQuestionSubmissionRequest: async () => ({
-      body: {
-        contentId: "123",
-        operationKey: OPERATION_KEY,
-        payment: {
-          amount: "1000000",
-          asset: "0x0000000000000000000000000000000000000001",
-          serviceFeeAmount: "0",
+    getMcpAgentBudgetSummary: async () => managedBudgetSummary(),
+    prepareAgentWalletQuestionSubmissionRequest: async params => {
+      prepared.push(params);
+      return {
+        body: {
+          clientRequestId: "mcp:hashed",
+          operationKey: OPERATION_KEY,
+          payment: {
+            amount: "1000000",
+            asset: "USDC",
+            bountyAmount: "1000000",
+            decimals: 6,
+            serviceFeeAmount: "0",
+            spender: "0x0000000000000000000000000000000000000002",
+            tokenAddress: "0x0000000000000000000000000000000000000001",
+          },
+          status: "awaiting_wallet_signature",
+          transactionPlan: {
+            calls: [{ id: "approve-usdc", to: "0x0000000000000000000000000000000000000001" }],
+            requiresOrderedExecution: true,
+          },
+          wallet: { address: params.walletAddress, fundingMode: "agent_wallet" },
         },
-        status: "submitted",
-      },
-      status: 200,
-    }),
-    ...quoteOverrides(),
-    updateMcpBudgetReservation: async params => {
-      reservationUpdates.push(params.status);
-      if (params.status === "submitted") {
-        throw new Error("budget write failed after submit");
-      }
-      return null;
+        status: 202,
+      };
     },
+    ...quoteOverrides(),
   });
 
   const result = await callCuryoMcpTool({
@@ -137,77 +147,20 @@ test("curyo_ask_humans does not mark failed after submitted ask bookkeeping fail
     name: "curyo_ask_humans",
   });
 
-  const body = result as unknown as { status: string; warnings: string[] };
+  const body = result as unknown as {
+    confirmTool: string;
+    managedBudget: { remainingDailyBudgetAtomic: string };
+    status: string;
+    transactionPlan: { calls: unknown[] };
+    wallet: { address: string };
+  };
 
-  assert.equal(body.status, "submitted");
-  assert.deepEqual(reservationUpdates, ["submitted"]);
-  assert.deepEqual(body.warnings, ["submitted_budget_update_failed", "managed_budget_unavailable"]);
-});
-
-test("curyo_ask_humans still enqueues question.submitted when submitted bookkeeping fails", async () => {
-  mock.method(console, "error", () => {});
-  const enqueued: unknown[] = [];
-
-  __setMcpToolTestOverridesForTests({
-    enqueueAgentCallbackEvent: async params => {
-      enqueued.push(params);
-      return [];
-    },
-    getMcpAgentBudgetSummary: async () => managedBudgetSummary(),
-    handleManagedQuestionSubmissionRequest: async () => ({
-      body: {
-        contentId: "123",
-        contentIds: ["123"],
-        operationKey: OPERATION_KEY,
-        payment: {
-          amount: "1000000",
-          asset: "0x0000000000000000000000000000000000000001",
-          serviceFeeAmount: "0",
-        },
-        status: "submitted",
-      },
-      status: 200,
-    }),
-    ...quoteOverrides(),
-    updateMcpBudgetReservation: async params => {
-      if (params.status === "submitted") {
-        throw new Error("budget write failed after submit");
-      }
-      return null;
-    },
-    upsertAgentCallbackSubscription: async () => null,
-  });
-
-  const result = await callCuryoMcpTool({
-    agent: AGENT,
-    arguments: askArguments({
-      webhookEvents: ["question.submitted"],
-      webhookSecret: "webhook-secret",
-      webhookUrl: "https://agent.example/curyo",
-    }),
-    name: "curyo_ask_humans",
-  });
-
-  const body = result as unknown as { warnings: string[] };
-
-  assert.deepEqual(body.warnings, ["submitted_budget_update_failed"]);
-  assert.equal(enqueued.length, 1);
-  assert.deepEqual(enqueued[0], {
-    agentId: AGENT.id,
-    eventId: `${OPERATION_KEY}:question.submitted`,
-    eventType: "question.submitted",
-    payload: {
-      chainId: 42220,
-      clientRequestId: "ask-bookkeeping-failure",
-      contentId: "123",
-      contentIds: ["123"],
-      error: null,
-      eventType: "question.submitted",
-      operationKey: OPERATION_KEY,
-      publicUrl: "http://localhost:3000/rate?content=123",
-      status: "submitted",
-    },
-  });
+  assert.equal(body.status, "awaiting_wallet_signature");
+  assert.equal(body.confirmTool, "curyo_confirm_ask_transactions");
+  assert.equal(body.wallet.address, AGENT.walletAddress);
+  assert.equal(body.transactionPlan.calls.length, 1);
+  assert.equal(body.managedBudget.remainingDailyBudgetAtomic, "4000000");
+  assert.equal(prepared.length, 1);
 });
 
 test("curyo_ask_humans rejects bundle members outside the agent category allowlist", async () => {
@@ -240,151 +193,7 @@ test("curyo_ask_humans rejects bundle members outside the agent category allowli
   );
 });
 
-test("curyo_ask_humans async returns submitting and scheduled completion marks budget submitted", async () => {
-  const scheduledTasks: Array<() => Promise<void> | void> = [];
-  const reservationUpdates: Array<{ contentId?: string | null; status: string }> = [];
-  let completed = false;
-
-  __setMcpToolTestOverridesForTests({
-    completeManagedQuestionSubmissionRequest: async () => {
-      completed = true;
-      return {
-        body: {
-          contentId: "777",
-          operationKey: OPERATION_KEY,
-          status: "submitted",
-        },
-        status: 200,
-      };
-    },
-    getMcpAgentBudgetSummary: async () => managedBudgetSummary(),
-    startManagedQuestionSubmissionRequest: async () => ({
-      body: {
-        contentId: null,
-        operationKey: OPERATION_KEY,
-        payment: {
-          amount: "1000000",
-          asset: "0x0000000000000000000000000000000000000001",
-          serviceFeeAmount: "0",
-        },
-        status: "submitting",
-      },
-      shouldSubmit: true,
-      status: 202,
-    }),
-    ...quoteOverrides(),
-    updateMcpBudgetReservation: async params => {
-      reservationUpdates.push({ contentId: params.contentId, status: params.status });
-      return null;
-    },
-  });
-
-  const result = await callCuryoMcpTool({
-    agent: AGENT,
-    arguments: askArguments({ mode: "async" }),
-    name: "curyo_ask_humans",
-    scheduleBackgroundTask: task => {
-      scheduledTasks.push(task);
-    },
-  });
-
-  const body = result as unknown as {
-    clientRequestId: string;
-    managedBudget: { remainingDailyBudgetAtomic: string };
-    pollAfterMs: number;
-    status: string;
-    statusTool: string;
-  };
-
-  assert.equal(body.status, "submitting");
-  assert.equal(body.clientRequestId, "ask-bookkeeping-failure");
-  assert.equal(body.pollAfterMs, 5_000);
-  assert.equal(body.statusTool, "curyo_get_question_status");
-  assert.equal(body.managedBudget.remainingDailyBudgetAtomic, "4000000");
-  assert.equal(completed, false);
-  assert.equal(scheduledTasks.length, 1);
-  assert.deepEqual(reservationUpdates, []);
-
-  await scheduledTasks[0]?.();
-
-  assert.equal(completed, true);
-  assert.deepEqual(reservationUpdates, [{ contentId: "777", status: "submitted" }]);
-});
-
-test("curyo_ask_humans async completion failure marks budget failed", async () => {
-  mock.method(console, "error", () => {});
-  const scheduledTasks: Array<() => Promise<void> | void> = [];
-  const reservationUpdates: Array<{ error?: string | null; status: string }> = [];
-
-  __setMcpToolTestOverridesForTests({
-    completeManagedQuestionSubmissionRequest: async () => {
-      throw new Error("chain submit failed");
-    },
-    getMcpAgentBudgetSummary: async () => managedBudgetSummary(),
-    startManagedQuestionSubmissionRequest: async () => ({
-      body: {
-        contentId: null,
-        operationKey: OPERATION_KEY,
-        status: "submitting",
-      },
-      shouldSubmit: true,
-      status: 202,
-    }),
-    ...quoteOverrides(),
-    updateMcpBudgetReservation: async params => {
-      reservationUpdates.push({ error: params.error, status: params.status });
-      return null;
-    },
-  });
-
-  await callCuryoMcpTool({
-    agent: AGENT,
-    arguments: askArguments({ mode: "async" }),
-    name: "curyo_ask_humans",
-    scheduleBackgroundTask: task => {
-      scheduledTasks.push(task);
-    },
-  });
-
-  await scheduledTasks[0]?.();
-
-  assert.deepEqual(reservationUpdates, [{ error: "chain submit failed", status: "failed" }]);
-});
-
-test("curyo_ask_humans async does not schedule duplicate active submissions", async () => {
-  let scheduled = false;
-
-  __setMcpToolTestOverridesForTests({
-    getMcpAgentBudgetSummary: async () => managedBudgetSummary(),
-    startManagedQuestionSubmissionRequest: async () => ({
-      body: {
-        contentId: null,
-        operationKey: OPERATION_KEY,
-        status: "submitting",
-      },
-      shouldSubmit: false,
-      status: 202,
-    }),
-    ...quoteOverrides(),
-    updateMcpBudgetReservation: async () => {
-      throw new Error("budget should not be updated for active duplicate");
-    },
-  });
-
-  const result = await callCuryoMcpTool({
-    agent: AGENT,
-    arguments: askArguments({ mode: "async" }),
-    name: "curyo_ask_humans",
-    scheduleBackgroundTask: () => {
-      scheduled = true;
-    },
-  });
-
-  assert.equal((result as unknown as { status: string }).status, "submitting");
-  assert.equal(scheduled, false);
-});
-
-test("curyo_ask_humans registers webhooks and enqueues submitted callbacks", async () => {
+test("curyo_ask_humans registers webhooks and enqueues the awaiting-signature callback", async () => {
   const registered: unknown[] = [];
   const enqueued: unknown[] = [];
 
@@ -394,17 +203,15 @@ test("curyo_ask_humans registers webhooks and enqueues submitted callbacks", asy
       return [];
     },
     getMcpAgentBudgetSummary: async () => managedBudgetSummary(),
-    handleManagedQuestionSubmissionRequest: async () => ({
+    prepareAgentWalletQuestionSubmissionRequest: async params => ({
       body: {
-        contentId: "123",
-        contentIds: ["123"],
         operationKey: OPERATION_KEY,
-        status: "submitted",
+        status: "awaiting_wallet_signature",
+        wallet: { address: params.walletAddress, fundingMode: "agent_wallet" },
       },
-      status: 200,
+      status: 202,
     }),
     ...quoteOverrides(),
-    updateMcpBudgetReservation: async () => null,
     upsertAgentCallbackSubscription: async params => {
       registered.push(params);
       return null;
@@ -414,7 +221,7 @@ test("curyo_ask_humans registers webhooks and enqueues submitted callbacks", asy
   const result = await callCuryoMcpTool({
     agent: AGENT,
     arguments: askArguments({
-      webhookEvents: ["question.submitted"],
+      webhookEvents: ["question.submitting"],
       webhookSecret: "webhook-secret",
       webhookUrl: "https://agent.example/curyo",
     }),
@@ -426,30 +233,30 @@ test("curyo_ask_humans registers webhooks and enqueues submitted callbacks", asy
   };
 
   assert.equal(body.webhook.registered, true);
-  assert.deepEqual(body.webhook.events, ["question.submitted"]);
+  assert.deepEqual(body.webhook.events, ["question.submitting"]);
   assert.ok(body.webhook.signatureHeaders.includes("x-curyo-callback-signature"));
   assert.equal(registered.length, 1);
   assert.deepEqual(registered[0], {
     agentId: AGENT.id,
     callbackUrl: "https://agent.example/curyo",
-    eventTypes: ["question.submitted"],
+    eventTypes: ["question.submitting"],
     secret: "webhook-secret",
   });
   assert.equal(enqueued.length, 1);
   assert.deepEqual(enqueued[0], {
     agentId: AGENT.id,
-    eventId: `${OPERATION_KEY}:question.submitted`,
-    eventType: "question.submitted",
+    eventId: `${OPERATION_KEY}:question.submitting`,
+    eventType: "question.submitting",
     payload: {
       chainId: 42220,
       clientRequestId: "ask-bookkeeping-failure",
-      contentId: "123",
-      contentIds: ["123"],
+      contentId: null,
+      contentIds: [],
       error: null,
-      eventType: "question.submitted",
+      eventType: "question.submitting",
       operationKey: OPERATION_KEY,
-      publicUrl: "http://localhost:3000/rate?content=123",
-      status: "submitted",
+      publicUrl: null,
+      status: "awaiting_wallet_signature",
     },
   });
 });
@@ -460,16 +267,14 @@ test("curyo_ask_humans registers the default lifecycle webhook events", async ()
   __setMcpToolTestOverridesForTests({
     enqueueAgentCallbackEvent: async () => [],
     getMcpAgentBudgetSummary: async () => managedBudgetSummary(),
-    handleManagedQuestionSubmissionRequest: async () => ({
+    prepareAgentWalletQuestionSubmissionRequest: async () => ({
       body: {
-        contentId: "123",
         operationKey: OPERATION_KEY,
-        status: "submitted",
+        status: "awaiting_wallet_signature",
       },
-      status: 200,
+      status: 202,
     }),
     ...quoteOverrides(),
-    updateMcpBudgetReservation: async () => null,
     upsertAgentCallbackSubscription: async params => {
       registered.push(params);
       return null;
@@ -502,15 +307,74 @@ test("curyo_ask_humans registers the default lifecycle webhook events", async ()
   });
 });
 
-test("curyo_ask_humans rejects unsafe webhook URLs before submission side effects", async () => {
-  let submitted = false;
+test("curyo_confirm_ask_transactions marks budget submitted and enqueues submitted callbacks", async () => {
+  const enqueued: unknown[] = [];
+  const reservationUpdates: unknown[] = [];
+
+  __setMcpToolTestOverridesForTests({
+    confirmAgentWalletQuestionSubmissionRequest: async () => ({
+      body: {
+        chainId: 42220,
+        clientRequestId: "ask-bookkeeping-failure",
+        contentId: "123",
+        contentIds: ["123"],
+        operationKey: OPERATION_KEY,
+        status: "submitted",
+      },
+      status: 200,
+    }),
+    enqueueAgentCallbackEvent: async params => {
+      enqueued.push(params);
+      return [];
+    },
+    updateMcpBudgetReservation: async params => {
+      reservationUpdates.push(params);
+      return null;
+    },
+  });
+
+  const result = await callCuryoMcpTool({
+    agent: AGENT,
+    arguments: {
+      operationKey: OPERATION_KEY,
+      transactionHashes: [`0x${"4".repeat(64)}`],
+    },
+    name: "curyo_confirm_ask_transactions",
+  });
+
+  const body = result as unknown as { contentId: string; publicUrl: string; status: string };
+  assert.equal(body.status, "submitted");
+  assert.equal(body.contentId, "123");
+  assert.equal(body.publicUrl, "http://localhost:3000/rate?content=123");
+  assert.deepEqual(reservationUpdates, [{ contentId: "123", operationKey: OPERATION_KEY, status: "submitted" }]);
+  assert.equal(enqueued.length, 1);
+  assert.deepEqual(enqueued[0], {
+    agentId: AGENT.id,
+    eventId: `${OPERATION_KEY}:question.submitted`,
+    eventType: "question.submitted",
+    payload: {
+      chainId: 42220,
+      clientRequestId: "ask-bookkeeping-failure",
+      contentId: "123",
+      contentIds: ["123"],
+      error: null,
+      eventType: "question.submitted",
+      operationKey: OPERATION_KEY,
+      publicUrl: "http://localhost:3000/rate?content=123",
+      status: "submitted",
+    },
+  });
+});
+
+test("curyo_ask_humans rejects unsafe webhook URLs before reservation or wallet planning", async () => {
+  let prepared = false;
   let budgetReserved = false;
 
   __setMcpToolTestOverridesForTests({
     getMcpAgentBudgetSummary: async () => managedBudgetSummary(),
-    handleManagedQuestionSubmissionRequest: async () => {
-      submitted = true;
-      return { body: { status: "submitted" }, status: 200 };
+    prepareAgentWalletQuestionSubmissionRequest: async () => {
+      prepared = true;
+      return { body: { status: "awaiting_wallet_signature" }, status: 202 };
     },
     ...quoteOverrides(),
     reserveMcpAgentBudget: async () => {
@@ -533,5 +397,5 @@ test("curyo_ask_humans rejects unsafe webhook URLs before submission side effect
   );
 
   assert.equal(budgetReserved, false);
-  assert.equal(submitted, false);
+  assert.equal(prepared, false);
 });

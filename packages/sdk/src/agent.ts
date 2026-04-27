@@ -80,6 +80,12 @@ export interface AskHumansRequest extends CuryoAgentQuestionRequest {
   maxPaymentAmount?: string | number | bigint;
   mode?: "sync" | "async";
   transport?: "http" | "mcp" | "x402";
+  walletAddress?: `0x${string}` | string;
+}
+
+export interface ConfirmAskTransactionsRequest {
+  operationKey: `0x${string}` | string;
+  transactionHashes: (`0x${string}` | string)[];
 }
 
 export interface QuestionStatusLookup {
@@ -91,9 +97,36 @@ export interface QuestionStatusLookup {
 export interface CuryoAgentPayment {
   amount?: string;
   asset?: string;
+  bountyAmount?: string;
   decimals?: number;
   serviceFeeAmount?: string;
+  spender?: string;
   tokenAddress?: string;
+  [key: string]: unknown;
+}
+
+export interface CuryoAgentWalletTransactionCall {
+  data?: `0x${string}` | string;
+  description?: string;
+  functionName?: string;
+  id?: string;
+  phase?: "approve_usdc" | "reserve_submission" | "submit_question" | string;
+  to?: `0x${string}` | string;
+  value?: string;
+  waitAfterMs?: number;
+  [key: string]: unknown;
+}
+
+export interface CuryoAgentWalletTransactionPlan {
+  calls?: CuryoAgentWalletTransactionCall[];
+  requiresOrderedExecution?: boolean;
+  [key: string]: unknown;
+}
+
+export interface CuryoAgentWalletInfo {
+  address?: `0x${string}` | string;
+  fundingMode?: "agent_wallet" | string;
+  note?: string;
   [key: string]: unknown;
 }
 
@@ -137,6 +170,7 @@ export interface QuoteQuestionResponse {
   payment?: CuryoAgentPayment;
   questionCount?: number;
   resolvedCategoryIds?: string[];
+  walletPolicyRequired?: boolean;
   [key: string]: unknown;
 }
 
@@ -155,9 +189,12 @@ export interface AskHumansResponse {
   terminal?: boolean;
   status?: string;
   statusTool?: string;
+  confirmTool?: string;
   payment?: CuryoAgentPayment;
   rewardPoolId?: string | null;
+  transactionPlan?: CuryoAgentWalletTransactionPlan;
   transactionHashes?: string[];
+  wallet?: CuryoAgentWalletInfo;
   webhook?: JsonRecord | null;
   warnings?: string[];
   [key: string]: unknown;
@@ -268,6 +305,9 @@ export interface ListResultTemplatesResponse {
 export interface CuryoAgentClient {
   quoteQuestion(params: QuoteQuestionRequest): Promise<QuoteQuestionResponse>;
   askHumans(params: AskHumansRequest): Promise<AskHumansResponse>;
+  confirmAskTransactions(
+    params: ConfirmAskTransactionsRequest,
+  ): Promise<QuestionStatusResponse>;
   getQuestionStatus(
     params: QuestionStatusLookup,
   ): Promise<QuestionStatusResponse>;
@@ -340,6 +380,7 @@ export function createCuryoAgentClient(
   return {
     quoteQuestion: (params) => quoteQuestion(params, config),
     askHumans: (params) => askHumans(params, config),
+    confirmAskTransactions: (params) => confirmAskTransactions(params, config),
     getQuestionStatus: (params) => getQuestionStatus(params, config),
     getResult: (params) => getResult(params, config),
     listResultTemplates: () => listResultTemplates(config),
@@ -390,6 +431,26 @@ export async function askHumans(
 
   if (transport === "mcp" || (transport !== "x402" && config.mcpAccessToken)) {
     return callMcpTool<AskHumansResponse>(config, "curyo_ask_humans", body);
+  }
+
+  throw new CuryoSdkError(AGENT_AUTH_REQUIRED_MESSAGE);
+}
+
+export async function confirmAskTransactions(
+  params: ConfirmAskTransactionsRequest,
+  options: CuryoAgentClientOptions = {},
+): Promise<QuestionStatusResponse> {
+  const config = normalizeAgentConfig(options);
+  if (hasDirectAgentHttp(config)) {
+    return requestJson<QuestionStatusResponse>(config, agentConfirmAskUrl(config, params.operationKey), {
+      body: stringifyJson({ transactionHashes: params.transactionHashes }),
+      headers: jsonAgentHeaders(config),
+      method: "POST",
+    });
+  }
+
+  if (config.mcpAccessToken) {
+    return callMcpTool<QuestionStatusResponse>(config, "curyo_confirm_ask_transactions", { ...params });
   }
 
   throw new CuryoSdkError(AGENT_AUTH_REQUIRED_MESSAGE);
@@ -1338,6 +1399,14 @@ function agentQuoteUrl(config: NormalizedAgentConfig) {
 
 function agentAsksUrl(config: NormalizedAgentConfig) {
   return new URL("./asks", `${agentBaseUrl(config)}/`).toString();
+}
+
+function agentConfirmAskUrl(config: NormalizedAgentConfig, operationKey: string) {
+  const trimmed = operationKey.trim();
+  if (!trimmed) {
+    throw new CuryoSdkError("operationKey is required to confirm ask transactions");
+  }
+  return new URL(`./asks/${trimmed}/confirm`, `${agentBaseUrl(config)}/`).toString();
 }
 
 function agentStatusUrl(

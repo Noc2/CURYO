@@ -220,6 +220,64 @@ test("askHumans prefers direct authenticated agent HTTP before MCP framing", asy
   assert.equal(requestedBody.maxPaymentAmount, "1250000");
 });
 
+test("confirmAskTransactions uses direct authenticated agent HTTP", async () => {
+  let requestedUrl = "";
+  let requestedHeaders: Headers | undefined;
+  let requestedBody: any;
+  const operationKey = `0x${"77".repeat(32)}`;
+  const agent = createCuryoAgentClient({
+    apiBaseUrl: API_BASE_URL,
+    fetchImpl: async (input: URL | RequestInfo, init?: RequestInit) => {
+      requestedUrl = String(input);
+      requestedBody = JSON.parse(String(init?.body));
+      requestedHeaders = new Headers(init?.headers);
+      return jsonResponse({
+        contentId: "42",
+        operationKey,
+        status: "submitted",
+      });
+    },
+    mcpAccessToken: "agent-token",
+  });
+
+  const response = await agent.confirmAskTransactions({
+    operationKey,
+    transactionHashes: [`0x${"88".repeat(32)}`],
+  });
+
+  assert.equal(requestedUrl, `https://curyo.example/api/agent/asks/${operationKey}/confirm`);
+  assert.equal(requestedHeaders?.get("authorization"), "Bearer agent-token");
+  assert.deepEqual(requestedBody.transactionHashes, [`0x${"88".repeat(32)}`]);
+  assert.equal(response.contentId, "42");
+});
+
+test("confirmAskTransactions can use MCP framing", async () => {
+  let requestedBody: any;
+  const operationKey = `0x${"99".repeat(32)}`;
+  const agent = createCuryoAgentClient({
+    mcpApiUrl: "https://curyo.example/api/mcp",
+    fetchImpl: async (_input: URL | RequestInfo, init?: RequestInit) => {
+      requestedBody = JSON.parse(String(init?.body));
+      return jsonResponse({
+        result: {
+          structuredContent: { operationKey, status: "submitted" },
+        },
+      });
+    },
+    mcpAccessToken: "agent-token",
+  });
+
+  const response = await agent.confirmAskTransactions({
+    operationKey,
+    transactionHashes: [`0x${"aa".repeat(32)}`],
+  });
+
+  assert.equal(requestedBody.params.name, "curyo_confirm_ask_transactions");
+  assert.equal(requestedBody.params.arguments.operationKey, operationKey);
+  assert.deepEqual(requestedBody.params.arguments.transactionHashes, [`0x${"aa".repeat(32)}`]);
+  assert.equal(response.status, "submitted");
+});
+
 test("getQuestionStatus decorates x402 lookups with transport-independent readiness hints", async () => {
   const requestedUrls: string[] = [];
   const agent = createCuryoAgentClient({

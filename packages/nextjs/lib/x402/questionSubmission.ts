@@ -1,6 +1,6 @@
 import { ContentRegistryAbi, ProtocolConfigAbi } from "@curyo/contracts/abis";
 import { getSharedDeploymentAddress } from "@curyo/contracts/deployments";
-import { randomBytes } from "crypto";
+import { createHash, randomBytes } from "crypto";
 import "server-only";
 import {
   type Address,
@@ -9,6 +9,7 @@ import {
   createPublicClient,
   createWalletClient,
   decodeEventLog,
+  encodeFunctionData,
   erc20Abi,
   http,
   isAddress,
@@ -32,6 +33,7 @@ import {
   type X402QuestionPayload,
   X402_CELO_USDC_BY_CHAIN_ID,
   X402_SUBMISSION_REWARD_ASSET_USDC,
+  X402_USDC_DECIMALS,
   assertSupportedX402BundleBounty,
   buildX402QuestionOperation,
 } from "~~/lib/x402/questionPayload";
@@ -40,7 +42,47 @@ const RESERVED_SUBMISSION_WAIT_MS = 1_100;
 const TX_RECEIPT_TIMEOUT_MS = 180_000;
 const SUBMITTING_STALE_MS = 5 * 60_000;
 
-export type X402QuestionSubmissionStatus = "payment_settled" | "submitting" | "submitted" | "failed";
+export type X402QuestionSubmissionStatus =
+  | "awaiting_wallet_signature"
+  | "payment_settled"
+  | "submitting"
+  | "submitted"
+  | "failed";
+
+export type AgentWalletTransactionPhase = "approve_usdc" | "reserve_submission" | "submit_question";
+
+export type AgentWalletTransactionCall = {
+  data: Hex;
+  description: string;
+  functionName: string;
+  id: string;
+  phase: AgentWalletTransactionPhase;
+  to: Address;
+  value: "0";
+  waitAfterMs?: number;
+};
+
+export type AgentWalletQuestionSubmissionPlan = {
+  chainId: number;
+  calls: AgentWalletTransactionCall[];
+  operationKey: `0x${string}`;
+  payment: {
+    amount: string;
+    asset: "USDC";
+    bountyAmount: string;
+    decimals: number;
+    serviceFeeAmount: string;
+    spender: Address;
+    tokenAddress: Address;
+  };
+  payloadHash: string;
+  questionCount: number;
+  requiresOrderedExecution: true;
+  revealCommitment: Hex;
+  roundConfig: ReturnType<typeof serializeQuestionRoundConfig>;
+  submissionKeys: Hex[];
+  walletAddress: Address;
+};
 
 export type X402QuestionSubmissionRecord = {
   operationKey: `0x${string}`;
@@ -66,6 +108,7 @@ export type X402QuestionSubmissionRecord = {
 };
 
 type X402QuestionSubmissionTestOverrides = {
+  buildAgentWalletQuestionSubmissionPlan?: typeof buildAgentWalletQuestionSubmissionPlan;
   executeX402QuestionSubmission?: typeof executeX402QuestionSubmission;
   preflightX402QuestionSubmission?: typeof preflightX402QuestionSubmission;
   resolveX402QuestionConfig?: typeof resolveX402QuestionConfig;
@@ -74,13 +117,17 @@ type X402QuestionSubmissionTestOverrides = {
 type X402QuestionSubmissionConfig = {
   chainId: number;
   contentRegistryAddress: Address;
-  executorPrivateKey: Hex;
-  executorAddress: Address;
+  executorPrivateKey?: Hex;
+  executorAddress: Address | null;
   questionRewardPoolEscrowAddress: Address;
   rpcUrl: string;
   serviceFeeAmount: bigint;
   targetNetwork: NonNullable<ReturnType<typeof getPrimaryServerTargetNetwork>>;
   usdcAddress: Address;
+};
+
+type X402QuestionConfigOptions = {
+  requireExecutor?: boolean;
 };
 
 export class X402QuestionConfigError extends Error {
@@ -380,9 +427,8 @@ export function getX402QuestionFallbackChainId(): number | undefined {
 
 export function resolveX402QuestionConfig(
   chainId: number,
-  _options: { requireThirdwebSecret?: boolean } = {},
+  options: X402QuestionConfigOptions = {},
 ): X402QuestionSubmissionConfig {
-  void _options;
   const targetNetwork = getServerTargetNetworkById(chainId);
   if (!targetNetwork) {
     throw new X402QuestionConfigError(`Chain ${chainId} is not configured for this server.`);
@@ -400,8 +446,8 @@ export function resolveX402QuestionConfig(
   }
 
   const executorPrivateKey = getX402ExecutorPrivateKey();
-  if (!executorPrivateKey) {
-    throw new X402QuestionConfigError("CURYO_X402_EXECUTOR_PRIVATE_KEY is required for x402 question submission.");
+  if (options.requireExecutor && !executorPrivateKey) {
+    throw new X402QuestionConfigError("CURYO_X402_EXECUTOR_PRIVATE_KEY is required for executor question submission.");
   }
 
   const rpcUrl = getRpcUrl(targetNetwork);
@@ -409,16 +455,16 @@ export function resolveX402QuestionConfig(
     throw new X402QuestionConfigError(`No RPC URL is configured for chain ${chainId}.`);
   }
 
-  const account = privateKeyToAccount(executorPrivateKey);
+  const account = executorPrivateKey ? privateKeyToAccount(executorPrivateKey) : null;
 
   return {
     chainId,
     contentRegistryAddress,
-    executorAddress: account.address,
-    executorPrivateKey,
+    executorAddress: account?.address ?? null,
+    executorPrivateKey: executorPrivateKey ?? undefined,
     questionRewardPoolEscrowAddress,
     rpcUrl,
-    serviceFeeAmount: getX402ServiceFeeUsdc(),
+    serviceFeeAmount: options.requireExecutor ? getX402ServiceFeeUsdc() : 0n,
     targetNetwork,
     usdcAddress,
   };
@@ -426,6 +472,9 @@ export function resolveX402QuestionConfig(
 
 function getQuestionSubmissionDependencies() {
   return {
+    buildAgentWalletQuestionSubmissionPlan:
+      x402QuestionSubmissionTestOverrides?.buildAgentWalletQuestionSubmissionPlan ??
+      buildAgentWalletQuestionSubmissionPlan,
     executeX402QuestionSubmission:
       x402QuestionSubmissionTestOverrides?.executeX402QuestionSubmission ?? executeX402QuestionSubmission,
     preflightX402QuestionSubmission:
@@ -435,7 +484,15 @@ function getQuestionSubmissionDependencies() {
   };
 }
 
+function createPublicQuestionClient(config: X402QuestionSubmissionConfig) {
+  return createPublicClient({ chain: config.targetNetwork, transport: http(config.rpcUrl) });
+}
+
 function createViemClients(config: X402QuestionSubmissionConfig) {
+  if (!config.executorPrivateKey) {
+    throw new X402QuestionConfigError("Executor question submission requires CURYO_X402_EXECUTOR_PRIVATE_KEY.");
+  }
+
   const account = privateKeyToAccount(config.executorPrivateKey);
   const chain = config.targetNetwork;
   const transport = http(config.rpcUrl);
@@ -563,7 +620,7 @@ export async function preflightX402QuestionSubmission(params: {
   submissionKeys: Hex[];
 }> {
   const operation = buildX402QuestionOperation(params.payload);
-  const { publicClient } = createViemClients(params.config);
+  const publicClient = createPublicQuestionClient(params.config);
   const preflight = await preflightX402QuestionSubmissionWithClient({
     config: params.config,
     payload: params.payload,
@@ -583,6 +640,10 @@ async function ensureUsdcAllowance(params: {
   publicClient: X402PublicClient;
   walletClient: X402WalletClient;
 }): Promise<Hex | null> {
+  if (!params.config.executorAddress) {
+    throw new X402QuestionConfigError("Executor USDC allowance checks require an executor address.");
+  }
+
   const allowance = (await params.publicClient.readContract({
     address: params.config.usdcAddress,
     abi: erc20Abi,
@@ -605,65 +666,40 @@ async function ensureUsdcAllowance(params: {
   return approveHash;
 }
 
-function readSubmissionResult(receipt: TransactionReceipt): {
-  bundleId: bigint | null;
-  contentIds: bigint[];
-  rewardPoolId: bigint | null;
-} {
-  let bundleId: bigint | null = null;
-  const contentIds: bigint[] = [];
-  let rewardPoolId: bigint | null = null;
-
-  for (const log of receipt.logs) {
-    try {
-      const decoded = decodeEventLog({
-        abi: ContentRegistryAbi,
-        data: log.data,
-        topics: log.topics,
-      }) as { eventName: string; args: Record<string, unknown> };
-
-      if (decoded.eventName === "ContentSubmitted" && typeof decoded.args.contentId === "bigint") {
-        contentIds.push(decoded.args.contentId);
-      }
-      if (decoded.eventName === "QuestionBundleSubmitted") {
-        if (typeof decoded.args.bundleId === "bigint") {
-          bundleId = decoded.args.bundleId;
-        }
-        if (typeof decoded.args.rewardPoolId === "bigint") {
-          rewardPoolId = decoded.args.rewardPoolId;
-        }
-      } else if (
-        decoded.eventName === "SubmissionRewardPoolAttached" &&
-        typeof decoded.args.rewardPoolId === "bigint"
-      ) {
-        rewardPoolId = decoded.args.rewardPoolId;
-      }
-    } catch {
-      // Ignore logs from token transfers and other contracts in the same receipt.
-    }
-  }
-
-  return { bundleId, contentIds, rewardPoolId };
+function buildDeterministicQuestionSalt(params: {
+  index: number;
+  operationKey: Hex;
+  payloadHash: string;
+  submissionKey: Hex;
+  walletAddress: Address;
+}) {
+  return `0x${createHash("sha256")
+    .update(
+      [
+        "curyo",
+        "agent-wallet-question-salt",
+        params.operationKey,
+        params.payloadHash,
+        params.walletAddress.toLowerCase(),
+        params.submissionKey,
+        params.index.toString(),
+      ].join(":"),
+    )
+    .digest("hex")}` as Hex;
 }
 
-async function executeX402QuestionSubmission(params: {
-  config: X402QuestionSubmissionConfig;
+function buildQuestionSubmissionCallContext(params: {
   payload: X402QuestionPayload;
-}): Promise<{ bundleId: bigint | null; contentIds: bigint[]; rewardPoolId: bigint | null; transactionHashes: Hex[] }> {
-  const { account, publicClient, walletClient } = createViemClients(params.config);
-  const preflight = await preflightX402QuestionSubmissionWithClient({
-    config: params.config,
-    payload: params.payload,
-    publicClient,
-  });
-
-  const salts = params.payload.questions.map(() => `0x${randomBytes(32).toString("hex")}` as Hex);
+  salts: Hex[];
+  submissionKeys: Hex[];
+  submitter: Address;
+}) {
   const questions = params.payload.questions.map((question, index) => ({
     categoryId: question.categoryId,
     contextUrl: question.contextUrl,
     description: question.description,
     imageUrls: question.imageUrls,
-    salt: salts[index],
+    salt: params.salts[index],
     spec: {
       questionMetadataHash: question.questionMetadataHash,
       resultSpecHash: question.resultSpecHash,
@@ -683,10 +719,11 @@ async function executeX402QuestionSubmission(params: {
   const roundConfigAbi = questionRoundConfigToAbi(params.payload.roundConfig);
   const isBundleSubmission = questions.length > 1;
   const primaryQuestion = questions[0];
-  const primarySubmissionKey = preflight.submissionKeys[0];
+  const primarySubmissionKey = params.submissionKeys[0];
   if (!primaryQuestion || !primarySubmissionKey) {
     throw new Error("Question payload is empty.");
   }
+
   const revealCommitment = isBundleSubmission
     ? buildQuestionBundleSubmissionRevealCommitment({
         questions,
@@ -697,7 +734,7 @@ async function executeX402QuestionSubmission(params: {
         rewardPoolExpiresAt: params.payload.bounty.rewardPoolExpiresAt,
         feedbackClosesAt: params.payload.bounty.feedbackClosesAt,
         roundConfig: params.payload.roundConfig,
-        submitter: account.address,
+        submitter: params.submitter,
       })
     : buildQuestionSubmissionRevealCommitment({
         categoryId: primaryQuestion.categoryId,
@@ -714,11 +751,202 @@ async function executeX402QuestionSubmission(params: {
         roundConfig: params.payload.roundConfig,
         salt: primaryQuestion.salt,
         submissionKey: primarySubmissionKey,
-        submitter: account.address,
+        submitter: params.submitter,
         tags: primaryQuestion.tags,
         title: primaryQuestion.title,
         videoUrl: primaryQuestion.videoUrl,
       });
+
+  const submitFunctionName: "submitQuestionBundleWithRewardAndRoundConfig" | "submitQuestionWithRewardAndRoundConfig" =
+    isBundleSubmission ? "submitQuestionBundleWithRewardAndRoundConfig" : "submitQuestionWithRewardAndRoundConfig";
+  const submitArgs = isBundleSubmission
+    ? ([questions, rewardTerms, roundConfigAbi] as const)
+    : ([
+        primaryQuestion.contextUrl,
+        primaryQuestion.imageUrls,
+        primaryQuestion.videoUrl,
+        primaryQuestion.title,
+        primaryQuestion.description,
+        primaryQuestion.tags,
+        primaryQuestion.categoryId,
+        primaryQuestion.salt,
+        rewardTerms,
+        roundConfigAbi,
+        primaryQuestion.spec,
+      ] as const);
+
+  return {
+    isBundleSubmission,
+    primaryQuestion,
+    primarySubmissionKey,
+    questions,
+    revealCommitment,
+    rewardTerms,
+    roundConfigAbi,
+    submitArgs,
+    submitFunctionName,
+  };
+}
+
+export async function buildAgentWalletQuestionSubmissionPlan(params: {
+  config: X402QuestionSubmissionConfig;
+  payload: X402QuestionPayload;
+  walletAddress: Address;
+}): Promise<AgentWalletQuestionSubmissionPlan> {
+  const publicClient = createPublicQuestionClient(params.config);
+  const operation = buildX402QuestionOperation(params.payload);
+  const preflight = await preflightX402QuestionSubmissionWithClient({
+    config: params.config,
+    payload: params.payload,
+    publicClient,
+  });
+  const salts = preflight.submissionKeys.map((submissionKey, index) =>
+    buildDeterministicQuestionSalt({
+      index,
+      operationKey: operation.operationKey,
+      payloadHash: operation.payloadHash,
+      submissionKey,
+      walletAddress: params.walletAddress,
+    }),
+  );
+  const context = buildQuestionSubmissionCallContext({
+    payload: params.payload,
+    salts,
+    submissionKeys: preflight.submissionKeys,
+    submitter: params.walletAddress,
+  });
+  const submitDescription =
+    params.payload.questions.length > 1
+      ? `Submit ${params.payload.questions.length} question bundle and fund protocol escrow`
+      : "Submit question and fund protocol escrow";
+
+  return {
+    calls: [
+      {
+        data: encodeFunctionData({
+          abi: erc20Abi,
+          functionName: "approve",
+          args: [params.config.questionRewardPoolEscrowAddress, params.payload.bounty.amount],
+        }),
+        description: "Approve protocol escrow to pull the exact USDC bounty amount",
+        functionName: "approve",
+        id: "approve-usdc",
+        phase: "approve_usdc",
+        to: params.config.usdcAddress,
+        value: "0",
+      },
+      {
+        data: encodeFunctionData({
+          abi: ContentRegistryAbi,
+          functionName: "reserveSubmission",
+          args: [context.revealCommitment],
+        }),
+        description: "Reserve the deterministic question commitment from the wallet signer",
+        functionName: "reserveSubmission",
+        id: "reserve-submission",
+        phase: "reserve_submission",
+        to: params.config.contentRegistryAddress,
+        value: "0",
+        waitAfterMs: RESERVED_SUBMISSION_WAIT_MS,
+      },
+      {
+        data: encodeFunctionData({
+          abi: ContentRegistryAbi,
+          functionName: context.submitFunctionName,
+          args: context.submitArgs as never,
+        }),
+        description: submitDescription,
+        functionName: context.submitFunctionName,
+        id: "submit-question",
+        phase: "submit_question",
+        to: params.config.contentRegistryAddress,
+        value: "0",
+      },
+    ],
+    chainId: params.payload.chainId,
+    operationKey: operation.operationKey,
+    payment: {
+      amount: (params.payload.bounty.amount + params.config.serviceFeeAmount).toString(),
+      asset: "USDC",
+      bountyAmount: params.payload.bounty.amount.toString(),
+      decimals: X402_USDC_DECIMALS,
+      serviceFeeAmount: params.config.serviceFeeAmount.toString(),
+      spender: params.config.questionRewardPoolEscrowAddress,
+      tokenAddress: params.config.usdcAddress,
+    },
+    payloadHash: operation.payloadHash,
+    questionCount: params.payload.questions.length,
+    requiresOrderedExecution: true,
+    revealCommitment: context.revealCommitment,
+    roundConfig: serializeQuestionRoundConfig(params.payload.roundConfig),
+    submissionKeys: preflight.submissionKeys,
+    walletAddress: params.walletAddress,
+  };
+}
+
+function readSubmissionResult(receipt: TransactionReceipt): {
+  bundleId: bigint | null;
+  contentIds: bigint[];
+  rewardPoolId: bigint | null;
+  submitters: Address[];
+} {
+  let bundleId: bigint | null = null;
+  const contentIds: bigint[] = [];
+  let rewardPoolId: bigint | null = null;
+  const submitters = new Set<Address>();
+
+  for (const log of receipt.logs) {
+    try {
+      const decoded = decodeEventLog({
+        abi: ContentRegistryAbi,
+        data: log.data,
+        topics: log.topics,
+      }) as { eventName: string; args: Record<string, unknown> };
+
+      if (decoded.eventName === "ContentSubmitted" && typeof decoded.args.contentId === "bigint") {
+        contentIds.push(decoded.args.contentId);
+      }
+      if (typeof decoded.args.submitter === "string" && isAddress(decoded.args.submitter)) {
+        submitters.add(decoded.args.submitter);
+      }
+      if (decoded.eventName === "QuestionBundleSubmitted") {
+        if (typeof decoded.args.bundleId === "bigint") {
+          bundleId = decoded.args.bundleId;
+        }
+        if (typeof decoded.args.rewardPoolId === "bigint") {
+          rewardPoolId = decoded.args.rewardPoolId;
+        }
+      } else if (
+        decoded.eventName === "SubmissionRewardPoolAttached" &&
+        typeof decoded.args.rewardPoolId === "bigint"
+      ) {
+        rewardPoolId = decoded.args.rewardPoolId;
+      }
+    } catch {
+      // Ignore logs from token transfers and other contracts in the same receipt.
+    }
+  }
+
+  return { bundleId, contentIds, rewardPoolId, submitters: Array.from(submitters) };
+}
+
+async function executeX402QuestionSubmission(params: {
+  config: X402QuestionSubmissionConfig;
+  payload: X402QuestionPayload;
+}): Promise<{ bundleId: bigint | null; contentIds: bigint[]; rewardPoolId: bigint | null; transactionHashes: Hex[] }> {
+  const { account, publicClient, walletClient } = createViemClients(params.config);
+  const preflight = await preflightX402QuestionSubmissionWithClient({
+    config: params.config,
+    payload: params.payload,
+    publicClient,
+  });
+  const salts = params.payload.questions.map(() => `0x${randomBytes(32).toString("hex")}` as Hex);
+  const context = buildQuestionSubmissionCallContext({
+    payload: params.payload,
+    salts,
+    submissionKeys: preflight.submissionKeys,
+    submitter: account.address,
+  });
 
   const transactionHashes: Hex[] = [];
   const approvalHash = await ensureUsdcAllowance({
@@ -736,36 +964,19 @@ async function executeX402QuestionSubmission(params: {
     abi: ContentRegistryAbi,
     chain: params.config.targetNetwork,
     functionName: "reserveSubmission",
-    args: [revealCommitment],
+    args: [context.revealCommitment],
   });
   transactionHashes.push(reserveHash);
   await waitForSuccessfulReceipt(publicClient, reserveHash);
 
   try {
     await sleep(RESERVED_SUBMISSION_WAIT_MS);
-    const submitArgs = isBundleSubmission
-      ? ([questions, rewardTerms, roundConfigAbi] as const)
-      : ([
-          primaryQuestion.contextUrl,
-          primaryQuestion.imageUrls,
-          primaryQuestion.videoUrl,
-          primaryQuestion.title,
-          primaryQuestion.description,
-          primaryQuestion.tags,
-          primaryQuestion.categoryId,
-          primaryQuestion.salt,
-          rewardTerms,
-          roundConfigAbi,
-          primaryQuestion.spec,
-        ] as const);
     const { request } = await publicClient.simulateContract({
       account,
       address: params.config.contentRegistryAddress,
       abi: ContentRegistryAbi,
-      functionName: isBundleSubmission
-        ? "submitQuestionBundleWithRewardAndRoundConfig"
-        : "submitQuestionWithRewardAndRoundConfig",
-      args: submitArgs as never,
+      functionName: context.submitFunctionName,
+      args: context.submitArgs as never,
     });
     const submitHash = await walletClient.writeContract(request);
     transactionHashes.push(submitHash);
@@ -788,7 +999,7 @@ async function executeX402QuestionSubmission(params: {
         abi: ContentRegistryAbi,
         chain: params.config.targetNetwork,
         functionName: "cancelReservedSubmission",
-        args: [revealCommitment],
+        args: [context.revealCommitment],
       });
       transactionHashes.push(cancelHash);
       await waitForSuccessfulReceipt(publicClient, cancelHash);
@@ -879,6 +1090,259 @@ export function x402QuestionSubmissionStatusBody(params: {
   };
 }
 
+async function recordAgentWalletSubmissionPlan(params: {
+  agentId: string;
+  config: X402QuestionSubmissionConfig;
+  operation: X402QuestionOperation;
+  payload: X402QuestionPayload;
+  plan: AgentWalletQuestionSubmissionPlan;
+}) {
+  const now = new Date();
+  const receipt = JSON.stringify({
+    agentId: params.agentId,
+    mode: "agent-wallet-plan",
+    operationKey: params.operation.operationKey,
+    preparedAt: now.toISOString(),
+    revealCommitment: params.plan.revealCommitment,
+    walletAddress: params.plan.walletAddress,
+  });
+
+  try {
+    await dbClient.execute({
+      sql: `
+        INSERT INTO x402_question_submissions (
+          operation_key,
+          client_request_id,
+          payload_hash,
+          chain_id,
+          payer_address,
+          payment_asset,
+          payment_amount,
+          bounty_amount,
+          service_fee_amount,
+          question_count,
+          status,
+          payment_receipt,
+          created_at,
+          updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      args: [
+        params.operation.operationKey,
+        params.payload.clientRequestId,
+        params.operation.payloadHash,
+        params.payload.chainId,
+        params.plan.walletAddress,
+        params.config.usdcAddress,
+        params.plan.payment.amount,
+        params.payload.bounty.amount.toString(),
+        params.config.serviceFeeAmount.toString(),
+        params.payload.questions.length,
+        "awaiting_wallet_signature",
+        receipt,
+        now,
+        now,
+      ],
+    });
+  } catch (error) {
+    const code = typeof error === "object" && error && "code" in error ? String(error.code) : "";
+    if (code !== "23505") {
+      throw error;
+    }
+
+    await dbClient.execute({
+      sql: `
+        UPDATE x402_question_submissions
+        SET payer_address = ?,
+            payment_asset = ?,
+            payment_amount = ?,
+            bounty_amount = ?,
+            service_fee_amount = ?,
+            question_count = ?,
+            status = CASE WHEN status = 'submitted' THEN status ELSE ? END,
+            payment_receipt = CASE WHEN status = 'submitted' THEN payment_receipt ELSE ? END,
+            error = CASE WHEN status = 'submitted' THEN error ELSE NULL END,
+            updated_at = ?
+        WHERE operation_key = ?
+      `,
+      args: [
+        params.plan.walletAddress,
+        params.config.usdcAddress,
+        params.plan.payment.amount,
+        params.payload.bounty.amount.toString(),
+        params.config.serviceFeeAmount.toString(),
+        params.payload.questions.length,
+        "awaiting_wallet_signature",
+        receipt,
+        now,
+        params.operation.operationKey,
+      ],
+    });
+  }
+}
+
+function agentWalletQuestionSubmissionPlanBody(params: {
+  payload: X402QuestionPayload;
+  plan: AgentWalletQuestionSubmissionPlan;
+}) {
+  return {
+    bounty: {
+      amount: params.payload.bounty.amount.toString(),
+      asset: params.payload.bounty.asset,
+      requiredSettledRounds: params.payload.bounty.requiredSettledRounds.toString(),
+      requiredVoters: params.payload.bounty.requiredVoters.toString(),
+      rewardPoolExpiresAt: params.payload.bounty.rewardPoolExpiresAt.toString(),
+      feedbackClosesAt: params.payload.bounty.feedbackClosesAt.toString(),
+    },
+    chainId: params.payload.chainId,
+    clientRequestId: params.payload.clientRequestId,
+    operationKey: params.plan.operationKey,
+    payment: params.plan.payment,
+    payloadHash: params.plan.payloadHash,
+    questionCount: params.payload.questions.length,
+    ready: false,
+    roundConfig: serializeQuestionRoundConfig(params.payload.roundConfig),
+    status: "awaiting_wallet_signature",
+    terminal: false,
+    transactionPlan: {
+      calls: params.plan.calls,
+      requiresOrderedExecution: params.plan.requiresOrderedExecution,
+    },
+    wallet: {
+      address: params.plan.walletAddress,
+      fundingMode: "agent_wallet",
+      note: "The wallet signer must execute every call; Curyo does not receive bounty funds.",
+    },
+  };
+}
+
+export async function prepareAgentWalletQuestionSubmissionRequest(params: {
+  agentId: string;
+  payload: X402QuestionPayload;
+  walletAddress: Address;
+}): Promise<{ body: unknown; status: number }> {
+  const dependencies = getQuestionSubmissionDependencies();
+  const config = dependencies.resolveX402QuestionConfig(params.payload.chainId);
+  const operation = buildX402QuestionOperation(params.payload);
+  const existingRecord = await getX402QuestionSubmissionByClientRequest({
+    chainId: params.payload.chainId,
+    clientRequestId: params.payload.clientRequestId,
+  });
+
+  if (existingRecord && existingRecord.payloadHash !== operation.payloadHash) {
+    throw new X402QuestionConflictError("clientRequestId has already been used for a different question payload.");
+  }
+
+  if (existingRecord?.status === "submitted") {
+    return {
+      body: x402QuestionSubmissionStatusBody({ config, operation, payload: params.payload, record: existingRecord }),
+      status: 200,
+    };
+  }
+
+  const plan = await dependencies.buildAgentWalletQuestionSubmissionPlan({
+    config,
+    payload: params.payload,
+    walletAddress: params.walletAddress,
+  });
+  await recordAgentWalletSubmissionPlan({
+    agentId: params.agentId,
+    config,
+    operation,
+    payload: params.payload,
+    plan,
+  });
+
+  return {
+    body: agentWalletQuestionSubmissionPlanBody({ payload: params.payload, plan }),
+    status: 202,
+  };
+}
+
+function assertTransactionHashes(value: Hex[]) {
+  if (value.length === 0) {
+    throw new X402QuestionConflictError("At least one transaction hash is required.");
+  }
+  for (const hash of value) {
+    if (!/^0x[a-fA-F0-9]{64}$/.test(hash)) {
+      throw new X402QuestionConflictError("transactionHashes must contain 32-byte hex transaction hashes.");
+    }
+  }
+}
+
+export async function confirmAgentWalletQuestionSubmissionRequest(params: {
+  operationKey: `0x${string}`;
+  transactionHashes: Hex[];
+}): Promise<{ body: unknown; status: number }> {
+  assertTransactionHashes(params.transactionHashes);
+  const record = await getX402QuestionSubmissionByOperationKey(params.operationKey);
+  if (!record) {
+    throw new X402QuestionConflictError("Agent wallet submission plan was not found.");
+  }
+  if (record.status === "submitted") {
+    return {
+      body: normalizeSubmittedRecordBody(record),
+      status: 200,
+    };
+  }
+  if (!record.payerAddress || !isAddress(record.payerAddress)) {
+    throw new X402QuestionConflictError("Agent wallet submission plan is missing a wallet address.");
+  }
+
+  const config = resolveX402QuestionConfig(record.chainId);
+  const publicClient = createPublicQuestionClient(config);
+  const walletAddress = record.payerAddress.toLowerCase();
+  let bundleId: bigint | null = null;
+  const contentIds: bigint[] = [];
+  let rewardPoolId: bigint | null = null;
+  let sawExpectedSubmitter = false;
+
+  for (const hash of params.transactionHashes) {
+    const receipt = await waitForSuccessfulReceipt(publicClient, hash);
+    const result = readSubmissionResult(receipt);
+    if (result.contentIds.length > 0) {
+      contentIds.push(...result.contentIds);
+      bundleId = result.bundleId ?? bundleId;
+      rewardPoolId = result.rewardPoolId ?? rewardPoolId;
+    }
+    if (result.submitters.some(submitter => submitter.toLowerCase() === walletAddress)) {
+      sawExpectedSubmitter = true;
+    }
+  }
+
+  if (contentIds.length === 0) {
+    throw new X402QuestionConflictError("Confirmed transactions did not include a Curyo question submission.");
+  }
+  if (!sawExpectedSubmitter) {
+    throw new X402QuestionConflictError("Confirmed submission was not emitted for the planned wallet address.");
+  }
+
+  await updateSubmissionStatus({
+    bundleId,
+    contentId: contentIds[0] ?? null,
+    contentIds,
+    operationKey: params.operationKey,
+    rewardPoolId,
+    status: "submitted",
+    transactionHashes: params.transactionHashes,
+  });
+
+  const updatedRecord = await getX402QuestionSubmissionByOperationKey(params.operationKey);
+  return {
+    body: normalizeSubmittedRecordBody(updatedRecord ?? record),
+    status: 200,
+  };
+}
+
+function normalizeSubmittedRecordBody(record: X402QuestionSubmissionRecord) {
+  return {
+    ...x402QuestionSubmissionRecordBody(record),
+    ready: false,
+    terminal: false,
+  };
+}
+
 export function x402QuestionSubmissionRecordBody(record: X402QuestionSubmissionRecord | null) {
   if (!record) {
     return {
@@ -940,7 +1404,7 @@ export async function startManagedQuestionSubmissionRequest(params: {
   payload: X402QuestionPayload;
 }): Promise<{ body: unknown; shouldSubmit: boolean; status: number; submissionToken?: string | null }> {
   const dependencies = getQuestionSubmissionDependencies();
-  const config = dependencies.resolveX402QuestionConfig(params.payload.chainId, { requireThirdwebSecret: false });
+  const config = dependencies.resolveX402QuestionConfig(params.payload.chainId, { requireExecutor: true });
   const operation = buildX402QuestionOperation(params.payload);
   const existingRecord = await getX402QuestionSubmissionByClientRequest({
     chainId: params.payload.chainId,
@@ -1010,7 +1474,7 @@ export async function completeManagedQuestionSubmissionRequest(params: {
   submissionToken?: string | null;
 }): Promise<{ body: unknown; status: number }> {
   const dependencies = getQuestionSubmissionDependencies();
-  const config = dependencies.resolveX402QuestionConfig(params.payload.chainId, { requireThirdwebSecret: false });
+  const config = dependencies.resolveX402QuestionConfig(params.payload.chainId, { requireExecutor: true });
   const operation = buildX402QuestionOperation(params.payload);
   const existingRecord = await getX402QuestionSubmissionByClientRequest({
     chainId: params.payload.chainId,

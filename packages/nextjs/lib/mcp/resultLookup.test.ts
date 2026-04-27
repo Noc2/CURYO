@@ -15,6 +15,7 @@ const AGENT: McpAgentAuth = {
   perAskLimitAtomic: 2_000_000n,
   scopes: new Set(["curyo:read"]),
   tokenHash: "a".repeat(64),
+  walletAddress: null,
 };
 
 before(() => {

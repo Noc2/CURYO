@@ -11,6 +11,7 @@ env.DATABASE_URL = "memory:";
 
 type AgentAsksByClientRouteModule = typeof import("./asks/by-client-request/route");
 type AgentAsksByClientAuditRouteModule = typeof import("./asks/by-client-request/audit/route");
+type AgentAsksConfirmRouteModule = typeof import("./asks/[operationKey]/confirm/route");
 type AgentAsksAuditRouteModule = typeof import("./asks/[operationKey]/audit/route");
 type AgentAsksExportRouteModule = typeof import("./asks/export/route");
 type AgentAsksOperationRouteModule = typeof import("./asks/[operationKey]/route");
@@ -33,6 +34,7 @@ const OPERATION_KEY = `0x${"1".repeat(64)}` as const;
 
 let asksByClientRoute: AgentAsksByClientRouteModule;
 let asksByClientAuditRoute: AgentAsksByClientAuditRouteModule;
+let asksConfirmRoute: AgentAsksConfirmRouteModule;
 let asksAuditRoute: AgentAsksAuditRouteModule;
 let asksExportRoute: AgentAsksExportRouteModule;
 let asksOperationRoute: AgentAsksOperationRouteModule;
@@ -67,6 +69,7 @@ function configureAgent() {
       perAskLimitAtomic: "1000000",
       scopes: ["curyo:ask", "curyo:balance", "curyo:quote", "curyo:read"],
       token: "secret-token",
+      walletAddress: "0x00000000000000000000000000000000000000aa",
     },
   ]);
 }
@@ -269,6 +272,8 @@ function installQuoteOverrides() {
     }),
     resolveX402QuestionConfig: () =>
       ({
+        questionRewardPoolEscrowAddress: "0x0000000000000000000000000000000000000002",
+        serviceFeeAmount: 0n,
         usdcAddress: "0x0000000000000000000000000000000000000001",
       }) as never,
   });
@@ -284,19 +289,27 @@ function installAskOverrides() {
       remainingDailyBudgetAtomic: "4000000",
       spentTodayAtomic: "1000000",
     }),
-    handleManagedQuestionSubmissionRequest: async () => ({
+    prepareAgentWalletQuestionSubmissionRequest: async params => ({
       body: {
-        contentId: "42",
-        contentIds: ["42"],
+        clientRequestId: "mcp:ask-http",
         operationKey: OPERATION_KEY,
         payment: {
           amount: "1000000",
-          asset: "0x0000000000000000000000000000000000000001",
+          asset: "USDC",
+          bountyAmount: "1000000",
+          decimals: 6,
           serviceFeeAmount: "0",
+          spender: "0x0000000000000000000000000000000000000002",
+          tokenAddress: "0x0000000000000000000000000000000000000001",
         },
-        status: "submitted",
+        status: "awaiting_wallet_signature",
+        transactionPlan: {
+          calls: [{ id: "approve-usdc", to: "0x0000000000000000000000000000000000000001" }],
+          requiresOrderedExecution: true,
+        },
+        wallet: { address: params.walletAddress, fundingMode: "agent_wallet" },
       },
-      status: 200,
+      status: 202,
     }),
     preflightX402QuestionSubmission: async () => ({
       operation: {
@@ -325,6 +338,8 @@ function installAskOverrides() {
       }) as never,
     resolveX402QuestionConfig: () =>
       ({
+        questionRewardPoolEscrowAddress: "0x0000000000000000000000000000000000000002",
+        serviceFeeAmount: 0n,
         usdcAddress: "0x0000000000000000000000000000000000000001",
       }) as never,
     updateMcpBudgetReservation: async () => null,
@@ -342,6 +357,7 @@ before(async () => {
   urlSafetyModule = await import("~~/utils/urlSafety");
   asksByClientAuditRoute = await import("./asks/by-client-request/audit/route");
   asksByClientRoute = await import("./asks/by-client-request/route");
+  asksConfirmRoute = await import("./asks/[operationKey]/confirm/route");
   asksAuditRoute = await import("./asks/[operationKey]/audit/route");
   asksExportRoute = await import("./asks/export/route");
   asksOperationRoute = await import("./asks/[operationKey]/route");
@@ -411,7 +427,7 @@ test("agent quote route returns a direct authenticated quote response", async ()
   assert.equal((body.fastLane as Record<string, unknown>).pricingConfidence, "medium");
 });
 
-test("agent asks route returns the managed submission response", async () => {
+test("agent asks route returns the wallet transaction plan response", async () => {
   installAskOverrides();
 
   const response = await asksRoute.POST(
@@ -423,9 +439,9 @@ test("agent asks route returns the managed submission response", async () => {
   const body = (await response.json()) as Record<string, unknown>;
 
   assert.equal(response.status, 200);
-  assert.equal(body.status, "submitted");
-  assert.equal(body.contentId, "42");
+  assert.equal(body.status, "awaiting_wallet_signature");
   assert.equal(body.operationKey, OPERATION_KEY);
+  assert.equal((body.transactionPlan as { calls: unknown[] }).calls.length, 1);
 });
 
 test("agent asks route returns stable direct HTTP error payloads", async () => {
@@ -461,6 +477,37 @@ test("agent asks route returns stable direct HTTP error payloads", async () => {
   assert.equal(response.status, 403);
   assert.equal(body.code, "category_disallowed");
   assert.equal(body.originalCode, "McpBudgetError");
+});
+
+test("agent confirm route returns a submitted ask response", async () => {
+  mcpToolsModule.__setMcpToolTestOverridesForTests({
+    confirmAgentWalletQuestionSubmissionRequest: async () => ({
+      body: {
+        chainId: 42220,
+        clientRequestId: "ask-http",
+        contentId: "42",
+        contentIds: ["42"],
+        operationKey: OPERATION_KEY,
+        status: "submitted",
+      },
+      status: 200,
+    }),
+    enqueueAgentCallbackEvent: async () => [],
+    updateMcpBudgetReservation: async () => null,
+  });
+
+  const response = await asksConfirmRoute.POST(
+    makePost(`https://curyo.xyz/api/agent/asks/${OPERATION_KEY}/confirm`, {
+      transactionHashes: [`0x${"4".repeat(64)}`],
+    }),
+    { params: Promise.resolve({ operationKey: OPERATION_KEY }) },
+  );
+  const body = (await response.json()) as Record<string, unknown>;
+
+  assert.equal(response.status, 200);
+  assert.equal(body.status, "submitted");
+  assert.equal(body.contentId, "42");
+  assert.equal(body.publicUrl, "http://localhost:3000/rate?content=42");
 });
 
 test("agent status route returns not_found without treating it as a transport error", async () => {

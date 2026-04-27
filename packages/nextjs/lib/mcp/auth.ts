@@ -16,6 +16,7 @@ export type McpAgentAuth = {
   perAskLimitAtomic: bigint;
   scopes: Set<string>;
   tokenHash: string;
+  walletAddress: string | null;
 };
 
 export class McpAuthError extends Error {
@@ -68,6 +69,7 @@ function normalizeConfiguredAgent(value: unknown): McpAgentAuth | null {
     perAskLimitAtomic: parseAtomicAmount(entry.perAskLimitAtomic ?? entry.perAskLimit ?? "0", "perAskLimitAtomic"),
     scopes,
     tokenHash: hash,
+    walletAddress: typeof entry.walletAddress === "string" ? entry.walletAddress.trim() || null : null,
   };
 }
 
@@ -105,6 +107,7 @@ export function getConfiguredMcpAgents(): McpAgentAuth[] {
       ),
       scopes: new Set(scopes),
       tokenHash: sha256(token),
+      walletAddress: process.env.CURYO_MCP_WALLET_ADDRESS?.trim() || null,
     },
   ];
 }

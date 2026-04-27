@@ -12,6 +12,12 @@ const chainIdSchema = {
   type: "integer",
 };
 
+const evmAddressSchema = {
+  description: "EVM wallet address.",
+  pattern: "^0x[a-fA-F0-9]{40}$",
+  type: "string",
+};
+
 const templateSelectorSchema = {
   additionalProperties: false,
   properties: {
@@ -159,6 +165,10 @@ export const agentAskHumansInputSchema = {
       enum: ["sync", "async"],
       type: "string",
     },
+    walletAddress: {
+      ...evmAddressSchema,
+      description: "User-controlled smart wallet or scoped agent wallet that will sign the returned transaction plan.",
+    },
     webhookUrl: {
       description: "Optional HTTPS callback URL for lifecycle events.",
       type: "string",
@@ -174,6 +184,21 @@ export const agentAskHumansInputSchema = {
     },
   },
   required: ["clientRequestId", "bounty", "maxPaymentAmount"],
+  type: "object",
+} satisfies JsonSchema;
+
+export const agentConfirmAskTransactionsInputSchema = {
+  additionalProperties: false,
+  properties: {
+    operationKey: { description: "Curyo operation key returned by curyo_ask_humans.", type: "string" },
+    transactionHashes: {
+      description: "Transaction hashes produced by executing the wallet transaction plan.",
+      items: { pattern: "^0x[a-fA-F0-9]{64}$", type: "string" },
+      minItems: 1,
+      type: "array",
+    },
+  },
+  required: ["operationKey", "transactionHashes"],
   type: "object",
 } satisfies JsonSchema;
 
@@ -225,8 +250,10 @@ export const agentPaymentOutputSchema = {
   properties: {
     amount: atomicAmountSchema,
     asset: { type: "string" },
+    bountyAmount: atomicAmountSchema,
     decimals: { type: "integer" },
     serviceFeeAmount: atomicAmountSchema,
+    spender: { type: "string" },
     tokenAddress: { type: "string" },
   },
   type: "object",
@@ -243,6 +270,7 @@ export const agentQuoteOutputSchema = {
     payloadHash: { type: "string" },
     questionCount: { type: "integer" },
     resolvedCategoryIds: { items: { type: "string" }, type: "array" },
+    walletPolicyRequired: { type: "boolean" },
   },
   required: ["canSubmit", "operationKey", "payment", "payloadHash", "questionCount", "resolvedCategoryIds"],
   type: "object",
@@ -287,7 +315,7 @@ export const agentQuestionStatusOutputSchema = {
     rewardPoolId: { type: ["string", "null"] },
     resultTool: { type: ["string", "null"] },
     status: {
-      enum: ["not_found", "payment_settled", "submitting", "submitted", "failed"],
+      enum: ["not_found", "awaiting_wallet_signature", "payment_settled", "submitting", "submitted", "failed"],
       type: "string",
     },
     terminal: { type: "boolean" },
@@ -307,6 +335,8 @@ export const agentAskHumansOutputSchema = {
     managedBudget: { type: ["object", "null"] },
     pollAfterMs: { type: "integer" },
     statusTool: { type: "string" },
+    transactionPlan: { type: "object" },
+    wallet: { type: "object" },
     warnings: { items: { type: "string" }, type: "array" },
   },
   required: ["status", "operationKey"],
