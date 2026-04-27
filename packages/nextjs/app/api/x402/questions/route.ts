@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { X402QuestionInputError, parseX402QuestionRequest } from "~~/lib/x402/questionPayload";
 import {
+  X402QuestionBountyPaymentsDisabledError,
   X402QuestionConfigError,
   X402QuestionConflictError,
   getX402QuestionFallbackChainId,
@@ -15,6 +16,7 @@ const WRITE_RATE_LIMIT = { limit: 30, windowMs: 60_000 };
 function errorResponse(error: unknown) {
   if (
     error instanceof X402QuestionInputError ||
+    error instanceof X402QuestionBountyPaymentsDisabledError ||
     error instanceof X402QuestionConfigError ||
     error instanceof X402QuestionConflictError
   ) {

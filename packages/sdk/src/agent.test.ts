@@ -20,17 +20,6 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-function x402QuoteChallengeResponse(body: unknown) {
-  const encoded = Buffer.from(JSON.stringify(body), "utf8").toString("base64");
-  return new Response(null, {
-    headers: {
-      "content-type": "application/json",
-      "payment-required": encoded,
-    },
-    status: 402,
-  });
-}
-
 test("agent MCP helpers call tools/call with protocol and bearer headers", async () => {
   let requestedUrl = "";
   let requestedBody: any;
@@ -129,77 +118,42 @@ test("quoteQuestion uses direct authenticated agent HTTP when apiBaseUrl and tok
   assert.equal(response.fastLane?.pricingConfidence, "medium");
 });
 
-test("quoteQuestion can read a tokenless x402 payment challenge without spending", async () => {
-  let requestedUrl = "";
-  let requestedBody: any;
+test("quoteQuestion rejects the disabled tokenless hosted x402 path", async () => {
+  let fetchCalls = 0;
   const agent = createCuryoAgentClient({
     apiBaseUrl: API_BASE_URL,
     fetchImpl: async () => {
-      throw new Error("ask fetch should not be used for tokenless quotes");
-    },
-    quoteFetchImpl: async (input: URL | RequestInfo, init?: RequestInit) => {
-      requestedUrl = String(input);
-      requestedBody = JSON.parse(String(init?.body));
-      return x402QuoteChallengeResponse({
-        accepts: [
-          {
-            amount: "1250000",
-            asset: "0x765DE816845861e75A25fCA122bb6898B8B1282a",
-            extra: {
-              decimals: 6,
-              name: "USDC",
-            },
-            payTo: "0x0000000000000000000000000000000000000001",
-            scheme: "exact",
-          },
-        ],
-        error: "Payment required",
-        x402Version: 2,
-      });
+      fetchCalls += 1;
+      throw new Error("disabled x402 quote should not call fetch");
     },
   });
 
-  const quote = await agent.quoteQuestion({
-    bounty: { amount: 1_000_000n, requiredVoters: 3n },
-    chainId: 42220,
-    clientRequestId: "ask-x402-quote",
-    question: {
-      categoryId: 7n,
-      contextUrl: "https://example.com/context",
-      description: "Does this look ready for launch?",
-      tags: ["launch", "agent"],
-      title: "Launch readiness?",
-    },
-  });
-
-  assert.equal(requestedUrl, "https://curyo.example/api/x402/questions");
-  assert.equal(requestedBody.clientRequestId, "ask-x402-quote");
-  assert.equal(quote.canSubmit, true);
-  assert.equal(quote.clientRequestId, "ask-x402-quote");
-  assert.equal(quote.payment?.amount, "1250000");
-  assert.equal(quote.payment?.asset, "USDC");
-  assert.equal(quote.payment?.decimals, 6);
-  assert.equal(
-    quote.payment?.tokenAddress,
-    "0x765DE816845861e75A25fCA122bb6898B8B1282a",
+  assert.throws(
+    () =>
+      agent.quoteQuestion({
+        bounty: { amount: 1_000_000n, requiredVoters: 3n },
+        chainId: 42220,
+        clientRequestId: "ask-x402-quote",
+        question: {
+          categoryId: 7n,
+          contextUrl: "https://example.com/context",
+          description: "Does this look ready for launch?",
+          tags: ["launch", "agent"],
+          title: "Launch readiness?",
+        },
+      }),
+    /Hosted x402 question bounty payments are disabled/i,
   );
-  assert.equal(quote.questionCount, 1);
+  assert.equal(fetchCalls, 0);
 });
 
-test("askHumans defaults to the x402 question endpoint without wallet assumptions", async () => {
-  let requestedUrl = "";
-  let requestedBody: any;
+test("askHumans rejects the disabled tokenless hosted x402 path", async () => {
+  let fetchCalls = 0;
   const agent = createCuryoAgentClient({
     apiBaseUrl: API_BASE_URL,
-    fetchImpl: async (input: URL | RequestInfo, init?: RequestInit) => {
-      requestedUrl = String(input);
-      requestedBody = JSON.parse(String(init?.body));
-      return jsonResponse({
-        clientRequestId: "ask-2",
-        contentId: "42",
-        operationKey: `0x${"22".repeat(32)}`,
-        status: "submitted",
-      });
+    fetchImpl: async () => {
+      fetchCalls += 1;
+      throw new Error("disabled x402 ask should not call fetch");
     },
   });
 
@@ -217,18 +171,15 @@ test("askHumans defaults to the x402 question endpoint without wallet assumption
     },
   };
 
-  const response = await agent.askHumans(request);
-
-  assert.equal(requestedUrl, "https://curyo.example/api/x402/questions");
-  assert.equal(requestedBody.maxPaymentAmount, "1250000");
-  assert.equal(requestedBody.bounty.requiredVoters, "3");
-  assert.equal(response.status, "submitted");
-  assert.equal(response.contentId, "42");
-  assert.equal(response.publicUrl, "https://curyo.example/rate?content=42");
-  assert.equal(response.ready, false);
-  assert.equal(response.resultTool, null);
-  assert.equal(response.statusTool, "curyo_get_question_status");
-  assert.equal(response.terminal, false);
+  await assert.rejects(
+    () => agent.askHumans(request),
+    /Hosted x402 question bounty payments are disabled/i,
+  );
+  await assert.rejects(
+    () => agent.askHumans({ ...request, transport: "x402" }),
+    /Hosted x402 question bounty payments are disabled/i,
+  );
+  assert.equal(fetchCalls, 0);
 });
 
 test("askHumans prefers direct authenticated agent HTTP before MCP framing", async () => {

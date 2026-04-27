@@ -16,6 +16,8 @@ const DEFAULT_MCP_PROTOCOL_VERSION = "2025-11-25";
 const DEFAULT_AGENT_API_PATH = "/api/agent";
 const DEFAULT_X402_QUESTIONS_PATH = "/api/x402/questions";
 const DEFAULT_MCP_PATH = "/api/mcp";
+const HOSTED_X402_BOUNTY_DISABLED_MESSAGE =
+  "Hosted x402 question bounty payments are disabled because they route bounty USDC through the operator executor wallet. Configure mcpAccessToken for the managed agent API or submit from a user-controlled wallet instead.";
 
 export interface CuryoAgentClientOptions {
   agentApiPath?: string;
@@ -300,27 +302,10 @@ interface NormalizedAgentConfig {
   mcpApiUrl?: string;
   mcpAccessToken?: string;
   fetchImpl: CuryoFetch;
-  quoteFetchImpl: CuryoFetch;
   timeoutMs: number;
   mcpProtocolVersion: string;
   x402QuestionsPath: string;
 }
-
-type X402PaymentRequirement = {
-  amount?: string;
-  asset?: string;
-  payTo?: string;
-  maxAmountRequired?: string;
-  extra?: JsonRecord;
-  [key: string]: unknown;
-};
-
-type X402PaymentChallenge = {
-  accepts?: X402PaymentRequirement[];
-  error?: string;
-  x402Version?: number;
-  [key: string]: unknown;
-};
 
 type PublicFeedbackItem = {
   body?: string;
@@ -375,7 +360,7 @@ export function quoteQuestion(
   }
 
   if (config.apiBaseUrl && !config.mcpAccessToken) {
-    return requestX402Quote(config, params);
+    throw new CuryoSdkError(HOSTED_X402_BOUNTY_DISABLED_MESSAGE);
   }
 
   return callMcpTool<QuoteQuestionResponse>(
@@ -407,15 +392,7 @@ export async function askHumans(
     return callMcpTool<AskHumansResponse>(config, "curyo_ask_humans", body);
   }
 
-  const response = await requestJson<AskHumansResponse>(config, x402QuestionsUrl(config), {
-    body: stringifyJson(body),
-    headers: {
-      accept: "application/json",
-      "content-type": "application/json",
-    },
-    method: "POST",
-  });
-  return decorateX402QuestionState(response, config) as AskHumansResponse;
+  throw new CuryoSdkError(HOSTED_X402_BOUNTY_DISABLED_MESSAGE);
 }
 
 export async function getQuestionStatus(
@@ -521,53 +498,6 @@ export async function listResultTemplates(
   );
 }
 
-async function requestX402Quote(
-  config: NormalizedAgentConfig,
-  params: QuoteQuestionRequest,
-): Promise<QuoteQuestionResponse> {
-  const response = await fetchWithTimeout(
-    config.quoteFetchImpl,
-    config.timeoutMs,
-    x402QuestionsUrl(config),
-    {
-      body: stringifyJson(params),
-      headers: {
-        accept: "application/json",
-        "content-type": "application/json",
-      },
-      method: "POST",
-    },
-  );
-  const body = await response.text();
-  const parsed = body.length === 0 ? null : parseJson(body);
-
-  if (response.status === 402) {
-    return buildQuoteFromX402Challenge(
-      params,
-      parseX402PaymentChallenge(response, parsed),
-    );
-  }
-
-  if (response.ok && isJsonRecord(parsed)) {
-    return {
-      canSubmit: true,
-      clientRequestId: params.clientRequestId,
-      operationKey:
-        typeof parsed.operationKey === "string" ? parsed.operationKey : undefined,
-      payment: normalizeQuotedPayment(parsed.payment),
-      questionCount: questionCountFromRequest(params),
-    };
-  }
-
-  const message =
-    isJsonRecord(parsed) && typeof parsed.error === "string"
-      ? parsed.error
-      : isJsonRecord(parsed) && typeof parsed.message === "string"
-        ? parsed.message
-        : `Curyo request failed with status ${response.status}`;
-  throw new CuryoApiError(message, response.status);
-}
-
 async function getX402Result(
   config: NormalizedAgentConfig,
   params: QuestionStatusLookup & { contentId?: string | bigint },
@@ -625,57 +555,6 @@ async function buildPublicAgentResult(
     operation,
     publicUrl: publicQuestionUrl(config, contentId),
   });
-}
-
-function buildQuoteFromX402Challenge(
-  params: QuoteQuestionRequest,
-  challenge: X402PaymentChallenge,
-): QuoteQuestionResponse {
-  const acceptable = Array.isArray(challenge.accepts) ? challenge.accepts[0] : null;
-  if (!acceptable) {
-    throw new CuryoSdkError(
-      "x402 quote challenge did not include any payment requirements",
-    );
-  }
-
-  const amount =
-    typeof acceptable.amount === "string"
-      ? acceptable.amount
-      : typeof acceptable.maxAmountRequired === "string"
-        ? acceptable.maxAmountRequired
-        : null;
-  if (!amount) {
-    throw new CuryoSdkError(
-      "x402 quote challenge did not include a payment amount",
-    );
-  }
-
-  const extra = isJsonRecord(acceptable.extra) ? acceptable.extra : null;
-  const decimals =
-    typeof extra?.decimals === "number"
-      ? extra.decimals
-      : typeof extra?.decimals === "string" && Number.isFinite(Number(extra.decimals))
-        ? Number(extra.decimals)
-        : undefined;
-  const asset =
-    typeof extra?.name === "string"
-      ? extra.name
-      : typeof acceptable.asset === "string"
-        ? acceptable.asset
-        : undefined;
-
-  return {
-    canSubmit: true,
-    clientRequestId: params.clientRequestId,
-    payment: {
-      amount,
-      asset,
-      decimals,
-      tokenAddress:
-        typeof acceptable.asset === "string" ? acceptable.asset : undefined,
-    },
-    questionCount: questionCountFromRequest(params),
-  };
 }
 
 function formatPublicAgentResult(params: {
@@ -1154,56 +1033,6 @@ async function fetchWithTimeout(
   }
 }
 
-function parseX402PaymentChallenge(
-  response: Response,
-  parsedBody: unknown,
-): X402PaymentChallenge {
-  const headerValue = response.headers.get("payment-required");
-  if (headerValue) {
-    return parseJson(decodeBase64(headerValue)) as X402PaymentChallenge;
-  }
-
-  if (isJsonRecord(parsedBody)) {
-    return parsedBody as X402PaymentChallenge;
-  }
-
-  throw new CuryoSdkError(
-    "x402 quote challenge did not include a PAYMENT-REQUIRED header",
-  );
-}
-
-function decodeBase64(value: string) {
-  const trimmed = value.trim();
-  if (typeof globalThis.atob === "function") {
-    return globalThis.atob(trimmed);
-  }
-  return Buffer.from(trimmed, "base64").toString("utf8");
-}
-
-function normalizeQuotedPayment(value: unknown): CuryoAgentPayment | undefined {
-  if (!isJsonRecord(value)) return undefined;
-  return {
-    amount: typeof value.amount === "string" ? value.amount : undefined,
-    asset: typeof value.asset === "string" ? value.asset : undefined,
-    decimals:
-      typeof value.decimals === "number"
-        ? value.decimals
-        : typeof value.decimals === "string" && Number.isFinite(Number(value.decimals))
-          ? Number(value.decimals)
-          : undefined,
-    serviceFeeAmount:
-      typeof value.serviceFeeAmount === "string"
-        ? value.serviceFeeAmount
-        : undefined,
-    tokenAddress:
-      typeof value.tokenAddress === "string" ? value.tokenAddress : undefined,
-  };
-}
-
-function questionCountFromRequest(params: CuryoAgentQuestionRequest) {
-  return Array.isArray(params.questions) ? params.questions.length : params.question ? 1 : 0;
-}
-
 function feedbackUrl(config: NormalizedAgentConfig, contentId: string) {
   if (!config.apiBaseUrl) {
     throw new CuryoSdkError(
@@ -1465,7 +1294,6 @@ function normalizeAgentConfig(
         : undefined),
     mcpProtocolVersion:
       options.mcpProtocolVersion ?? DEFAULT_MCP_PROTOCOL_VERSION,
-    quoteFetchImpl: options.quoteFetchImpl ?? fetchImpl,
     timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
     x402QuestionsPath: options.x402QuestionsPath ?? DEFAULT_X402_QUESTIONS_PATH,
   };

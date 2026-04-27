@@ -2,8 +2,6 @@ import { ContentRegistryAbi, ProtocolConfigAbi } from "@curyo/contracts/abis";
 import { getSharedDeploymentAddress } from "@curyo/contracts/deployments";
 import { randomBytes } from "crypto";
 import "server-only";
-import { createThirdwebClient, defineChain } from "thirdweb";
-import { facilitator, settlePayment } from "thirdweb/x402";
 import {
   type Address,
   type Hex,
@@ -20,9 +18,7 @@ import { dbClient } from "~~/lib/db";
 import {
   getPrimaryServerTargetNetwork,
   getServerTargetNetworkById,
-  getThirdwebSecretKey,
   getX402ExecutorPrivateKey,
-  getX402PaymentWaitUntil,
   getX402ServiceFeeUsdc,
   getX402UsdcAddressOverride,
 } from "~~/lib/env/server";
@@ -36,7 +32,6 @@ import {
   type X402QuestionPayload,
   X402_CELO_USDC_BY_CHAIN_ID,
   X402_SUBMISSION_REWARD_ASSET_USDC,
-  X402_USDC_DECIMALS,
   assertSupportedX402BundleBounty,
   buildX402QuestionOperation,
 } from "~~/lib/x402/questionPayload";
@@ -85,9 +80,7 @@ type X402QuestionSubmissionConfig = {
   rpcUrl: string;
   serviceFeeAmount: bigint;
   targetNetwork: NonNullable<ReturnType<typeof getPrimaryServerTargetNetwork>>;
-  thirdwebSecretKey: string | null;
   usdcAddress: Address;
-  waitUntil: "simulated" | "submitted" | "confirmed";
 };
 
 export class X402QuestionConfigError extends Error {
@@ -105,6 +98,17 @@ export class X402QuestionConflictError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "X402QuestionConflictError";
+  }
+}
+
+export class X402QuestionBountyPaymentsDisabledError extends Error {
+  readonly status = 410;
+
+  constructor() {
+    super(
+      "Hosted x402 question bounty payments are disabled because they route bounty USDC through the operator executor wallet. Use managed agent wallet delegation or submit from a user-controlled wallet instead.",
+    );
+    this.name = "X402QuestionBountyPaymentsDisabledError";
   }
 }
 
@@ -377,14 +381,6 @@ function parseStoredContentIds(value: string | null): string[] {
   }
 }
 
-function getPayerAddress(paymentReceipt: unknown): string | null {
-  if (!paymentReceipt || typeof paymentReceipt !== "object") return null;
-  const receipt = paymentReceipt as Record<string, unknown>;
-  const candidates = [receipt.payer, receipt.from, receipt.source, receipt.sender];
-  const payer = candidates.find((value): value is string => typeof value === "string" && isAddress(value));
-  return payer ?? null;
-}
-
 function getRpcUrl(config: X402QuestionSubmissionConfig["targetNetwork"]): string | null {
   return config.rpcUrls.default.http[0] ?? null;
 }
@@ -395,8 +391,9 @@ export function getX402QuestionFallbackChainId(): number | undefined {
 
 export function resolveX402QuestionConfig(
   chainId: number,
-  options: { requireThirdwebSecret?: boolean } = {},
+  _options: { requireThirdwebSecret?: boolean } = {},
 ): X402QuestionSubmissionConfig {
+  void _options;
   const targetNetwork = getServerTargetNetworkById(chainId);
   if (!targetNetwork) {
     throw new X402QuestionConfigError(`Chain ${chainId} is not configured for this server.`);
@@ -411,11 +408,6 @@ export function resolveX402QuestionConfig(
   const questionRewardPoolEscrowAddress = getSharedDeploymentAddress(chainId, "QuestionRewardPoolEscrow");
   if (!contentRegistryAddress || !questionRewardPoolEscrowAddress) {
     throw new X402QuestionConfigError("Curyo contracts are not deployed for the requested chain.");
-  }
-
-  const thirdwebSecretKey = getThirdwebSecretKey();
-  if (!thirdwebSecretKey && options.requireThirdwebSecret !== false) {
-    throw new X402QuestionConfigError("THIRDWEB_SECRET_KEY is required for x402 settlement.");
   }
 
   const executorPrivateKey = getX402ExecutorPrivateKey();
@@ -439,9 +431,7 @@ export function resolveX402QuestionConfig(
     rpcUrl,
     serviceFeeAmount: getX402ServiceFeeUsdc(),
     targetNetwork,
-    thirdwebSecretKey: thirdwebSecretKey ?? null,
     usdcAddress,
-    waitUntil: getX402PaymentWaitUntil(),
   };
 }
 
@@ -938,129 +928,8 @@ export async function handleX402QuestionSubmissionRequest(params: {
   payload: X402QuestionPayload;
   request: Request;
 }): Promise<{ body: unknown; headers?: Record<string, string>; status: number }> {
-  const dependencies = getQuestionSubmissionDependencies();
-  const config = dependencies.resolveX402QuestionConfig(params.payload.chainId);
-  const operation = buildX402QuestionOperation(params.payload);
-  const existingRecord = await getX402QuestionSubmissionByClientRequest({
-    chainId: params.payload.chainId,
-    clientRequestId: params.payload.clientRequestId,
-  });
-
-  if (existingRecord && existingRecord.payloadHash !== operation.payloadHash) {
-    throw new X402QuestionConflictError("clientRequestId has already been used for a different question payload.");
-  }
-
-  if (existingRecord?.status === "submitted") {
-    return {
-      body: submissionResponseBody({ config, operation, payload: params.payload, record: existingRecord }),
-      status: 200,
-    };
-  }
-
-  if (
-    existingRecord?.status === "submitting" &&
-    Number.isFinite(existingRecord.updatedAt.getTime()) &&
-    Date.now() - existingRecord.updatedAt.getTime() < SUBMITTING_STALE_MS
-  ) {
-    throw new X402QuestionConflictError("This x402 question submission is already being processed.");
-  }
-
-  const totalPaymentAmount = params.payload.bounty.amount + config.serviceFeeAmount;
-  await dependencies.preflightX402QuestionSubmission({
-    config,
-    payload: params.payload,
-  });
-
-  let responseHeaders: Record<string, string> | undefined;
-  if (!existingRecord?.paymentReceipt) {
-    if (!config.thirdwebSecretKey) {
-      throw new X402QuestionConfigError("THIRDWEB_SECRET_KEY is required for x402 settlement.");
-    }
-    const thirdwebClient = createThirdwebClient({ secretKey: config.thirdwebSecretKey });
-    const thirdwebFacilitator = facilitator({
-      client: thirdwebClient,
-      serverWalletAddress: config.executorAddress,
-    });
-    const paymentData = params.request.headers.get("PAYMENT-SIGNATURE") ?? params.request.headers.get("X-PAYMENT");
-    const paymentResult = await settlePayment({
-      extraMetadata: {
-        bountyAmount: params.payload.bounty.amount.toString(),
-        clientRequestId: params.payload.clientRequestId,
-        operationKey: operation.operationKey,
-        serviceFeeAmount: config.serviceFeeAmount.toString(),
-      },
-      facilitator: thirdwebFacilitator,
-      method: params.request.method,
-      network: defineChain(config.targetNetwork),
-      payTo: config.executorAddress,
-      paymentData,
-      price: {
-        amount: totalPaymentAmount.toString(),
-        asset: {
-          address: config.usdcAddress as `0x${string}`,
-          decimals: X402_USDC_DECIMALS,
-        },
-      },
-      resourceUrl: params.request.url,
-      routeConfig: {
-        description: "Submit a Curyo question and fund its USDC bounty",
-        mimeType: "application/json",
-      },
-      waitUntil: config.waitUntil,
-    });
-
-    if (paymentResult.status !== 200) {
-      return {
-        body: paymentResult.responseBody,
-        headers: paymentResult.responseHeaders,
-        status: paymentResult.status,
-      };
-    }
-
-    responseHeaders = paymentResult.responseHeaders;
-    await recordPaymentSettlement({
-      config,
-      operation,
-      payerAddress: getPayerAddress(paymentResult.paymentReceipt),
-      payload: params.payload,
-      paymentAmount: totalPaymentAmount,
-      paymentReceipt: paymentResult.paymentReceipt,
-    });
-  }
-
-  await updateSubmissionStatus({
-    operationKey: operation.operationKey,
-    status: "submitting",
-  });
-
-  try {
-    const result = await dependencies.executeX402QuestionSubmission({
-      config,
-      payload: params.payload,
-    });
-    await updateSubmissionStatus({
-      bundleId: result.bundleId,
-      contentId: result.contentIds[0] ?? null,
-      contentIds: result.contentIds,
-      operationKey: operation.operationKey,
-      rewardPoolId: result.rewardPoolId,
-      status: "submitted",
-      transactionHashes: result.transactionHashes,
-    });
-
-    return {
-      body: submissionResponseBody({ config, operation, payload: params.payload, result }),
-      headers: responseHeaders,
-      status: 200,
-    };
-  } catch (error) {
-    await updateSubmissionStatus({
-      error: error instanceof Error ? error.message : String(error),
-      operationKey: operation.operationKey,
-      status: "failed",
-    });
-    throw error;
-  }
+  void params;
+  throw new X402QuestionBountyPaymentsDisabledError();
 }
 
 export async function handleManagedQuestionSubmissionRequest(params: {
