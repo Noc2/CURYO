@@ -6,6 +6,7 @@ export const PROFILE_FOLLOWS_SIGNED_READ_SESSION_COOKIE_NAME = "curyo_profile_fo
 export const NOTIFICATION_PREFERENCES_SIGNED_READ_SESSION_COOKIE_NAME = "curyo_notification_preferences_read_session";
 export const NOTIFICATION_EMAIL_SIGNED_READ_SESSION_COOKIE_NAME = "curyo_notification_email_read_session";
 export const CONTENT_FEEDBACK_SIGNED_READ_SESSION_COOKIE_NAME = "curyo_content_feedback_read_session";
+export const AGENT_POLICIES_SIGNED_READ_SESSION_COOKIE_NAME = "curyo_agent_policies_read_session";
 const SIGNED_READ_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 export type SignedReadSessionScope =
@@ -13,7 +14,8 @@ export type SignedReadSessionScope =
   | "profile_follows"
   | "notification_preferences"
   | "notification_email"
-  | "content_feedback";
+  | "content_feedback"
+  | "agent_policies";
 
 const signedReadSessionStore = createSignedSessionStore<SignedReadSessionScope>({
   tableName: "signed_read_sessions",
@@ -25,6 +27,7 @@ const signedReadSessionStore = createSignedSessionStore<SignedReadSessionScope>(
     notification_preferences: NOTIFICATION_PREFERENCES_SIGNED_READ_SESSION_COOKIE_NAME,
     notification_email: NOTIFICATION_EMAIL_SIGNED_READ_SESSION_COOKIE_NAME,
     content_feedback: CONTENT_FEEDBACK_SIGNED_READ_SESSION_COOKIE_NAME,
+    agent_policies: AGENT_POLICIES_SIGNED_READ_SESSION_COOKIE_NAME,
   },
 });
 
