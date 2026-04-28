@@ -19,6 +19,7 @@ import {
   PlayCircleIcon,
   WalletIcon,
 } from "@heroicons/react/24/outline";
+import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useCopyToClipboard } from "~~/hooks/scaffold-eth";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
@@ -900,10 +901,9 @@ export function AgentSubmissionPanel() {
   return (
     <section className="space-y-4">
       <div className="surface-card rounded-lg p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-base-content/50">Agent Setup</p>
-            <h2 className="mt-1 text-2xl font-semibold">Smart wallet submit controls</h2>
+            <h1 className={surfaceSectionHeadingClassName}>Agent Setup</h1>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Link href="/docs/ai#get-started" className="btn btn-outline btn-sm">
