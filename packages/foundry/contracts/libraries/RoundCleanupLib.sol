@@ -157,8 +157,7 @@ library RoundCleanupLib {
         mapping(bytes32 => bool) storage refundCommitClaims,
         mapping(bytes32 => RoundLib.Commit) storage roundCommits,
         IERC20 hrepToken,
-        bytes32 commitKey,
-        address recipient
+        bytes32 commitKey
     ) external returns (uint256 refundAmount, address commitVoter) {
         if (
             round.state != RoundLib.RoundState.Cancelled && round.state != RoundLib.RoundState.Tied
@@ -179,7 +178,7 @@ library RoundCleanupLib {
         refundCommitClaims[commitKey] = true;
         refundClaims[commitVoter] = true;
 
-        hrepToken.safeTransfer(recipient, refundAmount);
+        hrepToken.safeTransfer(commitVoter, refundAmount);
     }
 
     function processUnrevealedVotes(

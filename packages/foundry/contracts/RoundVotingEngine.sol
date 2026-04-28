@@ -833,16 +833,15 @@ contract RoundVotingEngine is
             revert RoundCleanupLib.RoundNotCancelledOrTied();
         }
 
-        (bytes32 commitKey, address refundRecipient) = _resolveClaimCommit(contentId, roundId, msg.sender);
+        (bytes32 commitKey,) = _resolveClaimCommit(contentId, roundId, msg.sender);
         if (commitKey == bytes32(0)) revert RoundCleanupLib.NoCommit();
-        (uint256 refundAmount,) = RoundCleanupLib.claimCancelledRoundRefund(
+        (uint256 refundAmount, address refundRecipient) = RoundCleanupLib.claimCancelledRoundRefund(
             round,
             cancelledRoundRefundClaimed[contentId][roundId],
             cancelledRoundRefundCommitClaimed[contentId][roundId],
             commits[contentId][roundId],
             hrepToken,
-            commitKey,
-            refundRecipient
+            commitKey
         );
         accountedHrepBalance -= refundAmount;
 

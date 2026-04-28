@@ -215,11 +215,12 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         require(round.state == RoundLib.RoundState.Settled, "Round not settled");
         _requireNoPendingUnrevealedCleanup(contentId, roundId);
 
-        (bytes32 commitKey, address rewardRecipient) = _resolveClaimCommit(contentId, roundId, msg.sender);
+        (bytes32 commitKey,) = _resolveClaimCommit(contentId, roundId, msg.sender);
         require(commitKey != bytes32(0), "No vote found");
 
         RoundLib.Commit memory commit = _readCommit(contentId, roundId, commitKey);
         require(commit.voter != address(0), "No vote found");
+        address rewardRecipient = commit.voter;
         if (rewardCommitClaimed[contentId][roundId][commitKey] || rewardClaimed[contentId][roundId][commit.voter]) {
             revert("Already claimed");
         }
@@ -494,10 +495,11 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         uint256 reservedReward = roundParticipationRewardReserved[contentId][roundId];
         if (rewardPoolAddress == address(0)) revert NoPool();
 
-        (bytes32 commitKey, address rewardRecipient) = _resolveClaimCommit(contentId, roundId, msg.sender);
+        (bytes32 commitKey,) = _resolveClaimCommit(contentId, roundId, msg.sender);
         if (commitKey == bytes32(0)) revert NoCommit();
         RoundLib.Commit memory commit = _readCommit(contentId, roundId, commitKey);
         if (commit.voter == address(0)) revert NoCommit();
+        address rewardRecipient = commit.voter;
         if (
             participationRewardCommitClaimed[contentId][roundId][commitKey]
                 || participationRewardClaimed[contentId][roundId][commit.voter]

@@ -1240,6 +1240,47 @@ contract RoundIntegrationTest is VotingTestBase {
         assertEq(hrepToken.balanceOf(voter2) - bal2Before, STAKE, "Voter2 should get refund from tie");
     }
 
+    function test_TiedRound_DelegatedLockedStakeRefundsStakePayer() public {
+        uint256 contentId = _submitContent();
+
+        MockVoterIdNFT voterIdNFT = new MockVoterIdNFT();
+        voterIdNFT.setHolder(voter1);
+        voterIdNFT.setHolder(voter2);
+        vm.prank(voter1);
+        voterIdNFT.setDelegate(voter4);
+
+        ProtocolConfig cfg = ProtocolConfig(address(votingEngine.protocolConfig()));
+        vm.prank(owner);
+        cfg.setVoterIdNFT(address(voterIdNFT));
+        vm.startPrank(owner);
+        hrepToken.setGovernor(owner);
+        hrepToken.setContentVotingContracts(address(votingEngine), address(registry));
+        hrepToken.lockForGovernance(voter4, STAKE);
+        vm.stopPrank();
+
+        uint256 holderBalanceBefore = hrepToken.balanceOf(voter1);
+        uint256 stakePayerBalanceBefore = hrepToken.balanceOf(voter4);
+
+        address[] memory voters = new address[](2);
+        voters[0] = voter4;
+        voters[1] = voter2;
+        bool[] memory dirs = new bool[](2);
+        dirs[0] = true;
+        dirs[1] = false;
+
+        uint256 roundId = _settleRoundWith(voters, contentId, dirs, STAKE);
+        assertEq(
+            hrepToken.balanceOf(voter4), stakePayerBalanceBefore - STAKE, "stake payer should fund delegated vote"
+        );
+
+        vm.prank(voter1);
+        votingEngine.claimCancelledRoundRefund(contentId, roundId);
+
+        assertEq(hrepToken.balanceOf(voter1), holderBalanceBefore, "Voter ID holder should not receive payer stake");
+        assertEq(hrepToken.balanceOf(voter4), stakePayerBalanceBefore, "stake payer should receive HREP refund");
+        assertEq(hrepToken.getLockedBalance(voter4), STAKE, "governance lock remains active");
+    }
+
     function test_TiedRound_NewRoundAfterTie() public {
         uint256 contentId = _submitContent();
 
