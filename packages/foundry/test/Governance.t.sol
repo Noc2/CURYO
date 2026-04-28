@@ -267,28 +267,28 @@ contract GovernanceTest is Test {
             - ENGINE_BALANCE - TREASURY_BALANCE - CONTENT_REGISTRY_BALANCE - FRONTEND_REGISTRY_BALANCE;
         uint256 expectedDynamicQuorum = (circulatingSupply * 4) / 100; // 4% of 7M = 280K
         assertEq(expectedDynamicQuorum, 280_000 * 1e6);
-        assertEq(governor.quorum(block.number - 1), expectedDynamicQuorum);
+        assertEq(governor.quorum(block.number - 1), 1_000_000 * 1e6);
     }
 
     function test_GovernorQuorum_ExcludesEngineAndTreasuryBalances() public {
         vm.roll(block.number + 1);
 
-        uint256 expectedQuorum = 280_000 * 1e6;
+        uint256 expectedQuorum = 1_000_000 * 1e6;
         uint256 brokenQuorum = ((7_000_000 * 1e6 + ENGINE_BALANCE + TREASURY_BALANCE) * 4) / 100;
 
         assertEq(governor.quorum(block.number - 1), expectedQuorum);
-        assertEq(brokenQuorum - expectedQuorum, 564_000 * 1e6);
+        assertEq(expectedQuorum - brokenQuorum, 156_000 * 1e6);
     }
 
     function test_GovernorQuorum_IncludesQuestionRewardEscrowBalance() public {
         vm.roll(block.number + 1);
 
-        uint256 expectedQuorum = 280_000 * 1e6;
+        uint256 expectedQuorum = 1_000_000 * 1e6;
         uint256 brokenQuorum = ((7_000_000 * 1e6 - QUESTION_REWARD_ESCROW_BALANCE) * 4) / 100;
 
         assertEq(governor.quorum(block.number - 1), expectedQuorum);
         assertFalse(governor.isExcludedHolder(mockQuestionRewardEscrow));
-        assertEq(expectedQuorum - brokenQuorum, 40_000 * 1e6);
+        assertEq(expectedQuorum - brokenQuorum, 760_000 * 1e6);
     }
 
     function test_GovernorQuorumMinimumFloor() public {
@@ -309,13 +309,13 @@ contract GovernanceTest is Test {
         holders[2] = address(102);
         smallGovernor.initializePools(holders);
 
-        // Mint 1M to pool, 100K to a user -> circulating = 100K, 4% = 4K < 100K floor
+        // Mint 1M to pool, 100K to a user -> circulating = 100K, 4% = 4K < 1M floor
         smallToken.mint(holders[0], 1_000_000 * 1e6);
         smallToken.mint(address(200), 100_000 * 1e6);
         vm.stopPrank();
 
         vm.roll(block.number + 1);
-        assertEq(smallGovernor.quorum(block.number - 1), 100_000 * 1e6); // bootstrap floor
+        assertEq(smallGovernor.quorum(block.number - 1), 1_000_000 * 1e6); // bootstrap floor
     }
 
     function test_GovernorQuorumGrowsAsPoolsDrain() public {
@@ -324,17 +324,17 @@ contract GovernanceTest is Test {
         uint256 transferBlock = vm.getBlockNumber();
         uint256 beforeSnapshotBlock = transferBlock - 1;
         uint256 quorumBefore = governor.quorum(beforeSnapshotBlock);
-        assertEq(quorumBefore, 280_000 * 1e6);
+        assertEq(quorumBefore, 1_000_000 * 1e6);
 
         // Simulate faucet distributing enough tokens to move past the bootstrap floor.
         vm.prank(mockFaucet);
-        token.transfer(address(50), 10_000_000 * 1e6);
+        token.transfer(address(50), 20_000_000 * 1e6);
 
         vm.roll(transferBlock + 1);
         uint256 quorumAfter = governor.quorum(transferBlock);
 
-        // Circulating supply rises from 7M to 17M, so 4% becomes 680K and beats the floor.
-        assertEq(quorumAfter, 680_000 * 1e6);
+        // Circulating supply rises from 7M to 27M, so 4% becomes 1.08M and beats the floor.
+        assertEq(quorumAfter, 1_080_000 * 1e6);
         assertGt(quorumAfter, quorumBefore);
     }
 
@@ -542,12 +542,12 @@ contract GovernanceTest is Test {
     function test_GovernorReplacementPreservesHistoricalQuorum() public {
         address replacement = address(99);
 
-        vm.prank(deployer);
-        token.mint(replacement, 1_000_000e6);
+        vm.prank(mockFaucet);
+        token.transfer(replacement, 20_000_000e6);
         vm.roll(block.number + 1);
         uint256 snapshotBlock = vm.getBlockNumber() - 1;
         uint256 snapshotQuorum = governor.quorum(snapshotBlock);
-        assertEq(snapshotQuorum, 320_000e6);
+        assertEq(snapshotQuorum, 1_080_000e6);
 
         _executeSingleCallProposal(
             address(governor),
@@ -560,7 +560,7 @@ contract GovernanceTest is Test {
         uint256 effectiveBlock = governor.excludedHolderEffectiveBlock(replacement);
         assertGt(effectiveBlock, snapshotBlock);
         vm.roll(effectiveBlock + 2);
-        assertEq(governor.quorum(effectiveBlock + 1), 280_000e6);
+        assertEq(governor.quorum(effectiveBlock + 1), 1_000_000e6);
     }
 
     function test_GovernorReplacementIgnoresDustVotes() public {

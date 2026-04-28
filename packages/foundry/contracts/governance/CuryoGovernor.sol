@@ -18,8 +18,8 @@ import { HumanReputation } from "../HumanReputation.sol";
 /// @dev Implements OpenZeppelin Governor with:
 ///      - Simple counting (For/Against/Abstain)
 ///      - Votes from HREP token (which implements ERC20Votes)
-///      - Dynamic quorum: 4% of circulating supply (total minus protocol-controlled balances)
-///      - Bootstrap quorum floor of 100K HREP to prevent early capture while circulation is thin
+    ///      - Dynamic quorum: 4% of circulating supply (total minus protocol-controlled balances)
+    ///      - Bootstrap quorum floor of 1M HREP to prevent early capture while circulation is thin
 ///      - Timelock execution for security
 ///      - 7-day token lock when voting or proposing
 contract CuryoGovernor is
@@ -42,8 +42,8 @@ contract CuryoGovernor is
     bool public poolsInitialized;
     /// @notice Bootstrap proposal threshold regardless of early faucet claim sizes (1K HREP with 6 decimals)
     uint256 public constant BOOTSTRAP_PROPOSAL_THRESHOLD = 1_000 * 1e6;
-    /// @notice Minimum quorum regardless of circulating supply (100K HREP with 6 decimals)
-    uint256 public constant MINIMUM_QUORUM = 100_000 * 1e6;
+    /// @notice Minimum quorum regardless of circulating supply (1M HREP with 6 decimals)
+    uint256 public constant MINIMUM_QUORUM = 1_000_000 * 1e6;
     /// @notice Highest threshold governance may set, preventing self-bricked proposal creation.
     uint256 public constant MAX_PROPOSAL_THRESHOLD = MINIMUM_QUORUM;
     /// @notice Highest voting delay governance may set (~1 week on 1s Celo blocks).
