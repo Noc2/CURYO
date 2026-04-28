@@ -1302,6 +1302,33 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(reward, (REWARD_POOL_AMOUNT / 2) / 3);
     }
 
+    function testPartialExpiredPoolCanSweepUnclaimedAllocatedRewardsAfterGrace() public {
+        uint256 contentId = _submitQuestion("");
+        uint256 expiresAt = block.timestamp + 1 days;
+        uint256 rewardPoolId = _createRewardPoolWithExpiry(contentId, 120e6, 3, 2, expiresAt);
+
+        address[] memory voters = _threeVoters();
+        uint256 firstRoundId = _settleRoundWith(voters, contentId, _directions(true, true, false));
+        rewardPoolEscrow.qualifyRound(rewardPoolId, firstRoundId);
+
+        vm.warp(expiresAt + 1);
+        uint256 funderBalanceBefore = usdc.balanceOf(funder);
+        uint256 unallocatedRefund = rewardPoolEscrow.refundExpiredRewardPool(rewardPoolId);
+        assertEq(unallocatedRefund, 60e6);
+        assertEq(usdc.balanceOf(funder), funderBalanceBefore + unallocatedRefund);
+
+        vm.prank(voter1);
+        uint256 claimed = rewardPoolEscrow.claimQuestionReward(rewardPoolId, firstRoundId);
+        assertEq(claimed, 20e6);
+
+        vm.warp(expiresAt + BUNDLE_CLAIM_GRACE + 1);
+        uint256 finalRefund = rewardPoolEscrow.refundExpiredRewardPool(rewardPoolId);
+        assertEq(finalRefund, 40e6);
+        assertEq(usdc.balanceOf(funder), funderBalanceBefore + unallocatedRefund + finalRefund);
+        assertEq(rewardPoolEscrow.claimableQuestionReward(rewardPoolId, firstRoundId, voter2), 0);
+        assertEq(usdc.balanceOf(address(rewardPoolEscrow)), 0);
+    }
+
     function testLaterEligibleRoundCannotSkipEarlierEligibleRound() public {
         uint256 contentId = _submitQuestion("");
         uint256 rewardPoolId = _createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1);

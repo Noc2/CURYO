@@ -65,6 +65,7 @@ contract QuestionRewardPoolEscrow is
         uint32 requiredSettledRounds;
         uint32 qualifiedRounds;
         bool refunded;
+        bool unallocatedRefunded;
         uint16 frontendFeeBps;
         bool nonRefundable;
     }
@@ -461,6 +462,7 @@ contract QuestionRewardPoolEscrow is
             requiredSettledRounds: requiredSettledRounds.toUint32(),
             qualifiedRounds: 0,
             refunded: false,
+            unallocatedRefunded: false,
             frontendFeeBps: defaultFrontendFeeBps,
             nonRefundable: nonRefundable
         });
@@ -516,9 +518,7 @@ contract QuestionRewardPoolEscrow is
         returns (uint256 rewardAmount)
     {
         RewardPool storage rewardPool = _getExistingRewardPool(rewardPoolId);
-        require(
-            !rewardPool.refunded || rewardPool.qualifiedRounds < rewardPool.requiredSettledRounds, "Bounty refunded"
-        );
+        require(!rewardPool.refunded, "Bounty refunded");
         require(votingEngine.roundUnrevealedCleanupRemaining(rewardPool.contentId, roundId) == 0, "Cleanup pending");
         _qualifyRoundIfNeeded(rewardPoolId, rewardPool, roundId);
 
@@ -750,7 +750,7 @@ contract QuestionRewardPoolEscrow is
 
     function refundExpiredRewardPool(uint256 rewardPoolId) external nonReentrant returns (uint256 refundAmount) {
         RewardPool storage rewardPool = _getExistingRewardPool(rewardPoolId);
-        if (rewardPool.qualifiedRounds >= rewardPool.requiredSettledRounds) {
+        if (rewardPool.qualifiedRounds >= rewardPool.requiredSettledRounds || rewardPool.unallocatedRefunded) {
             refundAmount = _refundCompleteRewardPool(rewardPoolId, rewardPool);
         } else {
             require(rewardPool.bountyClosesAt != 0 && block.timestamp > rewardPool.bountyClosesAt, "Not expired");
@@ -775,12 +775,14 @@ contract QuestionRewardPoolEscrow is
         returns (uint256 refundAmount)
     {
         require(!rewardPool.refunded, "Already refunded");
+        require(!rewardPool.unallocatedRefunded, "Already refunded");
         require(rewardPool.qualifiedRounds < rewardPool.requiredSettledRounds, "Bounty complete");
         _requireNoPendingFinishedRound(rewardPool);
         refundAmount = rewardPool.unallocatedAmount;
         require(refundAmount > 0, "No refund");
-        rewardPool.refunded = true;
+        rewardPool.unallocatedRefunded = true;
         rewardPool.unallocatedAmount = 0;
+        rewardPool.fundedAmount -= refundAmount;
         _transferRewardPoolResidue(rewardPoolId, rewardPool, refundAmount);
     }
 
@@ -818,7 +820,7 @@ contract QuestionRewardPoolEscrow is
     {
         RewardPool storage rewardPool = rewardPools[rewardPoolId];
         if (rewardPool.id == 0) return 0;
-        if (rewardPool.refunded && rewardPool.qualifiedRounds >= rewardPool.requiredSettledRounds) return 0;
+        if (rewardPool.refunded) return 0;
 
         IVoterIdNFT roundVoterIdNft = _roundVoterIdNft(rewardPool.contentId, roundId);
         uint256 voterId = roundVoterIdNft.getTokenId(account);
@@ -1219,6 +1221,7 @@ contract QuestionRewardPoolEscrow is
 
     function _requireIncompleteRewardPool(RewardPool storage rewardPool) internal view {
         require(!rewardPool.refunded, "Bounty refunded");
+        require(!rewardPool.unallocatedRefunded, "Bounty refunded");
         require(rewardPool.qualifiedRounds < rewardPool.requiredSettledRounds, "Bounty complete");
     }
 
@@ -1261,7 +1264,10 @@ contract QuestionRewardPoolEscrow is
     }
 
     function _canPreviewNewQualification(RewardPool storage rewardPool, uint256 roundId) internal view returns (bool) {
-        if (rewardPool.refunded || rewardPool.qualifiedRounds >= rewardPool.requiredSettledRounds) return false;
+        if (
+            rewardPool.refunded || rewardPool.unallocatedRefunded
+                || rewardPool.qualifiedRounds >= rewardPool.requiredSettledRounds
+        ) return false;
         return roundId >= rewardPool.startRoundId && roundId == rewardPool.nextRoundToEvaluate;
     }
 
