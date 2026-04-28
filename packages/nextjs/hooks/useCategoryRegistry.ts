@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { CategoryRegistryAbi } from "@curyo/contracts/abis";
 import { useReadContract, useReadContracts } from "wagmi";
+import { getSeededCategorySubcategories } from "~~/constants/categories";
 import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
 import { ponderApi } from "~~/services/ponder/client";
@@ -107,7 +108,7 @@ export function useCategoryRegistry() {
           id: BigInt(cat.id),
           name: cat.name,
           slug: cat.slug,
-          subcategories: [],
+          subcategories: getSeededCategorySubcategories(cat.slug),
           createdAt: BigInt(cat.createdAt),
         }),
       );
@@ -136,7 +137,7 @@ export function useCategoryRegistry() {
       if (!rpcCat) return cat;
       return {
         ...cat,
-        subcategories: rpcCat.subcategories,
+        subcategories: rpcCat.subcategories.length > 0 ? rpcCat.subcategories : cat.subcategories,
       };
     });
 

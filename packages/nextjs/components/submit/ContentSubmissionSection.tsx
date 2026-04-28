@@ -317,6 +317,19 @@ export function ContentSubmissionSection() {
 
   const { categories, isLoading: categoriesLoading } = useCategoryRegistry();
 
+  useEffect(() => {
+    if (!selectedCategory) return;
+    const latestCategory = categories.find(category => category.id === selectedCategory.id);
+    if (!latestCategory || latestCategory === selectedCategory) return;
+
+    setSelectedCategory(latestCategory);
+    setQuestionDrafts(prev =>
+      prev.map(draft =>
+        draft.selectedCategory?.id === latestCategory.id ? { ...draft, selectedCategory: latestCategory } : draft,
+      ),
+    );
+  }, [categories, selectedCategory]);
+
   const getActiveQuestionDraft = (): QuestionDraft => ({
     mediaMode,
     contextUrl,
