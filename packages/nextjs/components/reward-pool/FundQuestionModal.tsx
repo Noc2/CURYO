@@ -23,6 +23,7 @@ import {
   MIN_REWARD_POOL_REQUIRED_VOTERS,
   MIN_REWARD_POOL_SETTLED_ROUNDS,
   QUESTION_REWARD_POOL_ESCROW_ABI,
+  QUESTION_REWARD_POOL_ESCROW_WIRING_ABI,
   formatUsdAmount,
   getConfiguredQuestionRewardPoolEscrowAddress,
   getDefaultUsdcAddress,
@@ -118,11 +119,12 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
     try {
       let usdcAddress = fallbackUsdcAddress;
       try {
-        usdcAddress = (await readContract(wagmiConfig, {
+        const [, configuredUsdcAddress] = (await readContract(wagmiConfig, {
           address: escrowAddress,
-          abi: QUESTION_REWARD_POOL_ESCROW_ABI,
-          functionName: "usdcToken",
-        })) as `0x${string}`;
+          abi: QUESTION_REWARD_POOL_ESCROW_WIRING_ABI,
+          functionName: "getWiring",
+        })) as readonly [`0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`];
+        usdcAddress = configuredUsdcAddress;
       } catch {
         // Deployment metadata can be ahead of the escrow read during local work; fall back to chain defaults.
       }
