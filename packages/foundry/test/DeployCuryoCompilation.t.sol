@@ -69,6 +69,14 @@ contract DeployCuryoHarness is DeployCuryo {
         return migrationConfig.users.length;
     }
 
+    function exposedDefaultMigrationBootstrapBatchSize() external pure returns (uint256) {
+        return DEFAULT_MIGRATION_BOOTSTRAP_BATCH_SIZE;
+    }
+
+    function exposedMigrationBootstrapBatchSize() external view returns (uint256) {
+        return _migrationBootstrapBatchSize();
+    }
+
     function exposedParseUintString(string memory value) external pure returns (uint256) {
         return _parseUintString(value);
     }
@@ -523,6 +531,27 @@ contract DeployCuryoCompilationTest is Test {
         assertTrue(voterIdNFT.hasVoterId(users[0]));
         assertTrue(voterIdNFT.hasVoterId(users[1]));
         assertTrue(voterIdNFT.hasVoterId(users[2]));
+    }
+
+    function test_MigrationBootstrap_DefaultBatchSizeStaysBelowCeloGasLimit() public {
+        DeployCuryoHarness deployScript = new DeployCuryoHarness();
+
+        assertEq(deployScript.exposedDefaultMigrationBootstrapBatchSize(), 40);
+    }
+
+    function test_MigrationBootstrap_BatchSizeEnvOverrideCannotBeZero() public {
+        DeployCuryoHarness deployScript = new DeployCuryoHarness();
+
+        vm.setEnv("MIGRATION_BOOTSTRAP_BATCH_SIZE", "3");
+        assertEq(deployScript.exposedMigrationBootstrapBatchSize(), 3);
+
+        vm.setEnv("MIGRATION_BOOTSTRAP_BATCH_SIZE", "0");
+        vm.expectRevert(
+            abi.encodeWithSelector(DeployCuryo.DeploymentRoleVerificationFailed.selector, "Migration batch size zero")
+        );
+        deployScript.exposedMigrationBootstrapBatchSize();
+
+        vm.setEnv("MIGRATION_BOOTSTRAP_BATCH_SIZE", "40");
     }
 
     function test_MigrationBootstrap_BatchSizeCannotBeZero() public {

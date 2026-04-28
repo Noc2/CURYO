@@ -53,11 +53,12 @@ MIGRATION_BOOTSTRAP_FILE=./migrations/faucet-bootstrap.json yarn deploy --networ
 
 The deploy script validates the manifest before broadcasting, replays the claims in batches after
 the new faucet is funded, then calls `closeMigrationBootstrap()` before governance handoff. The
-default batch size is 250 migrated claims per transaction. Override it only if simulation shows the
-target chain has enough headroom:
+default batch size is 40 migrated claims per transaction to keep Celo bootstrap transactions below
+the chain block gas limit with headroom. Override it only if simulation shows the target chain has
+enough headroom:
 
 ```bash
-MIGRATION_BOOTSTRAP_FILE=./migrations/faucet-bootstrap.json MIGRATION_BOOTSTRAP_BATCH_SIZE=100 yarn deploy --network celo --keystore <name>
+MIGRATION_BOOTSTRAP_FILE=./migrations/faucet-bootstrap.json MIGRATION_BOOTSTRAP_BATCH_SIZE=25 yarn deploy --network celo --keystore <name>
 ```
 
 ## Post-Deploy Checks
