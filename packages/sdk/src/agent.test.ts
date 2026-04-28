@@ -133,7 +133,7 @@ test("quoteQuestion rejects tokenless hosted asks without agent auth", async () 
       agent.quoteQuestion({
         bounty: { amount: 1_000_000n, requiredVoters: 3n },
         chainId: 42220,
-        clientRequestId: "ask-x402-quote",
+        clientRequestId: "ask-tokenless-quote",
         question: {
           categoryId: 7n,
           contextUrl: "https://example.com/context",
@@ -173,10 +173,6 @@ test("askHumans rejects tokenless hosted asks without agent auth", async () => {
 
   await assert.rejects(
     () => agent.askHumans(request),
-    /agent asks require mcpAccessToken/i,
-  );
-  await assert.rejects(
-    () => agent.askHumans({ ...request, transport: "x402" }),
     /agent asks require mcpAccessToken/i,
   );
   assert.equal(fetchCalls, 0);
@@ -278,73 +274,28 @@ test("confirmAskTransactions can use MCP framing", async () => {
   assert.equal(response.status, "submitted");
 });
 
-test("getQuestionStatus decorates x402 lookups with transport-independent readiness hints", async () => {
-  const requestedUrls: string[] = [];
+test("getQuestionStatus rejects tokenless hosted status lookups without agent auth", async () => {
+  let fetchCalls = 0;
   const agent = createCuryoAgentClient({
     apiBaseUrl: API_BASE_URL,
-    fetchImpl: async (input: URL | RequestInfo) => {
-      const url = String(input);
-      requestedUrls.push(url);
-      if (url.includes("/api/x402/questions/0x")) {
-        return jsonResponse({
-          contentId: "42",
-          operationKey: `0x${"33".repeat(32)}`,
-          status: "submitted",
-        });
-      }
-      if (url.includes("/content/42")) {
-        return jsonResponse({
-          audienceContext: null,
-          content: {
-            categoryId: "5",
-            id: "42",
-            openRound: null,
-            question: "Would this pitch make you want to learn more?",
-            rating: 72,
-            ratingBps: 7200,
-            ratingSettledRounds: 1,
-            status: 1,
-            title: "Pitch interest",
-            totalVotes: 12,
-          },
-          ratings: [],
-          rounds: [
-            {
-              contentId: "42",
-              id: "round-1",
-              roundId: "1",
-              state: ROUND_STATE.Settled,
-            },
-          ],
-        });
-      }
-      return jsonResponse({ status: "submitting" });
+    fetchImpl: async () => {
+      fetchCalls += 1;
+      throw new Error("tokenless status should not call fetch");
     },
   });
 
-  const byOperation = await agent.getQuestionStatus({
-    operationKey: `0x${"33".repeat(32)}`,
-  });
-  await agent.getQuestionStatus({ chainId: 42220, clientRequestId: "ask-3" });
-
-  assert.equal(
-    requestedUrls[0],
-    `https://curyo.example/api/x402/questions/0x${"33".repeat(32)}`,
+  await assert.rejects(
+    () =>
+      agent.getQuestionStatus({
+        operationKey: `0x${"33".repeat(32)}`,
+      }),
+    /agent asks require mcpAccessToken/i,
   );
-  assert.equal(
-    requestedUrls[1],
-    "https://curyo.example/content/42",
+  await assert.rejects(
+    () => agent.getQuestionStatus({ chainId: 42220, clientRequestId: "ask-3" }),
+    /agent asks require mcpAccessToken/i,
   );
-  assert.equal(
-    requestedUrls[2],
-    "https://curyo.example/api/x402/questions/by-client-request?chainId=42220&clientRequestId=ask-3",
-  );
-  assert.equal(byOperation.publicUrl, "https://curyo.example/rate?content=42");
-  assert.equal(byOperation.ready, true);
-  assert.equal(byOperation.nextAction, "call_curyo_get_result");
-  assert.equal(byOperation.resultTool, "curyo_get_result");
-  assert.equal(byOperation.statusTool, "curyo_get_question_status");
-  assert.equal(byOperation.terminal, true);
+  assert.equal(fetchCalls, 0);
 });
 
 test("authenticated status, result, and templates use direct agent HTTP endpoints", async () => {
@@ -424,22 +375,13 @@ test("authenticated status, result, and templates use direct agent HTTP endpoint
   assert.equal(templates.templates[0]?.bundleStrategy, "independent");
 });
 
-test("getResult can build a tokenless public result after an x402 submit", async () => {
+test("getResult can build a tokenless public result when contentId is known", async () => {
   const requestedUrls: string[] = [];
   const agent = createCuryoAgentClient({
     apiBaseUrl: API_BASE_URL,
     fetchImpl: async (input: URL | RequestInfo) => {
       const url = String(input);
       requestedUrls.push(url);
-      if (url.includes("/api/x402/questions/")) {
-        return jsonResponse({
-          chainId: 42220,
-          clientRequestId: "ask-x402-result",
-          contentId: "42",
-          operationKey: `0x${"88".repeat(32)}`,
-          status: "submitted",
-        });
-      }
       if (url.includes("/content/42")) {
         return jsonResponse({
           audienceContext: null,
@@ -498,11 +440,10 @@ test("getResult can build a tokenless public result after an x402 submit", async
   });
 
   const result = await agent.getResult({
-    operationKey: `0x${"88".repeat(32)}`,
+    contentId: "42",
   });
 
   assert.deepEqual(requestedUrls, [
-    `https://curyo.example/api/x402/questions/0x${"88".repeat(32)}`,
     "https://curyo.example/content/42",
     "https://curyo.example/api/feedback?contentId=42",
   ]);
@@ -511,33 +452,28 @@ test("getResult can build a tokenless public result after an x402 submit", async
   assert.equal(result.publicUrl, "https://curyo.example/rate?content=42");
   assert.equal(result.recommendedNextAction, "proceed_after_addressing_objections");
   assert.equal(result.methodology?.templateId, "generic_rating");
-  assert.equal(result.operation?.status, "submitted");
+  assert.equal(result.operation, null);
   assert.deepEqual(result.sourceUrls, ["https://example.com/pricing-note"]);
 });
 
-test("getResult keeps tokenless x402 asks in a pending state until a public content id exists", async () => {
+test("getResult rejects tokenless operation lookups until a public content id is available", async () => {
+  let fetchCalls = 0;
   const agent = createCuryoAgentClient({
     apiBaseUrl: API_BASE_URL,
-    fetchImpl: async () =>
-      jsonResponse({
-        chainId: 42220,
-        clientRequestId: "ask-x402-pending",
+    fetchImpl: async () => {
+      fetchCalls += 1;
+      throw new Error("tokenless operation result should not call fetch");
+    },
+  });
+
+  await assert.rejects(
+    () =>
+      agent.getResult({
         operationKey: `0x${"99".repeat(32)}`,
-        status: "submitting",
       }),
-  });
-
-  const result = await agent.getResult({
-    operationKey: `0x${"99".repeat(32)}`,
-  });
-
-  assert.equal(result.ready, false);
-  assert.equal(result.answer, "pending");
-  assert.equal(result.operation?.status, "submitting");
-  assert.equal(
-    (result.wait as { recoverWith?: string } | undefined)?.recoverWith,
-    "curyo_get_question_status",
+    /agent asks require mcpAccessToken/i,
   );
+  assert.equal(fetchCalls, 0);
 });
 
 test("getResult treats terminal non-settled tokenless rounds as ready results", async () => {

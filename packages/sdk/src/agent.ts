@@ -14,7 +14,6 @@ type JsonRecord = Record<string, unknown>;
 const DEFAULT_TIMEOUT_MS = 10_000;
 const DEFAULT_MCP_PROTOCOL_VERSION = "2025-11-25";
 const DEFAULT_AGENT_API_PATH = "/api/agent";
-const DEFAULT_X402_QUESTIONS_PATH = "/api/x402/questions";
 const DEFAULT_MCP_PATH = "/api/mcp";
 const AGENT_AUTH_REQUIRED_MESSAGE =
   "Curyo agent asks require mcpAccessToken for the hosted agent API, or a user-controlled wallet execution flow.";
@@ -28,7 +27,6 @@ export interface CuryoAgentClientOptions {
   quoteFetchImpl?: CuryoFetch;
   timeoutMs?: number;
   mcpProtocolVersion?: string;
-  x402QuestionsPath?: string;
 }
 
 export interface CuryoAgentQuestionItem {
@@ -79,7 +77,7 @@ export interface QuoteQuestionRequest extends CuryoAgentQuestionRequest {}
 export interface AskHumansRequest extends CuryoAgentQuestionRequest {
   maxPaymentAmount?: string | number | bigint;
   mode?: "sync" | "async";
-  transport?: "http" | "mcp" | "x402";
+  transport?: "http" | "mcp";
   walletAddress?: `0x${string}` | string;
 }
 
@@ -99,7 +97,6 @@ export interface CuryoAgentPayment {
   asset?: string;
   bountyAmount?: string;
   decimals?: number;
-  serviceFeeAmount?: string;
   spender?: string;
   tokenAddress?: string;
   [key: string]: unknown;
@@ -344,7 +341,6 @@ interface NormalizedAgentConfig {
   fetchImpl: CuryoFetch;
   timeoutMs: number;
   mcpProtocolVersion: string;
-  x402QuestionsPath: string;
 }
 
 type PublicFeedbackItem = {
@@ -420,7 +416,7 @@ export async function askHumans(
 
   if (
     transport === "http" ||
-    (transport !== "mcp" && transport !== "x402" && hasDirectAgentHttp(config))
+    (transport !== "mcp" && hasDirectAgentHttp(config))
   ) {
     return requestJson<AskHumansResponse>(config, agentAsksUrl(config), {
       body: stringifyJson(body),
@@ -429,7 +425,7 @@ export async function askHumans(
     });
   }
 
-  if (transport === "mcp" || (transport !== "x402" && config.mcpAccessToken)) {
+  if (transport === "mcp" || config.mcpAccessToken) {
     return callMcpTool<AskHumansResponse>(config, "curyo_ask_humans", body);
   }
 
@@ -480,33 +476,7 @@ export async function getQuestionStatus(
     );
   }
 
-  const response = await requestJson<JsonRecord>(
-    config,
-    x402StatusUrl(config, params),
-    {
-      headers: {
-        accept: "application/json",
-      },
-      method: "GET",
-    },
-  );
-  const contentId =
-    typeof response.contentId === "string" ? response.contentId.trim() : "";
-  let latestRoundState: number | null = null;
-
-  if (contentId) {
-    try {
-      latestRoundState = await loadPublicRoundState(config, contentId);
-    } catch {
-      latestRoundState = null;
-    }
-  }
-
-  return decorateX402QuestionState(
-    response,
-    config,
-    latestRoundState,
-  ) as QuestionStatusResponse;
+  throw new CuryoSdkError(AGENT_AUTH_REQUIRED_MESSAGE);
 }
 
 export async function getResult(
@@ -525,16 +495,22 @@ export async function getResult(
     );
   }
 
-  if (config.apiBaseUrl && !config.mcpAccessToken) {
-    return getX402Result(config, params);
+  const contentId =
+    params.contentId === undefined ? "" : String(params.contentId).trim();
+  if (contentId && config.apiBaseUrl && !config.mcpAccessToken) {
+    return buildPublicAgentResult(config, contentId, null);
   }
 
-  const result = await callMcpTool<unknown>(config, "curyo_get_result", {
-    ...params,
-    contentId:
-      params.contentId === undefined ? undefined : String(params.contentId),
-  });
-  return parseAgentResult(result);
+  if (config.mcpAccessToken) {
+    const result = await callMcpTool<unknown>(config, "curyo_get_result", {
+      ...params,
+      contentId:
+        params.contentId === undefined ? undefined : String(params.contentId),
+    });
+    return parseAgentResult(result);
+  }
+
+  throw new CuryoSdkError(AGENT_AUTH_REQUIRED_MESSAGE);
 }
 
 export async function listResultTemplates(
@@ -557,35 +533,6 @@ export async function listResultTemplates(
     "curyo_list_result_templates",
     {},
   );
-}
-
-async function getX402Result(
-  config: NormalizedAgentConfig,
-  params: QuestionStatusLookup & { contentId?: string | bigint },
-): Promise<CuryoAgentResult> {
-  const contentId =
-    params.contentId === undefined ? "" : String(params.contentId).trim();
-  if (contentId) {
-    return buildPublicAgentResult(config, contentId, null);
-  }
-
-  const operation = decorateX402QuestionState(
-    await requestJson<JsonRecord>(config, x402StatusUrl(config, params), {
-      headers: {
-        accept: "application/json",
-      },
-      method: "GET",
-    }),
-    config,
-  );
-  const operationContentId =
-    typeof operation.contentId === "string" ? operation.contentId.trim() : "";
-
-  if (!operationContentId) {
-    return buildPendingAgentResult(operation);
-  }
-
-  return buildPublicAgentResult(config, operationContentId, operation);
 }
 
 async function buildPublicAgentResult(
@@ -786,116 +733,6 @@ function formatPublicAgentResult(params: {
       up: upStake.toString(),
     },
     voteCount,
-  };
-}
-
-function decorateX402QuestionState<T>(
-  value: T,
-  config: NormalizedAgentConfig,
-  latestRoundState: number | null = null,
-): T {
-  if (!isJsonRecord(value)) return value;
-
-  const decorated: JsonRecord = { ...value };
-  const contentId =
-    typeof decorated.contentId === "string" ? decorated.contentId : null;
-  const publicUrl = publicQuestionUrl(config, contentId);
-  if (publicUrl && typeof decorated.publicUrl !== "string") {
-    decorated.publicUrl = publicUrl;
-  }
-  if (typeof decorated.statusTool !== "string") {
-    decorated.statusTool = "curyo_get_question_status";
-  }
-
-  return {
-    ...decorated,
-    ...agentStatusHints(decorated, latestRoundState),
-  } as T;
-}
-
-function agentStatusHints(body: JsonRecord, latestRoundState: number | null = null) {
-  const status = typeof body.status === "string" ? body.status : "not_found";
-  const ready = isTerminalRoundState(latestRoundState);
-  const terminal = ready || status === "failed" || status === "not_found";
-
-  return {
-    nextAction:
-      status === "failed"
-        ? "manual_review"
-        : ready
-          ? "call_curyo_get_result"
-          : "poll_curyo_get_question_status",
-    pollAfterMs: terminal ? null : 5_000,
-    ready,
-    resultTool: ready ? "curyo_get_result" : null,
-    terminal,
-  };
-}
-
-function buildPendingAgentResult(operation: JsonRecord): CuryoAgentResult {
-  const status = typeof operation.status === "string" ? operation.status : "not_found";
-  return {
-    answer: status === "failed" ? "failed" : "pending",
-    confidence: {
-      level: "none",
-      score: 0,
-    },
-    distribution: {
-      conservativeRatingBps: null,
-      down: { count: 0, share: null, stake: "0" },
-      rating: null,
-      ratingBps: null,
-      revealedCount: 0,
-      state: null,
-      stateLabel: null,
-      up: { count: 0, share: null, stake: "0" },
-    },
-    dissentingView: null,
-    feedbackQuality: {
-      actionability: "none",
-      objectionCount: 0,
-      publicNoteCount: 0,
-      sourceUrlCount: 0,
-    },
-    limitations: ["The question has not reached a public Curyo result page yet."],
-    liveAskGuidance: null,
-    majorObjections: [],
-    methodology: {
-      ratingSystem: DEFAULT_AGENT_RESULT_TEMPLATE.ratingSystem,
-      sources: ["x402.question_submission"],
-      templateId: DEFAULT_AGENT_RESULT_TEMPLATE.id,
-      templateVersion: DEFAULT_AGENT_RESULT_TEMPLATE.version,
-      thresholds: DEFAULT_AGENT_RESULT_TEMPLATE.interpretation,
-    },
-    operation,
-    pollAfterMs: 5_000,
-    protocolState: {
-      latestRound: null,
-      status,
-    },
-    publicUrl:
-      typeof operation.publicUrl === "string" ? operation.publicUrl : null,
-    ready: false,
-    result: null,
-    wait: {
-      code: status === "failed" ? "failed_submission" : "still_settling",
-      recoverWith:
-        status === "failed" ? "inspect_status_error" : "curyo_get_question_status",
-    },
-    recommendedNextAction:
-      status === "failed" ? "manual_review" : "wait_for_settlement",
-    rationaleSummary:
-      status === "failed"
-        ? "The submission failed before a public Curyo result was available."
-        : "The human result is not ready yet.",
-    sourceUrls: [],
-    stakeMass: {
-      down: "0",
-      total: "0",
-      unit: "raw_staked_voting_power",
-      up: "0",
-    },
-    voteCount: 0,
   };
 }
 
@@ -1126,22 +963,6 @@ function latestRoundFromContentDetails(response: CuryoContentDetailsResponse) {
     : null;
 }
 
-async function loadPublicRoundState(
-  config: NormalizedAgentConfig,
-  contentId: string,
-) {
-  const read = createCuryoReadClient({
-    apiBaseUrl: config.apiBaseUrl,
-    fetchImpl: config.fetchImpl,
-    timeoutMs: config.timeoutMs,
-  });
-  const contentResponse = await read.getContent(contentId);
-  return toNumberValue(
-    latestRoundFromContentDetails(contentResponse)?.state,
-    null,
-  );
-}
-
 function toNumberValue(value: unknown, fallback: number | null = null): number | null {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "bigint") return Number(value);
@@ -1356,7 +1177,6 @@ function normalizeAgentConfig(
     mcpProtocolVersion:
       options.mcpProtocolVersion ?? DEFAULT_MCP_PROTOCOL_VERSION,
     timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
-    x402QuestionsPath: options.x402QuestionsPath ?? DEFAULT_X402_QUESTIONS_PATH,
   };
 }
 
@@ -1368,16 +1188,6 @@ function normalizeUrl(value?: string) {
   } catch {
     throw new CuryoSdkError(`Invalid URL: ${value}`);
   }
-}
-
-function x402QuestionsUrl(config: NormalizedAgentConfig) {
-  if (!config.apiBaseUrl) {
-    throw new CuryoSdkError(
-      "apiBaseUrl is required for x402 askHumans operations",
-    );
-  }
-
-  return new URL(config.x402QuestionsPath, `${config.apiBaseUrl}/`).toString();
 }
 
 function agentBaseUrl(config: NormalizedAgentConfig) {
@@ -1497,40 +1307,6 @@ function jsonAgentHeaders(config: NormalizedAgentConfig) {
     ...agentHeaders(config),
     "content-type": "application/json",
   };
-}
-
-function x402StatusUrl(
-  config: NormalizedAgentConfig,
-  params: QuestionStatusLookup,
-) {
-  if (!config.apiBaseUrl) {
-    throw new CuryoSdkError(
-      "apiBaseUrl is required for x402 status operations",
-    );
-  }
-  const operationKey =
-    typeof params.operationKey === "string" ? params.operationKey.trim() : "";
-
-  if (operationKey) {
-    return new URL(
-      `${config.x402QuestionsPath.replace(/\/+$/, "")}/${operationKey}`,
-      `${config.apiBaseUrl}/`,
-    ).toString();
-  }
-
-  if (!params.chainId || !params.clientRequestId) {
-    throw new CuryoSdkError(
-      "Provide operationKey or both chainId and clientRequestId",
-    );
-  }
-
-  const url = new URL(
-    `${config.x402QuestionsPath.replace(/\/+$/, "")}/by-client-request`,
-    `${config.apiBaseUrl}/`,
-  );
-  url.searchParams.set("chainId", String(params.chainId));
-  url.searchParams.set("clientRequestId", params.clientRequestId);
-  return url.toString();
 }
 
 function parseJson(body: string): unknown {
