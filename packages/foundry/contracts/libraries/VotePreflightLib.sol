@@ -40,7 +40,7 @@ library VotePreflightLib {
         if (hasVoterIdNft) {
             if (!voterIdNft.hasVoterId(voter)) revert VoterIdRequired();
             voterId = voterIdNft.getTokenId(voter);
-            uint256 submitterNullifier = registry.getSubmitterNullifier(contentId);
+            uint256 submitterNullifier = registry.contentSubmitterNullifier(contentId);
             if (submitterNullifier != 0 && voterIdNft.getNullifier(voterId) == submitterNullifier) {
                 revert SelfVote();
             }

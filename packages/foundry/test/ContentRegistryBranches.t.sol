@@ -725,7 +725,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         );
         vm.stopPrank();
 
-        assertEq(registry.getContentSubmitter(id), agentWallet);
+        (,, address storedSubmitter,,,,,,,) = registry.contents(id);
+        assertEq(storedSubmitter, agentWallet);
         assertEq(registry.getSubmitterIdentity(id), submitter);
         assertEq(mockQuestionRewardPoolEscrow.lastContentId(), id);
         assertEq(mockQuestionRewardPoolEscrow.lastFunder(), agentWallet);
@@ -803,7 +804,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             contextUrl, imageUrls, "", title, description, tags, categoryId, salt, submitter, rewardTerms, roundConfig
         );
         vm.warp(block.timestamp + 1);
-        vm.expectRevert("Reward voters exceed max");
+        vm.expectRevert("Voters exceed max");
         registry.submitQuestionWithRewardAndRoundConfig(
             contextUrl, imageUrls, "", title, description, tags, categoryId, salt, rewardTerms, roundConfig
         );
@@ -947,7 +948,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
 
         vm.startPrank(submitter);
-        vm.expectRevert("Invalid bounty close");
+        vm.expectRevert("Bad close");
         registry.submitQuestionWithRewardAndRoundConfig(
             "https://example.com/expired-bounty",
             imageUrls,
@@ -1294,10 +1295,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.startPrank(submitter);
         hrepToken.approve(address(reg2), 10e6);
         NoMediaQuestionText memory question = NoMediaQuestionText({
-            url: "https://example.com/no-config",
-            title: "goal",
-            description: "goal",
-            tags: "tags"
+            url: "https://example.com/no-config", title: "goal", description: "goal", tags: "tags"
         });
         bytes32 salt = _contentSubmissionSalt(question.url, submitter);
         (, bytes32 submissionKey) = reg2.previewQuestionSubmissionKey(

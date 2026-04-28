@@ -55,8 +55,6 @@ contract QuestionRewardPoolEscrow is
         address funder;
         address funderIdentity;
         address submitterIdentity;
-        uint256 submitterVoterId;
-        address submitterVoterIdNFT;
         uint8 asset;
         uint256 fundedAmount;
         uint256 unallocatedAmount;
@@ -65,7 +63,6 @@ contract QuestionRewardPoolEscrow is
         uint32 requiredSettledRounds;
         uint32 qualifiedRounds;
         bool refunded;
-        bool unallocatedRefunded;
         uint16 frontendFeeBps;
         bool nonRefundable;
     }
@@ -91,7 +88,6 @@ contract QuestionRewardPoolEscrow is
         uint32 requiredSettledRounds;
         uint32 completedRoundSets;
         uint32 claimedCount;
-        uint32 eligibleClaimCount;
         uint16 frontendFeeBps;
         uint256 funderNullifier;
         uint256 fundedAmount;
@@ -354,7 +350,6 @@ contract QuestionRewardPoolEscrow is
             requiredSettledRounds: requiredSettledRounds.toUint32(),
             completedRoundSets: 0,
             claimedCount: 0,
-            eligibleClaimCount: 0,
             frontendFeeBps: defaultFrontendFeeBps,
             funderNullifier: funderNullifier,
             fundedAmount: fundedAmount,
@@ -421,10 +416,10 @@ contract QuestionRewardPoolEscrow is
         _requireFutureBountyWindow(bountyClosesAt);
         uint256 normalizedFeedbackClosesAt = _normalizeFeedbackClosesAt(bountyClosesAt, feedbackClosesAt);
         RoundLib.RoundConfig memory contentCfg = registry.getContentRoundConfig(contentId);
-        require(requiredVoters <= contentCfg.maxVoters, "Reward voters exceed max");
+        require(requiredVoters <= contentCfg.maxVoters, "Voters exceed max");
         if (!nonRefundable) {
             require(amount >= requiredSettledRounds * uint256(contentCfg.maxVoters), "Amount too small");
-            require(bountyClosesAt > block.timestamp, "Invalid bounty close");
+            require(bountyClosesAt > block.timestamp, "Bad close");
         }
 
         uint256 fundedAmount = _pullExactToken(funder, asset, amount);
@@ -433,12 +428,8 @@ contract QuestionRewardPoolEscrow is
         uint256 startRoundId = currentRoundId == 0 ? 1 : currentRoundId + 1;
         (uint256 funderVoterId, address funderIdentity) = _resolveFunderIdentity(funder);
         address submitterIdentity = registry.getSubmitterIdentity(contentId);
-        uint256 submitterVoterId = submitterIdentity == address(0) ? 0 : voterIdNFT.getTokenId(submitterIdentity);
         uint256 funderNullifier = voterIdNFT.getNullifier(funderVoterId);
-        uint256 submitterNullifier = registry.getSubmitterNullifier(contentId);
-        if (submitterNullifier == 0 && submitterVoterId != 0) {
-            submitterNullifier = voterIdNFT.getNullifier(submitterVoterId);
-        }
+        uint256 submitterNullifier = registry.contentSubmitterNullifier(contentId);
 
         rewardPoolId = nextRewardPoolId++;
         rewardPools[rewardPoolId] = RewardPool({
@@ -452,8 +443,6 @@ contract QuestionRewardPoolEscrow is
             funder: funder,
             funderIdentity: funderIdentity,
             submitterIdentity: submitterIdentity,
-            submitterVoterId: submitterVoterId,
-            submitterVoterIdNFT: address(voterIdNFT),
             asset: asset,
             fundedAmount: fundedAmount,
             unallocatedAmount: fundedAmount,
@@ -462,7 +451,6 @@ contract QuestionRewardPoolEscrow is
             requiredSettledRounds: requiredSettledRounds.toUint32(),
             qualifiedRounds: 0,
             refunded: false,
-            unallocatedRefunded: false,
             frontendFeeBps: defaultFrontendFeeBps,
             nonRefundable: nonRefundable
         });
@@ -518,7 +506,7 @@ contract QuestionRewardPoolEscrow is
         returns (uint256 rewardAmount)
     {
         RewardPool storage rewardPool = _getExistingRewardPool(rewardPoolId);
-        require(!rewardPool.refunded, "Bounty refunded");
+        require(!rewardPool.refunded || rewardPool.claimDeadline != 0, "Bounty refunded");
         require(votingEngine.roundUnrevealedCleanupRemaining(rewardPool.contentId, roundId) == 0, "Cleanup pending");
         _qualifyRoundIfNeeded(rewardPoolId, rewardPool, roundId);
 
@@ -718,18 +706,8 @@ contract QuestionRewardPoolEscrow is
     function refundQuestionBundleReward(uint256 bundleId) external nonReentrant returns (uint256 refundAmount) {
         BundleReward storage bundle = _getExistingBundleReward(bundleId);
         require(!bundle.refunded, "Already refunded");
-        // Refund conditions: bounty window expired, or all configured round sets were fully claimed.
-        require(
-            (bundle.bountyClosesAt != 0 && block.timestamp > bundle.bountyClosesAt)
-                || (bundle.completedRoundSets >= bundle.requiredSettledRounds
-                    && bundle.claimedCount >= bundle.eligibleClaimCount),
-            "Bundle active"
-        );
-        // If claims are still open (bundle is claim-complete but not fully claimed) and the
-        // bounty-window-expiry branch triggered the refund, voters who haven't yet claimed
-        // would have their earned share swept back to the funder. Give them an explicit
-        // grace window to finish claiming before anyone can race them.
-        if (_isBundleClaimOpen(bundle)) {
+        require(bundle.bountyClosesAt != 0 && block.timestamp > bundle.bountyClosesAt, "Bundle active");
+        if (bundle.completedRoundSets != 0) {
             require(block.timestamp > uint256(bundle.bountyClosesAt) + BUNDLE_CLAIM_GRACE, "Grace");
             _requireBundleCleanupComplete(bundleId);
         }
@@ -750,7 +728,7 @@ contract QuestionRewardPoolEscrow is
 
     function refundExpiredRewardPool(uint256 rewardPoolId) external nonReentrant returns (uint256 refundAmount) {
         RewardPool storage rewardPool = _getExistingRewardPool(rewardPoolId);
-        if (rewardPool.qualifiedRounds >= rewardPool.requiredSettledRounds || rewardPool.unallocatedRefunded) {
+        if (rewardPool.qualifiedRounds >= rewardPool.requiredSettledRounds || rewardPool.refunded) {
             refundAmount = _refundCompleteRewardPool(rewardPoolId, rewardPool);
         } else {
             require(rewardPool.bountyClosesAt != 0 && block.timestamp > rewardPool.bountyClosesAt, "Not expired");
@@ -775,12 +753,11 @@ contract QuestionRewardPoolEscrow is
         returns (uint256 refundAmount)
     {
         require(!rewardPool.refunded, "Already refunded");
-        require(!rewardPool.unallocatedRefunded, "Already refunded");
         require(rewardPool.qualifiedRounds < rewardPool.requiredSettledRounds, "Bounty complete");
         _requireNoPendingFinishedRound(rewardPool);
         refundAmount = rewardPool.unallocatedAmount;
         require(refundAmount > 0, "No refund");
-        rewardPool.unallocatedRefunded = true;
+        rewardPool.refunded = true;
         rewardPool.unallocatedAmount = 0;
         rewardPool.fundedAmount -= refundAmount;
         _transferRewardPoolResidue(rewardPoolId, rewardPool, refundAmount);
@@ -790,7 +767,6 @@ contract QuestionRewardPoolEscrow is
         internal
         returns (uint256 refundAmount)
     {
-        require(!rewardPool.refunded, "Already refunded");
         uint256 claimDeadline = rewardPool.claimDeadline;
         require(claimDeadline != 0, "Grace");
         require(block.timestamp > claimDeadline + BUNDLE_CLAIM_GRACE, "Grace");
@@ -798,6 +774,7 @@ contract QuestionRewardPoolEscrow is
         refundAmount = rewardPool.fundedAmount - rewardPool.claimedAmount;
         require(refundAmount > 0, "No refund");
         rewardPool.refunded = true;
+        rewardPool.claimDeadline = 0;
         _transferRewardPoolResidue(rewardPoolId, rewardPool, refundAmount);
     }
 
@@ -820,7 +797,7 @@ contract QuestionRewardPoolEscrow is
     {
         RewardPool storage rewardPool = rewardPools[rewardPoolId];
         if (rewardPool.id == 0) return 0;
-        if (rewardPool.refunded) return 0;
+        if (rewardPool.refunded && rewardPool.claimDeadline == 0) return 0;
 
         IVoterIdNFT roundVoterIdNft = _roundVoterIdNft(rewardPool.contentId, roundId);
         uint256 voterId = roundVoterIdNft.getTokenId(account);
@@ -912,7 +889,7 @@ contract QuestionRewardPoolEscrow is
 
     function _requireFutureBountyWindow(uint256 bountyClosesAt) internal view {
         if (bountyClosesAt != 0) {
-            require(bountyClosesAt > block.timestamp, "Invalid bounty close");
+            require(bountyClosesAt > block.timestamp, "Bad close");
         }
     }
 
@@ -947,10 +924,6 @@ contract QuestionRewardPoolEscrow is
     function _getExistingBundleReward(uint256 bundleId) internal view returns (BundleReward storage bundle) {
         bundle = bundleRewards[bundleId];
         require(bundle.id != 0, "Bundle not found");
-    }
-
-    function _isBundleClaimOpen(BundleReward storage bundle) internal view returns (bool) {
-        return !bundle.refunded && bundle.claimedCount < bundle.eligibleClaimCount;
     }
 
     function _isBundleRoundSetClaimOpen(BundleReward storage bundle, uint256 bundleId, uint256 roundSetIndex)
@@ -1079,7 +1052,6 @@ contract QuestionRewardPoolEscrow is
         unchecked {
             bundle.completedRoundSets++;
         }
-        bundle.eligibleClaimCount += completerCount.toUint32();
         bundle.unallocatedAmount -= allocation;
 
         bundleRoundSetSnapshots[bundleId][roundSetIndex] = BundleRoundSetSnapshot({
@@ -1221,7 +1193,6 @@ contract QuestionRewardPoolEscrow is
 
     function _requireIncompleteRewardPool(RewardPool storage rewardPool) internal view {
         require(!rewardPool.refunded, "Bounty refunded");
-        require(!rewardPool.unallocatedRefunded, "Bounty refunded");
         require(rewardPool.qualifiedRounds < rewardPool.requiredSettledRounds, "Bounty complete");
     }
 
@@ -1264,10 +1235,7 @@ contract QuestionRewardPoolEscrow is
     }
 
     function _canPreviewNewQualification(RewardPool storage rewardPool, uint256 roundId) internal view returns (bool) {
-        if (
-            rewardPool.refunded || rewardPool.unallocatedRefunded
-                || rewardPool.qualifiedRounds >= rewardPool.requiredSettledRounds
-        ) return false;
+        if (rewardPool.refunded || rewardPool.qualifiedRounds >= rewardPool.requiredSettledRounds) return false;
         return roundId >= rewardPool.startRoundId && roundId == rewardPool.nextRoundToEvaluate;
     }
 
@@ -1288,8 +1256,6 @@ contract QuestionRewardPoolEscrow is
                 funderIdentity: rewardPool.funderIdentity,
                 funderNullifier: rewardPoolFunderNullifier[rewardPool.id],
                 submitterIdentity: rewardPool.submitterIdentity,
-                submitterVoterId: rewardPool.submitterVoterId,
-                submitterVoterIdNFT: rewardPool.submitterVoterIdNFT,
                 submitterNullifier: rewardPoolSubmitterNullifier[rewardPool.id]
             })
         );
@@ -1357,8 +1323,6 @@ contract QuestionRewardPoolEscrow is
             rewardPool.funderIdentity,
             rewardPoolFunderNullifier[rewardPool.id],
             rewardPool.submitterIdentity,
-            rewardPool.submitterVoterId,
-            rewardPool.submitterVoterIdNFT,
             rewardPoolSubmitterNullifier[rewardPool.id]
         );
     }

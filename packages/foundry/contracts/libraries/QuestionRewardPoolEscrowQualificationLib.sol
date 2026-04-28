@@ -18,8 +18,6 @@ library QuestionRewardPoolEscrowQualificationLib {
         address funderIdentity;
         uint256 funderNullifier;
         address submitterIdentity;
-        uint256 submitterVoterId;
-        address submitterVoterIdNFT;
         uint256 submitterNullifier;
     }
 
@@ -48,20 +46,10 @@ library QuestionRewardPoolEscrowQualificationLib {
         address funderIdentity,
         uint256 funderNullifier,
         address submitterIdentity,
-        uint256 submitterVoterId,
-        address submitterVoterIdNFT,
         uint256 submitterNullifier
     ) external view returns (bool) {
         return _isExcludedVoter(
-            voterIdNft,
-            voterId,
-            funder,
-            funderIdentity,
-            funderNullifier,
-            submitterIdentity,
-            submitterVoterId,
-            submitterVoterIdNFT,
-            submitterNullifier
+            voterIdNft, voterId, funder, funderIdentity, funderNullifier, submitterIdentity, submitterNullifier
         );
     }
 
@@ -70,7 +58,7 @@ library QuestionRewardPoolEscrowQualificationLib {
         view
         returns (uint256)
     {
-        uint256 snapshottedNullifier = registry.getSubmitterNullifier(contentId);
+        uint256 snapshottedNullifier = registry.contentSubmitterNullifier(contentId);
         if (snapshottedNullifier != 0) return snapshottedNullifier;
 
         address account = registry.getSubmitterIdentity(contentId);
@@ -109,8 +97,6 @@ library QuestionRewardPoolEscrowQualificationLib {
                         ctx.funderIdentity,
                         ctx.funderNullifier,
                         ctx.submitterIdentity,
-                        ctx.submitterVoterId,
-                        ctx.submitterVoterIdNFT,
                         ctx.submitterNullifier
                     )) {
                     unchecked {
@@ -131,8 +117,6 @@ library QuestionRewardPoolEscrowQualificationLib {
         address funderIdentity,
         uint256 funderNullifier,
         address submitterIdentity,
-        uint256 submitterVoterId,
-        address submitterVoterIdNFT,
         uint256 submitterNullifier
     ) private view returns (bool) {
         if (voterId == 0) return false;
@@ -153,7 +137,7 @@ library QuestionRewardPoolEscrowQualificationLib {
             return true;
         }
 
-        return submitterVoterIdNFT == address(voterIdNft) && voterId == submitterVoterId;
+        return false;
     }
 
     function _resolveFunderVoterId(IVoterIdNFT voterIdNft, address funder, address funderIdentity)

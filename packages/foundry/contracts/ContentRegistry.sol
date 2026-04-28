@@ -171,7 +171,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     mapping(uint256 => address) internal contentSubmitterIdentity;
 
     /// @notice Stable Self nullifier for the canonical submitter identity.
-    mapping(uint256 => uint256) internal contentSubmitterNullifier;
+    mapping(uint256 => uint256) public contentSubmitterNullifier;
 
     /// @notice Per-question round settings selected at submission and bounded by governance.
     mapping(uint256 => RoundLib.RoundConfig) public contentRoundConfig;
@@ -839,7 +839,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         // reveal hash carries caller-supplied randomness.
         require(salt != bytes32(0), "Salt required");
         _validateSubmissionReward(rewardTerms);
-        require(rewardTerms.requiredVoters <= roundConfig.maxVoters, "Reward voters exceed max");
+        require(rewardTerms.requiredVoters <= roundConfig.maxVoters, "Voters exceed max");
 
         bytes32 mediaHash = _submissionMediaHash(imageUrls, videoUrl);
         bytes32 revealCommitment = _computeRevealCommitment(
@@ -881,8 +881,8 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     }
 
     function _validateQuestionSpec(QuestionSpecCommitment memory spec) internal pure {
-        require(spec.questionMetadataHash != bytes32(0), "Question metadata hash required");
-        require(spec.resultSpecHash != bytes32(0), "Result spec hash required");
+        require(spec.questionMetadataHash != bytes32(0), "Bad metadata");
+        require(spec.resultSpecHash != bytes32(0), "Bad spec");
     }
 
     function _genericQuestionSpec() internal pure returns (QuestionSpecCommitment memory) {
@@ -930,9 +930,9 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     ) internal returns (uint256 contentId) {
         contentId = nextContentId++;
         contentSubmissionKey[contentId] = submissionKey;
-        contentSubmitterIdentity[contentId] = _resolveSubmitterIdentity(pending.submitter);
-        contentSubmitterNullifier[contentId] =
-            voterIdNFT.getNullifier(voterIdNFT.getTokenId(contentSubmitterIdentity[contentId]));
+        address submitterIdentity = _resolveSubmitterIdentity(pending.submitter);
+        contentSubmitterIdentity[contentId] = submitterIdentity;
+        contentSubmitterNullifier[contentId] = voterIdNFT.getNullifier(voterIdNFT.getTokenId(submitterIdentity));
         contentRoundConfig[contentId] = roundConfig;
         contents[contentId] = Content({
             id: contentId.toUint64(),
@@ -1122,17 +1122,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     // --- View functions ---
 
     function getSubmitterIdentity(uint256 contentId) external view returns (address) {
-        if (contents[contentId].submitter == address(0)) return address(0);
         return contentSubmitterIdentity[contentId];
-    }
-
-    function getSubmitterNullifier(uint256 contentId) external view returns (uint256) {
-        if (contents[contentId].submitter == address(0)) return 0;
-        return contentSubmitterNullifier[contentId];
-    }
-
-    function getContentSubmitter(uint256 contentId) external view returns (address) {
-        return contents[contentId].submitter;
     }
 
     function getRatingState(uint256 contentId) external view returns (RatingLib.RatingState memory state) {
@@ -1323,7 +1313,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         require(
             rewardTerms.amount >= rewardTerms.requiredSettledRounds * rewardTerms.requiredVoters, "Reward too small"
         );
-        require(rewardTerms.bountyClosesAt == 0 || rewardTerms.bountyClosesAt > block.timestamp, "Invalid bounty close");
+        require(rewardTerms.bountyClosesAt == 0 || rewardTerms.bountyClosesAt > block.timestamp, "Bad close");
         require(
             rewardTerms.feedbackClosesAt == 0 || rewardTerms.feedbackClosesAt > block.timestamp,
             "Invalid feedback close"
@@ -1377,7 +1367,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         view
         returns (RoundLib.RoundConfig memory cfg)
     {
-        require(address(protocolConfig) != address(0), "ProtocolConfig not set");
+        require(address(protocolConfig) != address(0), "Config not set");
         cfg = protocolConfig.validateRoundConfig(
             roundConfig.epochDuration, roundConfig.maxDuration, roundConfig.minVoters, roundConfig.maxVoters
         );

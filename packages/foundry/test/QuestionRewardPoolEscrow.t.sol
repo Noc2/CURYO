@@ -307,7 +307,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
 
         vm.startPrank(funder);
         usdc.approve(address(rewardPoolEscrow), REWARD_POOL_AMOUNT);
-        vm.expectRevert("Reward voters exceed max");
+        vm.expectRevert("Voters exceed max");
         rewardPoolEscrow.createRewardPool(contentId, REWARD_POOL_AMOUNT, 5, 1, block.timestamp + 30 days, 0);
         vm.stopPrank();
     }
@@ -1028,7 +1028,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
     function testSubmitterNullifierStaysExcludedAfterRemint() public {
         voterIdNFT.mint(submitter, 333_002);
         uint256 contentId = _submitQuestion("");
-        assertEq(registry.getSubmitterNullifier(contentId), 333_002);
+        assertEq(registry.contentSubmitterNullifier(contentId), 333_002);
 
         voterIdNFT.revokeVoterId(submitter);
         voterIdNFT.resetNullifier(333_002);
@@ -1040,7 +1040,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
     function testRemintedSubmitterCannotVoteOnOwnQuestion() public {
         voterIdNFT.mint(submitter, 333_003);
         uint256 contentId = _submitQuestion("");
-        assertEq(registry.getSubmitterNullifier(contentId), 333_003);
+        assertEq(registry.contentSubmitterNullifier(contentId), 333_003);
 
         voterIdNFT.revokeVoterId(submitter);
         voterIdNFT.resetNullifier(333_003);
@@ -1457,7 +1457,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
 
         vm.startPrank(funder);
         usdc.approve(address(rewardPoolEscrow), REWARD_POOL_AMOUNT);
-        vm.expectRevert("Invalid bounty close");
+        vm.expectRevert("Bad close");
         rewardPoolEscrow.createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1, 0, 0);
         vm.stopPrank();
     }
@@ -1560,7 +1560,8 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         vm.stopPrank();
 
         assertEq(contentId, expectedContentId);
-        assertEq(registry.getContentSubmitter(contentId), agentWallet);
+        (,, address storedSubmitter,,,,,,,) = registry.contents(contentId);
+        assertEq(storedSubmitter, agentWallet);
         assertEq(registry.getSubmitterIdentity(contentId), submitter);
         assertEq(usdc.balanceOf(address(rewardPoolEscrow)), escrowBalanceBefore + rewardTerms.amount);
         assertEq(usdc.balanceOf(agentWallet), agentBalanceBefore - rewardTerms.amount);
