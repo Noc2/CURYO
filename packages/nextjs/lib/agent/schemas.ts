@@ -155,7 +155,7 @@ export const agentAskHumansInputSchema = {
   properties: {
     ...agentAskInputBaseProperties,
     maxPaymentAmount: {
-      description: "Maximum total managed spend, including bounty and service fee, in atomic USDC.",
+      description: "Maximum total bounty spend in atomic USDC.",
       pattern: "^\\d+$",
       type: "string",
     },
@@ -252,7 +252,6 @@ export const agentPaymentOutputSchema = {
     asset: { type: "string" },
     bountyAmount: atomicAmountSchema,
     decimals: { type: "integer" },
-    serviceFeeAmount: atomicAmountSchema,
     spender: { type: "string" },
     tokenAddress: { type: "string" },
   },

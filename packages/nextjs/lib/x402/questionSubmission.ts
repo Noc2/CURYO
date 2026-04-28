@@ -1,26 +1,22 @@
 import { ContentRegistryAbi, ProtocolConfigAbi } from "@curyo/contracts/abis";
 import { getSharedDeploymentAddress } from "@curyo/contracts/deployments";
-import { createHash, randomBytes } from "crypto";
+import { createHash } from "crypto";
 import "server-only";
 import {
   type Address,
   type Hex,
   type TransactionReceipt,
   createPublicClient,
-  createWalletClient,
   decodeEventLog,
   encodeFunctionData,
   erc20Abi,
   http,
   isAddress,
 } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
 import { dbClient } from "~~/lib/db";
 import {
   getPrimaryServerTargetNetwork,
   getServerTargetNetworkById,
-  getX402ExecutorPrivateKey,
-  getX402ServiceFeeUsdc,
   getX402UsdcAddressOverride,
 } from "~~/lib/env/server";
 import { questionRoundConfigToAbi, serializeQuestionRoundConfig } from "~~/lib/questionRoundConfig";
@@ -40,14 +36,8 @@ import {
 
 const RESERVED_SUBMISSION_WAIT_MS = 1_100;
 const TX_RECEIPT_TIMEOUT_MS = 180_000;
-const SUBMITTING_STALE_MS = 5 * 60_000;
 
-export type X402QuestionSubmissionStatus =
-  | "awaiting_wallet_signature"
-  | "payment_settled"
-  | "submitting"
-  | "submitted"
-  | "failed";
+export type X402QuestionSubmissionStatus = "awaiting_wallet_signature" | "submitted" | "failed";
 
 export type AgentWalletTransactionPhase = "approve_usdc" | "reserve_submission" | "submit_question";
 
@@ -71,7 +61,6 @@ export type AgentWalletQuestionSubmissionPlan = {
     asset: "USDC";
     bountyAmount: string;
     decimals: number;
-    serviceFeeAmount: string;
     spender: Address;
     tokenAddress: Address;
   };
@@ -93,7 +82,6 @@ export type X402QuestionSubmissionRecord = {
   paymentAsset: string;
   paymentAmount: string;
   bountyAmount: string;
-  serviceFeeAmount: string;
   status: X402QuestionSubmissionStatus;
   bundleId: string | null;
   contentId: string | null;
@@ -102,14 +90,12 @@ export type X402QuestionSubmissionRecord = {
   rewardPoolId: string | null;
   transactionHashes: string | null;
   paymentReceipt: string | null;
-  submissionToken: string | null;
   error: string | null;
   updatedAt: Date;
 };
 
 type X402QuestionSubmissionTestOverrides = {
   buildAgentWalletQuestionSubmissionPlan?: typeof buildAgentWalletQuestionSubmissionPlan;
-  executeX402QuestionSubmission?: typeof executeX402QuestionSubmission;
   preflightX402QuestionSubmission?: typeof preflightX402QuestionSubmission;
   resolveX402QuestionConfig?: typeof resolveX402QuestionConfig;
 };
@@ -117,17 +103,10 @@ type X402QuestionSubmissionTestOverrides = {
 type X402QuestionSubmissionConfig = {
   chainId: number;
   contentRegistryAddress: Address;
-  executorPrivateKey?: Hex;
-  executorAddress: Address | null;
   questionRewardPoolEscrowAddress: Address;
   rpcUrl: string;
-  serviceFeeAmount: bigint;
   targetNetwork: NonNullable<ReturnType<typeof getPrimaryServerTargetNetwork>>;
   usdcAddress: Address;
-};
-
-type X402QuestionConfigOptions = {
-  requireExecutor?: boolean;
 };
 
 export class X402QuestionConfigError extends Error {
@@ -150,10 +129,6 @@ export class X402QuestionConflictError extends Error {
 
 let x402QuestionSubmissionTestOverrides: X402QuestionSubmissionTestOverrides | null = null;
 
-function sleep(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 function rowToRecord(row: Record<string, unknown> | undefined): X402QuestionSubmissionRecord | null {
   if (!row) return null;
   return {
@@ -172,8 +147,6 @@ function rowToRecord(row: Record<string, unknown> | undefined): X402QuestionSubm
     paymentReceipt: typeof row.payment_receipt === "string" ? row.payment_receipt : null,
     questionCount: Number(row.question_count ?? 1),
     rewardPoolId: typeof row.reward_pool_id === "string" ? row.reward_pool_id : null,
-    serviceFeeAmount: String(row.service_fee_amount),
-    submissionToken: typeof row.submission_token === "string" ? row.submission_token : null,
     status: String(row.status) as X402QuestionSubmissionStatus,
     transactionHashes: typeof row.transaction_hashes === "string" ? row.transaction_hashes : null,
     updatedAt: row.updated_at instanceof Date ? row.updated_at : new Date(String(row.updated_at)),
@@ -208,149 +181,6 @@ export async function getX402QuestionSubmissionByOperationKey(
       LIMIT 1
     `,
     args: [operationKey],
-  });
-
-  return rowToRecord(result.rows[0]);
-}
-
-async function recordPaymentSettlement(params: {
-  config: X402QuestionSubmissionConfig;
-  operation: X402QuestionOperation;
-  payload: X402QuestionPayload;
-  payerAddress: string | null;
-  paymentAmount: bigint;
-  paymentReceipt: unknown;
-}) {
-  const now = new Date();
-  try {
-    await dbClient.execute({
-      sql: `
-        INSERT INTO x402_question_submissions (
-          operation_key,
-          client_request_id,
-          payload_hash,
-          chain_id,
-          payer_address,
-          payment_asset,
-          payment_amount,
-          bounty_amount,
-          service_fee_amount,
-          question_count,
-          status,
-          payment_receipt,
-          created_at,
-          updated_at
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `,
-      args: [
-        params.operation.operationKey,
-        params.payload.clientRequestId,
-        params.operation.payloadHash,
-        params.payload.chainId,
-        params.payerAddress,
-        params.config.usdcAddress,
-        params.paymentAmount.toString(),
-        params.payload.bounty.amount.toString(),
-        params.config.serviceFeeAmount.toString(),
-        params.payload.questions.length,
-        "payment_settled",
-        JSON.stringify(params.paymentReceipt),
-        now,
-        now,
-      ],
-    });
-  } catch (error) {
-    const code = typeof error === "object" && error && "code" in error ? String(error.code) : "";
-    if (code !== "23505") {
-      throw error;
-    }
-
-    await dbClient.execute({
-      sql: `
-        UPDATE x402_question_submissions
-        SET payer_address = ?,
-            payment_receipt = ?,
-            payment_amount = ?,
-            payment_asset = ?,
-            status = CASE
-              WHEN status IN ('submitted', 'submitting') THEN status
-              ELSE ?
-            END,
-            submission_token = CASE
-              WHEN status = 'submitting' THEN submission_token
-              ELSE NULL
-            END,
-            error = CASE
-              WHEN status = 'submitting' THEN error
-              ELSE NULL
-            END,
-            updated_at = ?
-        WHERE operation_key = ?
-      `,
-      args: [
-        params.payerAddress,
-        JSON.stringify(params.paymentReceipt),
-        params.paymentAmount.toString(),
-        params.config.usdcAddress,
-        "payment_settled",
-        now,
-        params.operation.operationKey,
-      ],
-    });
-  }
-}
-
-async function claimManagedSubmissionExecution(params: {
-  now?: Date;
-  operationKey: `0x${string}`;
-}): Promise<{ record: X402QuestionSubmissionRecord | null; submissionToken: string | null }> {
-  const now = params.now ?? new Date();
-  const staleBefore = new Date(now.getTime() - SUBMITTING_STALE_MS);
-  const submissionToken = randomBytes(16).toString("hex");
-  const result = await dbClient.execute({
-    sql: `
-      UPDATE x402_question_submissions
-      SET status = 'submitting',
-          submission_token = ?,
-          error = NULL,
-          updated_at = ?
-      WHERE operation_key = ?
-        AND status <> 'submitted'
-        AND (
-          status = 'payment_settled'
-          OR status = 'failed'
-          OR (status = 'submitting' AND updated_at <= ?)
-        )
-      RETURNING *
-    `,
-    args: [submissionToken, now, params.operationKey, staleBefore],
-  });
-
-  const record = rowToRecord(result.rows[0]);
-  return {
-    record,
-    submissionToken: record ? submissionToken : null,
-  };
-}
-
-async function consumeManagedSubmissionExecution(params: {
-  now?: Date;
-  operationKey: `0x${string}`;
-  submissionToken: string;
-}) {
-  const now = params.now ?? new Date();
-  const result = await dbClient.execute({
-    sql: `
-      UPDATE x402_question_submissions
-      SET submission_token = NULL,
-          updated_at = ?
-      WHERE operation_key = ?
-        AND status = 'submitting'
-        AND submission_token = ?
-      RETURNING *
-    `,
-    args: [now, params.operationKey, params.submissionToken],
   });
 
   return rowToRecord(result.rows[0]);
@@ -425,10 +255,7 @@ export function getX402QuestionFallbackChainId(): number | undefined {
   return getPrimaryServerTargetNetwork()?.id;
 }
 
-export function resolveX402QuestionConfig(
-  chainId: number,
-  options: X402QuestionConfigOptions = {},
-): X402QuestionSubmissionConfig {
+export function resolveX402QuestionConfig(chainId: number): X402QuestionSubmissionConfig {
   const targetNetwork = getServerTargetNetworkById(chainId);
   if (!targetNetwork) {
     throw new X402QuestionConfigError(`Chain ${chainId} is not configured for this server.`);
@@ -445,26 +272,16 @@ export function resolveX402QuestionConfig(
     throw new X402QuestionConfigError("Curyo contracts are not deployed for the requested chain.");
   }
 
-  const executorPrivateKey = getX402ExecutorPrivateKey();
-  if (options.requireExecutor && !executorPrivateKey) {
-    throw new X402QuestionConfigError("CURYO_X402_EXECUTOR_PRIVATE_KEY is required for executor question submission.");
-  }
-
   const rpcUrl = getRpcUrl(targetNetwork);
   if (!rpcUrl) {
     throw new X402QuestionConfigError(`No RPC URL is configured for chain ${chainId}.`);
   }
 
-  const account = executorPrivateKey ? privateKeyToAccount(executorPrivateKey) : null;
-
   return {
     chainId,
     contentRegistryAddress,
-    executorAddress: account?.address ?? null,
-    executorPrivateKey: executorPrivateKey ?? undefined,
     questionRewardPoolEscrowAddress,
     rpcUrl,
-    serviceFeeAmount: options.requireExecutor ? getX402ServiceFeeUsdc() : 0n,
     targetNetwork,
     usdcAddress,
   };
@@ -475,8 +292,6 @@ function getQuestionSubmissionDependencies() {
     buildAgentWalletQuestionSubmissionPlan:
       x402QuestionSubmissionTestOverrides?.buildAgentWalletQuestionSubmissionPlan ??
       buildAgentWalletQuestionSubmissionPlan,
-    executeX402QuestionSubmission:
-      x402QuestionSubmissionTestOverrides?.executeX402QuestionSubmission ?? executeX402QuestionSubmission,
     preflightX402QuestionSubmission:
       x402QuestionSubmissionTestOverrides?.preflightX402QuestionSubmission ?? preflightX402QuestionSubmission,
     resolveX402QuestionConfig:
@@ -488,24 +303,7 @@ function createPublicQuestionClient(config: X402QuestionSubmissionConfig) {
   return createPublicClient({ chain: config.targetNetwork, transport: http(config.rpcUrl) });
 }
 
-function createViemClients(config: X402QuestionSubmissionConfig) {
-  if (!config.executorPrivateKey) {
-    throw new X402QuestionConfigError("Executor question submission requires CURYO_X402_EXECUTOR_PRIVATE_KEY.");
-  }
-
-  const account = privateKeyToAccount(config.executorPrivateKey);
-  const chain = config.targetNetwork;
-  const transport = http(config.rpcUrl);
-
-  return {
-    account,
-    publicClient: createPublicClient({ chain, transport }),
-    walletClient: createWalletClient({ account, chain, transport }),
-  };
-}
-
-type X402PublicClient = ReturnType<typeof createViemClients>["publicClient"];
-type X402WalletClient = ReturnType<typeof createViemClients>["walletClient"];
+type X402PublicClient = ReturnType<typeof createPublicQuestionClient>;
 
 async function waitForSuccessfulReceipt(publicClient: X402PublicClient, hash: Hex): Promise<TransactionReceipt> {
   const receipt = await publicClient.waitForTransactionReceipt({
@@ -629,41 +427,9 @@ export async function preflightX402QuestionSubmission(params: {
 
   return {
     operation,
-    paymentAmount: params.payload.bounty.amount + params.config.serviceFeeAmount,
+    paymentAmount: params.payload.bounty.amount,
     ...preflight,
   };
-}
-
-async function ensureUsdcAllowance(params: {
-  amount: bigint;
-  config: X402QuestionSubmissionConfig;
-  publicClient: X402PublicClient;
-  walletClient: X402WalletClient;
-}): Promise<Hex | null> {
-  if (!params.config.executorAddress) {
-    throw new X402QuestionConfigError("Executor USDC allowance checks require an executor address.");
-  }
-
-  const allowance = (await params.publicClient.readContract({
-    address: params.config.usdcAddress,
-    abi: erc20Abi,
-    functionName: "allowance",
-    args: [params.config.executorAddress, params.config.questionRewardPoolEscrowAddress],
-  })) as bigint;
-
-  if (allowance >= params.amount) {
-    return null;
-  }
-
-  const approveHash = await params.walletClient.writeContract({
-    address: params.config.usdcAddress,
-    abi: erc20Abi,
-    chain: params.config.targetNetwork,
-    functionName: "approve",
-    args: [params.config.questionRewardPoolEscrowAddress, params.amount],
-  });
-  await waitForSuccessfulReceipt(params.publicClient, approveHash);
-  return approveHash;
 }
 
 function buildDeterministicQuestionSalt(params: {
@@ -866,11 +632,10 @@ export async function buildAgentWalletQuestionSubmissionPlan(params: {
     chainId: params.payload.chainId,
     operationKey: operation.operationKey,
     payment: {
-      amount: (params.payload.bounty.amount + params.config.serviceFeeAmount).toString(),
+      amount: params.payload.bounty.amount.toString(),
       asset: "USDC",
       bountyAmount: params.payload.bounty.amount.toString(),
       decimals: X402_USDC_DECIMALS,
-      serviceFeeAmount: params.config.serviceFeeAmount.toString(),
       spender: params.config.questionRewardPoolEscrowAddress,
       tokenAddress: params.config.usdcAddress,
     },
@@ -930,130 +695,6 @@ function readSubmissionResult(receipt: TransactionReceipt): {
   return { bundleId, contentIds, rewardPoolId, submitters: Array.from(submitters) };
 }
 
-async function executeX402QuestionSubmission(params: {
-  config: X402QuestionSubmissionConfig;
-  payload: X402QuestionPayload;
-}): Promise<{ bundleId: bigint | null; contentIds: bigint[]; rewardPoolId: bigint | null; transactionHashes: Hex[] }> {
-  const { account, publicClient, walletClient } = createViemClients(params.config);
-  const preflight = await preflightX402QuestionSubmissionWithClient({
-    config: params.config,
-    payload: params.payload,
-    publicClient,
-  });
-  const salts = params.payload.questions.map(() => `0x${randomBytes(32).toString("hex")}` as Hex);
-  const context = buildQuestionSubmissionCallContext({
-    payload: params.payload,
-    salts,
-    submissionKeys: preflight.submissionKeys,
-    submitter: account.address,
-  });
-
-  const transactionHashes: Hex[] = [];
-  const approvalHash = await ensureUsdcAllowance({
-    amount: params.payload.bounty.amount,
-    config: params.config,
-    publicClient,
-    walletClient,
-  });
-  if (approvalHash) {
-    transactionHashes.push(approvalHash);
-  }
-
-  const reserveHash = await walletClient.writeContract({
-    address: params.config.contentRegistryAddress,
-    abi: ContentRegistryAbi,
-    chain: params.config.targetNetwork,
-    functionName: "reserveSubmission",
-    args: [context.revealCommitment],
-  });
-  transactionHashes.push(reserveHash);
-  await waitForSuccessfulReceipt(publicClient, reserveHash);
-
-  try {
-    await sleep(RESERVED_SUBMISSION_WAIT_MS);
-    const { request } = await publicClient.simulateContract({
-      account,
-      address: params.config.contentRegistryAddress,
-      abi: ContentRegistryAbi,
-      functionName: context.submitFunctionName,
-      args: context.submitArgs as never,
-    });
-    const submitHash = await walletClient.writeContract(request);
-    transactionHashes.push(submitHash);
-    const submitReceipt = await waitForSuccessfulReceipt(publicClient, submitHash);
-    const result = readSubmissionResult(submitReceipt);
-    if (result.contentIds.length === 0) {
-      throw new Error("Submission receipt did not include ContentSubmitted.");
-    }
-
-    return {
-      bundleId: result.bundleId,
-      contentIds: result.contentIds,
-      rewardPoolId: result.rewardPoolId,
-      transactionHashes,
-    };
-  } catch (error) {
-    try {
-      const cancelHash = await walletClient.writeContract({
-        address: params.config.contentRegistryAddress,
-        abi: ContentRegistryAbi,
-        chain: params.config.targetNetwork,
-        functionName: "cancelReservedSubmission",
-        args: [context.revealCommitment],
-      });
-      transactionHashes.push(cancelHash);
-      await waitForSuccessfulReceipt(publicClient, cancelHash);
-    } catch {
-      // The original submit error is more useful to callers than a best-effort cleanup failure.
-    }
-    throw error;
-  }
-}
-
-function submissionResponseBody(params: {
-  config: X402QuestionSubmissionConfig;
-  operation: X402QuestionOperation;
-  payload: X402QuestionPayload;
-  record?: X402QuestionSubmissionRecord | null;
-  result?: { bundleId: bigint | null; contentIds: bigint[]; rewardPoolId: bigint | null; transactionHashes: Hex[] };
-}) {
-  const contentIds =
-    params.result?.contentIds.map(contentId => contentId.toString()) ??
-    (params.record?.contentIds ? parseStoredContentIds(params.record.contentIds) : []);
-  const contentId = contentIds[0] ?? params.record?.contentId ?? null;
-  const bundleId = params.result?.bundleId?.toString() ?? params.record?.bundleId ?? null;
-  const rewardPoolId = params.result?.rewardPoolId?.toString() ?? params.record?.rewardPoolId ?? null;
-  const transactionHashes =
-    params.result?.transactionHashes ?? parseStoredTransactionHashes(params.record?.transactionHashes ?? null);
-
-  return {
-    bounty: {
-      amount: params.payload.bounty.amount.toString(),
-      asset: params.payload.bounty.asset,
-      requiredSettledRounds: params.payload.bounty.requiredSettledRounds.toString(),
-      requiredVoters: params.payload.bounty.requiredVoters.toString(),
-      rewardPoolExpiresAt: params.payload.bounty.rewardPoolExpiresAt.toString(),
-      feedbackClosesAt: params.payload.bounty.feedbackClosesAt.toString(),
-    },
-    chainId: params.payload.chainId,
-    bundleId,
-    contentId,
-    contentIds,
-    executorAddress: params.config.executorAddress,
-    operationKey: params.operation.operationKey,
-    questionCount: params.payload.questions.length,
-    roundConfig: serializeQuestionRoundConfig(params.payload.roundConfig),
-    payment: {
-      amount: (params.payload.bounty.amount + params.config.serviceFeeAmount).toString(),
-      asset: params.config.usdcAddress,
-      serviceFeeAmount: params.config.serviceFeeAmount.toString(),
-    },
-    rewardPoolId,
-    status: "submitted",
-    transactionHashes,
-  };
-}
-
 export function x402QuestionSubmissionStatusBody(params: {
   config: X402QuestionSubmissionConfig;
   operation: X402QuestionOperation;
@@ -1075,14 +716,12 @@ export function x402QuestionSubmissionStatusBody(params: {
     contentId: params.record?.contentId ?? null,
     contentIds: params.record?.contentIds ? parseStoredContentIds(params.record.contentIds) : [],
     error: params.record?.error ?? null,
-    executorAddress: params.config.executorAddress,
     operationKey: params.operation.operationKey,
     questionCount: params.payload.questions.length,
     roundConfig: serializeQuestionRoundConfig(params.payload.roundConfig),
     payment: {
-      amount: (params.payload.bounty.amount + params.config.serviceFeeAmount).toString(),
+      amount: params.payload.bounty.amount.toString(),
       asset: params.config.usdcAddress,
-      serviceFeeAmount: params.config.serviceFeeAmount.toString(),
     },
     rewardPoolId: params.record?.rewardPoolId ?? null,
     status: params.record?.status ?? "not_found",
@@ -1137,7 +776,7 @@ async function recordAgentWalletSubmissionPlan(params: {
         params.config.usdcAddress,
         params.plan.payment.amount,
         params.payload.bounty.amount.toString(),
-        params.config.serviceFeeAmount.toString(),
+        "0",
         params.payload.questions.length,
         "awaiting_wallet_signature",
         receipt,
@@ -1158,7 +797,7 @@ async function recordAgentWalletSubmissionPlan(params: {
             payment_asset = ?,
             payment_amount = ?,
             bounty_amount = ?,
-            service_fee_amount = ?,
+            service_fee_amount = '0',
             question_count = ?,
             status = CASE WHEN status = 'submitted' THEN status ELSE ? END,
             payment_receipt = CASE WHEN status = 'submitted' THEN payment_receipt ELSE ? END,
@@ -1171,7 +810,6 @@ async function recordAgentWalletSubmissionPlan(params: {
         params.config.usdcAddress,
         params.plan.payment.amount,
         params.payload.bounty.amount.toString(),
-        params.config.serviceFeeAmount.toString(),
         params.payload.questions.length,
         "awaiting_wallet_signature",
         receipt,
@@ -1367,7 +1005,6 @@ export function x402QuestionSubmissionRecordBody(record: X402QuestionSubmissionR
     payment: {
       amount: record.paymentAmount,
       asset: record.paymentAsset,
-      serviceFeeAmount: record.serviceFeeAmount,
     },
     questionCount: record.questionCount,
     rewardPoolId: record.rewardPoolId,
@@ -1375,173 +1012,6 @@ export function x402QuestionSubmissionRecordBody(record: X402QuestionSubmissionR
     transactionHashes: parseStoredTransactionHashes(record.transactionHashes),
     updatedAt: record.updatedAt.toISOString(),
   };
-}
-
-export async function handleManagedQuestionSubmissionRequest(params: {
-  agentId: string;
-  payload: X402QuestionPayload;
-}): Promise<{ body: unknown; status: number }> {
-  const started = await startManagedQuestionSubmissionRequest(params);
-  if (!started.shouldSubmit) {
-    const body = started.body as Record<string, unknown>;
-    if (body.status === "submitted") {
-      return {
-        body: started.body,
-        status: 200,
-      };
-    }
-    throw new X402QuestionConflictError("This managed MCP question submission is already being processed.");
-  }
-
-  return completeManagedQuestionSubmissionRequest({
-    ...params,
-    submissionToken: started.submissionToken,
-  });
-}
-
-export async function startManagedQuestionSubmissionRequest(params: {
-  agentId: string;
-  payload: X402QuestionPayload;
-}): Promise<{ body: unknown; shouldSubmit: boolean; status: number; submissionToken?: string | null }> {
-  const dependencies = getQuestionSubmissionDependencies();
-  const config = dependencies.resolveX402QuestionConfig(params.payload.chainId, { requireExecutor: true });
-  const operation = buildX402QuestionOperation(params.payload);
-  const existingRecord = await getX402QuestionSubmissionByClientRequest({
-    chainId: params.payload.chainId,
-    clientRequestId: params.payload.clientRequestId,
-  });
-
-  if (existingRecord && existingRecord.payloadHash !== operation.payloadHash) {
-    throw new X402QuestionConflictError("clientRequestId has already been used for a different question payload.");
-  }
-
-  if (existingRecord?.status === "submitted") {
-    return {
-      body: submissionResponseBody({ config, operation, payload: params.payload, record: existingRecord }),
-      shouldSubmit: false,
-      status: 200,
-    };
-  }
-
-  if (
-    existingRecord?.status === "submitting" &&
-    Number.isFinite(existingRecord.updatedAt.getTime()) &&
-    Date.now() - existingRecord.updatedAt.getTime() < SUBMITTING_STALE_MS
-  ) {
-    return {
-      body: x402QuestionSubmissionStatusBody({ config, operation, payload: params.payload, record: existingRecord }),
-      shouldSubmit: false,
-      status: 202,
-    };
-  }
-
-  const preflight = await dependencies.preflightX402QuestionSubmission({
-    config,
-    payload: params.payload,
-  });
-
-  if (!existingRecord?.paymentReceipt) {
-    await recordPaymentSettlement({
-      config,
-      operation,
-      payerAddress: params.agentId,
-      paymentAmount: preflight.paymentAmount,
-      paymentReceipt: {
-        agentId: params.agentId,
-        mode: "mcp-managed",
-        operationKey: operation.operationKey,
-        reservedAt: new Date().toISOString(),
-      },
-      payload: params.payload,
-    });
-  }
-
-  const claimed = await claimManagedSubmissionExecution({
-    operationKey: operation.operationKey,
-  });
-  const submittingRecord = claimed.record ?? (await getX402QuestionSubmissionByOperationKey(operation.operationKey));
-  return {
-    body: x402QuestionSubmissionStatusBody({ config, operation, payload: params.payload, record: submittingRecord }),
-    shouldSubmit: !!claimed.submissionToken,
-    status: submittingRecord?.status === "submitted" ? 200 : 202,
-    submissionToken: claimed.submissionToken,
-  };
-}
-
-export async function completeManagedQuestionSubmissionRequest(params: {
-  agentId: string;
-  payload: X402QuestionPayload;
-  submissionToken?: string | null;
-}): Promise<{ body: unknown; status: number }> {
-  const dependencies = getQuestionSubmissionDependencies();
-  const config = dependencies.resolveX402QuestionConfig(params.payload.chainId, { requireExecutor: true });
-  const operation = buildX402QuestionOperation(params.payload);
-  const existingRecord = await getX402QuestionSubmissionByClientRequest({
-    chainId: params.payload.chainId,
-    clientRequestId: params.payload.clientRequestId,
-  });
-
-  if (existingRecord && existingRecord.payloadHash !== operation.payloadHash) {
-    throw new X402QuestionConflictError("clientRequestId has already been used for a different question payload.");
-  }
-
-  if (existingRecord?.status === "submitted") {
-    return {
-      body: submissionResponseBody({ config, operation, payload: params.payload, record: existingRecord }),
-      status: 200,
-    };
-  }
-
-  if (!existingRecord?.paymentReceipt) {
-    throw new X402QuestionConflictError("This managed MCP question submission has not been started.");
-  }
-
-  if (!params.submissionToken) {
-    throw new X402QuestionConflictError("This managed MCP question submission is already being processed.");
-  }
-
-  const claimedRecord = await consumeManagedSubmissionExecution({
-    operationKey: operation.operationKey,
-    submissionToken: params.submissionToken,
-  });
-  if (!claimedRecord) {
-    const currentRecord = await getX402QuestionSubmissionByOperationKey(operation.operationKey);
-    if (currentRecord?.status === "submitted") {
-      return {
-        body: submissionResponseBody({ config, operation, payload: params.payload, record: currentRecord }),
-        status: 200,
-      };
-    }
-    throw new X402QuestionConflictError("This managed MCP question submission is already being processed.");
-  }
-
-  try {
-    const result = await dependencies.executeX402QuestionSubmission({
-      config,
-      payload: params.payload,
-    });
-    await updateSubmissionStatus({
-      bundleId: result.bundleId,
-      contentId: result.contentIds[0] ?? null,
-      contentIds: result.contentIds,
-      operationKey: operation.operationKey,
-      rewardPoolId: result.rewardPoolId,
-      status: "submitted",
-      transactionHashes: result.transactionHashes,
-    });
-
-    return {
-      body: submissionResponseBody({ config, operation, payload: params.payload, result }),
-      status: 200,
-    };
-  } catch (error) {
-    await updateSubmissionStatus({
-      error: error instanceof Error ? error.message : String(error),
-      operationKey: operation.operationKey,
-      status: "failed",
-    });
-    throw error;
-  }
 }
 
 export function __setX402QuestionSubmissionTestOverridesForTests(value: X402QuestionSubmissionTestOverrides | null) {

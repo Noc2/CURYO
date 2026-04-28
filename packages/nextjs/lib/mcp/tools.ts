@@ -489,7 +489,6 @@ function formatQuoteResult(
       asset: "USDC",
       bountyAmount: payload.bounty.amount.toString(),
       decimals: X402_USDC_DECIMALS,
-      serviceFeeAmount: config.serviceFeeAmount.toString(),
       spender: config.questionRewardPoolEscrowAddress,
       tokenAddress: config.usdcAddress,
     },
@@ -572,7 +571,7 @@ async function buildQuestionResult(args: JsonObject, agent: McpAgentAuth) {
       majorObjections: [],
       methodology: {
         ratingSystem: "curyo.binary_staked_rating.v1",
-        sources: ["x402.question_submission"],
+        sources: ["curyo.agent_question_submission"],
         templateId: "generic_rating",
         templateVersion: 1,
       },

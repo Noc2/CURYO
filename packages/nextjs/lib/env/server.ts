@@ -175,20 +175,6 @@ export function getThirdwebServerVerifierSecret(): string | undefined {
   return readEnv("THIRDWEB_SERVER_VERIFIER_SECRET");
 }
 
-export function getX402ExecutorPrivateKey(): `0x${string}` | undefined {
-  const value = readEnv("CURYO_X402_EXECUTOR_PRIVATE_KEY");
-  return value?.startsWith("0x") ? (value as `0x${string}`) : undefined;
-}
-
-export function getX402ServiceFeeUsdc(): bigint {
-  const value = readEnv("CURYO_X402_SERVICE_FEE_USDC");
-  if (!value || !/^\d+$/.test(value)) {
-    return 0n;
-  }
-
-  return BigInt(value);
-}
-
 export function getX402UsdcAddressOverride(): `0x${string}` | undefined {
   const value = readEnv("CURYO_X402_USDC_ADDRESS");
   return value?.startsWith("0x") ? (value as `0x${string}`) : undefined;

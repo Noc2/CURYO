@@ -5,10 +5,8 @@ import { createMemoryDatabaseResources } from "~~/lib/db/testMemory";
 import type { X402QuestionPayload } from "~~/lib/x402/questionPayload";
 import {
   __setX402QuestionSubmissionTestOverridesForTests,
-  completeManagedQuestionSubmissionRequest,
   getX402QuestionSubmissionByClientRequest,
   prepareAgentWalletQuestionSubmissionRequest,
-  startManagedQuestionSubmissionRequest,
 } from "~~/lib/x402/questionSubmission";
 
 const env = process.env as Record<string, string | undefined>;
@@ -56,15 +54,10 @@ function buildPayload(clientRequestId: string): X402QuestionPayload {
 const TEST_CONFIG = {
   chainId: 42220,
   contentRegistryAddress: "0x0000000000000000000000000000000000000011" as const,
-  executorAddress: "0x0000000000000000000000000000000000000012" as const,
-  executorPrivateKey: `0x${"1".repeat(64)}` as `0x${string}`,
   questionRewardPoolEscrowAddress: "0x0000000000000000000000000000000000000013" as const,
   rpcUrl: "http://localhost:8545",
-  serviceFeeAmount: 0n,
   targetNetwork: { id: 42220 } as never,
-  thirdwebSecretKey: null,
   usdcAddress: "0x0000000000000000000000000000000000000014" as const,
-  waitUntil: "submitted" as const,
 };
 
 before(() => {
@@ -74,23 +67,40 @@ before(() => {
 
 beforeEach(async () => {
   __setX402QuestionSubmissionTestOverridesForTests({
-    executeX402QuestionSubmission: async () => ({
-      bundleId: null,
-      contentIds: [777n],
-      rewardPoolId: 888n,
-      transactionHashes: [`0x${"4".repeat(64)}` as const],
-    }),
-    preflightX402QuestionSubmission: async ({ payload }) => ({
-      operation: {
-        canonicalPayload: {} as never,
-        operationKey: `0x${payload.clientRequestId.padEnd(64, "0").slice(0, 64)}` as `0x${string}`,
-        payloadHash: `payload:${payload.clientRequestId}`,
+    buildAgentWalletQuestionSubmissionPlan: async ({ payload, walletAddress }) => ({
+      calls: [
+        {
+          data: `0x${"a".repeat(8)}` as const,
+          description: "Approve escrow",
+          functionName: "approve",
+          id: "approve-usdc",
+          phase: "approve_usdc",
+          to: TEST_CONFIG.usdcAddress,
+          value: "0",
+        },
+      ],
+      chainId: payload.chainId,
+      operationKey: `0x${payload.clientRequestId.padEnd(64, "0").slice(0, 64)}` as `0x${string}`,
+      payment: {
+        amount: payload.bounty.amount.toString(),
+        asset: "USDC",
+        bountyAmount: payload.bounty.amount.toString(),
+        decimals: 6,
+        spender: TEST_CONFIG.questionRewardPoolEscrowAddress,
+        tokenAddress: TEST_CONFIG.usdcAddress,
       },
-      paymentAmount: payload.bounty.amount,
-      resolvedCategoryIds: payload.questions.map(question => question.categoryId),
-      submissionKeys: payload.questions.map(
-        (_question, index) => `0x${String(index + 1).padStart(64, "0")}` as `0x${string}`,
-      ),
+      payloadHash: `payload:${payload.clientRequestId}`,
+      questionCount: payload.questions.length,
+      requiresOrderedExecution: true,
+      revealCommitment: `0x${"9".repeat(64)}` as const,
+      roundConfig: {
+        epochDuration: payload.roundConfig.epochDuration.toString(),
+        maxDuration: payload.roundConfig.maxDuration.toString(),
+        maxVoters: payload.roundConfig.maxVoters.toString(),
+        minVoters: payload.roundConfig.minVoters.toString(),
+      },
+      submissionKeys: [`0x${"2".repeat(64)}` as const],
+      walletAddress,
     }),
     resolveX402QuestionConfig: () => TEST_CONFIG,
   });
@@ -107,159 +117,28 @@ after(() => {
   }
 });
 
-test("startManagedQuestionSubmissionRequest only grants one live execution token", async () => {
-  const payload = buildPayload("atomic-start");
-  const [first, second] = await Promise.all([
-    startManagedQuestionSubmissionRequest({ agentId: "agent-1", payload }),
-    startManagedQuestionSubmissionRequest({ agentId: "agent-1", payload }),
-  ]);
-
-  const winners = [first, second].filter(result => result.shouldSubmit);
-  assert.equal(winners.length, 1);
-  assert.equal(typeof winners[0]?.submissionToken, "string");
-
-  const loser = first.shouldSubmit ? second : first;
-  assert.equal(loser.shouldSubmit, false);
-  assert.equal((loser.body as { status: string }).status, "submitting");
-
-  const record = await getX402QuestionSubmissionByClientRequest({
-    chainId: payload.chainId,
-    clientRequestId: payload.clientRequestId,
-  });
-  assert.equal(record?.status, "submitting");
-  assert.equal(typeof record?.submissionToken, "string");
-});
-
-test("completeManagedQuestionSubmissionRequest consumes the execution token before submit", async () => {
-  const payload = buildPayload("token-consume");
-  let executeCalls = 0;
-  let releaseExecution: (() => void) | undefined;
-  const executionGate = new Promise<void>(resolve => {
-    releaseExecution = resolve;
-  });
-
-  __setX402QuestionSubmissionTestOverridesForTests({
-    executeX402QuestionSubmission: async () => {
-      executeCalls += 1;
-      await executionGate;
-      return {
-        bundleId: null,
-        contentIds: [999n],
-        rewardPoolId: 1_001n,
-        transactionHashes: [`0x${"5".repeat(64)}` as const],
-      };
-    },
-    preflightX402QuestionSubmission: async ({ payload: currentPayload }) => ({
-      operation: {
-        canonicalPayload: {} as never,
-        operationKey: `0x${currentPayload.clientRequestId.padEnd(64, "0").slice(0, 64)}` as `0x${string}`,
-        payloadHash: `payload:${currentPayload.clientRequestId}`,
-      },
-      paymentAmount: currentPayload.bounty.amount,
-      resolvedCategoryIds: currentPayload.questions.map(question => question.categoryId),
-      submissionKeys: currentPayload.questions.map(
-        (_question, index) => `0x${String(index + 1).padStart(64, "0")}` as `0x${string}`,
-      ),
-    }),
-    resolveX402QuestionConfig: () => TEST_CONFIG,
-  });
-
-  const started = await startManagedQuestionSubmissionRequest({ agentId: "agent-1", payload });
-  assert.equal(started.shouldSubmit, true);
-  assert.equal(typeof started.submissionToken, "string");
-
-  const firstCompletion = completeManagedQuestionSubmissionRequest({
-    agentId: "agent-1",
-    payload,
-    submissionToken: started.submissionToken,
-  });
-
-  while (executeCalls === 0) {
-    await new Promise(resolve => setTimeout(resolve, 0));
-  }
-
-  await assert.rejects(
-    () =>
-      completeManagedQuestionSubmissionRequest({
-        agentId: "agent-1",
-        payload,
-        submissionToken: started.submissionToken,
-      }),
-    /already being processed/i,
-  );
-  assert.equal(executeCalls, 1);
-
-  assert.ok(releaseExecution);
-  releaseExecution();
-  const completed = await firstCompletion;
-  assert.equal(completed.status, 200);
-
-  const record = await getX402QuestionSubmissionByClientRequest({
-    chainId: payload.chainId,
-    clientRequestId: payload.clientRequestId,
-  });
-  assert.equal(record?.status, "submitted");
-  assert.equal(record?.contentId, "999");
-  assert.equal(record?.submissionToken, null);
-});
-
-test("prepareAgentWalletQuestionSubmissionRequest stores awaiting wallet signature without executor custody", async () => {
+test("prepareAgentWalletQuestionSubmissionRequest stores a direct wallet plan without service fees", async () => {
   const payload = buildPayload("wallet-plan");
   const walletAddress = "0x00000000000000000000000000000000000000aa" as const;
-
-  __setX402QuestionSubmissionTestOverridesForTests({
-    ...({
-      buildAgentWalletQuestionSubmissionPlan: async ({ payload: currentPayload }) => ({
-        calls: [
-          {
-            data: `0x${"a".repeat(8)}` as const,
-            description: "Approve escrow",
-            functionName: "approve",
-            id: "approve-usdc",
-            phase: "approve_usdc",
-            to: TEST_CONFIG.usdcAddress,
-            value: "0",
-          },
-        ],
-        chainId: currentPayload.chainId,
-        operationKey: `0x${currentPayload.clientRequestId.padEnd(64, "0").slice(0, 64)}` as `0x${string}`,
-        payment: {
-          amount: currentPayload.bounty.amount.toString(),
-          asset: "USDC",
-          bountyAmount: currentPayload.bounty.amount.toString(),
-          decimals: 6,
-          serviceFeeAmount: "0",
-          spender: TEST_CONFIG.questionRewardPoolEscrowAddress,
-          tokenAddress: TEST_CONFIG.usdcAddress,
-        },
-        payloadHash: `payload:${currentPayload.clientRequestId}`,
-        questionCount: currentPayload.questions.length,
-        requiresOrderedExecution: true,
-        revealCommitment: `0x${"9".repeat(64)}` as const,
-        roundConfig: {
-          epochDuration: currentPayload.roundConfig.epochDuration.toString(),
-          maxDuration: currentPayload.roundConfig.maxDuration.toString(),
-          maxVoters: currentPayload.roundConfig.maxVoters.toString(),
-          minVoters: currentPayload.roundConfig.minVoters.toString(),
-        },
-        submissionKeys: [`0x${"2".repeat(64)}` as const],
-        walletAddress,
-      }),
-      resolveX402QuestionConfig: () => ({ ...TEST_CONFIG, executorAddress: null, executorPrivateKey: undefined }),
-    } satisfies Parameters<typeof __setX402QuestionSubmissionTestOverridesForTests>[0]),
-  });
 
   const prepared = await prepareAgentWalletQuestionSubmissionRequest({
     agentId: "agent-wallet",
     payload,
     walletAddress,
   });
-  const body = prepared.body as { status: string; transactionPlan: { calls: unknown[] }; wallet: { address: string } };
+  const body = prepared.body as {
+    payment: Record<string, unknown>;
+    status: string;
+    transactionPlan: { calls: unknown[] };
+    wallet: { address: string };
+  };
 
   assert.equal(prepared.status, 202);
   assert.equal(body.status, "awaiting_wallet_signature");
   assert.equal(body.wallet.address, walletAddress);
   assert.equal(body.transactionPlan.calls.length, 1);
+  assert.equal(body.payment.amount, payload.bounty.amount.toString());
+  assert.equal("serviceFeeAmount" in body.payment, false);
 
   const record = await getX402QuestionSubmissionByClientRequest({
     chainId: payload.chainId,
@@ -268,39 +147,4 @@ test("prepareAgentWalletQuestionSubmissionRequest stores awaiting wallet signatu
   assert.equal(record?.status, "awaiting_wallet_signature");
   assert.equal(record?.payerAddress, walletAddress);
   assert.equal(record?.paymentAmount, payload.bounty.amount.toString());
-});
-
-test("startManagedQuestionSubmissionRequest accepts multi-round bundle bounty terms and rejects missing closes", async () => {
-  const multiRoundBundlePayload = buildPayload("multi-round-bundle");
-  multiRoundBundlePayload.bounty = {
-    ...multiRoundBundlePayload.bounty,
-    requiredSettledRounds: 2n,
-  };
-  multiRoundBundlePayload.questions = [
-    ...multiRoundBundlePayload.questions,
-    {
-      ...multiRoundBundlePayload.questions[0],
-      contextUrl: "https://example.com/context/variant-b",
-      questionMetadataHash: `0x${"6".repeat(64)}` as const,
-      resultSpecHash: `0x${"7".repeat(64)}` as const,
-      title: "Agent action approval variant B",
-    },
-  ];
-  const started = await startManagedQuestionSubmissionRequest({
-    agentId: "agent-1",
-    payload: multiRoundBundlePayload,
-  });
-  assert.equal(started.status, 202);
-  assert.equal(started.shouldSubmit, true);
-  assert.equal(typeof started.submissionToken, "string");
-
-  const missingClosePayload = buildPayload("missing-close");
-  missingClosePayload.bounty = {
-    ...missingClosePayload.bounty,
-    rewardPoolExpiresAt: 0n,
-  };
-  await assert.rejects(
-    () => startManagedQuestionSubmissionRequest({ agentId: "agent-1", payload: missingClosePayload }),
-    /must be greater than zero/,
-  );
 });

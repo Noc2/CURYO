@@ -273,7 +273,6 @@ function installQuoteOverrides() {
     resolveX402QuestionConfig: () =>
       ({
         questionRewardPoolEscrowAddress: "0x0000000000000000000000000000000000000002",
-        serviceFeeAmount: 0n,
         usdcAddress: "0x0000000000000000000000000000000000000001",
       }) as never,
   });
@@ -298,7 +297,6 @@ function installAskOverrides() {
           asset: "USDC",
           bountyAmount: "1000000",
           decimals: 6,
-          serviceFeeAmount: "0",
           spender: "0x0000000000000000000000000000000000000002",
           tokenAddress: "0x0000000000000000000000000000000000000001",
         },
@@ -339,7 +337,6 @@ function installAskOverrides() {
     resolveX402QuestionConfig: () =>
       ({
         questionRewardPoolEscrowAddress: "0x0000000000000000000000000000000000000002",
-        serviceFeeAmount: 0n,
         usdcAddress: "0x0000000000000000000000000000000000000001",
       }) as never,
     updateMcpBudgetReservation: async () => null,

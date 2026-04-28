@@ -76,7 +76,6 @@ function quoteOverrides() {
     resolveX402QuestionConfig: () =>
       ({
         questionRewardPoolEscrowAddress: "0x0000000000000000000000000000000000000002",
-        serviceFeeAmount: 0n,
         usdcAddress: "0x0000000000000000000000000000000000000001",
       }) as never,
   };
@@ -124,7 +123,6 @@ test("curyo_ask_humans returns a wallet transaction plan without submitting from
             asset: "USDC",
             bountyAmount: "1000000",
             decimals: 6,
-            serviceFeeAmount: "0",
             spender: "0x0000000000000000000000000000000000000002",
             tokenAddress: "0x0000000000000000000000000000000000000001",
           },
