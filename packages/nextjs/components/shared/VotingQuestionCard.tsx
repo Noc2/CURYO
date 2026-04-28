@@ -270,11 +270,13 @@ function DockCircleIconButton({
   onClick,
   icon,
   disabled = false,
+  tone = "light",
 }: {
   label: string;
   onClick?: () => void;
   icon: ReactNode;
   disabled?: boolean;
+  tone?: "light" | "feedback";
 }) {
   return (
     <TooltipAnchor text={label} position="top" className={`${DOCK_CONTROL_CIRCLE_CLASS_NAME} shrink-0 rounded-full`}>
@@ -284,7 +286,7 @@ function DockCircleIconButton({
         disabled={disabled || !onClick}
         aria-label={label}
         title={label}
-        className="vote-btn vote-btn-sm vote-light"
+        className={`vote-btn vote-btn-sm ${tone === "feedback" ? "vote-feedback" : "vote-light"}`}
       >
         <span className="vote-bg" />
         <span className="vote-symbol">{icon}</span>
@@ -565,6 +567,7 @@ export function VotingQuestionCard({
         label="Open feedback"
         onClick={onOpenFeedback}
         icon={<ChatBubbleLeftRightIcon className="h-5 w-5 drop-shadow-sm" aria-hidden="true" />}
+        tone={hasMyVote ? "feedback" : "light"}
       />
     );
 

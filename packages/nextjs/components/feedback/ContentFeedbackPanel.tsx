@@ -89,7 +89,12 @@ export function ContentFeedbackPanel({ item, variant = "rail", onRequestConnect 
     (myCommitHash as unknown as string) !== "0x0000000000000000000000000000000000000000000000000000000000000000";
   const canSubmitDraft = Boolean(item && bodyLength >= 4 && bodyLength <= CONTENT_FEEDBACK_BODY_MAX_LENGTH);
   const submitDisabled = !canSubmitDraft || isSubmitting || !hasCurrentRoundVote;
-  const submitTooltip = !hasCurrentRoundVote ? "You need to vote first." : "Add feedback";
+  const submitTooltip = !hasCurrentRoundVote
+    ? "You need to vote first."
+    : !canSubmitDraft
+      ? "Write at least 4 characters."
+      : "Add feedback";
+  const submitButtonToneClassName = hasCurrentRoundVote ? "vote-feedback" : "vote-light";
   const ownHiddenCopy =
     feedback.ownHiddenCount > 0
       ? `${feedback.ownHiddenCount} hidden note${feedback.ownHiddenCount === 1 ? "" : "s"} from you`
@@ -210,7 +215,7 @@ export function ContentFeedbackPanel({ item, variant = "rail", onRequestConnect 
           <TooltipAnchor text={submitTooltip} position="top" className="rounded-full">
             <button
               type="submit"
-              className="vote-btn vote-btn-sm vote-feedback"
+              className={`vote-btn vote-btn-sm ${submitButtonToneClassName}`}
               disabled={submitDisabled}
               aria-label="Add feedback"
               title={submitTooltip}

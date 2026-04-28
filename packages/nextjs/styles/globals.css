@@ -529,8 +529,8 @@ body {
 }
 
 .vote-btn.vote-feedback .vote-bg {
-  background: rgb(var(--curyo-steel-rgb) / 0.42);
-  box-shadow: none;
+  background: var(--curyo-ember);
+  box-shadow: 0 0 18px rgb(var(--curyo-ember-rgb) / 0.24);
 }
 
 .vote-btn.vote-light .vote-bg {
@@ -547,7 +547,8 @@ body {
 }
 
 .vote-btn.vote-feedback:disabled .vote-bg {
-  background: rgb(245 240 235 / 0.22);
+  background: var(--curyo-ember);
+  box-shadow: 0 0 16px rgb(var(--curyo-ember-rgb) / 0.18);
 }
 
 .vote-btn.vote-light:disabled .vote-bg {
@@ -674,6 +675,10 @@ body {
 .vote-btn:disabled {
   opacity: 0.35;
   cursor: not-allowed;
+}
+
+.vote-btn.vote-feedback:disabled {
+  opacity: 0.72;
 }
 
 .vote-btn:disabled:hover .vote-bg,
