@@ -7,6 +7,7 @@ import { contracts } from "~~/utils/scaffold-eth/contract";
 const SUBMISSION_REWARD_DECIMALS = 6;
 export const MIN_REWARD_POOL_REQUIRED_VOTERS = 3;
 export const MIN_REWARD_POOL_SETTLED_ROUNDS = 1;
+export const MAX_REWARD_POOL_SETTLED_ROUNDS = 16;
 export const DEFAULT_REWARD_POOL_FRONTEND_FEE_BPS = 300;
 export const DEFAULT_SUBMISSION_REWARD_POOL = 1_000_000n;
 export const SUBMISSION_REWARD_ASSET_HREP = 0;

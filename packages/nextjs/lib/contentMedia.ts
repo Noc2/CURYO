@@ -2,6 +2,7 @@ import { sanitizeExternalUrl } from "~~/utils/externalUrl";
 import { canonicalizeUrl, detectPlatform } from "~~/utils/platforms";
 
 export const MAX_SUBMISSION_IMAGE_URLS = 4;
+export const MAX_SUBMISSION_URL_LENGTH = 2048;
 
 const DIRECT_IMAGE_URL_PATTERN = /^https:\/\/.+\.(?:avif|gif|jpe?g|png|webp)(?:[?#].*)?$/i;
 

@@ -26,6 +26,7 @@ export type QuestionRoundConfigBounds = {
 };
 
 export const QUESTION_ROUND_MAX_EPOCH_COUNT = 2016;
+export const MAX_QUESTION_BUNDLE_ROUND_VOTERS = 100;
 
 export const DEFAULT_QUESTION_ROUND_CONFIG: QuestionRoundConfig = {
   epochDuration: BigInt(DEFAULT_ROUND_CONFIG.epochDurationSeconds),

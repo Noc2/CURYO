@@ -38,6 +38,7 @@ import {
 import { MAX_CONTENT_DESCRIPTION_LENGTH } from "~~/lib/contentDescription";
 import {
   MAX_SUBMISSION_IMAGE_URLS,
+  MAX_SUBMISSION_URL_LENGTH,
   isDirectImageUrl,
   isYouTubeVideoUrl,
   normalizeSubmissionContextUrl,
@@ -54,7 +55,9 @@ import {
   DEFAULT_REWARD_POOL_FRONTEND_FEE_BPS,
   DEFAULT_SUBMISSION_REWARD_POOL,
   ERC20_APPROVAL_ABI,
+  MAX_REWARD_POOL_SETTLED_ROUNDS,
   MIN_REWARD_POOL_REQUIRED_VOTERS,
+  MIN_REWARD_POOL_SETTLED_ROUNDS,
   QUESTION_SUBMISSION_ABI,
   SUBMISSION_REWARD_ASSET_HREP,
   SUBMISSION_REWARD_ASSET_USDC,
@@ -65,6 +68,7 @@ import {
 import {
   DEFAULT_QUESTION_ROUND_CONFIG,
   DEFAULT_QUESTION_ROUND_CONFIG_BOUNDS,
+  MAX_QUESTION_BUNDLE_ROUND_VOTERS,
   QUESTION_ROUND_MAX_EPOCH_COUNT,
   formatDurationLabel,
   getQuestionRoundMaxDurationForEpoch,
@@ -102,7 +106,7 @@ const MEDIA_URL_CONFIG = {
 type SubmissionStep = "question" | "bounty";
 
 const MAX_QUESTION_BUNDLE_COUNT = 10;
-const MIN_BUNDLE_REQUIRED_SETTLED_ROUNDS = 1;
+const MAX_CONTENT_TAGS_LENGTH = 256;
 const SECONDS_PER_MINUTE = 60;
 const SECONDS_PER_HOUR = 60 * SECONDS_PER_MINUTE;
 
@@ -201,14 +205,6 @@ function createRandomHex32(): `0x${string}` {
   const bytes = new Uint8Array(32);
   window.crypto.getRandomValues(bytes);
   return toHex(bytes);
-}
-
-function parseIntegerInput(value: string): number {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) {
-    return 0;
-  }
-  return Math.floor(parsed);
 }
 
 function normalizeWholeNumberInput(value: string): string | null {
@@ -424,12 +420,28 @@ export function ContentSubmissionSection() {
   }, [categories, categorySearch]);
 
   const urlConfig = MEDIA_URL_CONFIG;
-  const customSubcategoryError = customSubcategory ? getContentTagValidationError(customSubcategory) : null;
+  const selectedTags = serializeTags(selectedSubcategories);
+  const selectedTagsValidationError =
+    selectedTags.length > MAX_CONTENT_TAGS_LENGTH
+      ? `Categories must be ${MAX_CONTENT_TAGS_LENGTH} characters or fewer.`
+      : null;
+  const pendingCustomTags = customSubcategory.trim()
+    ? serializeTags([...selectedSubcategories, customSubcategory.trim()])
+    : selectedTags;
+  const customSubcategoryError = customSubcategory
+    ? (getContentTagValidationError(customSubcategory) ??
+      (pendingCustomTags.length > MAX_CONTENT_TAGS_LENGTH
+        ? `Categories must be ${MAX_CONTENT_TAGS_LENGTH} characters or fewer.`
+        : null))
+    : null;
 
   const getContextUrlValidationError = (value: string): string | null => {
     const trimmedValue = value.trim();
     if (!trimmedValue) {
       return "Add a context link before submitting.";
+    }
+    if (trimmedValue.length > MAX_SUBMISSION_URL_LENGTH) {
+      return `URL must be ${MAX_SUBMISSION_URL_LENGTH} characters or fewer.`;
     }
 
     const sanitizedUrl = sanitizeExternalUrl(trimmedValue);
@@ -463,6 +475,9 @@ export function ContentSubmissionSection() {
           ? "Add a YouTube URL before submitting."
           : "Add at least one image URL before submitting."
         : null;
+    }
+    if (trimmedValue.length > MAX_SUBMISSION_URL_LENGTH) {
+      return `URL must be ${MAX_SUBMISSION_URL_LENGTH} characters or fewer.`;
     }
 
     const sanitizedUrl = sanitizeExternalUrl(trimmedValue);
@@ -623,11 +638,13 @@ export function ContentSubmissionSection() {
 
   const handleAddCustomSubcategory = () => {
     const trimmed = customSubcategory.trim();
+    const nextSerializedTags = serializeTags([...selectedSubcategories, trimmed]);
     if (
       trimmed &&
       !selectedSubcategories.includes(trimmed) &&
       selectedSubcategories.length < 3 &&
-      getContentTagValidationError(trimmed) === null
+      getContentTagValidationError(trimmed) === null &&
+      nextSerializedTags.length <= MAX_CONTENT_TAGS_LENGTH
     ) {
       setSelectedSubcategories(prev => {
         const next = [...prev, trimmed];
@@ -775,6 +792,17 @@ export function ContentSubmissionSection() {
     const max = Math.max(min, Math.floor(maxRoundDurationForSelectedBlindPhase / SECONDS_PER_HOUR));
     return { min, max };
   }, [maxRoundDurationForSelectedBlindPhase, roundConfigBounds.minRoundDuration]);
+  const roundMaxVoterBounds = useMemo(() => {
+    const bundleAwareMaxVoters =
+      questionCount > 1
+        ? Math.min(roundConfigBounds.maxVoterCap, MAX_QUESTION_BUNDLE_ROUND_VOTERS)
+        : roundConfigBounds.maxVoterCap;
+
+    return {
+      min: roundConfigBounds.minVoterCap,
+      max: Math.max(roundConfigBounds.minVoterCap, bundleAwareMaxVoters),
+    };
+  }, [questionCount, roundConfigBounds.maxVoterCap, roundConfigBounds.minVoterCap]);
   const updateRoundWholeNumberInput = (value: string, setValue: (nextValue: string) => void) => {
     const normalizedValue = normalizeWholeNumberInput(value);
     if (normalizedValue === null) {
@@ -814,20 +842,27 @@ export function ContentSubmissionSection() {
     if (minVoters < roundConfigBounds.minSettlementVoters || minVoters > roundConfigBounds.maxSettlementVoters) {
       return `Settlement voters must be ${roundConfigBounds.minSettlementVoters}-${roundConfigBounds.maxSettlementVoters}.`;
     }
-    if (maxVoters < roundConfigBounds.minVoterCap || maxVoters > roundConfigBounds.maxVoterCap) {
-      return `Voter cap must be ${roundConfigBounds.minVoterCap}-${roundConfigBounds.maxVoterCap}.`;
+    if (maxVoters < roundMaxVoterBounds.min || maxVoters > roundMaxVoterBounds.max) {
+      return questionCount > 1
+        ? `Voter cap must be ${roundMaxVoterBounds.min}-${roundMaxVoterBounds.max} for question bundles.`
+        : `Voter cap must be ${roundMaxVoterBounds.min}-${roundMaxVoterBounds.max}.`;
     }
     if (maxVoters < minVoters) {
       return "Voter cap must be at least the settlement voters.";
     }
     return null;
   })();
-  const parsedRewardRequiredVoters = parseIntegerInput(rewardRequiredVoters);
-  const parsedRewardRequiredRounds = parseIntegerInput(rewardRequiredRounds);
+  const parsedRewardRequiredVoters = parseWholeNumberInput(rewardRequiredVoters);
+  const parsedRewardRequiredRounds = parseWholeNumberInput(rewardRequiredRounds);
+  const rewardRequiredVotersBounds = {
+    min: MIN_REWARD_POOL_REQUIRED_VOTERS,
+    max: Math.max(
+      MIN_REWARD_POOL_REQUIRED_VOTERS,
+      Math.min(Number(selectedRoundConfig.maxVoters), roundMaxVoterBounds.max),
+    ),
+  };
   const selectedRequiredVoters = BigInt(Math.max(MIN_REWARD_POOL_REQUIRED_VOTERS, parsedRewardRequiredVoters));
-  const selectedRequiredSettledRounds = BigInt(
-    Math.max(MIN_BUNDLE_REQUIRED_SETTLED_ROUNDS, parsedRewardRequiredRounds),
-  );
+  const selectedRequiredSettledRounds = BigInt(Math.max(MIN_REWARD_POOL_SETTLED_ROUNDS, parsedRewardRequiredRounds));
   const bountyMinimumCoverageAmount = selectedRequiredVoters * selectedRequiredSettledRounds;
   const minimumRewardAmount =
     rewardAsset === "hrep"
@@ -858,9 +893,11 @@ export function ContentSubmissionSection() {
         : null;
   const rewardRequiredVotersError = bountyStepAttempted ? rewardRequiredVotersValidationError : null;
   const rewardRequiredRoundsValidationError =
-    parsedRewardRequiredRounds < MIN_BUNDLE_REQUIRED_SETTLED_ROUNDS
-      ? `Minimum is ${MIN_BUNDLE_REQUIRED_SETTLED_ROUNDS} round.`
-      : null;
+    parsedRewardRequiredRounds < MIN_REWARD_POOL_SETTLED_ROUNDS
+      ? `Minimum is ${MIN_REWARD_POOL_SETTLED_ROUNDS} round.`
+      : parsedRewardRequiredRounds > MAX_REWARD_POOL_SETTLED_ROUNDS
+        ? `Maximum is ${MAX_REWARD_POOL_SETTLED_ROUNDS} rounds.`
+        : null;
   const rewardRequiredRoundsError = bountyStepAttempted ? rewardRequiredRoundsValidationError : null;
   const bountyWindowSeconds = getBountyWindowSeconds(
     bountyWindowPreset,
@@ -868,12 +905,18 @@ export function ContentSubmissionSection() {
     customBountyWindowUnit,
   );
   const parsedCustomBountyWindowAmount = parseBountyWindowAmount(customBountyWindowAmount);
+  const customBountyWindowAmountMax =
+    customBountyWindowUnit === "hours"
+      ? Math.floor(Number.MAX_SAFE_INTEGER / SECONDS_PER_HOUR)
+      : Math.floor(Number.MAX_SAFE_INTEGER / (24 * SECONDS_PER_HOUR));
   const rewardExpiryValidationError =
     bountyWindowPreset === "custom" && parsedCustomBountyWindowAmount < 1
       ? `Enter at least 1 ${customBountyWindowUnit === "hours" ? "hour" : "day"}.`
-      : bountyWindowSeconds === null
-        ? "Choose a bounty window."
-        : null;
+      : bountyWindowPreset === "custom" && parsedCustomBountyWindowAmount > customBountyWindowAmountMax
+        ? `Enter ${customBountyWindowAmountMax.toLocaleString()} ${customBountyWindowUnit} or fewer.`
+        : bountyWindowSeconds === null
+          ? "Choose a bounty window."
+          : null;
   const rewardExpiryError = bountyStepAttempted ? rewardExpiryValidationError : null;
   const bountySettingsValid =
     rewardRequiredVotersValidationError === null &&
@@ -981,6 +1024,11 @@ export function ContentSubmissionSection() {
     const nextTitleError = trimmedTitle ? getContentTitleValidationError(trimmedTitle) : null;
     const nextDescriptionError = trimmedDescription ? getContentDescriptionValidationError(trimmedDescription) : null;
     const blockedContentTags = findBlockedContentTags(draft.selectedSubcategories);
+    const submittedTags = serializeTags(draft.selectedSubcategories);
+    const tagsValidationError =
+      submittedTags.length > MAX_CONTENT_TAGS_LENGTH
+        ? `Categories must be ${MAX_CONTENT_TAGS_LENGTH} characters or fewer.`
+        : null;
     const hasMediaError =
       draft.mediaMode === "images"
         ? nextImageUrlErrors.some(Boolean)
@@ -1005,6 +1053,7 @@ export function ContentSubmissionSection() {
       Boolean(nextTitleError) ||
       Boolean(nextDescriptionError) ||
       hasMediaError ||
+      Boolean(tagsValidationError) ||
       blockedContentTags.length > 0;
 
     return {
@@ -1015,7 +1064,7 @@ export function ContentSubmissionSection() {
       submittedContextUrl,
       submittedImageUrls,
       submittedVideoUrl,
-      submittedTags: serializeTags(draft.selectedSubcategories),
+      submittedTags,
       trimmedDescription,
       trimmedTitle,
     };
@@ -1080,7 +1129,11 @@ export function ContentSubmissionSection() {
   };
 
   const handleQuestionCountChange = (value: string) => {
-    const nextCount = Math.max(1, Math.min(MAX_QUESTION_BUNDLE_COUNT, parseIntegerInput(value)));
+    const nextCount = Math.max(1, Math.min(MAX_QUESTION_BUNDLE_COUNT, parseWholeNumberInput(value)));
+    const nextVoterCapMax =
+      nextCount > 1
+        ? Math.min(roundConfigBounds.maxVoterCap, MAX_QUESTION_BUNDLE_ROUND_VOTERS)
+        : roundConfigBounds.maxVoterCap;
     const syncedDrafts = questionDrafts.map((draft, index) =>
       index === activeQuestionIndex ? getActiveQuestionDraft() : draft,
     );
@@ -1099,6 +1152,20 @@ export function ContentSubmissionSection() {
     setQuestionDrafts(nextDrafts);
     setActiveQuestionIndex(nextActiveIndex);
     loadQuestionDraft(nextDrafts[nextActiveIndex] ?? createEmptyQuestionDraft());
+    setRoundMaxVoters(current =>
+      clampWholeNumberInput(
+        current,
+        roundConfigBounds.minVoterCap,
+        Math.max(roundConfigBounds.minVoterCap, nextVoterCapMax),
+      ),
+    );
+    setRewardRequiredVoters(current =>
+      clampWholeNumberInput(
+        current,
+        MIN_REWARD_POOL_REQUIRED_VOTERS,
+        Math.max(MIN_REWARD_POOL_REQUIRED_VOTERS, nextVoterCapMax),
+      ),
+    );
     setSubmissionStep("question");
     setBountyStepAttempted(false);
   };
@@ -1714,10 +1781,22 @@ export function ContentSubmissionSection() {
           </span>
           <input
             type="number"
-            min={MIN_REWARD_POOL_REQUIRED_VOTERS}
+            min={rewardRequiredVotersBounds.min}
+            max={rewardRequiredVotersBounds.max}
             step={1}
+            inputMode="numeric"
             value={rewardRequiredVoters}
-            onChange={e => setRewardRequiredVoters(e.target.value)}
+            onChange={e => {
+              const normalizedValue = normalizeWholeNumberInput(e.target.value);
+              if (normalizedValue !== null) {
+                setRewardRequiredVoters(normalizedValue);
+              }
+            }}
+            onBlur={() => {
+              setRewardRequiredVoters(current =>
+                clampWholeNumberInput(current, rewardRequiredVotersBounds.min, rewardRequiredVotersBounds.max),
+              );
+            }}
             className={`input input-bordered bg-base-100 ${
               bountyStepAttempted && rewardRequiredVotersError ? "input-error" : ""
             }`}
@@ -1731,10 +1810,22 @@ export function ContentSubmissionSection() {
           </span>
           <input
             type="number"
-            min={MIN_BUNDLE_REQUIRED_SETTLED_ROUNDS}
+            min={MIN_REWARD_POOL_SETTLED_ROUNDS}
+            max={MAX_REWARD_POOL_SETTLED_ROUNDS}
             step={1}
+            inputMode="numeric"
             value={rewardRequiredRounds}
-            onChange={e => setRewardRequiredRounds(e.target.value)}
+            onChange={e => {
+              const normalizedValue = normalizeWholeNumberInput(e.target.value);
+              if (normalizedValue !== null) {
+                setRewardRequiredRounds(normalizedValue);
+              }
+            }}
+            onBlur={() => {
+              setRewardRequiredRounds(current =>
+                clampWholeNumberInput(current, MIN_REWARD_POOL_SETTLED_ROUNDS, MAX_REWARD_POOL_SETTLED_ROUNDS),
+              );
+            }}
             className={`input input-bordered bg-base-100 ${
               bountyStepAttempted && rewardRequiredRoundsError ? "input-error" : ""
             }`}
@@ -1852,8 +1943,8 @@ export function ContentSubmissionSection() {
             <span className="label-text">Voter cap</span>
             <input
               type="number"
-              min={roundConfigBounds.minVoterCap}
-              max={roundConfigBounds.maxVoterCap}
+              min={roundMaxVoterBounds.min}
+              max={roundMaxVoterBounds.max}
               step={1}
               inputMode="numeric"
               value={roundMaxVoters}
@@ -1861,8 +1952,19 @@ export function ContentSubmissionSection() {
                 updateRoundWholeNumberInput(e.target.value, setRoundMaxVoters);
               }}
               onBlur={() => {
-                setRoundMaxVoters(current =>
-                  clampWholeNumberInput(current, roundConfigBounds.minVoterCap, roundConfigBounds.maxVoterCap),
+                const clampedMaxVoters = clampWholeNumberInput(
+                  roundMaxVoters,
+                  roundMaxVoterBounds.min,
+                  roundMaxVoterBounds.max,
+                );
+
+                setRoundMaxVoters(clampedMaxVoters);
+                setRewardRequiredVoters(current =>
+                  clampWholeNumberInput(
+                    current,
+                    MIN_REWARD_POOL_REQUIRED_VOTERS,
+                    Math.max(MIN_REWARD_POOL_REQUIRED_VOTERS, Number(clampedMaxVoters)),
+                  ),
                 );
               }}
               className={`input input-bordered bg-base-100 ${
@@ -1910,9 +2012,19 @@ export function ContentSubmissionSection() {
               <input
                 type="number"
                 min={1}
+                max={customBountyWindowAmountMax}
                 step={1}
+                inputMode="numeric"
                 value={customBountyWindowAmount}
-                onChange={e => setCustomBountyWindowAmount(e.target.value)}
+                onChange={e => {
+                  const normalizedValue = normalizeWholeNumberInput(e.target.value);
+                  if (normalizedValue !== null) {
+                    setCustomBountyWindowAmount(normalizedValue);
+                  }
+                }}
+                onBlur={() =>
+                  setCustomBountyWindowAmount(current => clampWholeNumberInput(current, 1, customBountyWindowAmountMax))
+                }
                 className={`input input-bordered bg-base-100 ${
                   bountyStepAttempted && rewardExpiryError ? "input-error" : ""
                 }`}
@@ -1922,7 +2034,16 @@ export function ContentSubmissionSection() {
               <span className="label-text">Unit</span>
               <select
                 value={customBountyWindowUnit}
-                onChange={e => setCustomBountyWindowUnit(e.target.value as BountyWindowUnit)}
+                onChange={e => {
+                  const nextUnit = e.target.value as BountyWindowUnit;
+                  const nextMax =
+                    nextUnit === "hours"
+                      ? Math.floor(Number.MAX_SAFE_INTEGER / SECONDS_PER_HOUR)
+                      : Math.floor(Number.MAX_SAFE_INTEGER / (24 * SECONDS_PER_HOUR));
+
+                  setCustomBountyWindowUnit(nextUnit);
+                  setCustomBountyWindowAmount(current => clampWholeNumberInput(current, 1, nextMax));
+                }}
                 className="select select-bordered bg-base-100"
               >
                 <option value="hours">Hours</option>
@@ -2106,6 +2227,7 @@ export function ContentSubmissionSection() {
                     value={contextUrl}
                     onChange={e => handleContextUrlChange(e.target.value)}
                     onBlur={() => setContextUrlError(getContextUrlValidationError(contextUrl))}
+                    maxLength={MAX_SUBMISSION_URL_LENGTH}
                   />
                   {contextMissing && !contextUrlError ? (
                     <p className="mt-1 text-base text-error">Add a context link before submitting.</p>
@@ -2163,6 +2285,7 @@ export function ContentSubmissionSection() {
                             value={imageUrl}
                             onChange={event => handleImageUrlChange(index, event.target.value)}
                             onBlur={() => validateImageUrl(index, imageUrl, imageMediaMissing && index === 0)}
+                            maxLength={MAX_SUBMISSION_URL_LENGTH}
                           />
                           <button
                             type="button"
@@ -2204,6 +2327,7 @@ export function ContentSubmissionSection() {
                         value={videoUrl}
                         onChange={handleVideoUrlChange}
                         onBlur={() => validateVideoUrl(videoUrl, videoMediaMissing)}
+                        maxLength={MAX_SUBMISSION_URL_LENGTH}
                       />
                       {videoUrlError ? <p className="mt-1 text-base text-error">{videoUrlError}</p> : null}
                       {videoMediaMissing && !videoUrlError ? (
@@ -2363,6 +2487,7 @@ export function ContentSubmissionSection() {
                             setCustomSubcategory(e.target.value);
                             patchActiveQuestionDraft({ customSubcategory: e.target.value });
                           }}
+                          maxLength={MAX_CONTENT_TAGS_LENGTH}
                           onKeyDown={e => {
                             if (e.key === "Enter") {
                               e.preventDefault();
@@ -2388,6 +2513,9 @@ export function ContentSubmissionSection() {
                     </div>
                     {customSubcategoryError ? (
                       <p className="mt-2 text-base text-error">{customSubcategoryError}</p>
+                    ) : null}
+                    {selectedTagsValidationError ? (
+                      <p className="mt-2 text-base text-error">{selectedTagsValidationError}</p>
                     ) : null}
                     {questionStepAttempted && selectedSubcategories.length === 0 ? (
                       <p className="mt-2 text-base text-error">Pick at least one category before submitting.</p>
