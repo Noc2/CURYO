@@ -92,6 +92,8 @@ contract QuestionRewardPoolEscrow is
         uint32 requiredSettledRounds;
         uint32 completedRoundSets;
         uint32 claimedCount;
+        // Deprecated field retained to preserve proxy storage layout.
+        uint32 eligibleClaimCount;
         uint16 frontendFeeBps;
         uint256 funderNullifier;
         uint256 fundedAmount;
@@ -354,6 +356,7 @@ contract QuestionRewardPoolEscrow is
             requiredSettledRounds: requiredSettledRounds.toUint32(),
             completedRoundSets: 0,
             claimedCount: 0,
+            eligibleClaimCount: 0,
             frontendFeeBps: defaultFrontendFeeBps,
             funderNullifier: funderNullifier,
             fundedAmount: fundedAmount,
