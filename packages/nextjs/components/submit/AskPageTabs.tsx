@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { CpuChipIcon, PencilSquareIcon } from "@heroicons/react/24/outline";
 import { AgentSubmissionPanel } from "~~/components/submit/AgentSubmissionPanel";
 import { ContentSubmissionSection } from "~~/components/submit/ContentSubmissionSection";
 
@@ -16,21 +15,19 @@ export function AskPageTabs() {
         <button
           type="button"
           onClick={() => setActiveTab("manual")}
-          className={`tab-control inline-flex items-center gap-2 px-4 py-1.5 text-base font-medium transition-colors ${
+          className={`tab-control inline-flex items-center px-4 py-1.5 text-base font-medium transition-colors ${
             activeTab === "manual" ? "pill-active" : "pill-inactive"
           }`}
         >
-          <PencilSquareIcon className="h-4 w-4" />
           <span>Manual</span>
         </button>
         <button
           type="button"
           onClick={() => setActiveTab("agent")}
-          className={`tab-control inline-flex items-center gap-2 px-4 py-1.5 text-base font-medium transition-colors ${
+          className={`tab-control inline-flex items-center px-4 py-1.5 text-base font-medium transition-colors ${
             activeTab === "agent" ? "pill-active" : "pill-inactive"
           }`}
         >
-          <CpuChipIcon className="h-4 w-4" />
           <span>Agent</span>
         </button>
       </div>
