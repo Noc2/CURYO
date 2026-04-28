@@ -964,25 +964,27 @@ export function AgentSubmissionPanel() {
           </div>
 
           <div className="mt-5 grid gap-3 md:grid-cols-2">
-            <label className="form-control">
+            <label className="form-control gap-2 sm:grid sm:grid-cols-[max-content_minmax(0,1fr)] sm:items-center sm:gap-x-6">
               <span className="label-text text-sm font-medium">Agent id</span>
               <input
-                className="input input-bordered mt-1"
+                className="input input-bordered mt-1 min-w-0 sm:mt-0"
                 value={policyForm.agentId}
                 onChange={event => setPolicyForm(prev => ({ ...prev, agentId: event.target.value }))}
                 placeholder="research-agent"
               />
             </label>
-            <label className="form-control">
+            <label className="form-control gap-2 sm:grid sm:grid-cols-[max-content_minmax(0,1fr)] sm:items-center sm:gap-x-6">
               <span className="label-text text-sm font-medium">Agent wallet</span>
               <input
-                className={`input input-bordered mt-1 font-mono ${agentWalletInputInvalid ? "input-error" : ""}`}
+                className={`input input-bordered mt-1 min-w-0 font-mono sm:mt-0 ${
+                  agentWalletInputInvalid ? "input-error" : ""
+                }`}
                 value={policyForm.agentWalletAddress}
                 onChange={event => setPolicyForm(prev => ({ ...prev, agentWalletAddress: event.target.value }))}
                 placeholder="0x..."
               />
               {agentWalletInputInvalid ? (
-                <span className="mt-1 text-sm text-error">Enter a valid EVM address.</span>
+                <span className="mt-1 text-sm text-error sm:col-start-2">Enter a valid EVM address.</span>
               ) : null}
             </label>
           </div>
