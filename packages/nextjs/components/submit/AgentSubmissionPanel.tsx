@@ -174,6 +174,11 @@ export function AgentSubmissionPanel() {
   const usdcAddress = getDefaultUsdcAddress(targetNetwork.id);
   const thirdwebTargetChain = useMemo(() => defineChain(targetNetwork), [targetNetwork]);
   const { categories, isLoading: categoriesLoading } = useCategoryRegistry();
+  const allCategoryIds = useMemo(() => categories.map(category => category.id.toString()), [categories]);
+  const allCategoriesSelected =
+    allCategoryIds.length > 0 &&
+    (policyForm.categories.length === 0 ||
+      allCategoryIds.every(categoryId => policyForm.categories.includes(categoryId)));
   const agentPolicies = useAgentPolicies(address, { autoRead: false });
   const selectedPolicy = useMemo(
     () => agentPolicies.policies.find(policy => policy.id === selectedPolicyId) ?? null,
@@ -338,17 +343,20 @@ export function AgentSubmissionPanel() {
     [address, agentPolicies.policies],
   );
 
-  const handleToggleCategory = useCallback((categoryId: string) => {
-    setPolicyForm(prev => {
-      const selected = new Set(prev.categories);
-      if (selected.has(categoryId)) {
-        selected.delete(categoryId);
-      } else {
-        selected.add(categoryId);
-      }
-      return { ...prev, categories: Array.from(selected).sort((a, b) => Number(a) - Number(b)) };
-    });
-  }, []);
+  const handleToggleCategory = useCallback(
+    (categoryId: string) => {
+      setPolicyForm(prev => {
+        const selected = new Set(prev.categories.length === 0 ? allCategoryIds : prev.categories);
+        if (selected.has(categoryId)) {
+          selected.delete(categoryId);
+        } else {
+          selected.add(categoryId);
+        }
+        return { ...prev, categories: Array.from(selected).sort((a, b) => Number(a) - Number(b)) };
+      });
+    },
+    [allCategoryIds],
+  );
 
   const handleToggleScope = useCallback((scope: string) => {
     setPolicyForm(prev => {
@@ -629,7 +637,7 @@ export function AgentSubmissionPanel() {
     ) : categories.length > 0 ? (
       categories.map(category => {
         const categoryId = category.id.toString();
-        const selected = policyForm.categories.includes(categoryId);
+        const selected = allCategoriesSelected || policyForm.categories.includes(categoryId);
         return (
           <button
             key={categoryId}
@@ -1178,14 +1186,11 @@ export function AgentSubmissionPanel() {
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <h4 className="font-semibold">Allowed categories</h4>
-                <p className="mt-1 text-sm text-base-content/60">
-                  Empty means the token can submit asks to any active category.
-                </p>
               </div>
               <button
                 type="button"
-                className={`btn btn-sm ${policyForm.categories.length === 0 ? "btn-primary" : "btn-outline"}`}
-                onClick={() => setPolicyForm(prev => ({ ...prev, categories: [] }))}
+                className={`btn btn-sm ${allCategoriesSelected ? "btn-primary" : "btn-outline"}`}
+                onClick={() => setPolicyForm(prev => ({ ...prev, categories: allCategoryIds }))}
               >
                 All categories
               </button>
