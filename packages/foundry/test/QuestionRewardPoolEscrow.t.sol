@@ -1532,19 +1532,17 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         vm.stopPrank();
     }
 
-    function testStandaloneUsdcRewardPoolAllowsFunderWithoutVoterId() public {
+    function testStandaloneUsdcRewardPoolRejectsFunderWithoutVoterId() public {
         uint256 contentId = _submitQuestion("");
         address unverifiedFunder = address(0xB0B);
         usdc.mint(unverifiedFunder, REWARD_POOL_AMOUNT);
 
         vm.startPrank(unverifiedFunder);
         usdc.approve(address(rewardPoolEscrow), REWARD_POOL_AMOUNT);
-        uint256 rewardPoolId =
-            rewardPoolEscrow.createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1, block.timestamp + 30 days, 0);
+        vm.expectRevert("Voter ID required");
+        rewardPoolEscrow.createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1, block.timestamp + 30 days, 0);
         vm.stopPrank();
-
-        assertEq(rewardPoolId, rewardPoolEscrow.nextRewardPoolId() - 1);
-        assertEq(usdc.balanceOf(address(rewardPoolEscrow)), REWARD_POOL_AMOUNT);
+        assertEq(usdc.balanceOf(address(rewardPoolEscrow)), 0);
     }
 
     function testAgentWalletQuestionSubmissionFundsEscrowFromSigningWallet() public {

@@ -278,6 +278,7 @@ contract QuestionRewardPoolEscrow is
         uint256 bountyClosesAt,
         uint256 feedbackClosesAt
     ) external nonReentrant whenNotPaused returns (uint256 rewardPoolId) {
+        require(voterIdNFT.getTokenId(msg.sender) != 0, "Voter ID required");
         rewardPoolId = _createRewardPool(
             contentId,
             msg.sender,
