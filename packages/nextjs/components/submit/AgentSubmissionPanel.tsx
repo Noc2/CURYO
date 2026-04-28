@@ -1017,18 +1017,6 @@ export function AgentSubmissionPanel() {
                   </p>
                 )}
               </div>
-
-              <div className="mt-4 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => void handleCopy(agentWalletAddress)}
-                  disabled={!agentWalletAddress}
-                  className="btn btn-outline btn-sm"
-                >
-                  <ClipboardDocumentIcon className="h-4 w-4" />
-                  {isCopiedToClipboard ? "Copied" : "Copy wallet"}
-                </button>
-              </div>
             </div>
 
             <div className="min-w-0">
