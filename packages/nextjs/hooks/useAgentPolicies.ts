@@ -143,6 +143,7 @@ async function readAgentPolicies(
 
 export function useAgentPolicies(address?: string, options?: UseAgentPoliciesOptions) {
   const { signMessageAsync } = useSignMessage();
+  const [isReadSessionBusy, setIsReadSessionBusy] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isTokenBusy, setIsTokenBusy] = useState(false);
   const [isStatusBusy, setIsStatusBusy] = useState(false);
@@ -164,6 +165,25 @@ export function useAgentPolicies(address?: string, options?: UseAgentPoliciesOpt
     staleTime: 30_000,
     retry: false,
   });
+
+  const unlock = useCallback(async (): Promise<AgentPolicyMutationResult> => {
+    if (!address) return { ok: false, reason: "not_connected" };
+    setIsReadSessionBusy(true);
+    try {
+      await ensurePrivateAccountReadSession(address, signMessageAsync);
+      await refetch();
+      return { ok: true };
+    } catch (error) {
+      if (isSignatureRejected(error)) return { ok: false, reason: "rejected" };
+      return {
+        ok: false,
+        reason: "request_failed",
+        error: error instanceof Error ? error.message : "Failed to unlock managed agents",
+      };
+    } finally {
+      setIsReadSessionBusy(false);
+    }
+  }, [address, refetch, signMessageAsync]);
 
   const savePolicy = useCallback(
     async (policy: AgentPolicySaveInput): Promise<AgentPolicyMutationResult> => {
@@ -304,6 +324,7 @@ export function useAgentPolicies(address?: string, options?: UseAgentPoliciesOpt
   return {
     hasReadSession: data?.hasSession ?? false,
     isLoading,
+    isReadSessionBusy,
     isSaving,
     isStatusBusy,
     isTokenBusy,
@@ -312,6 +333,7 @@ export function useAgentPolicies(address?: string, options?: UseAgentPoliciesOpt
     revokeToken,
     rotateToken,
     savePolicy,
+    unlock,
     updateStatus,
   };
 }

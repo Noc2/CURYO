@@ -121,6 +121,15 @@ function formatUsdcInput(value: string | bigint | number | null | undefined) {
   return fractionalText ? `${whole.toString()}.${fractionalText}` : whole.toString();
 }
 
+function parsePositiveAtomicAmount(value: string | bigint | number | null | undefined, fallback: bigint) {
+  try {
+    const parsed = BigInt(value ?? 0);
+    return parsed > 0n ? parsed : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 function policyToForm(policy: AgentPolicyRecord, fallbackWallet: string | undefined): AgentPolicyFormState {
   return {
     agentId: policy.agentId,
@@ -179,7 +188,7 @@ export function AgentSubmissionPanel() {
     allCategoryIds.length > 0 &&
     (policyForm.categories.length === 0 ||
       allCategoryIds.every(categoryId => policyForm.categories.includes(categoryId)));
-  const agentPolicies = useAgentPolicies(address, { autoRead: false });
+  const agentPolicies = useAgentPolicies(address, { autoRead: true });
   const selectedPolicy = useMemo(
     () => agentPolicies.policies.find(policy => policy.id === selectedPolicyId) ?? null,
     [agentPolicies.policies, selectedPolicyId],
@@ -205,8 +214,14 @@ export function AgentSubmissionPanel() {
   });
 
   const balance = typeof balanceRaw === "bigint" ? balanceRaw : 0n;
-  const hasUsdcForDefaultAsk = balance >= DEFAULT_PER_ASK_CAP_ATOMIC;
-  const fundingReady = hasUsdcForDefaultAsk;
+  const policyFormPerAskCapAtomic = useMemo(
+    () => parseSubmissionRewardAmount(policyForm.perAskCap),
+    [policyForm.perAskCap],
+  );
+  const requiredPerAskFunding = selectedPolicy
+    ? parsePositiveAtomicAmount(selectedPolicy.perAskLimitAtomic, DEFAULT_PER_ASK_CAP_ATOMIC)
+    : (policyFormPerAskCapAtomic ?? DEFAULT_PER_ASK_CAP_ATOMIC);
+  const fundingReady = Boolean((selectedPolicy || policyFormPerAskCapAtomic) && balance >= requiredPerAskFunding);
   const ready = Boolean(
     address && agentWalletAddress && escrowAddress && usdcAddress && fundingReady && selectedPolicy,
   );
@@ -270,6 +285,19 @@ export function AgentSubmissionPanel() {
     },
     [copyToClipboard],
   );
+
+  const handleUnlockAgentPolicies = useCallback(async () => {
+    const result = await agentPolicies.unlock();
+    if (result.ok) {
+      notification.success("Managed agent controls unlocked.");
+      return;
+    }
+    if (result.reason === "rejected") {
+      notification.warning("Signature rejected. Managed agents stay locked.");
+      return;
+    }
+    notification.error(result.error || "Failed to unlock managed agents.");
+  }, [agentPolicies]);
 
   const handleTransferUsdc = useCallback(async () => {
     if (!address) {
@@ -369,19 +397,6 @@ export function AgentSubmissionPanel() {
       return { ...prev, scopes: Array.from(selected) };
     });
   }, []);
-
-  const handleUnlockAgentPolicies = useCallback(async () => {
-    const result = await agentPolicies.unlock();
-    if (result.ok) {
-      notification.success("Managed agent controls unlocked.");
-      return;
-    }
-    if (result.reason === "rejected") {
-      notification.warning("Signature rejected. Managed agents stay locked.");
-      return;
-    }
-    notification.error(result.error || "Failed to unlock managed agents.");
-  }, [agentPolicies]);
 
   const handleSavePolicy = useCallback(async () => {
     if (!address) {
@@ -535,6 +550,18 @@ export function AgentSubmissionPanel() {
       </select>
     ) : null;
 
+  const renderUnlockAgentPoliciesButton = (size: "sm" | "xs" = "sm") => (
+    <button
+      type="button"
+      className={`btn btn-outline ${size === "xs" ? "btn-xs" : "btn-sm"}`}
+      disabled={!address || agentPolicies.isLoading || agentPolicies.isReadSessionBusy}
+      onClick={() => void handleUnlockAgentPolicies()}
+    >
+      <KeyIcon className="h-4 w-4" />
+      {agentPolicies.hasReadSession ? "Refresh" : "Unlock"}
+    </button>
+  );
+
   const tokenAccessPanel = selectedPolicy ? (
     <>
       <dl className="mt-4 space-y-3 text-sm">
@@ -607,7 +634,10 @@ export function AgentSubmissionPanel() {
   const recentAsksPanel = (
     <div className="space-y-3">
       {!agentPolicies.hasReadSession ? (
-        <p className="text-sm text-base-content/60">Unlock managed agents to view recent ask operations.</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm text-base-content/60">Unlock managed agents to view recent ask operations.</p>
+          {renderUnlockAgentPoliciesButton("xs")}
+        </div>
       ) : recentAsksLoading ? (
         <span className="loading loading-spinner loading-sm" />
       ) : recentAsks.length > 0 ? (
@@ -677,15 +707,7 @@ export function AgentSubmissionPanel() {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {policySelector}
-              <button
-                type="button"
-                className="btn btn-outline btn-sm"
-                disabled={!address || agentPolicies.isLoading}
-                onClick={() => void handleUnlockAgentPolicies()}
-              >
-                <KeyIcon className="h-4 w-4" />
-                {agentPolicies.hasReadSession ? "Refresh" : "Unlock"}
-              </button>
+              {renderUnlockAgentPoliciesButton()}
               <button type="button" className="btn btn-outline btn-sm" onClick={handleEditSelectedPolicy}>
                 Edit setup
               </button>
@@ -768,6 +790,9 @@ export function AgentSubmissionPanel() {
                 <div className="rounded-lg border border-base-300 bg-base-100/50 p-4">
                   <p className="text-sm text-base-content/60">Celo USDC</p>
                   <p className="mt-1 text-xl font-semibold">{formatUsdc(balance)}</p>
+                  <p className="mt-1 text-sm text-base-content/55">
+                    Required per ask: {formatUsdc(requiredPerAskFunding)}
+                  </p>
                 </div>
               </div>
             </div>
@@ -786,9 +811,12 @@ export function AgentSubmissionPanel() {
                   <p className="text-sm font-semibold uppercase tracking-wide text-base-content/50">MCP Access</p>
                   <h3 className="mt-1 text-lg font-semibold">Token lifecycle</h3>
                 </div>
-                <Link href="/docs/ai#mcp-adapter-shape" className="link link-primary text-sm">
-                  Docs
-                </Link>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <Link href="/docs/ai#mcp-adapter-shape" className="link link-primary text-sm">
+                    Docs
+                  </Link>
+                  {renderUnlockAgentPoliciesButton()}
+                </div>
               </div>
               {tokenAccessPanel}
             </div>
@@ -844,15 +872,7 @@ export function AgentSubmissionPanel() {
               Docs
               <ArrowTopRightOnSquareIcon className="h-4 w-4" />
             </Link>
-            <button
-              type="button"
-              className="btn btn-outline btn-sm"
-              disabled={!address || agentPolicies.isLoading}
-              onClick={() => void handleUnlockAgentPolicies()}
-            >
-              <KeyIcon className="h-4 w-4" />
-              {agentPolicies.hasReadSession ? "Refresh" : "Unlock"}
-            </button>
+            {renderUnlockAgentPoliciesButton()}
             {selectedPolicy ? (
               <button type="button" className="btn btn-outline btn-sm" onClick={() => setIsSetupMode(false)}>
                 Dashboard
@@ -980,6 +1000,9 @@ export function AgentSubmissionPanel() {
                     <span>Celo USDC</span>
                   </div>
                   <p className="mt-2 text-lg font-semibold">{formatUsdc(balance)}</p>
+                  <p className="mt-1 text-sm text-base-content/55">
+                    Required per ask: {formatUsdc(requiredPerAskFunding)}
+                  </p>
                 </div>
               </div>
 
