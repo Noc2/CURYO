@@ -14,6 +14,19 @@ export type SerializedQuestionRoundConfig = {
   maxVoters: string;
 };
 
+export type QuestionRoundConfigBounds = {
+  minEpochDuration: number;
+  maxEpochDuration: number;
+  minRoundDuration: number;
+  maxRoundDuration: number;
+  minSettlementVoters: number;
+  maxSettlementVoters: number;
+  minVoterCap: number;
+  maxVoterCap: number;
+};
+
+export const QUESTION_ROUND_MAX_EPOCH_COUNT = 2016;
+
 export const DEFAULT_QUESTION_ROUND_CONFIG: QuestionRoundConfig = {
   epochDuration: BigInt(DEFAULT_ROUND_CONFIG.epochDurationSeconds),
   maxDuration: BigInt(DEFAULT_ROUND_CONFIG.maxDurationSeconds),
@@ -21,7 +34,7 @@ export const DEFAULT_QUESTION_ROUND_CONFIG: QuestionRoundConfig = {
   maxVoters: BigInt(DEFAULT_ROUND_CONFIG.maxVoters),
 };
 
-export const DEFAULT_QUESTION_ROUND_CONFIG_BOUNDS = {
+export const DEFAULT_QUESTION_ROUND_CONFIG_BOUNDS: QuestionRoundConfigBounds = {
   minEpochDuration: 5 * 60,
   maxEpochDuration: 60 * 60,
   minRoundDuration: 60 * 60,
@@ -30,7 +43,7 @@ export const DEFAULT_QUESTION_ROUND_CONFIG_BOUNDS = {
   maxSettlementVoters: 100,
   minVoterCap: 2,
   maxVoterCap: 10_000,
-} as const;
+};
 
 export function serializeQuestionRoundConfig(config: QuestionRoundConfig): SerializedQuestionRoundConfig {
   return {
@@ -70,6 +83,26 @@ export function coerceQuestionRoundConfig(
     minVoters: BigInt(source.minVoters ?? DEFAULT_QUESTION_ROUND_CONFIG.minVoters),
     maxVoters: BigInt(source.maxVoters ?? DEFAULT_QUESTION_ROUND_CONFIG.maxVoters),
   };
+}
+
+export function getQuestionRoundMaxDurationForEpoch(
+  epochDurationSeconds: number,
+  configuredMaxDurationSeconds: number,
+): number {
+  const normalizedEpochDuration = Math.max(1, Math.floor(epochDurationSeconds));
+  const normalizedMaxDuration = Math.max(0, Math.floor(configuredMaxDurationSeconds));
+  const epochLimitedMaxDuration = normalizedEpochDuration * (QUESTION_ROUND_MAX_EPOCH_COUNT + 1) - 1;
+
+  return Math.min(normalizedMaxDuration, epochLimitedMaxDuration);
+}
+
+export function isQuestionRoundMaxDurationValidForEpoch(
+  epochDurationSeconds: number,
+  maxDurationSeconds: number,
+): boolean {
+  return (
+    epochDurationSeconds > 0 && Math.floor(maxDurationSeconds / epochDurationSeconds) <= QUESTION_ROUND_MAX_EPOCH_COUNT
+  );
 }
 
 export function formatDurationLabel(seconds: bigint | number): string {

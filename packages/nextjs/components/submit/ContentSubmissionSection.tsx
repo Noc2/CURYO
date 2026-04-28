@@ -65,7 +65,10 @@ import {
 import {
   DEFAULT_QUESTION_ROUND_CONFIG,
   DEFAULT_QUESTION_ROUND_CONFIG_BOUNDS,
+  QUESTION_ROUND_MAX_EPOCH_COUNT,
   formatDurationLabel,
+  getQuestionRoundMaxDurationForEpoch,
+  isQuestionRoundMaxDurationValidForEpoch,
   questionRoundConfigToAbi,
 } from "~~/lib/questionRoundConfig";
 import {
@@ -100,6 +103,8 @@ type SubmissionStep = "question" | "bounty";
 
 const MAX_QUESTION_BUNDLE_COUNT = 10;
 const MIN_BUNDLE_REQUIRED_SETTLED_ROUNDS = 1;
+const SECONDS_PER_MINUTE = 60;
+const SECONDS_PER_HOUR = 60 * SECONDS_PER_MINUTE;
 
 type QuestionDraft = {
   mediaMode: MediaMode;
@@ -204,6 +209,29 @@ function parseIntegerInput(value: string): number {
     return 0;
   }
   return Math.floor(parsed);
+}
+
+function normalizeWholeNumberInput(value: string): string | null {
+  if (value === "" || /^\d+$/.test(value)) {
+    return value;
+  }
+
+  return null;
+}
+
+function parseWholeNumberInput(value: string): number {
+  const normalized = normalizeWholeNumberInput(value);
+  if (normalized === null || normalized === "") {
+    return 0;
+  }
+
+  const parsed = Number(normalized);
+  return Number.isSafeInteger(parsed) ? parsed : 0;
+}
+
+function clampWholeNumberInput(value: string, min: number, max: number): string {
+  const parsed = parseWholeNumberInput(value);
+  return String(Math.min(Math.max(parsed, min), max));
 }
 
 function divideRewardAmount(total: bigint, divisor: bigint): bigint {
@@ -718,21 +746,48 @@ export function ContentSubmissionSection() {
   }, [protocolRoundConfigBounds]);
   useEffect(() => {
     if (roundConfigTouched || !protocolRoundConfig) return;
-    setRoundBlindMinutes(String(Math.max(1, Math.round(roundConfigDefaults.epochDuration / 60))));
-    setRoundMaxDurationHours(String(Math.max(1, Math.round(roundConfigDefaults.maxDuration / 3600))));
+    setRoundBlindMinutes(String(Math.max(1, Math.round(roundConfigDefaults.epochDuration / SECONDS_PER_MINUTE))));
+    setRoundMaxDurationHours(String(Math.max(1, Math.round(roundConfigDefaults.maxDuration / SECONDS_PER_HOUR))));
     setRoundMinVoters(String(roundConfigDefaults.minVoters));
     setRoundMaxVoters(String(roundConfigDefaults.maxVoters));
   }, [protocolRoundConfig, roundConfigDefaults, roundConfigTouched]);
+  const roundBlindMinuteBounds = useMemo(() => {
+    const min = Math.ceil(roundConfigBounds.minEpochDuration / SECONDS_PER_MINUTE);
+    const max = Math.max(min, Math.floor(roundConfigBounds.maxEpochDuration / SECONDS_PER_MINUTE));
+    return { min, max };
+  }, [roundConfigBounds.maxEpochDuration, roundConfigBounds.minEpochDuration]);
   const selectedRewardAssetId = rewardAsset === "hrep" ? SUBMISSION_REWARD_ASSET_HREP : SUBMISSION_REWARD_ASSET_USDC;
   const selectedRewardAmount = useMemo(() => parseSubmissionRewardAmount(rewardAmount), [rewardAmount]);
-  const parsedRoundBlindMinutes = parseIntegerInput(roundBlindMinutes);
-  const parsedRoundMaxDurationHours = parseIntegerInput(roundMaxDurationHours);
-  const parsedRoundMinVoters = parseIntegerInput(roundMinVoters);
-  const parsedRoundMaxVoters = parseIntegerInput(roundMaxVoters);
+  const parsedRoundBlindMinutes = parseWholeNumberInput(roundBlindMinutes);
+  const parsedRoundMaxDurationHours = parseWholeNumberInput(roundMaxDurationHours);
+  const parsedRoundMinVoters = parseWholeNumberInput(roundMinVoters);
+  const parsedRoundMaxVoters = parseWholeNumberInput(roundMaxVoters);
+  const effectiveBlindMinutesForDurationCap =
+    parsedRoundBlindMinutes >= roundBlindMinuteBounds.min && parsedRoundBlindMinutes <= roundBlindMinuteBounds.max
+      ? parsedRoundBlindMinutes
+      : roundBlindMinuteBounds.min;
+  const maxRoundDurationForSelectedBlindPhase = getQuestionRoundMaxDurationForEpoch(
+    effectiveBlindMinutesForDurationCap * SECONDS_PER_MINUTE,
+    roundConfigBounds.maxRoundDuration,
+  );
+  const roundMaxDurationHourBounds = useMemo(() => {
+    const min = Math.ceil(roundConfigBounds.minRoundDuration / SECONDS_PER_HOUR);
+    const max = Math.max(min, Math.floor(maxRoundDurationForSelectedBlindPhase / SECONDS_PER_HOUR));
+    return { min, max };
+  }, [maxRoundDurationForSelectedBlindPhase, roundConfigBounds.minRoundDuration]);
+  const updateRoundWholeNumberInput = (value: string, setValue: (nextValue: string) => void) => {
+    const normalizedValue = normalizeWholeNumberInput(value);
+    if (normalizedValue === null) {
+      return;
+    }
+
+    setRoundConfigTouched(true);
+    setValue(normalizedValue);
+  };
   const selectedRoundConfig = useMemo(
     () => ({
-      epochDuration: BigInt(Math.max(0, parsedRoundBlindMinutes) * 60),
-      maxDuration: BigInt(Math.max(0, parsedRoundMaxDurationHours) * 3600),
+      epochDuration: BigInt(Math.max(0, parsedRoundBlindMinutes) * SECONDS_PER_MINUTE),
+      maxDuration: BigInt(Math.max(0, parsedRoundMaxDurationHours) * SECONDS_PER_HOUR),
       minVoters: BigInt(Math.max(0, parsedRoundMinVoters)),
       maxVoters: BigInt(Math.max(0, parsedRoundMaxVoters)),
     }),
@@ -752,6 +807,9 @@ export function ContentSubmissionSection() {
       return `Max duration must be ${formatDurationLabel(roundConfigBounds.minRoundDuration)}-${formatDurationLabel(
         roundConfigBounds.maxRoundDuration,
       )}.`;
+    }
+    if (!isQuestionRoundMaxDurationValidForEpoch(epochDuration, maxDuration)) {
+      return `Max duration can span at most ${QUESTION_ROUND_MAX_EPOCH_COUNT.toLocaleString()} blind phases; choose ${roundMaxDurationHourBounds.max}h or less for this blind phase.`;
     }
     if (minVoters < roundConfigBounds.minSettlementVoters || minVoters > roundConfigBounds.maxSettlementVoters) {
       return `Settlement voters must be ${roundConfigBounds.minSettlementVoters}-${roundConfigBounds.maxSettlementVoters}.`;
@@ -1438,8 +1496,8 @@ export function ContentSubmissionSection() {
       setBountyWindowPreset(DEFAULT_BOUNTY_WINDOW_PRESET);
       setCustomBountyWindowAmount(DEFAULT_CUSTOM_BOUNTY_WINDOW_AMOUNT);
       setCustomBountyWindowUnit(DEFAULT_CUSTOM_BOUNTY_WINDOW_UNIT);
-      setRoundBlindMinutes(String(Math.max(1, Math.round(roundConfigDefaults.epochDuration / 60))));
-      setRoundMaxDurationHours(String(Math.max(1, Math.round(roundConfigDefaults.maxDuration / 3600))));
+      setRoundBlindMinutes(String(Math.max(1, Math.round(roundConfigDefaults.epochDuration / SECONDS_PER_MINUTE))));
+      setRoundMaxDurationHours(String(Math.max(1, Math.round(roundConfigDefaults.maxDuration / SECONDS_PER_HOUR))));
       setRoundMinVoters(String(roundConfigDefaults.minVoters));
       setRoundMaxVoters(String(roundConfigDefaults.maxVoters));
       setRoundConfigTouched(false);
@@ -1706,13 +1764,33 @@ export function ContentSubmissionSection() {
             <span className="label-text">Blind phase (minutes)</span>
             <input
               type="number"
-              min={Math.ceil(roundConfigBounds.minEpochDuration / 60)}
-              max={Math.floor(roundConfigBounds.maxEpochDuration / 60)}
+              min={roundBlindMinuteBounds.min}
+              max={roundBlindMinuteBounds.max}
               step={1}
+              inputMode="numeric"
               value={roundBlindMinutes}
               onChange={e => {
-                setRoundConfigTouched(true);
-                setRoundBlindMinutes(e.target.value);
+                updateRoundWholeNumberInput(e.target.value, setRoundBlindMinutes);
+              }}
+              onBlur={() => {
+                const clampedBlindMinutes = clampWholeNumberInput(
+                  roundBlindMinutes,
+                  roundBlindMinuteBounds.min,
+                  roundBlindMinuteBounds.max,
+                );
+                const maxDurationSeconds = getQuestionRoundMaxDurationForEpoch(
+                  Number(clampedBlindMinutes) * SECONDS_PER_MINUTE,
+                  roundConfigBounds.maxRoundDuration,
+                );
+                const maxDurationHours = Math.max(
+                  roundMaxDurationHourBounds.min,
+                  Math.floor(maxDurationSeconds / SECONDS_PER_HOUR),
+                );
+
+                setRoundBlindMinutes(clampedBlindMinutes);
+                setRoundMaxDurationHours(current =>
+                  clampWholeNumberInput(current, roundMaxDurationHourBounds.min, maxDurationHours),
+                );
               }}
               className={`input input-bordered bg-base-100 ${
                 bountyStepAttempted && roundConfigValidationError ? "input-error" : ""
@@ -1724,13 +1802,18 @@ export function ContentSubmissionSection() {
             <span className="label-text">Max duration (hours)</span>
             <input
               type="number"
-              min={Math.ceil(roundConfigBounds.minRoundDuration / 3600)}
-              max={Math.floor(roundConfigBounds.maxRoundDuration / 3600)}
+              min={roundMaxDurationHourBounds.min}
+              max={roundMaxDurationHourBounds.max}
               step={1}
+              inputMode="numeric"
               value={roundMaxDurationHours}
               onChange={e => {
-                setRoundConfigTouched(true);
-                setRoundMaxDurationHours(e.target.value);
+                updateRoundWholeNumberInput(e.target.value, setRoundMaxDurationHours);
+              }}
+              onBlur={() => {
+                setRoundMaxDurationHours(current =>
+                  clampWholeNumberInput(current, roundMaxDurationHourBounds.min, roundMaxDurationHourBounds.max),
+                );
               }}
               className={`input input-bordered bg-base-100 ${
                 bountyStepAttempted && roundConfigValidationError ? "input-error" : ""
@@ -1745,10 +1828,19 @@ export function ContentSubmissionSection() {
               min={roundConfigBounds.minSettlementVoters}
               max={roundConfigBounds.maxSettlementVoters}
               step={1}
+              inputMode="numeric"
               value={roundMinVoters}
               onChange={e => {
-                setRoundConfigTouched(true);
-                setRoundMinVoters(e.target.value);
+                updateRoundWholeNumberInput(e.target.value, setRoundMinVoters);
+              }}
+              onBlur={() => {
+                setRoundMinVoters(current =>
+                  clampWholeNumberInput(
+                    current,
+                    roundConfigBounds.minSettlementVoters,
+                    roundConfigBounds.maxSettlementVoters,
+                  ),
+                );
               }}
               className={`input input-bordered bg-base-100 ${
                 bountyStepAttempted && roundConfigValidationError ? "input-error" : ""
@@ -1763,10 +1855,15 @@ export function ContentSubmissionSection() {
               min={roundConfigBounds.minVoterCap}
               max={roundConfigBounds.maxVoterCap}
               step={1}
+              inputMode="numeric"
               value={roundMaxVoters}
               onChange={e => {
-                setRoundConfigTouched(true);
-                setRoundMaxVoters(e.target.value);
+                updateRoundWholeNumberInput(e.target.value, setRoundMaxVoters);
+              }}
+              onBlur={() => {
+                setRoundMaxVoters(current =>
+                  clampWholeNumberInput(current, roundConfigBounds.minVoterCap, roundConfigBounds.maxVoterCap),
+                );
               }}
               className={`input input-bordered bg-base-100 ${
                 bountyStepAttempted && roundConfigValidationError ? "input-error" : ""
