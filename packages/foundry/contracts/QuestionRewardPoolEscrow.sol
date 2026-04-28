@@ -431,7 +431,10 @@ contract QuestionRewardPoolEscrow is
         address submitterIdentity = registry.getSubmitterIdentity(contentId);
         uint256 submitterVoterId = submitterIdentity == address(0) ? 0 : voterIdNFT.getTokenId(submitterIdentity);
         uint256 funderNullifier = voterIdNFT.getNullifier(funderVoterId);
-        uint256 submitterNullifier = submitterVoterId == 0 ? 0 : voterIdNFT.getNullifier(submitterVoterId);
+        uint256 submitterNullifier = registry.getSubmitterNullifier(contentId);
+        if (submitterNullifier == 0 && submitterVoterId != 0) {
+            submitterNullifier = voterIdNFT.getNullifier(submitterVoterId);
+        }
 
         rewardPoolId = nextRewardPoolId++;
         rewardPools[rewardPoolId] = RewardPool({

@@ -40,6 +40,10 @@ library VotePreflightLib {
         if (hasVoterIdNft) {
             if (!voterIdNft.hasVoterId(voter)) revert VoterIdRequired();
             voterId = voterIdNft.getTokenId(voter);
+            uint256 submitterNullifier = registry.getSubmitterNullifier(contentId);
+            if (submitterNullifier != 0 && voterIdNft.getNullifier(voterId) == submitterNullifier) {
+                revert SelfVote();
+            }
         }
 
         address effectiveVoter = voter;
@@ -54,7 +58,11 @@ library VotePreflightLib {
         useTokenIdentity = hasVoterIdNft && voterId != 0;
     }
 
-    function isFrontendEligible(IFrontendRegistry frontendRegistry, address frontend) external view returns (bool eligible) {
+    function isFrontendEligible(IFrontendRegistry frontendRegistry, address frontend)
+        external
+        view
+        returns (bool eligible)
+    {
         if (frontend == address(0) || address(frontendRegistry) == address(0)) {
             return false;
         }
@@ -68,7 +76,9 @@ library VotePreflightLib {
 
     function prepareCommit(
         mapping(uint256 => mapping(uint256 => mapping(address => bytes32))) storage voterCommitHash,
-        mapping(uint256 => mapping(uint256 => mapping(uint256 => bool))) storage hasTokenIdCommitted,
+        mapping(
+            uint256 => mapping(uint256 => mapping(uint256 => bool))
+        ) storage hasTokenIdCommitted,
         mapping(uint256 => mapping(uint256 => mapping(uint256 => bytes32))) storage voterNullifierCommitKey,
         mapping(uint256 => mapping(address => uint256)) storage lastVoteTimestamp,
         mapping(uint256 => mapping(uint256 => uint256)) storage lastVoteTimestampByToken,

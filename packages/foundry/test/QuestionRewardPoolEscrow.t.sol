@@ -1003,27 +1003,28 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
     function testSubmitterNullifierStaysExcludedAfterRemint() public {
         voterIdNFT.mint(submitter, 333_002);
         uint256 contentId = _submitQuestion("");
-        uint256 rewardPoolId = _createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1);
+        assertEq(registry.getSubmitterNullifier(contentId), 333_002);
 
         voterIdNFT.revokeVoterId(submitter);
         voterIdNFT.resetNullifier(333_002);
         voterIdNFT.mint(voter1, 333_002);
 
-        address[] memory voters = new address[](4);
-        voters[0] = voter1;
-        voters[1] = voter2;
-        voters[2] = voter3;
-        voters[3] = voter4;
-        uint256 roundId = _settleRoundWith(voters, contentId, _directions(true, true, true, false));
+        _expectSelfVoteCommitRevert(voter1, contentId, keccak256("reminted-submitter-self-vote"));
+    }
 
-        assertEq(rewardPoolEscrow.claimableQuestionReward(rewardPoolId, roundId, voter1), 0);
-        vm.prank(voter1);
-        vm.expectRevert("Excluded voter");
-        rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
+    function testRemintedSubmitterCannotVoteOnOwnQuestion() public {
+        voterIdNFT.mint(submitter, 333_003);
+        uint256 contentId = _submitQuestion("");
+        assertEq(registry.getSubmitterNullifier(contentId), 333_003);
 
-        vm.prank(voter2);
-        uint256 reward = rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
-        assertEq(reward, REWARD_POOL_AMOUNT / 3);
+        voterIdNFT.revokeVoterId(submitter);
+        voterIdNFT.resetNullifier(333_003);
+        address remintedSubmitter = address(0x5A1D);
+        voterIdNFT.mint(remintedSubmitter, 333_003);
+        vm.prank(owner);
+        hrepToken.mint(remintedSubmitter, 10_000e6);
+
+        _expectSelfVoteCommitRevert(remintedSubmitter, contentId, keccak256("reminted-submitter-self-vote-2"));
     }
 
     function testDelegatedFunderStaysExcludedAfterAgentReassignment() public {
@@ -1733,6 +1734,25 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         }
         contentId = registry.submitQuestionWithRewardAndRoundConfig(
             contextUrl, imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, salt, rewardTerms, roundConfig
+        );
+        vm.stopPrank();
+    }
+
+    function _expectSelfVoteCommitRevert(address voter, uint256 contentId, bytes32 salt) internal {
+        TestCommitArtifacts memory artifacts =
+            _buildTestCommitArtifacts(address(votingEngine), voter, true, salt, contentId);
+        vm.startPrank(voter);
+        hrepToken.approve(address(votingEngine), STAKE);
+        vm.expectRevert(RoundVotingEngine.SelfVote.selector);
+        votingEngine.commitVote(
+            contentId,
+            artifacts.roundReferenceRatingBps,
+            artifacts.targetRound,
+            artifacts.drandChainHash,
+            artifacts.commitHash,
+            artifacts.ciphertext,
+            STAKE,
+            address(0)
         );
         vm.stopPrank();
     }

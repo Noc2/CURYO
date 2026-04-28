@@ -170,6 +170,9 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     /// @notice Canonical submitter identity snapshot (holder address if submitted through a delegate).
     mapping(uint256 => address) internal contentSubmitterIdentity;
 
+    /// @notice Stable Self nullifier for the canonical submitter identity.
+    mapping(uint256 => uint256) internal contentSubmitterNullifier;
+
     /// @notice Per-question round settings selected at submission and bounded by governance.
     mapping(uint256 => RoundLib.RoundConfig) public contentRoundConfig;
 
@@ -202,7 +205,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     SubmissionMediaValidator internal immutable SUBMISSION_MEDIA_VALIDATOR;
 
     /// @dev Reserved storage gap for future upgrades
-    uint256[46] private __gap;
+    uint256[45] private __gap;
 
     // --- Events ---
     event ContentSubmitted(
@@ -928,6 +931,8 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         contentId = nextContentId++;
         contentSubmissionKey[contentId] = submissionKey;
         contentSubmitterIdentity[contentId] = _resolveSubmitterIdentity(pending.submitter);
+        contentSubmitterNullifier[contentId] =
+            voterIdNFT.getNullifier(voterIdNFT.getTokenId(contentSubmitterIdentity[contentId]));
         contentRoundConfig[contentId] = roundConfig;
         contents[contentId] = Content({
             id: contentId.toUint64(),
@@ -1119,6 +1124,11 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     function getSubmitterIdentity(uint256 contentId) external view returns (address) {
         if (contents[contentId].submitter == address(0)) return address(0);
         return contentSubmitterIdentity[contentId];
+    }
+
+    function getSubmitterNullifier(uint256 contentId) external view returns (uint256) {
+        if (contents[contentId].submitter == address(0)) return 0;
+        return contentSubmitterNullifier[contentId];
     }
 
     function getContentSubmitter(uint256 contentId) external view returns (address) {

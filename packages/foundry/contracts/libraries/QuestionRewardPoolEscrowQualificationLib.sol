@@ -70,6 +70,9 @@ library QuestionRewardPoolEscrowQualificationLib {
         view
         returns (uint256)
     {
+        uint256 snapshottedNullifier = registry.getSubmitterNullifier(contentId);
+        if (snapshottedNullifier != 0) return snapshottedNullifier;
+
         address account = registry.getSubmitterIdentity(contentId);
         uint256 voterId = voterIdNft.getTokenId(account);
         return voterId == 0 ? 0 : voterIdNft.getNullifier(voterId);
