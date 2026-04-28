@@ -18,6 +18,16 @@ import { RatingMath } from "./libraries/RatingMath.sol";
 import { ProtocolConfig } from "./ProtocolConfig.sol";
 import { SubmissionMediaValidator } from "./SubmissionMediaValidator.sol";
 
+struct Eip3009Authorization {
+    address from;
+    address to;
+    uint256 value;
+    uint256 validAfter;
+    uint256 validBefore;
+    bytes32 nonce;
+    bytes signature;
+}
+
 interface IQuestionRewardPoolEscrow {
     function createSubmissionRewardPoolFromRegistry(
         uint256 contentId,
@@ -28,6 +38,17 @@ interface IQuestionRewardPoolEscrow {
         uint256 requiredSettledRounds,
         uint256 bountyClosesAt,
         uint256 feedbackClosesAt
+    ) external returns (uint256 rewardPoolId);
+
+    function createSubmissionRewardPoolFromRegistryWithAuthorization(
+        uint256 contentId,
+        address funder,
+        uint256 amount,
+        uint256 requiredVoters,
+        uint256 requiredSettledRounds,
+        uint256 bountyClosesAt,
+        uint256 feedbackClosesAt,
+        Eip3009Authorization calldata authorization
     ) external returns (uint256 rewardPoolId);
 
     function createSubmissionBundleFromRegistry(
@@ -233,6 +254,12 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         uint256 requiredSettledRounds,
         uint256 bountyClosesAt,
         uint256 feedbackClosesAt,
+        uint256 rewardPoolId
+    );
+    event X402QuestionSubmitted(
+        uint256 indexed contentId,
+        address indexed submitter,
+        bytes32 indexed paymentNonce,
         uint256 rewardPoolId
     );
     event QuestionBundleSubmitted(
@@ -554,7 +581,14 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
                 )
             );
             uint256 contentId = _storeSubmittedContent(
-                submissionKeys[i], pending, contentHash, resolvedCategoryIds[i], validatedRoundConfig, bundleId, i
+                submissionKeys[i],
+                pending.submitter,
+                rewardTerms.asset != SUBMISSION_REWARD_ASSET_USDC,
+                contentHash,
+                resolvedCategoryIds[i],
+                validatedRoundConfig,
+                bundleId,
+                i
             );
             contentIds[i] = contentId;
             questionBundleContentIds[bundleId].push(contentId);
@@ -701,6 +735,76 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         );
     }
 
+    function submitQuestionWithX402Payment(
+        string memory contextUrl,
+        string[] memory imageUrls,
+        string memory videoUrl,
+        string memory title,
+        string memory description,
+        string memory tags,
+        uint256 categoryId,
+        bytes32 salt,
+        SubmissionRewardTerms memory rewardTerms,
+        RoundLib.RoundConfig memory roundConfig,
+        QuestionSpecCommitment memory spec,
+        Eip3009Authorization calldata paymentAuthorization
+    ) external nonReentrant whenNotPaused returns (uint256 contentId) {
+        SubmissionMetadata memory metadata = _validatedContextSubmissionMetadata(
+            contextUrl, imageUrls, videoUrl, title, description, tags, categoryId
+        );
+        RoundLib.RoundConfig memory validatedRoundConfig = _validatedRoundConfig(roundConfig);
+        (uint256 resolvedCategoryId, bytes32 submissionKey) = _prepareX402QuestionSubmission(
+            metadata, imageUrls, videoUrl, salt, rewardTerms, validatedRoundConfig, spec, paymentAuthorization
+        );
+        bytes32 contentHash = _questionContentHash(metadata, imageUrls, videoUrl, resolvedCategoryId, spec);
+        contentId = _storeSubmittedContent(
+            submissionKey,
+            paymentAuthorization.from,
+            false,
+            contentHash,
+            resolvedCategoryId,
+            validatedRoundConfig,
+            0,
+            0
+        );
+        uint256 rewardPoolId = IQuestionRewardPoolEscrow(questionRewardPoolEscrow)
+            .createSubmissionRewardPoolFromRegistryWithAuthorization(
+                contentId,
+                paymentAuthorization.from,
+                rewardTerms.amount,
+                rewardTerms.requiredVoters,
+                rewardTerms.requiredSettledRounds,
+                rewardTerms.bountyClosesAt,
+                rewardTerms.feedbackClosesAt,
+                paymentAuthorization
+            );
+
+        emit ContentSubmitted(
+            contentId,
+            paymentAuthorization.from,
+            contentHash,
+            metadata.url,
+            metadata.title,
+            metadata.description,
+            metadata.tags,
+            resolvedCategoryId
+        );
+        emit QuestionSpecAnchored(contentId, spec.questionMetadataHash, spec.resultSpecHash);
+        emit ContentMediaSubmitted(contentId, imageUrls, videoUrl);
+        emit SubmissionRewardPoolAttached(
+            contentId,
+            paymentAuthorization.from,
+            rewardTerms.asset,
+            rewardTerms.amount,
+            rewardTerms.requiredVoters,
+            rewardTerms.requiredSettledRounds,
+            rewardTerms.bountyClosesAt,
+            rewardTerms.feedbackClosesAt,
+            rewardPoolId
+        );
+        emit X402QuestionSubmitted(contentId, paymentAuthorization.from, paymentAuthorization.nonce, rewardPoolId);
+    }
+
     function getContentRoundConfig(uint256 contentId) public view returns (RoundLib.RoundConfig memory cfg) {
         cfg = contentRoundConfig[contentId];
         if (cfg.epochDuration == 0) {
@@ -717,7 +821,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     function cancelContent(uint256 contentId) external nonReentrant whenNotPaused {
         require(bonusPool != address(0), "Bonus pool not set");
         Content storage c = contents[contentId];
-        require(contentSubmitterIdentity[contentId] == _resolveSubmitterIdentity(msg.sender), "Not submitter");
+        require(contentSubmitterIdentity[contentId] == _resolveOptionalSubmitterIdentity(msg.sender), "Not submitter");
         require(c.status == ContentStatus.Active, "Not active");
         if (votingEngine != address(0)) {
             require(!IRoundVotingEngine(votingEngine).hasCommits(contentId), "Content has votes");
@@ -778,22 +882,16 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     ) internal returns (uint256 contentId) {
         (uint256 resolvedCategoryId, bytes32 submissionKey, PendingSubmission memory pending) =
             _prepareQuestionMediaSubmission(metadata, imageUrls, videoUrl, salt, rewardTerms, roundConfig, spec);
-        bytes32 contentHash = keccak256(
-            abi.encode(
-                "curyo-question-context-v2",
-                metadata.url,
-                imageUrls,
-                videoUrl,
-                metadata.title,
-                metadata.description,
-                metadata.tags,
-                resolvedCategoryId,
-                spec.questionMetadataHash,
-                spec.resultSpecHash
-            )
-        );
+        bytes32 contentHash = _questionContentHash(metadata, imageUrls, videoUrl, resolvedCategoryId, spec);
         contentId = _storeSubmittedContent(
-            submissionKey, pending, contentHash, resolvedCategoryId, roundConfig, bundleId, bundleIndex
+            submissionKey,
+            pending.submitter,
+            rewardTerms.asset != SUBMISSION_REWARD_ASSET_USDC,
+            contentHash,
+            resolvedCategoryId,
+            roundConfig,
+            bundleId,
+            bundleIndex
         );
         uint256 rewardPoolId = _attachSubmissionRewardPool(contentId, rewardTerms);
         emit ContentSubmitted(
@@ -865,8 +963,74 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         submissionKeyUsed[submissionKey] = true;
     }
 
+    function _prepareX402QuestionSubmission(
+        SubmissionMetadata memory metadata,
+        string[] memory imageUrls,
+        string memory videoUrl,
+        bytes32 salt,
+        SubmissionRewardTerms memory rewardTerms,
+        RoundLib.RoundConfig memory roundConfig,
+        QuestionSpecCommitment memory spec,
+        Eip3009Authorization calldata paymentAuthorization
+    ) internal returns (uint256 resolvedCategoryId, bytes32 submissionKey) {
+        require(questionRewardPoolEscrow != address(0), "Bounty escrow not set");
+        _validateQuestionSpec(spec);
+        require(rewardTerms.asset == SUBMISSION_REWARD_ASSET_USDC, "USDC required");
+        require(paymentAuthorization.from != address(0), "Invalid payer");
+        require(paymentAuthorization.to == questionRewardPoolEscrow, "Bad payee");
+        require(paymentAuthorization.value == rewardTerms.amount, "Bad amount");
+        resolvedCategoryId = _resolveQuestionSubmissionCategory(metadata);
+        submissionKey = _deriveQuestionMediaSubmissionKey(metadata, resolvedCategoryId);
+        require(!submissionKeyUsed[submissionKey], "Question already submitted");
+        require(salt != bytes32(0), "Salt required");
+        _validateSubmissionReward(rewardTerms);
+        require(rewardTerms.requiredVoters <= roundConfig.maxVoters, "Voters exceed max");
+        require(
+            paymentAuthorization.nonce
+                == computeX402QuestionPaymentNonce(
+                    metadata,
+                    imageUrls,
+                    videoUrl,
+                    salt,
+                    rewardTerms,
+                    roundConfig,
+                    spec,
+                    paymentAuthorization.from,
+                    paymentAuthorization.to,
+                    paymentAuthorization.value,
+                    paymentAuthorization.validAfter,
+                    paymentAuthorization.validBefore
+                ),
+            "Bad nonce"
+        );
+        submissionKeyUsed[submissionKey] = true;
+    }
+
     function _submissionMediaHash(string[] memory imageUrls, string memory videoUrl) internal pure returns (bytes32) {
         return keccak256(abi.encode(imageUrls, videoUrl));
+    }
+
+    function _questionContentHash(
+        SubmissionMetadata memory metadata,
+        string[] memory imageUrls,
+        string memory videoUrl,
+        uint256 resolvedCategoryId,
+        QuestionSpecCommitment memory spec
+    ) internal pure returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                "curyo-question-context-v2",
+                metadata.url,
+                imageUrls,
+                videoUrl,
+                metadata.title,
+                metadata.description,
+                metadata.tags,
+                resolvedCategoryId,
+                spec.questionMetadataHash,
+                spec.resultSpecHash
+            )
+        );
     }
 
     function _enterQuestionSubmissionGuard() private {
@@ -921,7 +1085,8 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
     function _storeSubmittedContent(
         bytes32 submissionKey,
-        PendingSubmission memory pending,
+        address submitter,
+        bool requireSubmitterVoterId,
         bytes32 contentHash,
         uint256 resolvedCategoryId,
         RoundLib.RoundConfig memory roundConfig,
@@ -930,14 +1095,15 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     ) internal returns (uint256 contentId) {
         contentId = nextContentId++;
         contentSubmissionKey[contentId] = submissionKey;
-        address submitterIdentity = _resolveSubmitterIdentity(pending.submitter);
+        (address submitterIdentity, uint256 submitterNullifier) =
+            _snapshotSubmitterIdentity(submitter, requireSubmitterVoterId);
         contentSubmitterIdentity[contentId] = submitterIdentity;
-        contentSubmitterNullifier[contentId] = voterIdNFT.getNullifier(voterIdNFT.getTokenId(submitterIdentity));
+        contentSubmitterNullifier[contentId] = submitterNullifier;
         contentRoundConfig[contentId] = roundConfig;
         contents[contentId] = Content({
             id: contentId.toUint64(),
             contentHash: contentHash,
-            submitter: msg.sender,
+            submitter: submitter,
             createdAt: block.timestamp.toUint48(),
             lastActivityAt: block.timestamp.toUint48(),
             status: ContentStatus.Active,
@@ -1301,6 +1467,55 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         );
     }
 
+    function computeX402QuestionPaymentNonce(
+        SubmissionMetadata memory metadata,
+        string[] memory imageUrls,
+        string memory videoUrl,
+        bytes32 salt,
+        SubmissionRewardTerms memory rewardTerms,
+        RoundLib.RoundConfig memory roundConfig,
+        QuestionSpecCommitment memory spec,
+        address payer,
+        address payee,
+        uint256 value,
+        uint256 validAfter,
+        uint256 validBefore
+    ) public view returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                "curyo-x402-question-payment-v1",
+                block.chainid,
+                address(this),
+                questionRewardPoolEscrow,
+                payer,
+                payee,
+                value,
+                validAfter,
+                validBefore,
+                metadata.url,
+                imageUrls,
+                videoUrl,
+                metadata.title,
+                metadata.description,
+                metadata.tags,
+                metadata.categoryId,
+                salt,
+                rewardTerms.asset,
+                rewardTerms.amount,
+                rewardTerms.requiredVoters,
+                rewardTerms.requiredSettledRounds,
+                rewardTerms.bountyClosesAt,
+                rewardTerms.feedbackClosesAt,
+                roundConfig.epochDuration,
+                roundConfig.maxDuration,
+                roundConfig.minVoters,
+                roundConfig.maxVoters,
+                spec.questionMetadataHash,
+                spec.resultSpecHash
+            )
+        );
+    }
+
     function _validateSubmissionReward(SubmissionRewardTerms memory rewardTerms) internal view {
         require(
             rewardTerms.asset == SUBMISSION_REWARD_ASSET_HREP || rewardTerms.asset == SUBMISSION_REWARD_ASSET_USDC,
@@ -1379,6 +1594,36 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         address resolved = voterIdNFT.resolveHolder(submitter);
         require(resolved != address(0), "Voter ID required");
         return resolved;
+    }
+
+    function _resolveOptionalSubmitterIdentity(address submitter) internal view returns (address) {
+        if (submitter == address(0) || address(voterIdNFT) == address(0)) return submitter;
+        address resolved = voterIdNFT.resolveHolder(submitter);
+        return resolved == address(0) ? submitter : resolved;
+    }
+
+    function _snapshotSubmitterIdentity(address submitter, bool requireVoterId)
+        internal
+        view
+        returns (address submitterIdentity, uint256 submitterNullifier)
+    {
+        if (submitter == address(0)) return (address(0), 0);
+        if (requireVoterId) {
+            submitterIdentity = _resolveSubmitterIdentity(submitter);
+        } else if (address(voterIdNFT) != address(0)) {
+            submitterIdentity = voterIdNFT.resolveHolder(submitter);
+            if (submitterIdentity == address(0)) {
+                submitterIdentity = submitter;
+            }
+        } else {
+            submitterIdentity = submitter;
+        }
+
+        if (address(voterIdNFT) == address(0) || submitterIdentity == address(0)) {
+            return (submitterIdentity, 0);
+        }
+        uint256 voterId = voterIdNFT.getTokenId(submitterIdentity);
+        submitterNullifier = voterId == 0 ? 0 : voterIdNFT.getNullifier(voterId);
     }
 
     function _getDormancyAnchor(uint256 contentId) internal view returns (uint256) {

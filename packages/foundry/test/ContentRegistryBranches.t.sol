@@ -1661,7 +1661,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         mockVoterIdNFT.removeDelegate();
 
         vm.prank(delegate);
-        vm.expectRevert("Voter ID required");
+        vm.expectRevert("Not submitter");
         registry.cancelContent(contentId);
 
         vm.prank(submitter);
