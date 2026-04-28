@@ -19,6 +19,7 @@ import {
   PlayCircleIcon,
   WalletIcon,
 } from "@heroicons/react/24/outline";
+import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useCopyToClipboard } from "~~/hooks/scaffold-eth";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import {
@@ -44,6 +45,8 @@ const DEFAULT_PER_ASK_CAP_ATOMIC = 2_000_000n;
 const DEFAULT_DAILY_CAP_ATOMIC = 10_000_000n;
 const DEFAULT_AGENT_SCOPES = ["curyo:ask", "curyo:read", "curyo:quote", "curyo:balance"];
 const SETUP_STEP_ORDER = ["wallet", "fund", "payment", "policy", "mcp"] as const;
+const AGENT_WALLET_HELP_TEXT =
+  "The owner wallet signs policy changes. The agent wallet is the address your MCP client uses as walletAddress when it submits paid asks.";
 
 type AgentSetupStep = (typeof SETUP_STEP_ORDER)[number];
 type PaymentMode = "wallet_calls" | "x402_authorization";
@@ -956,11 +959,10 @@ export function AgentSubmissionPanel() {
             <p className="text-sm font-semibold uppercase tracking-wide text-base-content/50">
               Step {activeStepNumber} of {SETUP_STEP_ORDER.length}
             </p>
-            <h3 className="mt-1 text-xl font-semibold">Choose the agent wallet</h3>
-            <p className="mt-2 text-sm leading-relaxed text-base-content/65">
-              The owner wallet signs policy changes. The agent wallet is the address your MCP client uses as
-              walletAddress when it submits paid asks.
-            </p>
+            <h3 className="mt-1 flex items-center gap-2 text-xl font-semibold">
+              Choose the agent wallet
+              <InfoTooltip text={AGENT_WALLET_HELP_TEXT} position="right" />
+            </h3>
           </div>
 
           <div className="mt-5 grid gap-3 md:grid-cols-2">
@@ -1012,7 +1014,10 @@ export function AgentSubmissionPanel() {
             </div>
           </div>
 
-          <div className="mt-5 flex flex-wrap gap-2">
+          <div className="mt-5 flex items-center justify-between gap-2">
+            <button type="button" className="btn btn-outline btn-sm" onClick={handleStartNewPolicy}>
+              Reset
+            </button>
             <button
               type="button"
               className="btn btn-primary btn-sm"
@@ -1020,9 +1025,6 @@ export function AgentSubmissionPanel() {
               onClick={() => setActiveSetupStep("fund")}
             >
               Continue
-            </button>
-            <button type="button" className="btn btn-outline btn-sm" onClick={handleStartNewPolicy}>
-              Reset
             </button>
           </div>
         </div>
