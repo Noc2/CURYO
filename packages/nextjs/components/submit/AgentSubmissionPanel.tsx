@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { defineChain } from "thirdweb";
 import { BuyWidget } from "thirdweb/react";
@@ -12,7 +12,6 @@ import {
   CheckCircleIcon,
   ClipboardDocumentIcon,
   CpuChipIcon,
-  ExclamationTriangleIcon,
   KeyIcon,
   NoSymbolIcon,
   PauseCircleIcon,
@@ -929,26 +928,23 @@ export function AgentSubmissionPanel() {
 
         <div className="mt-5 flex flex-wrap items-center gap-2 text-sm font-medium text-base-content/55">
           {setupSteps.map((step, index) => (
-            <button
-              key={step.id}
-              type="button"
-              aria-current={activeSetupStep === step.id ? "step" : undefined}
-              onClick={() => setActiveSetupStep(step.id)}
-              className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/80 ${
-                activeSetupStep === step.id
-                  ? "border-primary/40 bg-primary/10 text-primary hover:bg-primary/15"
-                  : "step-control-inactive"
-              }`}
-            >
-              {step.complete ? (
-                <CheckCircleIcon className="h-4 w-4 text-success" />
-              ) : (
-                <ExclamationTriangleIcon className="h-4 w-4 text-warning" />
-              )}
-              <span>
+            <Fragment key={step.id}>
+              <button
+                type="button"
+                aria-current={activeSetupStep === step.id ? "step" : undefined}
+                aria-label={`Go to ${step.label}`}
+                onClick={() => setActiveSetupStep(step.id)}
+                title={`Go to ${step.label}`}
+                className={`cursor-pointer rounded-md border px-2 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/80 ${
+                  activeSetupStep === step.id
+                    ? "border-primary/40 bg-primary/10 text-primary hover:bg-primary/15"
+                    : "step-control-inactive"
+                }`}
+              >
                 {index + 1}. {step.label}
-              </span>
-            </button>
+              </button>
+              {index < setupSteps.length - 1 ? <span aria-hidden="true">→</span> : null}
+            </Fragment>
           ))}
         </div>
       </div>
