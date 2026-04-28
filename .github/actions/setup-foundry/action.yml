@@ -11,3 +11,5 @@ runs:
         git submodule update --init contracts/lib/openzeppelin-foundry-upgrades contracts/lib/forge-std
     - name: Install Foundry
       uses: foundry-rs/foundry-toolchain@8789b3e21e6c11b2697f5eb56eddae542f746c10 # v1
+      with:
+        version: v1.5.1
