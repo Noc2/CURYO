@@ -1241,7 +1241,6 @@ const HomeInner = () => {
         return;
       }
 
-      const committedIndex = displayFeed.findIndex(i => i.id === stakeModal.contentId);
       const success = await commitVote({
         contentId: stakeModal.contentId,
         isUp: stakeModal.isUp,
@@ -1267,13 +1266,7 @@ const HomeInner = () => {
         recordRecommendationSignal(item, "vote_commit", { isUp: stakeModal.isUp });
       }
 
-      const nextIndex = committedIndex >= 0 ? Math.min(committedIndex + 1, displayFeed.length - 1) : -1;
-      const advanced = nextIndex > committedIndex ? handleSelectByIndex(nextIndex) : false;
-      notification.success(
-        advanced
-          ? `Vote submitted! Stake: ${stakeAmount} HREP · next card ready`
-          : `Vote submitted! Stake: ${stakeAmount} HREP`,
-      );
+      notification.success(`Vote submitted! Stake: ${stakeAmount} HREP`);
 
       if (isFirstVote) {
         markVoteCompleted();
@@ -1284,7 +1277,6 @@ const HomeInner = () => {
       clearVoteError,
       commitVote,
       displayFeed,
-      handleSelectByIndex,
       isVoteCooldownCheckPendingForContent,
       isFirstVote,
       markVoteCompleted,
