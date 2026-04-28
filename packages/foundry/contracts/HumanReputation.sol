@@ -97,11 +97,11 @@ contract HumanReputation is ERC20, ERC1363, ERC20Permit, ERC20Votes, AccessContr
 
     /// @notice Lock tokens for governance participation. Called by governor contract.
     /// @dev Uses a single aggregate lock per address (O(1)) instead of unbounded array.
-    ///      Governance voting uses snapshots, so users who moved tokens after the snapshot can
-    ///      still vote. The lock records that snapshotted voting-power obligation even when it
-    ///      exceeds the current balance, preventing post-snapshot transfers from turning the
-    ///      lock into a no-op. Future outgoing transfers remain blocked until the lock expires
-    ///      unless the account holds more than its active obligation.
+    ///      Governance voting uses snapshots, but the account must still hold at least the
+    ///      snapshotted weight when the lock is applied. This prevents post-snapshot transfers
+    ///      from leaving the lock on an empty account while the voting tokens remain liquid
+    ///      elsewhere. Future outgoing transfers remain blocked until the lock expires unless
+    ///      the account holds more than its active obligation.
     ///      If an active lock exists, the newly lockable amount is added and unlock time is extended.
     ///      If the previous lock expired, a fresh lock is created.
     /// @param account The account whose tokens to lock
@@ -109,6 +109,7 @@ contract HumanReputation is ERC20, ERC1363, ERC20Permit, ERC20Votes, AccessContr
     function lockForGovernance(address account, uint256 amount) external {
         require(msg.sender == governor, "Only governor");
         require(amount > 0, "Amount must be > 0");
+        require(balanceOf(account) >= amount, "Insufficient balance for governance lock");
 
         GovernanceLock storage lock = _governanceLock[account];
         uint256 newUnlockTime = block.timestamp + GOVERNANCE_LOCK_DURATION;
@@ -116,8 +117,8 @@ contract HumanReputation is ERC20, ERC1363, ERC20Permit, ERC20Votes, AccessContr
             // Previous lock expired or no lock exists — start fresh with the full governance obligation.
             lock.amount = amount;
         } else {
-            // Active lock — preserve existing balance-capped accumulation, but include the
-            // requested governance weight so post-snapshot transfers cannot erase the lock.
+            // Active lock — preserve existing balance-capped accumulation while extending
+            // the obligation for this governance action as far as the account balance allows.
             uint256 currentBalance = balanceOf(account);
             uint256 lockableBase = currentBalance > amount ? currentBalance : amount;
             uint256 lockableBalance = lockableBase > lock.amount ? lockableBase - lock.amount : 0;

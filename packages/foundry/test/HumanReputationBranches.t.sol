@@ -315,31 +315,20 @@ contract HumanReputationBranchesTest is Test {
         assertEq(hrep.getTransferableBalance(user1), 500e6);
     }
 
-    function test_LockForGovernance_FreshLockRecordsFullObligation() public {
+    function test_LockForGovernance_RejectsObligationAboveCurrentBalance() public {
         vm.prank(mockGovernor);
+        vm.expectRevert("Insufficient balance for governance lock");
         hrep.lockForGovernance(user1, 2_000e6);
-
-        assertEq(hrep.getLockedBalance(user1), 2_000e6);
-        assertEq(hrep.getTransferableBalance(user1), 0);
     }
 
-    function test_LockForGovernance_PostSnapshotTransferStillLocksFutureBalance() public {
+    function test_LockForGovernance_PostSnapshotTransferRevertsWhenBalanceMoved() public {
         vm.prank(user1);
         hrep.transfer(user2, 1_000e6);
         assertEq(hrep.balanceOf(user1), 0);
 
         vm.prank(mockGovernor);
+        vm.expectRevert("Insufficient balance for governance lock");
         hrep.lockForGovernance(user1, 500e6);
-
-        assertEq(hrep.getLockedBalance(user1), 500e6);
-        assertEq(hrep.getTransferableBalance(user1), 0);
-
-        vm.prank(admin);
-        hrep.mint(user1, 100e6);
-
-        vm.prank(user1);
-        vm.expectRevert("Exceeds transferable balance (governance locked)");
-        hrep.transfer(user2, 1);
     }
 
     function test_GetGovernanceLock_Expired_ReturnsZero() public {
