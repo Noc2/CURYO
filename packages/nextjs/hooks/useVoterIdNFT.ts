@@ -21,6 +21,18 @@ export function isInitialQueryPending({
   return isLoading || isFetching;
 }
 
+export function shouldReadVoterIdTokenId({
+  address,
+  hasVoterId,
+  hasVoterIdFetched,
+}: {
+  address?: string;
+  hasVoterId: boolean | undefined;
+  hasVoterIdFetched: boolean;
+}) {
+  return Boolean(address && hasVoterIdFetched && hasVoterId === true);
+}
+
 const VOTER_ID_CACHE_KEY = "curyo:voterIdNFT";
 
 interface VoterIdCache {
@@ -35,6 +47,11 @@ function readVoterIdCache(address: string): VoterIdCache | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (typeof parsed.hasVoterId !== "boolean" || typeof parsed.tokenId !== "string") return null;
+    try {
+      BigInt(parsed.tokenId);
+    } catch {
+      return null;
+    }
     return parsed;
   } catch {
     return null;
@@ -80,8 +97,11 @@ export function useVoterIdNFT(address?: string) {
     },
   } as any);
 
-  // Use cached hasVoterId to enable tokenId query immediately (avoids sequential waterfall)
-  const hasVoterIdResolved = hasVoterId ?? cached?.hasVoterId ?? false;
+  const shouldReadTokenId = shouldReadVoterIdTokenId({
+    address,
+    hasVoterId: hasVoterId as boolean | undefined,
+    hasVoterIdFetched,
+  });
 
   const {
     data: tokenId,
@@ -95,20 +115,28 @@ export function useVoterIdNFT(address?: string) {
     functionName: "getTokenId",
     args: [address],
     query: {
-      enabled: !!address && hasVoterIdResolved === true,
+      enabled: shouldReadTokenId,
       initialData: cached?.hasVoterId && cached.tokenId ? BigInt(cached.tokenId) : undefined,
     },
   } as any);
 
   // Persist to localStorage when fresh data arrives
   useEffect(() => {
-    if (address && hasVoterId !== undefined) {
-      writeVoterIdCache(address, hasVoterId as boolean, (tokenId as bigint) ?? 0n);
+    if (address && hasVoterIdFetched && hasVoterId !== undefined) {
+      const hasFreshVoterId = hasVoterId as boolean;
+      writeVoterIdCache(address, hasFreshVoterId, hasFreshVoterId ? ((tokenId as bigint | undefined) ?? 0n) : 0n);
     }
-  }, [address, hasVoterId, tokenId]);
+  }, [address, hasVoterId, hasVoterIdFetched, tokenId]);
 
   const refetch = useCallback(async () => {
-    const [hasVoterIdResult] = await Promise.all([refetchHasVoterId(), refetchTokenId()]);
+    const hasVoterIdResult = await refetchHasVoterId();
+    if (hasVoterIdResult.data === true) {
+      try {
+        await refetchTokenId();
+      } catch {
+        // A Voter ID status refresh should not surface optional token-id reads.
+      }
+    }
     return { hasVoterId: hasVoterIdResult.data as boolean | undefined };
   }, [refetchHasVoterId, refetchTokenId]);
 
@@ -127,7 +155,7 @@ export function useVoterIdNFT(address?: string) {
     });
   const tokenIdCheckPending =
     hasAddress &&
-    resolvedHasVoterId &&
+    shouldReadTokenId &&
     !contractUnavailable &&
     !cached?.tokenId && // skip pending state when we have cached data
     isInitialQueryPending({
@@ -137,10 +165,11 @@ export function useVoterIdNFT(address?: string) {
       isError: tokenIdError,
     });
   const isResolved = !hasAddress || contractUnavailable || (!voterIdCheckPending && !tokenIdCheckPending);
+  const resolvedTokenId = resolvedHasVoterId ? (tokenId ?? (cached?.tokenId ? BigInt(cached.tokenId) : 0n)) : 0n;
 
   return {
     hasVoterId: resolvedHasVoterId,
-    tokenId: tokenId ?? (cached?.tokenId ? BigInt(cached.tokenId) : 0n),
+    tokenId: resolvedTokenId,
     isLoading: !isResolved,
     isResolved,
     refetch,
