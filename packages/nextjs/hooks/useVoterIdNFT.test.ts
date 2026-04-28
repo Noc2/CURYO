@@ -1,4 +1,4 @@
-import { isInitialQueryPending, shouldReadVoterIdTokenId } from "./useVoterIdNFT";
+import { buildVoterIdCacheKey, isInitialQueryPending, shouldReadVoterIdTokenId } from "./useVoterIdNFT";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -68,5 +68,12 @@ test("shouldReadVoterIdTokenId skips wallets without a confirmed Voter ID", () =
       hasVoterIdFetched: true,
     }),
     false,
+  );
+});
+
+test("buildVoterIdCacheKey scopes cached IDs to the contract address", () => {
+  assert.equal(
+    buildVoterIdCacheKey("0x067c804bb006836469379D4A2A69a81803bd1F45", "0xfa9605A2c38a0B4f16f689FDD07B63F295b86d1C"),
+    "curyo:voterIdNFT:0x067c804bb006836469379d4a2a69a81803bd1f45:0xfa9605a2c38a0b4f16f689fdd07b63f295b86d1c",
   );
 });

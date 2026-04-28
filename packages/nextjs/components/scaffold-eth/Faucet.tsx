@@ -141,6 +141,7 @@ export const FaucetModal = () => {
   const [mockUsdcTokenAddress, setMockUsdcTokenAddress] = useState<AddressType>();
   const [hasVoterId, setHasVoterId] = useState<boolean | null>(null);
   const [voterIdTokenId, setVoterIdTokenId] = useState<bigint | null>(null);
+  const [voterIdReadFailed, setVoterIdReadFailed] = useState(false);
   const { chain: ConnectedChain, address: connectedAddress } = useAccount();
 
   const isHardhat = ConnectedChain?.id === hardhat.id;
@@ -236,6 +237,7 @@ export const FaucetModal = () => {
       if (!inputAddress || !voterIdNFTAddress) {
         setHasVoterId(null);
         setVoterIdTokenId(null);
+        setVoterIdReadFailed(false);
         return;
       }
 
@@ -259,9 +261,12 @@ export const FaucetModal = () => {
         } else {
           setVoterIdTokenId(null);
         }
-      } catch {
+        setVoterIdReadFailed(false);
+      } catch (error) {
+        console.warn("[Faucet] Unable to read local VoterIdNFT contract", error);
         setHasVoterId(null);
         setVoterIdTokenId(null);
+        setVoterIdReadFailed(true);
       }
     };
 
@@ -391,6 +396,12 @@ export const FaucetModal = () => {
 
     if (hasVoterId) {
       notification.error("Address already has a Voter ID");
+      return;
+    }
+    if (voterIdReadFailed) {
+      notification.error(
+        "Local VoterIdNFT reads are failing. Restart Anvil and run yarn deploy so deployedContracts.ts matches the chain.",
+      );
       return;
     }
 
@@ -552,7 +563,13 @@ export const FaucetModal = () => {
               <p className="text-base text-base-content/60">
                 Create a non-transferable Voter ID. Required for voting and profile actions.
               </p>
-              {hasVoterId === true && voterIdTokenId !== null ? (
+              {voterIdReadFailed && (
+                <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm text-warning">
+                  Local VoterIdNFT reads are failing. The running Anvil chain is likely out of sync with{" "}
+                  <code>deployedContracts.ts</code>; restart <code>yarn chain</code> and run <code>yarn deploy</code>.
+                </div>
+              )}
+              {hasVoterId === true ? (
                 <div className="flex items-center gap-2 text-success">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                     <path
@@ -561,13 +578,15 @@ export const FaucetModal = () => {
                       clipRule="evenodd"
                     />
                   </svg>
-                  <span className="font-medium">Voter ID #{voterIdTokenId.toString()} owned</span>
+                  <span className="font-medium">
+                    {voterIdTokenId !== null ? `Voter ID #${voterIdTokenId.toString()} owned` : "Voter ID owned"}
+                  </span>
                 </div>
               ) : (
                 <button
                   className="h-10 btn btn-secondary btn-sm px-4 rounded-full w-full"
                   onClick={claimVoterId}
-                  disabled={voterIdLoading || !inputAddress || hasVoterId === true}
+                  disabled={voterIdLoading || !inputAddress || voterIdReadFailed}
                 >
                   {!voterIdLoading ? (
                     <GiftIcon className="h-5 w-5" />

@@ -40,10 +40,15 @@ interface VoterIdCache {
   tokenId: string; // bigint serialized
 }
 
-function readVoterIdCache(address: string): VoterIdCache | null {
+export function buildVoterIdCacheKey(contractAddress: string, address: string) {
+  return `${VOTER_ID_CACHE_KEY}:${contractAddress.toLowerCase()}:${address.toLowerCase()}`;
+}
+
+function readVoterIdCache(contractAddress: string | undefined, address: string): VoterIdCache | null {
+  if (!contractAddress) return null;
   if (typeof window === "undefined") return null;
   try {
-    const raw = localStorage.getItem(`${VOTER_ID_CACHE_KEY}:${address.toLowerCase()}`);
+    const raw = localStorage.getItem(buildVoterIdCacheKey(contractAddress, address));
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (typeof parsed.hasVoterId !== "boolean" || typeof parsed.tokenId !== "string") return null;
@@ -58,15 +63,26 @@ function readVoterIdCache(address: string): VoterIdCache | null {
   }
 }
 
-function writeVoterIdCache(address: string, hasVoterId: boolean, tokenId: bigint) {
+function writeVoterIdCache(contractAddress: string | undefined, address: string, hasVoterId: boolean, tokenId: bigint) {
+  if (!contractAddress) return;
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(
-      `${VOTER_ID_CACHE_KEY}:${address.toLowerCase()}`,
+      buildVoterIdCacheKey(contractAddress, address),
       JSON.stringify({ hasVoterId, tokenId: tokenId.toString() }),
     );
   } catch {
     // localStorage full or unavailable — ignore
+  }
+}
+
+function clearVoterIdCache(contractAddress: string | undefined, address: string | undefined) {
+  if (!contractAddress || !address) return;
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(buildVoterIdCacheKey(contractAddress, address));
+  } catch {
+    // localStorage unavailable — ignore
   }
 }
 
@@ -75,11 +91,12 @@ function writeVoterIdCache(address: string, hasVoterId: boolean, tokenId: bigint
  * Seeds initial state from localStorage to avoid loading flash on navigation.
  */
 export function useVoterIdNFT(address?: string) {
-  const cached = address ? readVoterIdCache(address) : null;
-
   const { data: voterIdContract, isLoading: voterIdContractLoading } = useDeployedContractInfo({
     contractName: "VoterIdNFT" as any,
   });
+  const voterIdContractAddress = voterIdContract?.address;
+  const cached = address ? readVoterIdCache(voterIdContractAddress, address) : null;
+
   const {
     data: hasVoterId,
     isLoading: hasVoterIdLoading,
@@ -93,13 +110,13 @@ export function useVoterIdNFT(address?: string) {
     args: [address],
     query: {
       enabled: !!address,
-      initialData: cached?.hasVoterId,
+      placeholderData: cached?.hasVoterId,
     },
   } as any);
 
   const shouldReadTokenId = shouldReadVoterIdTokenId({
     address,
-    hasVoterId: hasVoterId as boolean | undefined,
+    hasVoterId: hasVoterIdError ? undefined : (hasVoterId as boolean | undefined),
     hasVoterIdFetched,
   });
 
@@ -116,17 +133,27 @@ export function useVoterIdNFT(address?: string) {
     args: [address],
     query: {
       enabled: shouldReadTokenId,
-      initialData: cached?.hasVoterId && cached.tokenId ? BigInt(cached.tokenId) : undefined,
+      placeholderData: cached?.hasVoterId && cached.tokenId ? BigInt(cached.tokenId) : undefined,
     },
   } as any);
 
   // Persist to localStorage when fresh data arrives
   useEffect(() => {
-    if (address && hasVoterIdFetched && hasVoterId !== undefined) {
+    if (address && voterIdContractAddress && hasVoterIdFetched && hasVoterId !== undefined && !hasVoterIdError) {
       const hasFreshVoterId = hasVoterId as boolean;
-      writeVoterIdCache(address, hasFreshVoterId, hasFreshVoterId ? ((tokenId as bigint | undefined) ?? 0n) : 0n);
+      if (!hasFreshVoterId) {
+        writeVoterIdCache(voterIdContractAddress, address, false, 0n);
+      } else if (typeof tokenId === "bigint" && !tokenIdError) {
+        writeVoterIdCache(voterIdContractAddress, address, true, tokenId);
+      }
     }
-  }, [address, hasVoterId, hasVoterIdFetched, tokenId]);
+  }, [address, hasVoterId, hasVoterIdError, hasVoterIdFetched, tokenId, tokenIdError, voterIdContractAddress]);
+
+  useEffect(() => {
+    if (hasVoterIdError || tokenIdError) {
+      clearVoterIdCache(voterIdContractAddress, address);
+    }
+  }, [address, hasVoterIdError, tokenIdError, voterIdContractAddress]);
 
   const refetch = useCallback(async () => {
     const hasVoterIdResult = await refetchHasVoterId();
@@ -142,7 +169,9 @@ export function useVoterIdNFT(address?: string) {
 
   const hasAddress = Boolean(address);
   const contractUnavailable = hasAddress && !voterIdContractLoading && !voterIdContract;
-  const resolvedHasVoterId = (hasVoterId as boolean | undefined) ?? cached?.hasVoterId ?? false;
+  const resolvedHasVoterId = hasVoterIdError
+    ? false
+    : ((hasVoterId as boolean | undefined) ?? cached?.hasVoterId ?? false);
   const voterIdCheckPending =
     hasAddress &&
     !contractUnavailable &&
@@ -165,7 +194,11 @@ export function useVoterIdNFT(address?: string) {
       isError: tokenIdError,
     });
   const isResolved = !hasAddress || contractUnavailable || (!voterIdCheckPending && !tokenIdCheckPending);
-  const resolvedTokenId = resolvedHasVoterId ? (tokenId ?? (cached?.tokenId ? BigInt(cached.tokenId) : 0n)) : 0n;
+  const resolvedTokenId = resolvedHasVoterId
+    ? tokenIdError
+      ? 0n
+      : (tokenId ?? (cached?.tokenId ? BigInt(cached.tokenId) : 0n))
+    : 0n;
 
   return {
     hasVoterId: resolvedHasVoterId,
