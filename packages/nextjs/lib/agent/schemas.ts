@@ -165,9 +165,32 @@ export const agentAskHumansInputSchema = {
       enum: ["sync", "async"],
       type: "string",
     },
+    paymentAuthorization: {
+      additionalProperties: false,
+      description:
+        "Signed EIP-3009 ReceiveWithAuthorization payload for paymentMode=x402_authorization. Omit signature on the first call to receive the authorization request.",
+      properties: {
+        from: evmAddressSchema,
+        nonce: { pattern: "^0x[a-fA-F0-9]{64}$", type: "string" },
+        signature: { pattern: "^0x([a-fA-F0-9]{2})*$", type: "string" },
+        to: evmAddressSchema,
+        validAfter: atomicAmountSchema,
+        validBefore: atomicAmountSchema,
+        value: atomicAmountSchema,
+      },
+      type: "object",
+    },
+    paymentMode: {
+      default: "wallet_calls",
+      description:
+        "wallet_calls returns approve/reserve/submit transactions. x402_authorization returns a native USDC authorization request, then a single submit transaction after signature.",
+      enum: ["wallet_calls", "x402_authorization"],
+      type: "string",
+    },
     walletAddress: {
       ...evmAddressSchema,
-      description: "User-controlled smart wallet or scoped agent wallet that will sign the returned transaction plan.",
+      description:
+        "User-controlled smart wallet or scoped agent wallet that signs the returned plan or x402 authorization.",
     },
     webhookUrl: {
       description: "Optional HTTPS callback URL for lifecycle events.",
@@ -334,9 +357,11 @@ export const agentAskHumansOutputSchema = {
     managedBudget: { type: ["object", "null"] },
     pollAfterMs: { type: "integer" },
     statusTool: { type: "string" },
-    transactionPlan: { type: "object" },
+    transactionPlan: { type: ["object", "null"] },
     wallet: { type: "object" },
+    paymentMode: { enum: ["wallet_calls", "x402_authorization"], type: "string" },
     warnings: { items: { type: "string" }, type: "array" },
+    x402AuthorizationRequest: { type: ["object", "null"] },
   },
   required: ["status", "operationKey"],
   type: "object",

@@ -39,7 +39,11 @@ const TX_RECEIPT_TIMEOUT_MS = 180_000;
 
 export type X402QuestionSubmissionStatus = "awaiting_wallet_signature" | "submitted" | "failed";
 
-export type AgentWalletTransactionPhase = "approve_usdc" | "reserve_submission" | "submit_question";
+export type AgentWalletTransactionPhase =
+  | "approve_usdc"
+  | "reserve_submission"
+  | "submit_question"
+  | "submit_x402_question";
 
 export type AgentWalletTransactionCall = {
   data: Hex;
@@ -73,6 +77,30 @@ export type AgentWalletQuestionSubmissionPlan = {
   walletAddress: Address;
 };
 
+export type NativeX402PaymentAuthorization = {
+  from: Address;
+  nonce: Hex;
+  signature?: Hex;
+  to: Address;
+  validAfter: string;
+  validBefore: string;
+  value: string;
+};
+
+export type NativeX402QuestionSubmissionPlan = {
+  authorization: NativeX402PaymentAuthorization;
+  chainId: number;
+  calls: AgentWalletTransactionCall[];
+  operationKey: `0x${string}`;
+  payment: AgentWalletQuestionSubmissionPlan["payment"];
+  payloadHash: string;
+  questionCount: number;
+  requiresOrderedExecution: true;
+  roundConfig: ReturnType<typeof serializeQuestionRoundConfig>;
+  submissionKey: Hex;
+  walletAddress: Address;
+};
+
 export type X402QuestionSubmissionRecord = {
   operationKey: `0x${string}`;
   clientRequestId: string;
@@ -96,6 +124,7 @@ export type X402QuestionSubmissionRecord = {
 
 type X402QuestionSubmissionTestOverrides = {
   buildAgentWalletQuestionSubmissionPlan?: typeof buildAgentWalletQuestionSubmissionPlan;
+  buildNativeX402QuestionSubmissionPlan?: typeof buildNativeX402QuestionSubmissionPlan;
   preflightX402QuestionSubmission?: typeof preflightX402QuestionSubmission;
   resolveX402QuestionConfig?: typeof resolveX402QuestionConfig;
 };
@@ -128,6 +157,125 @@ export class X402QuestionConflictError extends Error {
 }
 
 let x402QuestionSubmissionTestOverrides: X402QuestionSubmissionTestOverrides | null = null;
+
+const ContentRegistryX402Abi = [
+  {
+    inputs: [
+      {
+        components: [
+          { name: "url", type: "string" },
+          { name: "title", type: "string" },
+          { name: "description", type: "string" },
+          { name: "tags", type: "string" },
+          { name: "categoryId", type: "uint256" },
+        ],
+        name: "metadata",
+        type: "tuple",
+      },
+      { name: "imageUrls", type: "string[]" },
+      { name: "videoUrl", type: "string" },
+      { name: "salt", type: "bytes32" },
+      {
+        components: [
+          { name: "asset", type: "uint8" },
+          { name: "amount", type: "uint256" },
+          { name: "requiredVoters", type: "uint256" },
+          { name: "requiredSettledRounds", type: "uint256" },
+          { name: "bountyClosesAt", type: "uint256" },
+          { name: "feedbackClosesAt", type: "uint256" },
+        ],
+        name: "rewardTerms",
+        type: "tuple",
+      },
+      {
+        components: [
+          { name: "epochDuration", type: "uint32" },
+          { name: "maxDuration", type: "uint32" },
+          { name: "minVoters", type: "uint16" },
+          { name: "maxVoters", type: "uint16" },
+        ],
+        name: "roundConfig",
+        type: "tuple",
+      },
+      {
+        components: [
+          { name: "questionMetadataHash", type: "bytes32" },
+          { name: "resultSpecHash", type: "bytes32" },
+        ],
+        name: "spec",
+        type: "tuple",
+      },
+      { name: "payer", type: "address" },
+      { name: "payee", type: "address" },
+      { name: "value", type: "uint256" },
+      { name: "validAfter", type: "uint256" },
+      { name: "validBefore", type: "uint256" },
+    ],
+    name: "computeX402QuestionPaymentNonce",
+    outputs: [{ name: "", type: "bytes32" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      { name: "contextUrl", type: "string" },
+      { name: "imageUrls", type: "string[]" },
+      { name: "videoUrl", type: "string" },
+      { name: "title", type: "string" },
+      { name: "description", type: "string" },
+      { name: "tags", type: "string" },
+      { name: "categoryId", type: "uint256" },
+      { name: "salt", type: "bytes32" },
+      {
+        components: [
+          { name: "asset", type: "uint8" },
+          { name: "amount", type: "uint256" },
+          { name: "requiredVoters", type: "uint256" },
+          { name: "requiredSettledRounds", type: "uint256" },
+          { name: "bountyClosesAt", type: "uint256" },
+          { name: "feedbackClosesAt", type: "uint256" },
+        ],
+        name: "rewardTerms",
+        type: "tuple",
+      },
+      {
+        components: [
+          { name: "epochDuration", type: "uint32" },
+          { name: "maxDuration", type: "uint32" },
+          { name: "minVoters", type: "uint16" },
+          { name: "maxVoters", type: "uint16" },
+        ],
+        name: "roundConfig",
+        type: "tuple",
+      },
+      {
+        components: [
+          { name: "questionMetadataHash", type: "bytes32" },
+          { name: "resultSpecHash", type: "bytes32" },
+        ],
+        name: "spec",
+        type: "tuple",
+      },
+      {
+        components: [
+          { name: "from", type: "address" },
+          { name: "to", type: "address" },
+          { name: "value", type: "uint256" },
+          { name: "validAfter", type: "uint256" },
+          { name: "validBefore", type: "uint256" },
+          { name: "nonce", type: "bytes32" },
+          { name: "signature", type: "bytes" },
+        ],
+        name: "paymentAuthorization",
+        type: "tuple",
+      },
+    ],
+    name: "submitQuestionWithX402Payment",
+    outputs: [{ name: "contentId", type: "uint256" }],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+] as const;
 
 function rowToRecord(row: Record<string, unknown> | undefined): X402QuestionSubmissionRecord | null {
   if (!row) return null;
@@ -292,6 +440,9 @@ function getQuestionSubmissionDependencies() {
     buildAgentWalletQuestionSubmissionPlan:
       x402QuestionSubmissionTestOverrides?.buildAgentWalletQuestionSubmissionPlan ??
       buildAgentWalletQuestionSubmissionPlan,
+    buildNativeX402QuestionSubmissionPlan:
+      x402QuestionSubmissionTestOverrides?.buildNativeX402QuestionSubmissionPlan ??
+      buildNativeX402QuestionSubmissionPlan,
     preflightX402QuestionSubmission:
       x402QuestionSubmissionTestOverrides?.preflightX402QuestionSubmission ?? preflightX402QuestionSubmission,
     resolveX402QuestionConfig:
@@ -649,6 +800,243 @@ export async function buildAgentWalletQuestionSubmissionPlan(params: {
   };
 }
 
+type NativeX402PaymentAuthorizationInput = {
+  from?: unknown;
+  nonce?: unknown;
+  signature?: unknown;
+  to?: unknown;
+  validAfter?: unknown;
+  validBefore?: unknown;
+  value?: unknown;
+};
+
+function parseUnsignedBigInt(value: unknown, fieldName: string): bigint | null {
+  if (value === null || value === undefined || value === "") return null;
+  if (typeof value === "bigint") return value >= 0n ? value : null;
+  if (typeof value === "number") {
+    return Number.isSafeInteger(value) && value >= 0 ? BigInt(value) : null;
+  }
+  if (typeof value === "string" && /^\d+$/.test(value.trim())) {
+    return BigInt(value.trim());
+  }
+  throw new X402QuestionConflictError(`${fieldName} must be a non-negative integer.`);
+}
+
+function parseHexBytes(value: unknown, fieldName: string): Hex | null {
+  if (value === null || value === undefined || value === "") return null;
+  if (typeof value === "string" && /^0x([0-9a-fA-F]{2})*$/.test(value)) return value as Hex;
+  throw new X402QuestionConflictError(`${fieldName} must be hex bytes.`);
+}
+
+function parseAddressField(value: unknown, fieldName: string): Address | null {
+  if (value === null || value === undefined || value === "") return null;
+  if (typeof value === "string" && isAddress(value, { strict: false })) return value as Address;
+  throw new X402QuestionConflictError(`${fieldName} must be an EVM address.`);
+}
+
+function normalizeNativeX402AuthorizationInput(
+  value: NativeX402PaymentAuthorizationInput | null | undefined,
+): Partial<NativeX402PaymentAuthorization> {
+  if (!value) return {};
+  return {
+    from: parseAddressField(value.from, "paymentAuthorization.from") ?? undefined,
+    nonce: parseHexBytes(value.nonce, "paymentAuthorization.nonce") ?? undefined,
+    signature: parseHexBytes(value.signature, "paymentAuthorization.signature") ?? undefined,
+    to: parseAddressField(value.to, "paymentAuthorization.to") ?? undefined,
+    validAfter: parseUnsignedBigInt(value.validAfter, "paymentAuthorization.validAfter")?.toString(),
+    validBefore: parseUnsignedBigInt(value.validBefore, "paymentAuthorization.validBefore")?.toString(),
+    value: parseUnsignedBigInt(value.value, "paymentAuthorization.value")?.toString(),
+  };
+}
+
+function defaultNativeX402ValidBefore() {
+  return BigInt(Math.floor(Date.now() / 1000) + 30 * 60);
+}
+
+function buildNativeX402TypedData(params: {
+  authorization: NativeX402PaymentAuthorization;
+  chainId: number;
+  tokenAddress: Address;
+}) {
+  return {
+    domain: {
+      chainId: params.chainId,
+      verifyingContract: params.tokenAddress,
+    },
+    message: {
+      from: params.authorization.from,
+      nonce: params.authorization.nonce,
+      to: params.authorization.to,
+      validAfter: params.authorization.validAfter,
+      validBefore: params.authorization.validBefore,
+      value: params.authorization.value,
+    },
+    primaryType: "ReceiveWithAuthorization",
+    types: {
+      ReceiveWithAuthorization: [
+        { name: "from", type: "address" },
+        { name: "to", type: "address" },
+        { name: "value", type: "uint256" },
+        { name: "validAfter", type: "uint256" },
+        { name: "validBefore", type: "uint256" },
+        { name: "nonce", type: "bytes32" },
+      ],
+    },
+  };
+}
+
+export async function buildNativeX402QuestionSubmissionPlan(params: {
+  config: X402QuestionSubmissionConfig;
+  payload: X402QuestionPayload;
+  paymentAuthorization?: NativeX402PaymentAuthorizationInput | null;
+  walletAddress: Address;
+}): Promise<NativeX402QuestionSubmissionPlan> {
+  if (params.payload.questions.length !== 1) {
+    throw new X402QuestionConflictError("Native x402 authorization currently supports single-question asks only.");
+  }
+
+  const publicClient = createPublicQuestionClient(params.config);
+  const operation = buildX402QuestionOperation(params.payload);
+  const preflight = await preflightX402QuestionSubmissionWithClient({
+    config: params.config,
+    payload: params.payload,
+    publicClient,
+  });
+  const submissionKey = preflight.submissionKeys[0];
+  if (!submissionKey) throw new X402QuestionConflictError("Question submission key was not available.");
+
+  const salt = buildDeterministicQuestionSalt({
+    index: 0,
+    operationKey: operation.operationKey,
+    payloadHash: operation.payloadHash,
+    submissionKey,
+    walletAddress: params.walletAddress,
+  });
+  const context = buildQuestionSubmissionCallContext({
+    payload: params.payload,
+    salts: [salt],
+    submissionKeys: [submissionKey],
+    submitter: params.walletAddress,
+  });
+  const question = context.primaryQuestion;
+  const inputAuthorization = normalizeNativeX402AuthorizationInput(params.paymentAuthorization);
+  const validAfter = BigInt(inputAuthorization.validAfter ?? "0");
+  const validBefore = BigInt(inputAuthorization.validBefore ?? defaultNativeX402ValidBefore().toString());
+  if (validBefore <= validAfter) {
+    throw new X402QuestionConflictError("paymentAuthorization.validBefore must be greater than validAfter.");
+  }
+
+  const computedNonce = (await publicClient.readContract({
+    address: params.config.contentRegistryAddress,
+    abi: ContentRegistryX402Abi,
+    functionName: "computeX402QuestionPaymentNonce",
+    args: [
+      {
+        categoryId: question.categoryId,
+        description: question.description,
+        tags: question.tags,
+        title: question.title,
+        url: question.contextUrl,
+      },
+      question.imageUrls,
+      question.videoUrl,
+      question.salt,
+      context.rewardTerms,
+      context.roundConfigAbi,
+      question.spec,
+      params.walletAddress,
+      params.config.questionRewardPoolEscrowAddress,
+      params.payload.bounty.amount,
+      validAfter,
+      validBefore,
+    ],
+  })) as Hex;
+  if (inputAuthorization.nonce && inputAuthorization.nonce.toLowerCase() !== computedNonce.toLowerCase()) {
+    throw new X402QuestionConflictError("paymentAuthorization.nonce does not match the Curyo x402 ask payload.");
+  }
+  if (inputAuthorization.from && inputAuthorization.from.toLowerCase() !== params.walletAddress.toLowerCase()) {
+    throw new X402QuestionConflictError("paymentAuthorization.from must match the agent wallet address.");
+  }
+  if (
+    inputAuthorization.to &&
+    inputAuthorization.to.toLowerCase() !== params.config.questionRewardPoolEscrowAddress.toLowerCase()
+  ) {
+    throw new X402QuestionConflictError("paymentAuthorization.to must be the Curyo reward escrow.");
+  }
+  if (inputAuthorization.value && BigInt(inputAuthorization.value) !== params.payload.bounty.amount) {
+    throw new X402QuestionConflictError("paymentAuthorization.value must equal the bounty amount.");
+  }
+
+  const authorization: NativeX402PaymentAuthorization = {
+    from: params.walletAddress,
+    nonce: computedNonce,
+    signature: inputAuthorization.signature,
+    to: params.config.questionRewardPoolEscrowAddress,
+    validAfter: validAfter.toString(),
+    validBefore: validBefore.toString(),
+    value: params.payload.bounty.amount.toString(),
+  };
+  const calls: AgentWalletTransactionCall[] = authorization.signature
+    ? [
+        {
+          data: encodeFunctionData({
+            abi: ContentRegistryX402Abi,
+            functionName: "submitQuestionWithX402Payment",
+            args: [
+              question.contextUrl,
+              question.imageUrls,
+              question.videoUrl,
+              question.title,
+              question.description,
+              question.tags,
+              question.categoryId,
+              question.salt,
+              context.rewardTerms,
+              context.roundConfigAbi,
+              question.spec,
+              {
+                from: authorization.from,
+                nonce: authorization.nonce,
+                signature: authorization.signature,
+                to: authorization.to,
+                validAfter: BigInt(authorization.validAfter),
+                validBefore: BigInt(authorization.validBefore),
+                value: BigInt(authorization.value),
+              },
+            ],
+          }),
+          description: "Submit the question and fund protocol escrow with the signed x402 USDC authorization",
+          functionName: "submitQuestionWithX402Payment",
+          id: "submit-x402-question",
+          phase: "submit_x402_question",
+          to: params.config.contentRegistryAddress,
+          value: "0",
+        },
+      ]
+    : [];
+
+  return {
+    authorization,
+    calls,
+    chainId: params.payload.chainId,
+    operationKey: operation.operationKey,
+    payment: {
+      amount: params.payload.bounty.amount.toString(),
+      asset: "USDC",
+      bountyAmount: params.payload.bounty.amount.toString(),
+      decimals: X402_USDC_DECIMALS,
+      spender: params.config.questionRewardPoolEscrowAddress,
+      tokenAddress: params.config.usdcAddress,
+    },
+    payloadHash: operation.payloadHash,
+    questionCount: params.payload.questions.length,
+    requiresOrderedExecution: true,
+    roundConfig: serializeQuestionRoundConfig(params.payload.roundConfig),
+    submissionKey,
+    walletAddress: params.walletAddress,
+  };
+}
+
 function readSubmissionResult(receipt: TransactionReceipt): {
   bundleId: bigint | null;
   contentIds: bigint[];
@@ -817,6 +1205,107 @@ async function recordAgentWalletSubmissionPlan(params: {
   }
 }
 
+async function recordNativeX402SubmissionPlan(params: {
+  agentId: string;
+  config: X402QuestionSubmissionConfig;
+  operation: X402QuestionOperation;
+  payload: X402QuestionPayload;
+  plan: NativeX402QuestionSubmissionPlan;
+}) {
+  const now = new Date();
+  const receipt = JSON.stringify({
+    agentId: params.agentId,
+    authorization: params.plan.authorization,
+    mode: "native-x402-authorization",
+    operationKey: params.operation.operationKey,
+    preparedAt: now.toISOString(),
+    walletAddress: params.plan.walletAddress,
+  });
+
+  try {
+    await dbClient.execute({
+      sql: `
+        INSERT INTO x402_question_submissions (
+          operation_key,
+          client_request_id,
+          payload_hash,
+          chain_id,
+          payer_address,
+          payment_asset,
+          payment_amount,
+          bounty_amount,
+          question_count,
+          status,
+          payment_receipt,
+          created_at,
+          updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      args: [
+        params.operation.operationKey,
+        params.payload.clientRequestId,
+        params.operation.payloadHash,
+        params.payload.chainId,
+        params.plan.walletAddress,
+        params.config.usdcAddress,
+        params.plan.payment.amount,
+        params.payload.bounty.amount.toString(),
+        params.payload.questions.length,
+        "awaiting_wallet_signature",
+        receipt,
+        now,
+        now,
+      ],
+    });
+  } catch (error) {
+    const code = typeof error === "object" && error && "code" in error ? String(error.code) : "";
+    if (code !== "23505") {
+      throw error;
+    }
+
+    await dbClient.execute({
+      sql: `
+        UPDATE x402_question_submissions
+        SET payer_address = ?,
+            payment_asset = ?,
+            payment_amount = ?,
+            bounty_amount = ?,
+            question_count = ?,
+            status = CASE WHEN status = 'submitted' THEN status ELSE ? END,
+            payment_receipt = CASE WHEN status = 'submitted' THEN payment_receipt ELSE ? END,
+            error = CASE WHEN status = 'submitted' THEN error ELSE NULL END,
+            updated_at = ?
+        WHERE operation_key = ?
+      `,
+      args: [
+        params.plan.walletAddress,
+        params.config.usdcAddress,
+        params.plan.payment.amount,
+        params.payload.bounty.amount.toString(),
+        params.payload.questions.length,
+        "awaiting_wallet_signature",
+        receipt,
+        now,
+        params.operation.operationKey,
+      ],
+    });
+  }
+}
+
+function readStoredNativeX402Authorization(record: X402QuestionSubmissionRecord | null) {
+  if (!record?.paymentReceipt) return null;
+  try {
+    const parsed = JSON.parse(record.paymentReceipt) as {
+      authorization?: NativeX402PaymentAuthorizationInput;
+      mode?: string;
+    };
+    return parsed.mode === "native-x402-authorization" ? (parsed.authorization ?? null) : null;
+  } catch {
+    return null;
+  }
+}
+
 function agentWalletQuestionSubmissionPlanBody(params: {
   payload: X402QuestionPayload;
   plan: AgentWalletQuestionSubmissionPlan;
@@ -844,10 +1333,60 @@ function agentWalletQuestionSubmissionPlanBody(params: {
       calls: params.plan.calls,
       requiresOrderedExecution: params.plan.requiresOrderedExecution,
     },
+    paymentMode: "wallet_calls",
     wallet: {
       address: params.plan.walletAddress,
       fundingMode: "agent_wallet",
       note: "The wallet signer must execute every call; Curyo does not receive bounty funds.",
+    },
+  };
+}
+
+function nativeX402QuestionSubmissionPlanBody(params: {
+  payload: X402QuestionPayload;
+  plan: NativeX402QuestionSubmissionPlan;
+}) {
+  const signed = Boolean(params.plan.authorization.signature);
+  return {
+    bounty: {
+      amount: params.payload.bounty.amount.toString(),
+      asset: params.payload.bounty.asset,
+      requiredSettledRounds: params.payload.bounty.requiredSettledRounds.toString(),
+      requiredVoters: params.payload.bounty.requiredVoters.toString(),
+      rewardPoolExpiresAt: params.payload.bounty.rewardPoolExpiresAt.toString(),
+      feedbackClosesAt: params.payload.bounty.feedbackClosesAt.toString(),
+    },
+    chainId: params.payload.chainId,
+    clientRequestId: params.payload.clientRequestId,
+    nextAction: signed ? "submit_x402_transaction" : "sign_x402_authorization",
+    operationKey: params.plan.operationKey,
+    payment: params.plan.payment,
+    paymentMode: "x402_authorization",
+    payloadHash: params.plan.payloadHash,
+    questionCount: params.payload.questions.length,
+    ready: false,
+    roundConfig: params.plan.roundConfig,
+    status: "awaiting_wallet_signature",
+    terminal: false,
+    transactionPlan: signed
+      ? {
+          calls: params.plan.calls,
+          requiresOrderedExecution: params.plan.requiresOrderedExecution,
+        }
+      : null,
+    wallet: {
+      address: params.plan.walletAddress,
+      fundingMode: "x402_authorization",
+      note: "Sign the x402 USDC authorization with this wallet; Curyo does not custody funds.",
+    },
+    x402AuthorizationRequest: {
+      authorization: params.plan.authorization,
+      eip712: buildNativeX402TypedData({
+        authorization: params.plan.authorization,
+        chainId: params.plan.chainId,
+        tokenAddress: params.plan.payment.tokenAddress,
+      }),
+      submitTool: "curyo_ask_humans",
     },
   };
 }
@@ -891,6 +1430,52 @@ export async function prepareAgentWalletQuestionSubmissionRequest(params: {
 
   return {
     body: agentWalletQuestionSubmissionPlanBody({ payload: params.payload, plan }),
+    status: 202,
+  };
+}
+
+export async function prepareNativeX402QuestionSubmissionRequest(params: {
+  agentId: string;
+  paymentAuthorization?: NativeX402PaymentAuthorizationInput | null;
+  payload: X402QuestionPayload;
+  walletAddress: Address;
+}): Promise<{ body: unknown; status: number }> {
+  const dependencies = getQuestionSubmissionDependencies();
+  const config = dependencies.resolveX402QuestionConfig(params.payload.chainId);
+  const operation = buildX402QuestionOperation(params.payload);
+  const existingRecord = await getX402QuestionSubmissionByClientRequest({
+    chainId: params.payload.chainId,
+    clientRequestId: params.payload.clientRequestId,
+  });
+
+  if (existingRecord && existingRecord.payloadHash !== operation.payloadHash) {
+    throw new X402QuestionConflictError("clientRequestId has already been used for a different question payload.");
+  }
+
+  if (existingRecord?.status === "submitted") {
+    return {
+      body: x402QuestionSubmissionStatusBody({ config, operation, payload: params.payload, record: existingRecord }),
+      status: 200,
+    };
+  }
+
+  const storedAuthorization = readStoredNativeX402Authorization(existingRecord);
+  const plan = await dependencies.buildNativeX402QuestionSubmissionPlan({
+    config,
+    payload: params.payload,
+    paymentAuthorization: params.paymentAuthorization ?? storedAuthorization,
+    walletAddress: params.walletAddress,
+  });
+  await recordNativeX402SubmissionPlan({
+    agentId: params.agentId,
+    config,
+    operation,
+    payload: params.payload,
+    plan,
+  });
+
+  return {
+    body: nativeX402QuestionSubmissionPlanBody({ payload: params.payload, plan }),
     status: 202,
   };
 }

@@ -12,14 +12,18 @@ import { checkRateLimit } from "~~/utils/rateLimit";
 
 const WRITE_RATE_LIMIT = { limit: 20, windowMs: 60_000 };
 
-function buildMcpConfig(token: string, request: NextRequest) {
+function buildMcpConfig(token: string, request: NextRequest, agentWalletAddress: string) {
   return {
     mcpServers: {
       curyo: {
-        url: new URL("/api/mcp", request.url).toString(),
         headers: {
           Authorization: `Bearer ${token}`,
+          "MCP-Protocol-Version": "2025-11-25",
         },
+        paymentModes: ["wallet_calls", "x402_authorization"],
+        transport: "streamable-http",
+        url: new URL("/api/mcp", request.url).toString(),
+        walletAddress: agentWalletAddress,
       },
     },
   };
@@ -78,7 +82,7 @@ export async function POST(request: NextRequest) {
       ok: true,
       policy,
       token,
-      mcpConfig: buildMcpConfig(token, request),
+      mcpConfig: buildMcpConfig(token, request, policy.agentWalletAddress),
     });
   } catch (error) {
     if (error instanceof AgentPolicyLifecycleError) {

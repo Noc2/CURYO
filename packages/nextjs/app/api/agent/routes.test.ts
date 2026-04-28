@@ -307,6 +307,36 @@ function installAskOverrides() {
       },
       status: 202,
     }),
+    prepareNativeX402QuestionSubmissionRequest: async params => ({
+      body: {
+        clientRequestId: "mcp:ask-http",
+        operationKey: OPERATION_KEY,
+        payment: {
+          amount: "1000000",
+          asset: "USDC",
+          bountyAmount: "1000000",
+          decimals: 6,
+          spender: "0x0000000000000000000000000000000000000002",
+          tokenAddress: "0x0000000000000000000000000000000000000001",
+        },
+        paymentMode: "x402_authorization",
+        status: "awaiting_wallet_signature",
+        transactionPlan: null,
+        wallet: { address: params.walletAddress, fundingMode: "x402_authorization" },
+        x402AuthorizationRequest: {
+          authorization: {
+            from: params.walletAddress,
+            nonce: `0x${"3".repeat(64)}`,
+            to: "0x0000000000000000000000000000000000000002",
+            validAfter: "0",
+            validBefore: "1762000000",
+            value: "1000000",
+          },
+          typedData: { primaryType: "ReceiveWithAuthorization" },
+        },
+      },
+      status: 202,
+    }),
     preflightX402QuestionSubmission: async () => ({
       operation: {
         canonicalPayload: {} as never,
@@ -437,6 +467,29 @@ test("agent asks route returns the wallet transaction plan response", async () =
   assert.equal(body.status, "awaiting_wallet_signature");
   assert.equal(body.operationKey, OPERATION_KEY);
   assert.equal((body.transactionPlan as { calls: unknown[] }).calls.length, 1);
+});
+
+test("agent asks route returns the native x402 authorization response", async () => {
+  installAskOverrides();
+
+  const response = await asksRoute.POST(
+    makePost("https://curyo.xyz/api/agent/asks", {
+      ...questionPayload("ask-http"),
+      maxPaymentAmount: "1500000",
+      paymentMode: "x402_authorization",
+    }),
+  );
+  const body = (await response.json()) as Record<string, unknown>;
+
+  assert.equal(response.status, 200);
+  assert.equal(body.status, "awaiting_wallet_signature");
+  assert.equal(body.operationKey, OPERATION_KEY);
+  assert.equal(body.paymentMode, "x402_authorization");
+  assert.equal(body.transactionPlan, null);
+  assert.equal(
+    ((body.x402AuthorizationRequest as Record<string, unknown>).typedData as Record<string, unknown>).primaryType,
+    "ReceiveWithAuthorization",
+  );
 });
 
 test("agent asks route returns stable direct HTTP error payloads", async () => {

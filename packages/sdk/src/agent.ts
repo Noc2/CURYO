@@ -77,6 +77,17 @@ export interface QuoteQuestionRequest extends CuryoAgentQuestionRequest {}
 export interface AskHumansRequest extends CuryoAgentQuestionRequest {
   maxPaymentAmount?: string | number | bigint;
   mode?: "sync" | "async";
+  paymentAuthorization?: {
+    from?: `0x${string}` | string;
+    nonce?: `0x${string}` | string;
+    signature?: `0x${string}` | string;
+    to?: `0x${string}` | string;
+    validAfter?: string | number | bigint;
+    validBefore?: string | number | bigint;
+    value?: string | number | bigint;
+    [key: string]: unknown;
+  };
+  paymentMode?: "wallet_calls" | "x402_authorization";
   transport?: "http" | "mcp";
   walletAddress?: `0x${string}` | string;
 }
@@ -107,7 +118,7 @@ export interface CuryoAgentWalletTransactionCall {
   description?: string;
   functionName?: string;
   id?: string;
-  phase?: "approve_usdc" | "reserve_submission" | "submit_question" | string;
+  phase?: "approve_usdc" | "reserve_submission" | "submit_question" | "submit_x402_question" | string;
   to?: `0x${string}` | string;
   value?: string;
   waitAfterMs?: number;
@@ -122,7 +133,7 @@ export interface CuryoAgentWalletTransactionPlan {
 
 export interface CuryoAgentWalletInfo {
   address?: `0x${string}` | string;
-  fundingMode?: "agent_wallet" | string;
+  fundingMode?: "agent_wallet" | "x402_authorization" | string;
   note?: string;
   [key: string]: unknown;
 }
@@ -188,12 +199,14 @@ export interface AskHumansResponse {
   statusTool?: string;
   confirmTool?: string;
   payment?: CuryoAgentPayment;
+  paymentMode?: "wallet_calls" | "x402_authorization" | string;
   rewardPoolId?: string | null;
   transactionPlan?: CuryoAgentWalletTransactionPlan;
   transactionHashes?: string[];
   wallet?: CuryoAgentWalletInfo;
   webhook?: JsonRecord | null;
   warnings?: string[];
+  x402AuthorizationRequest?: JsonRecord | null;
   [key: string]: unknown;
 }
 

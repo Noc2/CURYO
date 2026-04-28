@@ -49,6 +49,7 @@ import {
   getX402QuestionSubmissionByOperationKey,
   preflightX402QuestionSubmission,
   prepareAgentWalletQuestionSubmissionRequest,
+  prepareNativeX402QuestionSubmissionRequest,
   resolveX402QuestionConfig,
   x402QuestionSubmissionRecordBody,
 } from "~~/lib/x402/questionSubmission";
@@ -72,6 +73,7 @@ type McpToolDefinition = {
 };
 
 type AskHumansMode = "sync" | "async";
+type AskHumansPaymentMode = "wallet_calls" | "x402_authorization";
 type BackgroundTaskScheduler = (task: () => Promise<void> | void) => void;
 
 type McpToolDependencies = {
@@ -80,6 +82,7 @@ type McpToolDependencies = {
   getContentById: typeof ponderApi.getContentById;
   getMcpAgentBudgetSummary: typeof getMcpAgentBudgetSummary;
   prepareAgentWalletQuestionSubmissionRequest: typeof prepareAgentWalletQuestionSubmissionRequest;
+  prepareNativeX402QuestionSubmissionRequest: typeof prepareNativeX402QuestionSubmissionRequest;
   preflightX402QuestionSubmission: typeof preflightX402QuestionSubmission;
   reserveMcpAgentBudget: typeof reserveMcpAgentBudget;
   resolveX402QuestionConfig: typeof resolveX402QuestionConfig;
@@ -98,6 +101,8 @@ function getMcpToolDependencies(): McpToolDependencies {
     getMcpAgentBudgetSummary: mcpToolTestOverrides?.getMcpAgentBudgetSummary ?? getMcpAgentBudgetSummary,
     prepareAgentWalletQuestionSubmissionRequest:
       mcpToolTestOverrides?.prepareAgentWalletQuestionSubmissionRequest ?? prepareAgentWalletQuestionSubmissionRequest,
+    prepareNativeX402QuestionSubmissionRequest:
+      mcpToolTestOverrides?.prepareNativeX402QuestionSubmissionRequest ?? prepareNativeX402QuestionSubmissionRequest,
     preflightX402QuestionSubmission:
       mcpToolTestOverrides?.preflightX402QuestionSubmission ?? preflightX402QuestionSubmission,
     reserveMcpAgentBudget: mcpToolTestOverrides?.reserveMcpAgentBudget ?? reserveMcpAgentBudget,
@@ -177,7 +182,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
       readOnlyHint: false,
     },
     description:
-      "Reserve managed MCP budget and return wallet calls for a user-authorized smart wallet or scoped agent wallet to sign.",
+      "Reserve managed MCP budget and return either wallet calls or a native x402 USDC authorization request for the scoped agent wallet.",
     inputSchema: agentAskHumansInputSchema,
     name: "curyo_ask_humans",
     outputSchema: agentAskHumansOutputSchema,
@@ -289,6 +294,13 @@ function parseAskHumansMode(value: unknown): AskHumansMode {
   if (value === undefined || value === null) return "sync";
   if (value === "sync" || value === "async") return value;
   throw new McpToolError("mode must be either sync or async.");
+}
+
+function parseAskHumansPaymentMode(value: unknown): AskHumansPaymentMode {
+  if (value === undefined || value === null || value === "") return "wallet_calls";
+  if (value === "wallet_calls" || value === "agent_wallet") return "wallet_calls";
+  if (value === "x402_authorization" || value === "native_x402" || value === "x402") return "x402_authorization";
+  throw new McpToolError("paymentMode must be wallet_calls or x402_authorization.");
 }
 
 async function parseWebhookOptions(args: JsonObject): Promise<{
@@ -645,6 +657,7 @@ export async function callCuryoMcpTool(params: {
 
     case "curyo_ask_humans": {
       parseAskHumansMode(args.mode);
+      const paymentMode = parseAskHumansPaymentMode(args.paymentMode ?? args.fundingMode);
       const payload = parseX402QuestionRequest(args);
       assertManagedQuestionCategoriesAllowed(params.agent, payload);
       const webhook = await parseWebhookOptions(args);
@@ -712,13 +725,26 @@ export async function callCuryoMcpTool(params: {
           }
         : null;
 
-      let result: Awaited<ReturnType<typeof prepareAgentWalletQuestionSubmissionRequest>>;
+      let result:
+        | Awaited<ReturnType<typeof prepareAgentWalletQuestionSubmissionRequest>>
+        | Awaited<ReturnType<typeof prepareNativeX402QuestionSubmissionRequest>>;
       try {
-        result = await dependencies.prepareAgentWalletQuestionSubmissionRequest({
-          agentId: params.agent.id,
-          payload: managedPayload,
-          walletAddress,
-        });
+        result =
+          paymentMode === "x402_authorization"
+            ? await dependencies.prepareNativeX402QuestionSubmissionRequest({
+                agentId: params.agent.id,
+                paymentAuthorization:
+                  typeof args.paymentAuthorization === "object" && args.paymentAuthorization
+                    ? (args.paymentAuthorization as Record<string, unknown>)
+                    : null,
+                payload: managedPayload,
+                walletAddress,
+              })
+            : await dependencies.prepareAgentWalletQuestionSubmissionRequest({
+                agentId: params.agent.id,
+                payload: managedPayload,
+                walletAddress,
+              });
       } catch (error) {
         await dependencies.updateMcpBudgetReservation({
           error: error instanceof Error ? error.message : String(error),

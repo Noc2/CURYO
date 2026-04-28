@@ -161,6 +161,64 @@ test("curyo_ask_humans returns a wallet transaction plan without submitting from
   assert.equal(prepared.length, 1);
 });
 
+test("curyo_ask_humans can return a native x402 authorization request", async () => {
+  const prepared: unknown[] = [];
+
+  __setMcpToolTestOverridesForTests({
+    getMcpAgentBudgetSummary: async () => managedBudgetSummary(),
+    prepareNativeX402QuestionSubmissionRequest: async params => {
+      prepared.push(params);
+      return {
+        body: {
+          clientRequestId: "mcp:hashed",
+          nextAction: "sign_x402_authorization",
+          operationKey: OPERATION_KEY,
+          paymentMode: "x402_authorization",
+          status: "awaiting_wallet_signature",
+          transactionPlan: null,
+          wallet: { address: params.walletAddress, fundingMode: "x402_authorization" },
+          x402AuthorizationRequest: {
+            authorization: {
+              from: params.walletAddress,
+              nonce: `0x${"4".repeat(64)}`,
+              to: "0x0000000000000000000000000000000000000002",
+              validAfter: "0",
+              validBefore: "1762000000",
+              value: "1000000",
+            },
+          },
+        },
+        status: 202,
+      };
+    },
+    ...quoteOverrides(),
+  });
+
+  const result = await callCuryoMcpTool({
+    agent: AGENT,
+    arguments: askArguments({ paymentMode: "x402_authorization" }),
+    name: "curyo_ask_humans",
+  });
+
+  const body = result as unknown as {
+    confirmTool: string;
+    nextAction: string;
+    paymentMode: string;
+    transactionPlan: null;
+    wallet: { address: string; fundingMode: string };
+    x402AuthorizationRequest: { authorization: { nonce: string } };
+  };
+
+  assert.equal(body.paymentMode, "x402_authorization");
+  assert.equal(body.nextAction, "sign_x402_authorization");
+  assert.equal(body.transactionPlan, null);
+  assert.equal(body.confirmTool, "curyo_confirm_ask_transactions");
+  assert.equal(body.wallet.address, AGENT.walletAddress);
+  assert.equal(body.wallet.fundingMode, "x402_authorization");
+  assert.equal(body.x402AuthorizationRequest.authorization.nonce, `0x${"4".repeat(64)}`);
+  assert.equal(prepared.length, 1);
+});
+
 test("curyo_ask_humans rejects bundle members outside the agent category allowlist", async () => {
   await assert.rejects(
     () =>
