@@ -564,6 +564,29 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter2), 0);
     }
 
+    function testBundleRewardsSnapshotAllCompletersAboveMinimum() public {
+        uint256[] memory contentIds = _submitBundleQuestions();
+        uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, REWARD_POOL_AMOUNT, 3);
+
+        address[] memory voters = _fourVoters();
+        bool[] memory directions = _directions(true, true, false, true);
+
+        _settleRoundWith(voters, contentIds[0], directions);
+        _settleRoundWith(voters, contentIds[1], directions);
+
+        assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter1), REWARD_POOL_AMOUNT / 4);
+        assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter4), REWARD_POOL_AMOUNT / 4);
+
+        uint256 totalClaimed;
+        for (uint256 i = 0; i < voters.length; i++) {
+            vm.prank(voters[i]);
+            totalClaimed += rewardPoolEscrow.claimQuestionBundleReward(bundleId, 0);
+        }
+
+        assertEq(totalClaimed, REWARD_POOL_AMOUNT);
+        assertEq(usdc.balanceOf(address(rewardPoolEscrow)), 0);
+    }
+
     function testBundleClaimSupportsMultipleRoundSets() public {
         uint256[] memory contentIds = _submitBundleQuestions();
         uint256 bundleAmount = 120e6;

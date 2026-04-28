@@ -90,6 +90,7 @@ contract QuestionRewardPoolEscrow is
         uint32 requiredSettledRounds;
         uint32 completedRoundSets;
         uint32 claimedCount;
+        uint32 eligibleClaimCount;
         uint16 frontendFeeBps;
         uint256 funderNullifier;
         uint256 fundedAmount;
@@ -110,6 +111,7 @@ contract QuestionRewardPoolEscrow is
     struct BundleRoundSetSnapshot {
         bool qualified;
         uint32 claimedCount;
+        uint32 eligibleCompleters;
         uint256 allocation;
         uint256 frontendFeeAllocation;
     }
@@ -351,6 +353,7 @@ contract QuestionRewardPoolEscrow is
             requiredSettledRounds: requiredSettledRounds.toUint32(),
             completedRoundSets: 0,
             claimedCount: 0,
+            eligibleClaimCount: 0,
             frontendFeeBps: defaultFrontendFeeBps,
             funderNullifier: funderNullifier,
             fundedAmount: fundedAmount,
@@ -646,7 +649,7 @@ contract QuestionRewardPoolEscrow is
                 frontend,
                 snapshot.allocation,
                 snapshot.frontendFeeAllocation,
-                bundle.requiredCompleters,
+                snapshot.eligibleCompleters,
                 snapshot.claimedCount
             );
         require(grossAmount > 0, "No reward");
@@ -707,7 +710,7 @@ contract QuestionRewardPoolEscrow is
             frontend,
             snapshot.allocation,
             snapshot.frontendFeeAllocation,
-            bundle.requiredCompleters,
+            snapshot.eligibleCompleters,
             snapshot.claimedCount
         );
     }
@@ -719,7 +722,7 @@ contract QuestionRewardPoolEscrow is
         require(
             (bundle.bountyClosesAt != 0 && block.timestamp > bundle.bountyClosesAt)
                 || (bundle.completedRoundSets >= bundle.requiredSettledRounds
-                    && bundle.claimedCount >= uint256(bundle.requiredSettledRounds) * bundle.requiredCompleters),
+                    && bundle.claimedCount >= bundle.eligibleClaimCount),
             "Bundle active"
         );
         // If claims are still open (bundle is claim-complete but not fully claimed) and the
@@ -945,7 +948,7 @@ contract QuestionRewardPoolEscrow is
     }
 
     function _isBundleClaimOpen(BundleReward storage bundle) internal view returns (bool) {
-        return !bundle.refunded && bundle.claimedCount < uint256(bundle.completedRoundSets) * bundle.requiredCompleters;
+        return !bundle.refunded && bundle.claimedCount < bundle.eligibleClaimCount;
     }
 
     function _isBundleRoundSetClaimOpen(BundleReward storage bundle, uint256 bundleId, uint256 roundSetIndex)
@@ -955,7 +958,7 @@ contract QuestionRewardPoolEscrow is
     {
         if (bundle.refunded || roundSetIndex >= bundle.requiredSettledRounds) return false;
         BundleRoundSetSnapshot storage snapshot = bundleRoundSetSnapshots[bundleId][roundSetIndex];
-        return snapshot.qualified && snapshot.claimedCount < bundle.requiredCompleters;
+        return snapshot.qualified && snapshot.claimedCount < snapshot.eligibleCompleters;
     }
 
     function _requireBundleCleanupComplete(uint256 bundleId) internal view {
@@ -1060,23 +1063,29 @@ contract QuestionRewardPoolEscrow is
     function _qualifyBundleRoundSet(uint256 bundleId, BundleReward storage bundle, uint256 roundSetIndex) internal {
         if (bundleRoundSetSnapshots[bundleId][roundSetIndex].qualified) return;
 
-        if (_bundleRoundSetCompleterCount(bundleId, bundle, roundSetIndex) < bundle.requiredCompleters) {
+        uint256 completerCount = _bundleRoundSetCompleterCount(bundleId, bundle, roundSetIndex);
+        if (completerCount < bundle.requiredCompleters) {
             _resetBundleRoundSet(bundleId, roundSetIndex);
             return;
         }
 
         uint256 allocation = _previewBundleRoundSetAllocation(bundle);
         require(allocation > 0 && allocation <= bundle.unallocatedAmount, "No allocation");
-        require(allocation >= bundle.requiredCompleters, "Small allocation");
+        require(allocation >= completerCount, "Small allocation");
         uint256 frontendFeeAllocation = (allocation * bundle.frontendFeeBps) / BPS_SCALE;
 
         unchecked {
             bundle.completedRoundSets++;
         }
+        bundle.eligibleClaimCount += completerCount.toUint32();
         bundle.unallocatedAmount -= allocation;
 
         bundleRoundSetSnapshots[bundleId][roundSetIndex] = BundleRoundSetSnapshot({
-            qualified: true, claimedCount: 0, allocation: allocation, frontendFeeAllocation: frontendFeeAllocation
+            qualified: true,
+            claimedCount: 0,
+            eligibleCompleters: completerCount.toUint32(),
+            allocation: allocation,
+            frontendFeeAllocation: frontendFeeAllocation
         });
 
         emit QuestionBundleRoundSetQualified(bundleId, roundSetIndex, allocation, frontendFeeAllocation);
@@ -1094,7 +1103,7 @@ contract QuestionRewardPoolEscrow is
         uint256 firstRoundId = bundleRoundIds[bundleId][0][roundSetIndex];
         IVoterIdNFT firstRoundVoterIdNft = _roundVoterIdNft(firstContentId, firstRoundId);
         uint256 commitCount = votingEngine.getRoundCommitCount(firstContentId, firstRoundId);
-        for (uint256 i = 0; i < commitCount && completerCount < bundle.requiredCompleters;) {
+        for (uint256 i = 0; i < commitCount;) {
             bytes32 commitKey = votingEngine.getRoundCommitKey(firstContentId, firstRoundId, i);
             (,,,, bool revealed,,) = votingEngine.commitCore(firstContentId, firstRoundId, commitKey);
             if (revealed) {
