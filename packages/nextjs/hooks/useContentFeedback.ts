@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSignMessage } from "wagmi";
+import { ensurePrivateAccountReadSession } from "~~/hooks/usePrivateAccountSession";
 import type { ContentFeedbackItem, ContentFeedbackListResult, ContentFeedbackType } from "~~/lib/feedback/types";
 import { isSignatureRejected } from "~~/utils/signatureErrors";
 
@@ -168,36 +169,11 @@ export function useContentFeedback(contentId: bigint | string | number | null | 
 
     setIsUnlocking(true);
     try {
-      const challenge = await readResponseBody<SignedChallengeResponse>(
-        await fetch("/api/feedback/challenge", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            address,
-            contentId: normalizedContentId,
-            intent: "read",
-          }),
-        }),
-        "Failed to create feedback challenge",
-      );
-
-      if (!challenge.message || !challenge.challengeId) {
-        throw new Error("Failed to create feedback challenge");
-      }
-
-      const signature = await signMessageAsync({ message: challenge.message });
+      await ensurePrivateAccountReadSession(address, signMessageAsync);
+      const params = new URLSearchParams({ contentId: normalizedContentId, address });
       const response = await readResponseBody<ContentFeedbackListResult>(
-        await fetch("/api/feedback/read", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            address,
-            contentId: normalizedContentId,
-            signature,
-            challengeId: challenge.challengeId,
-          }),
-        }),
-        "Failed to unlock feedback",
+        await fetch(`/api/feedback?${params.toString()}`),
+        "Failed to load feedback",
       );
 
       queryClient.setQueryData(queryKey, response);
@@ -210,7 +186,7 @@ export function useContentFeedback(contentId: bigint | string | number | null | 
       return {
         ok: false,
         reason: "request_failed",
-        error: error instanceof Error ? error.message : "Failed to unlock feedback",
+        error: error instanceof Error ? error.message : "Failed to load feedback",
       };
     } finally {
       setIsUnlocking(false);

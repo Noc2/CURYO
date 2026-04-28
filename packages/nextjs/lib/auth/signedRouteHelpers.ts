@@ -4,11 +4,7 @@ import {
   mapSignedActionError,
   verifyAndConsumeSignedActionChallenge,
 } from "~~/lib/auth/signedActions";
-import {
-  type SignedReadSessionScope,
-  getSignedReadSessionCookie,
-  issueSignedReadSession,
-} from "~~/lib/auth/signedReadSessions";
+import { type SignedReadSessionScope, setAllSignedReadSessionCookies } from "~~/lib/auth/signedReadSessions";
 import { db } from "~~/lib/db";
 
 export async function verifySignedActionChallenge(params: {
@@ -52,8 +48,7 @@ export async function createSignedReadResponse<TBody>(
   scope: SignedReadSessionScope,
   body: TBody,
 ) {
-  const session = await issueSignedReadSession(walletAddress, scope);
+  void scope;
   const response = NextResponse.json(body);
-  response.cookies.set(getSignedReadSessionCookie(scope, session));
-  return response;
+  return setAllSignedReadSessionCookies(response, walletAddress);
 }

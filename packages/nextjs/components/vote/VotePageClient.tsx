@@ -276,7 +276,7 @@ const HomeInner = () => {
     toggleWatch,
     requestReadAccess: requestWatchReadAccess,
     isPending: isWatchPending,
-  } = useWatchedContent(address, { autoRead: false });
+  } = useWatchedContent(address, { autoRead: true });
   const {
     followedItems,
     followedWallets,
@@ -284,7 +284,7 @@ const HomeInner = () => {
     toggleFollow,
     requestReadAccess: requestFollowReadAccess,
     isPending: isFollowPending,
-  } = useFollowedProfiles(address, { autoRead: false });
+  } = useFollowedProfiles(address, { autoRead: true });
   const { discoverSignals, isLoading: discoverSignalsLoading } = useDiscoverSignals(address, {
     watchedItems,
     followedItems,
@@ -1415,7 +1415,7 @@ const HomeInner = () => {
           }
 
           if (result.reason !== "rejected") {
-            notification.error(result.error || "Failed to unlock your watchlist");
+            notification.error(result.error || "Failed to load your watchlist");
           }
           return;
         }
@@ -1442,7 +1442,7 @@ const HomeInner = () => {
         }
 
         if (result.reason !== "rejected") {
-          notification.error(result.error || "Failed to unlock your follow list");
+          notification.error(result.error || "Failed to load your follow list");
         }
         return;
       }

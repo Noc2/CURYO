@@ -166,7 +166,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
     toggleFollow,
     isPending: isFollowPending,
   } = useFollowedProfiles(connectedAddress, {
-    autoRead: false,
+    autoRead: true,
   });
   const { stats, categories } = useVoterAccuracy(normalizedAddress);
   const { hasVoterId, tokenId, isLoading: voterIdLoading } = useVoterIdNFT(normalizedAddress);

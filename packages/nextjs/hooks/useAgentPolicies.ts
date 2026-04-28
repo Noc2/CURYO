@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useSignMessage } from "wagmi";
+import { ensurePrivateAccountReadSession } from "~~/hooks/usePrivateAccountSession";
 import { isSignatureRejected } from "~~/utils/signatureErrors";
 
 export type AgentPolicyStatus = "active" | "paused" | "revoked";
@@ -131,17 +132,9 @@ async function readAgentPolicies(
     return { items: [], count: 0, hasSession: false };
   }
 
-  const signed = await requestSignedChallenge({
-    address,
-    body: { intent: "read" },
-    signMessageAsync,
-  });
+  await ensurePrivateAccountReadSession(address, signMessageAsync);
   const policies = await readJson<{ items?: AgentPolicyRecord[]; count?: number }>(
-    await fetch("/api/agent/policies", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ address, ...signed }),
-    }),
+    await fetch(`/api/agent/policies?address=${encodeURIComponent(address)}`),
     "Failed to fetch managed agents",
   );
   const items = policies.items ?? [];
@@ -150,7 +143,6 @@ async function readAgentPolicies(
 
 export function useAgentPolicies(address?: string, options?: UseAgentPoliciesOptions) {
   const { signMessageAsync } = useSignMessage();
-  const queryClient = useQueryClient();
   const [isSaving, setIsSaving] = useState(false);
   const [isTokenBusy, setIsTokenBusy] = useState(false);
   const [isStatusBusy, setIsStatusBusy] = useState(false);
@@ -172,22 +164,6 @@ export function useAgentPolicies(address?: string, options?: UseAgentPoliciesOpt
     staleTime: 30_000,
     retry: false,
   });
-
-  const unlock = useCallback(async () => {
-    if (!address) return { ok: false, reason: "not_connected" as const };
-    try {
-      const next = await readAgentPolicies(address, signMessageAsync, true);
-      queryClient.setQueryData(queryKey, next);
-      return { ok: true as const };
-    } catch (error) {
-      if (isSignatureRejected(error)) return { ok: false as const, reason: "rejected" as const };
-      return {
-        ok: false as const,
-        reason: "request_failed" as const,
-        error: error instanceof Error ? error.message : "Failed to unlock managed agents",
-      };
-    }
-  }, [address, queryClient, queryKey, signMessageAsync]);
 
   const savePolicy = useCallback(
     async (policy: AgentPolicySaveInput): Promise<AgentPolicyMutationResult> => {
@@ -336,7 +312,6 @@ export function useAgentPolicies(address?: string, options?: UseAgentPoliciesOpt
     revokeToken,
     rotateToken,
     savePolicy,
-    unlock,
     updateStatus,
   };
 }
