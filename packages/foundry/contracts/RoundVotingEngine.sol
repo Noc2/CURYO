@@ -578,21 +578,25 @@ contract RoundVotingEngine is
             lastCommitRevealableAfter[contentId],
             voterCommitHash[contentId][roundId],
             contentHasCommits,
-            hasTokenIdCommitted[contentId][roundId],
-            voterIdCommitKey[contentId][roundId],
-            commitVoterId[contentId][roundId],
-            voterNullifierCommitKey[contentId][roundId],
             contentId,
             roundId,
             commitKey,
             epochEnd,
             effectiveRevealableAfter,
             voter,
-            commitHash,
-            voterId,
-            roundVoterIdNft,
-            useTokenIdentity
+            commitHash
         );
+        if (useTokenIdentity) {
+            RoundCleanupLib.recordTokenIdentityCommitIndex(
+                hasTokenIdCommitted[contentId][roundId],
+                voterIdCommitKey[contentId][roundId],
+                commitVoterId[contentId][roundId],
+                voterNullifierCommitKey[contentId][roundId],
+                commitKey,
+                voterId,
+                roundVoterIdNft
+            );
+        }
     }
 
     function _recordCommitAccounting(
@@ -606,17 +610,20 @@ contract RoundVotingEngine is
         uint64 stakeAmount64,
         uint256 stakeAmount
     ) internal {
-        round.voteCount++;
-        round.totalStake += stakeAmount64;
-
-        lastVoteTimestamp[contentId][voter] = block.timestamp;
-        if (useTokenIdentity) {
-            lastVoteTimestampByToken[contentId][voterId] = block.timestamp;
-            currentVoterIdNft.recordStake(contentId, roundId, voterId, stakeAmount);
-        }
-
-        // Vote commits still refresh UI activity timestamps, but not the dormancy anchor.
-        registry.updateActivity(contentId);
+        RoundCleanupLib.recordCommitAccounting(
+            round,
+            lastVoteTimestamp[contentId],
+            lastVoteTimestampByToken[contentId],
+            address(registry),
+            currentVoterIdNft,
+            contentId,
+            roundId,
+            voter,
+            voterId,
+            useTokenIdentity,
+            stakeAmount64,
+            stakeAmount
+        );
     }
 
     /// @dev Get or create the active round for a content item.

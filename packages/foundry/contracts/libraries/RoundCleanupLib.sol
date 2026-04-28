@@ -10,6 +10,10 @@ import {RoundLib} from "./RoundLib.sol";
 import {TlockVoteLib} from "./TlockVoteLib.sol";
 import {TokenTransferLib} from "./TokenTransferLib.sol";
 
+interface IRoundCleanupActivityRegistry {
+    function updateActivity(uint256 contentId) external;
+}
+
 /// @title RoundCleanupLib
 /// @notice Shared refund and cleanup paths extracted from RoundVotingEngine to reduce runtime size.
 library RoundCleanupLib {
@@ -113,20 +117,13 @@ library RoundCleanupLib {
         mapping(uint256 => uint256) storage lastCommitRevealableAfter,
         mapping(address => bytes32) storage roundVoterCommitHash,
         mapping(uint256 => bool) storage contentHasCommits,
-        mapping(uint256 => bool) storage roundHasTokenIdCommitted,
-        mapping(uint256 => bytes32) storage roundVoterIdCommitKey,
-        mapping(bytes32 => uint256) storage roundCommitVoterId,
-        mapping(uint256 => bytes32) storage roundVoterNullifierCommitKey,
         uint256 contentId,
         uint256 roundId,
         bytes32 commitKey,
         uint256 epochEnd,
         uint256 effectiveRevealableAfter,
         address voter,
-        bytes32 commitHash,
-        uint256 voterId,
-        IVoterIdNFT voterIdNft,
-        bool useTokenIdentity
+        bytes32 commitHash
     ) external {
         roundCommitHashes.push(commitKey);
         epochUnrevealedCount[epochEnd]++;
@@ -135,23 +132,10 @@ library RoundCleanupLib {
         }
 
         roundVoterCommitHash[voter] = commitHash;
-        if (!contentHasCommits[contentId]) {
-            contentHasCommits[contentId] = true;
-        }
-        if (useTokenIdentity) {
-            _recordTokenIdentityCommitIndex(
-                roundHasTokenIdCommitted,
-                roundVoterIdCommitKey,
-                roundCommitVoterId,
-                roundVoterNullifierCommitKey,
-                commitKey,
-                voterId,
-                voterIdNft
-            );
-        }
+        contentHasCommits[contentId] = true;
     }
 
-    function _recordTokenIdentityCommitIndex(
+    function recordTokenIdentityCommitIndex(
         mapping(uint256 => bool) storage roundHasTokenIdCommitted,
         mapping(uint256 => bytes32) storage roundVoterIdCommitKey,
         mapping(bytes32 => uint256) storage roundCommitVoterId,
@@ -159,7 +143,7 @@ library RoundCleanupLib {
         bytes32 commitKey,
         uint256 voterId,
         IVoterIdNFT voterIdNft
-    ) private {
+    ) external {
         roundHasTokenIdCommitted[voterId] = true;
         roundVoterIdCommitKey[voterId] = commitKey;
         roundCommitVoterId[commitKey] = voterId;
@@ -169,6 +153,33 @@ library RoundCleanupLib {
                 roundVoterNullifierCommitKey[voterNullifier] = commitKey;
             }
         }
+    }
+
+    function recordCommitAccounting(
+        RoundLib.Round storage round,
+        mapping(address => uint256) storage contentLastVoteTimestamp,
+        mapping(uint256 => uint256) storage contentLastVoteTimestampByToken,
+        address registry,
+        IVoterIdNFT currentVoterIdNft,
+        uint256 contentId,
+        uint256 roundId,
+        address voter,
+        uint256 voterId,
+        bool useTokenIdentity,
+        uint64 stakeAmount64,
+        uint256 stakeAmount
+    ) external {
+        round.voteCount++;
+        round.totalStake += stakeAmount64;
+
+        contentLastVoteTimestamp[voter] = block.timestamp;
+        if (useTokenIdentity) {
+            contentLastVoteTimestampByToken[voterId] = block.timestamp;
+            currentVoterIdNft.recordStake(contentId, roundId, voterId, stakeAmount);
+        }
+
+        // Vote commits still refresh UI activity timestamps, but not the dormancy anchor.
+        IRoundCleanupActivityRegistry(registry).updateActivity(contentId);
     }
 
     function claimCancelledRoundRefund(
