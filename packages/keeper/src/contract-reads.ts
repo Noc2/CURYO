@@ -1,4 +1,5 @@
 import type { PublicClient } from "viem";
+import { getAddress } from "viem";
 import { ContentRegistryAbi, ProtocolConfigAbi, RoundVotingEngineAbi } from "@curyo/contracts/abis";
 import { getRevertReason } from "./revert-utils.js";
 
@@ -197,6 +198,26 @@ export async function validateKeeperContracts(
   await readRoundVotingConfig(publicClient, engineAddr);
 
   await assertContractDeployed(publicClient, registryAddr, "ContentRegistry");
+
+  let registryVotingEngine: `0x${string}`;
+  try {
+    registryVotingEngine = (await publicClient.readContract({
+      address: registryAddr,
+      abi: ContentRegistryAbi,
+      functionName: "votingEngine",
+      args: [],
+    })) as `0x${string}`;
+  } catch (err: unknown) {
+    throw new Error(
+      `Failed to read ContentRegistry.votingEngine() at ${registryAddr}: ${getRevertReason(err)}`,
+    );
+  }
+
+  if (getAddress(registryVotingEngine) !== getAddress(engineAddr)) {
+    throw new Error(
+      `ContentRegistry at ${registryAddr} is wired to RoundVotingEngine ${registryVotingEngine}, but keeper is configured for ${engineAddr}. Check deployment artifacts and contract addresses.`,
+    );
+  }
 
   try {
     await publicClient.readContract({
