@@ -17,6 +17,28 @@ import { RoundLib } from "./libraries/RoundLib.sol";
 import { QuestionRewardPoolEscrowClaimLib } from "./libraries/QuestionRewardPoolEscrowClaimLib.sol";
 import { QuestionRewardPoolEscrowQualificationLib } from "./libraries/QuestionRewardPoolEscrowQualificationLib.sol";
 
+struct Eip3009Authorization {
+    address from;
+    address to;
+    uint256 value;
+    uint256 validAfter;
+    uint256 validBefore;
+    bytes32 nonce;
+    bytes signature;
+}
+
+interface IReceiveWithAuthorizationToken {
+    function receiveWithAuthorization(
+        address from,
+        address to,
+        uint256 value,
+        uint256 validAfter,
+        uint256 validBefore,
+        bytes32 nonce,
+        bytes calldata signature
+    ) external;
+}
+
 /// @title QuestionRewardPoolEscrow
 /// @notice Holds per-question USDC bounties and pays equal per-round rewards to revealed voters.
 /// @dev Curyo 2 keeps HREP coherence penalties in the voting engine. Stablecoin payouts are participation rewards.
@@ -306,6 +328,32 @@ contract QuestionRewardPoolEscrow is
             contentId,
             funder,
             asset,
+            amount,
+            requiredVoters,
+            requiredSettledRounds,
+            bountyClosesAt,
+            feedbackClosesAt,
+            true
+        );
+    }
+
+    function createSubmissionRewardPoolFromRegistryWithAuthorization(
+        uint256 contentId,
+        address funder,
+        uint256 amount,
+        uint256 requiredVoters,
+        uint256 requiredSettledRounds,
+        uint256 bountyClosesAt,
+        uint256 feedbackClosesAt,
+        Eip3009Authorization calldata authorization
+    ) external nonReentrant whenNotPaused returns (uint256 rewardPoolId) {
+        require(msg.sender == address(registry), "Only registry");
+        require(funder != address(0), "Invalid funder");
+        _receiveUsdcAuthorization(funder, amount, authorization);
+        rewardPoolId = _createRewardPoolFromFundedAmount(
+            contentId,
+            funder,
+            REWARD_ASSET_USDC,
             amount,
             requiredVoters,
             requiredSettledRounds,
@@ -923,6 +971,29 @@ contract QuestionRewardPoolEscrow is
         uint256 balanceBefore = token.balanceOf(address(this));
         token.safeTransferFrom(funder, address(this), amount);
         receivedAmount = token.balanceOf(address(this)) - balanceBefore;
+        require(receivedAmount == amount, "Bad token");
+    }
+
+    function _receiveUsdcAuthorization(
+        address funder,
+        uint256 amount,
+        Eip3009Authorization calldata authorization
+    ) internal {
+        require(authorization.from == funder, "Bad payer");
+        require(authorization.to == address(this), "Bad payee");
+        require(authorization.value == amount, "Bad amount");
+
+        uint256 balanceBefore = usdcToken.balanceOf(address(this));
+        IReceiveWithAuthorizationToken(address(usdcToken)).receiveWithAuthorization(
+            authorization.from,
+            authorization.to,
+            authorization.value,
+            authorization.validAfter,
+            authorization.validBefore,
+            authorization.nonce,
+            authorization.signature
+        );
+        uint256 receivedAmount = usdcToken.balanceOf(address(this)) - balanceBefore;
         require(receivedAmount == amount, "Bad token");
     }
 

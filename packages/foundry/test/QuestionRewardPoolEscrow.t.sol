@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
-import { ContentRegistry } from "../contracts/ContentRegistry.sol";
+import { ContentRegistry, Eip3009Authorization } from "../contracts/ContentRegistry.sol";
 import { HumanReputation } from "../contracts/HumanReputation.sol";
 import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
 import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
@@ -67,6 +67,18 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         uint8 asset,
         bool nonRefundable
     );
+
+    struct X402TestQuestion {
+        string contextUrl;
+        string title;
+        string description;
+        string tags;
+        string[] imageUrls;
+        RoundLib.RoundConfig roundConfig;
+        ContentRegistry.SubmissionRewardTerms rewardTerms;
+        ContentRegistry.QuestionSpecCommitment spec;
+        bytes32 salt;
+    }
 
     function _tlockDrandChainHash() internal pure override returns (bytes32) {
         return DEFAULT_DRAND_CHAIN_HASH;
@@ -1580,6 +1592,39 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(registry.contentSubmitterNullifier(contentId), 0);
     }
 
+    function testX402QuestionSubmissionConsumesUsdcAuthorizationWithoutVoterId() public {
+        address agentWallet = address(0xA11CE);
+        X402TestQuestion memory question = _x402TestQuestion();
+        Eip3009Authorization memory authorization = _x402Authorization(agentWallet, question);
+
+        usdc.mint(agentWallet, question.rewardTerms.amount);
+        uint256 escrowBalanceBefore = usdc.balanceOf(address(rewardPoolEscrow));
+        uint256 agentBalanceBefore = usdc.balanceOf(agentWallet);
+
+        uint256 contentId = registry.submitQuestionWithX402Payment(
+            question.contextUrl,
+            question.imageUrls,
+            "",
+            question.title,
+            question.description,
+            question.tags,
+            CATEGORY_ID,
+            question.salt,
+            question.rewardTerms,
+            question.roundConfig,
+            question.spec,
+            authorization
+        );
+
+        (,, address storedSubmitter,,,,,,,) = registry.contents(contentId);
+        assertEq(storedSubmitter, agentWallet);
+        assertEq(registry.getSubmitterIdentity(contentId), agentWallet);
+        assertEq(registry.contentSubmitterNullifier(contentId), 0);
+        assertTrue(usdc.authorizationState(agentWallet, authorization.nonce));
+        assertEq(usdc.balanceOf(address(rewardPoolEscrow)), escrowBalanceBefore + question.rewardTerms.amount);
+        assertEq(usdc.balanceOf(agentWallet), agentBalanceBefore - question.rewardTerms.amount);
+    }
+
     function testDelegatedAgentSubmitterHolderCannotClaimQuestionReward() public {
         address agentWallet = address(0xA11CE);
         vm.prank(submitter);
@@ -1746,6 +1791,69 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
             "https://example.com/context", imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, salt, roundConfig
         );
         vm.stopPrank();
+    }
+
+    function _x402TestQuestion() internal view returns (X402TestQuestion memory question) {
+        question.contextUrl = "https://example.com/x402-agent-question";
+        question.title = "Should the agent proceed with this supplier?";
+        question.description = "Review the supplied context and vote on whether the agent should continue.";
+        question.tags = "agents,bounty";
+        question.imageUrls = new string[](1);
+        question.imageUrls[0] = "https://example.com/x402-agent-question.jpg";
+        question.roundConfig = RoundLib.RoundConfig({
+            epochDuration: uint32(EPOCH_DURATION), maxDuration: uint32(7 days), minVoters: 3, maxVoters: 200
+        });
+        question.rewardTerms = ContentRegistry.SubmissionRewardTerms({
+            asset: REWARD_ASSET_USDC,
+            amount: REWARD_POOL_AMOUNT,
+            requiredVoters: 3,
+            requiredSettledRounds: 1,
+            bountyClosesAt: block.timestamp + 30 days,
+            feedbackClosesAt: block.timestamp + 30 days
+        });
+        question.spec = ContentRegistry.QuestionSpecCommitment({
+            questionMetadataHash: keccak256("x402-question-metadata"),
+            resultSpecHash: keccak256("x402-result-spec")
+        });
+        question.salt = keccak256("x402-usdc-no-voter-id");
+    }
+
+    function _x402Authorization(address agentWallet, X402TestQuestion memory question)
+        internal
+        view
+        returns (Eip3009Authorization memory authorization)
+    {
+        uint256 validAfter = block.timestamp - 1;
+        uint256 validBefore = block.timestamp + 30 minutes;
+        ContentRegistry.SubmissionMetadata memory metadata = ContentRegistry.SubmissionMetadata({
+            url: question.contextUrl,
+            title: question.title,
+            description: question.description,
+            tags: question.tags,
+            categoryId: CATEGORY_ID
+        });
+        authorization = Eip3009Authorization({
+            from: agentWallet,
+            to: address(rewardPoolEscrow),
+            value: question.rewardTerms.amount,
+            validAfter: validAfter,
+            validBefore: validBefore,
+            nonce: registry.computeX402QuestionPaymentNonce(
+                metadata,
+                question.imageUrls,
+                "",
+                question.salt,
+                question.rewardTerms,
+                question.roundConfig,
+                question.spec,
+                agentWallet,
+                address(rewardPoolEscrow),
+                question.rewardTerms.amount,
+                validAfter,
+                validBefore
+            ),
+            signature: hex""
+        });
     }
 
     function _submitAgentQuestionWithUsdcReward(address agentWallet, string memory path, bool expectVoterIdRevert)
