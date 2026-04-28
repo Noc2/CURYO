@@ -221,6 +221,20 @@ contract HumanFaucetTest is Test {
         assertEq(hrepToken.balanceOf(user), TIER_0_AMOUNT);
     }
 
+    function test_BootstrapMigratedClaims_RejectsOversizedBatch() public {
+        uint256 length = 101;
+        address[] memory users = new address[](length);
+        uint256[] memory nullifiers = new uint256[](length);
+        uint256[] memory amounts = new uint256[](length);
+        address[] memory referrers = new address[](length);
+        uint256[] memory claimantBonuses = new uint256[](length);
+        uint256[] memory referrerRewards = new uint256[](length);
+
+        vm.prank(admin);
+        vm.expectRevert(HumanFaucet.MigrationBootstrapBatchTooLarge.selector);
+        faucet.bootstrapMigratedClaims(users, nullifiers, amounts, referrers, claimantBonuses, referrerRewards);
+    }
+
     function test_VerifySelfProof_RevertShortProofPayload() public {
         mockHub.setVerified(user1);
         bytes memory userContextData = _buildUserContextData(user1, "");

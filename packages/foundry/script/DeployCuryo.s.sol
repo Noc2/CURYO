@@ -63,6 +63,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
     uint256 internal constant MIGRATION_REFERRAL_RATIO_BPS = 5_000;
     uint256 internal constant MIGRATION_BPS_SCALE = 10_000;
     uint256 internal constant DEFAULT_MIGRATION_BOOTSTRAP_BATCH_SIZE = 20;
+    uint256 internal constant MAX_MIGRATION_BOOTSTRAP_BATCH_SIZE = 100;
 
     // Self.xyz IdentityVerificationHub addresses
     address constant CELO_MAINNET_HUB = 0xe57F4773bd9c9d8b6Cd70431117d353298B9f5BF;
@@ -688,6 +689,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
     function _migrationBootstrapBatchSize() internal view returns (uint256 batchSize) {
         batchSize = vm.envOr("MIGRATION_BOOTSTRAP_BATCH_SIZE", DEFAULT_MIGRATION_BOOTSTRAP_BATCH_SIZE);
         _require(batchSize > 0, "Migration batch size zero");
+        _require(batchSize <= MAX_MIGRATION_BOOTSTRAP_BATCH_SIZE, "Migration batch size too large");
     }
 
     function _bootstrapMigratedClaimsInBatches(

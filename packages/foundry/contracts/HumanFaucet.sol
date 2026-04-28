@@ -39,6 +39,9 @@ contract HumanFaucet is SelfVerificationRoot, EIP712, Ownable, Pausable {
     /// @notice Referral bonus ratio: 50% of claim amount for both claimant bonus and referrer reward
     uint256 public constant REFERRAL_RATIO_BPS = 5000;
 
+    /// @notice Maximum migrated claims accepted in one bootstrap transaction.
+    uint256 internal constant MIGRATION_BOOTSTRAP_MAX_BATCH_SIZE = 100;
+
     /// @notice Allowed Self.xyz attestation IDs
     bytes32 public constant PASSPORT_ATTESTATION_ID = bytes32(uint256(1));
     bytes32 public constant BIOMETRIC_ID_CARD_ATTESTATION_ID = bytes32(uint256(2));
@@ -196,6 +199,9 @@ contract HumanFaucet is SelfVerificationRoot, EIP712, Ownable, Pausable {
     /// @notice Thrown when migration array lengths do not match
     error MigrationArrayLengthMismatch();
 
+    /// @notice Thrown when a migration bootstrap call is too large for a bounded replay transaction
+    error MigrationBootstrapBatchTooLarge();
+
     /// @notice Thrown when a migrated claim contains invalid data
     error InvalidMigrationClaim();
 
@@ -333,6 +339,9 @@ contract HumanFaucet is SelfVerificationRoot, EIP712, Ownable, Pausable {
                 || users.length != claimantBonuses.length || users.length != referrerRewards.length
         ) {
             revert MigrationArrayLengthMismatch();
+        }
+        if (users.length > MIGRATION_BOOTSTRAP_MAX_BATCH_SIZE) {
+            revert MigrationBootstrapBatchTooLarge();
         }
         require(address(voterIdNFT) != address(0), "VoterIdNFT not set");
 
