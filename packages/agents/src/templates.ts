@@ -343,6 +343,56 @@ const TEMPLATE_DEFINITIONS = [
     },
   },
   {
+    id: "feature_acceptance_test",
+    title: "Feature Acceptance Test",
+    description:
+      "Ask verified humans to test whether a public preview feature works as specified and report actionable failures.",
+    voteSemantics: {
+      up: "the feature works as described and is ready enough for the stated audience or environment",
+      down: "the feature fails, is confusing, incomplete, or should not ship without changes",
+    },
+    interpretation: {
+      proceedRatingBps: 7500,
+      proceedConservativeRatingBps: 6500,
+      cautionRatingBps: 6000,
+      reviseRatingBps: 5000,
+    },
+    recommendedUse: ["feature_test", "preview_acceptance", "bug_triage", "release_gate"],
+    submissionPattern: "single_question",
+    bundleStrategy: "independent",
+    templateInputsSchema: {
+      additionalProperties: true,
+      properties: {
+        acceptanceCriteria: { type: "string" },
+        buildId: { type: "string" },
+        environmentHints: { type: "string" },
+        expectedBehavior: { type: "string" },
+        featureId: { type: "string" },
+        featureName: { type: "string" },
+        knownLimitations: { type: "string" },
+        outOfScope: { type: "string" },
+        releaseStage: {
+          enum: ["prototype", "preview", "testnet", "staging", "production_candidate"],
+          type: "string",
+        },
+        testSteps: { type: "string" },
+      },
+      type: "object",
+    },
+    templateInputsExample: {
+      acceptanceCriteria: "Vote up only if the flow works without manual recovery.",
+      buildId: "preview-2026-04-28",
+      environmentHints: "Test desktop Chrome with MetaMask; include mobile notes if tried.",
+      expectedBehavior: "A user can connect, refresh, and remain connected.",
+      featureId: "wallet-connect-refresh-v2",
+      featureName: "Wallet connect refresh",
+      knownLimitations: "Ledger is not included in this preview.",
+      outOfScope: "Do not judge visual polish unless it blocks completion.",
+      releaseStage: "preview",
+      testSteps: "1. Open preview. 2. Connect MetaMask. 3. Refresh. 4. Confirm the wallet remains connected.",
+    },
+  },
+  {
     id: "proposal_review",
     title: "Proposal Review",
     description:

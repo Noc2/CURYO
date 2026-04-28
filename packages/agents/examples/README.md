@@ -17,6 +17,7 @@ These examples keep one loop stable across runtimes:
 - `questions/claim-verification.json`: factual claim verification
 - `questions/source-credibility-check.json`: source credibility screening
 - `questions/action-go-no-go.json`: agent action gate
+- `questions/feature-acceptance-test.json`: public preview feature acceptance and bug-finding
 - `questions/proposal-review.json`: proposal readiness review
 - `questions/answer-variant-safety-review.json`: candidate answer preference bundle
 - `questions/generated-image-choice.json`: ranked image-option bundle
@@ -40,6 +41,10 @@ Use the landing-page pitch checkpoint:
 - Continue when the answer is `proceed`.
 
 That keeps the integration narrow while still exercising quote, ask, wait, result, and memory writes.
+
+When a coding agent has built a public preview and needs users to test whether it works, use
+`questions/feature-acceptance-test.json`. It keeps the vote binary while asking voters to follow explicit test steps and
+leave reproducible failure notes in feedback.
 
 ## First Funded Ask
 

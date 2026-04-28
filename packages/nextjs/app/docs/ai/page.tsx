@@ -5,16 +5,17 @@ const agentsSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/agent
 const sdkSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/sdk";
 const agentTemplatesSourceHref = "https://github.com/Noc2/CURYO/blob/main/packages/agents/src/templates.ts";
 const agentFlowTemplateLinks = [
-  { href: `${agentTemplatesSourceHref}#L49-L84`, id: "generic_rating" },
-  { href: `${agentTemplatesSourceHref}#L86-L124`, id: "go_no_go" },
-  { href: `${agentTemplatesSourceHref}#L126-L165`, id: "ranked_option_member" },
-  { href: `${agentTemplatesSourceHref}#L167-L200`, id: "llm_answer_quality" },
-  { href: `${agentTemplatesSourceHref}#L202-L236`, id: "rag_grounding_check" },
-  { href: `${agentTemplatesSourceHref}#L238-L269`, id: "claim_verification" },
-  { href: `${agentTemplatesSourceHref}#L271-L304`, id: "source_credibility_check" },
-  { href: `${agentTemplatesSourceHref}#L306-L344`, id: "agent_action_go_no_go" },
-  { href: `${agentTemplatesSourceHref}#L346-L380`, id: "proposal_review" },
-  { href: `${agentTemplatesSourceHref}#L382-L418`, id: "pairwise_output_preference" },
+  { href: agentTemplatesSourceHref, id: "generic_rating" },
+  { href: agentTemplatesSourceHref, id: "go_no_go" },
+  { href: agentTemplatesSourceHref, id: "ranked_option_member" },
+  { href: agentTemplatesSourceHref, id: "llm_answer_quality" },
+  { href: agentTemplatesSourceHref, id: "rag_grounding_check" },
+  { href: agentTemplatesSourceHref, id: "claim_verification" },
+  { href: agentTemplatesSourceHref, id: "source_credibility_check" },
+  { href: agentTemplatesSourceHref, id: "agent_action_go_no_go" },
+  { href: agentTemplatesSourceHref, id: "feature_acceptance_test" },
+  { href: agentTemplatesSourceHref, id: "proposal_review" },
+  { href: agentTemplatesSourceHref, id: "pairwise_output_preference" },
 ] as const;
 
 const genericMcpConfig = `{
@@ -133,8 +134,9 @@ const AIPage: NextPage = () => {
 
       <h2>When To Submit</h2>
       <p>
-        Use Curyo when the decision depends on taste, evidence quality, local context, safety, ambiguity, or whether an
-        agent should proceed with an action. Do not use it for private artifacts or generic content generation.
+        Use Curyo when the decision depends on taste, evidence quality, local context, safety, ambiguity, whether an
+        agent should proceed with an action, or whether a public preview feature works against concrete test steps. Do
+        not use it for private artifacts or generic content generation.
       </p>
 
       <h2>Agent Flow</h2>
@@ -266,8 +268,8 @@ const AIPage: NextPage = () => {
         <a href={agentTemplatesSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
           template source
         </a>
-        . New AI evaluation templates keep the same binary staked rating flow and only change the rubric metadata and
-        result interpretation hints.
+        . New AI evaluation and feature-acceptance templates keep the same binary staked rating flow and only change the
+        rubric metadata and result interpretation hints.
       </p>
 
       <h2 id="mcp-adapter-shape">MCP Adapter Shape</h2>

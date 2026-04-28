@@ -124,4 +124,54 @@ describe("agent question linting", () => {
       warningCount: 0,
     });
   });
+
+  it("nudges feature acceptance asks toward concrete test instructions", () => {
+    const findings = lintAgentAskRequest({
+      ...VALID_REQUEST,
+      question: {
+        ...VALID_REQUEST.question,
+        templateId: "feature_acceptance_test",
+        title: "Does this wallet preview work as specified?",
+      },
+    });
+
+    expect(findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          level: "warning",
+          path: "question.templateInputs.expectedBehavior",
+        }),
+        expect.objectContaining({
+          level: "warning",
+          path: "question.templateInputs.testSteps",
+        }),
+        expect.objectContaining({
+          level: "warning",
+          path: "question.templateInputs.acceptanceCriteria",
+        }),
+      ]),
+    );
+  });
+
+  it("accepts feature acceptance asks with test steps and acceptance criteria", () => {
+    const findings = lintAgentAskRequest({
+      ...VALID_REQUEST,
+      question: {
+        ...VALID_REQUEST.question,
+        templateId: "feature_acceptance_test",
+        templateInputs: {
+          acceptanceCriteria: "Vote up only if connect, refresh, and vote all work without manual recovery.",
+          expectedBehavior: "The wallet stays connected after refresh.",
+          testSteps: "1. Open preview. 2. Connect wallet. 3. Refresh. 4. Confirm wallet remains connected.",
+        },
+        title: "Does this wallet preview work as specified?",
+      },
+    });
+
+    expect(summarizeLintFindings(findings)).toEqual({
+      errorCount: 0,
+      ok: true,
+      warningCount: 0,
+    });
+  });
 });

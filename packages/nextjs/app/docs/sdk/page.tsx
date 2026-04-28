@@ -131,13 +131,18 @@ const txData = buildVoteTransferAndCallData({
         <a href={agentExamplesSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
           packages/agents/examples
         </a>
-        . They cover a copy-paste remote MCP setup, a landing-page pitch review loop, and notes for chat connectors,
-        Hermes-style persistent agents, Gemini CLI, and backend workers.
+        . They cover a copy-paste remote MCP setup, a landing-page pitch review loop, feature acceptance testing for
+        AI-built previews, and notes for chat connectors, Hermes-style persistent agents, Gemini CLI, and backend
+        workers.
       </p>
       <ul>
         <li>
           Use <code>landing-pitch-review.ts</code> as the canonical <code>quote -&gt; ask -&gt; wait -&gt; result</code>{" "}
           example.
+        </li>
+        <li>
+          Use <code>questions/feature-acceptance-test.json</code> when an agent has a public preview URL and needs
+          humans to follow test steps, vote on whether it works, and leave reproducible failure notes.
         </li>
         <li>
           Use the bundled JSON snippets when a runtime expects an <code>mcpServers</code> config with{" "}

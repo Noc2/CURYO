@@ -1,8 +1,10 @@
 import { findAgentResultTemplate } from "../templates";
-import type { AgentAskExample, AgentQuestionExample, JsonObject, QuestionLintFinding } from "./types";
+import type { AgentAskExample, AgentQuestionExample, JsonObject, JsonValue, QuestionLintFinding } from "./types";
 
 const CLIENT_REQUEST_ID_PATTERN = /^[A-Za-z0-9._:-]{4,160}$/;
 const RANK_BY_RATING_TEMPLATE_IDS = new Set(["ranked_option_member", "pairwise_output_preference"]);
+const FEATURE_ACCEPTANCE_TEMPLATE_ID = "feature_acceptance_test";
+const FEATURE_ACCEPTANCE_REQUIRED_INPUTS = ["expectedBehavior", "testSteps", "acceptanceCriteria"] as const;
 
 function isObject(value: unknown): value is JsonObject {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -45,15 +47,26 @@ function pushFinding(
   findings.push({ level, path, message });
 }
 
+function templateInputText(templateInputs: JsonObject | null, key: string): string {
+  const value = templateInputs?.[key];
+  return typeof value === "string" ? value.trim() : "";
+}
+
 export function lintAgentQuestion(
   question: Partial<AgentQuestionExample>,
   path = "question",
   inheritedTemplateId?: string,
+  inheritedTemplateInputs?: JsonValue,
 ): QuestionLintFinding[] {
   const findings: QuestionLintFinding[] = [];
   const title = typeof question.title === "string" ? question.title.trim() : "";
   const description = typeof question.description === "string" ? question.description.trim() : "";
   const templateId = question.templateId ?? inheritedTemplateId;
+  const templateInputs = isObject(question.templateInputs)
+    ? question.templateInputs
+    : isObject(inheritedTemplateInputs)
+      ? inheritedTemplateInputs
+      : null;
 
   if (!title) pushFinding(findings, "error", `${path}.title`, "Question title is required.");
   if (title.length > 120) pushFinding(findings, "error", `${path}.title`, "Question title must fit the 120 character on-chain limit.");
@@ -89,6 +102,18 @@ export function lintAgentQuestion(
       `${path}.title`,
       "Rank-by-rating members should ask voters to rate one shown option, then compare ratings later.",
     );
+  }
+  if (templateId === FEATURE_ACCEPTANCE_TEMPLATE_ID) {
+    for (const key of FEATURE_ACCEPTANCE_REQUIRED_INPUTS) {
+      if (!templateInputText(templateInputs, key)) {
+        pushFinding(
+          findings,
+          "warning",
+          `${path}.templateInputs.${key}`,
+          "Feature acceptance tests should include expected behavior, test steps, and acceptance criteria.",
+        );
+      }
+    }
   }
   if (question.imageUrls !== undefined && hasInvalidHttpsUrlList(question.imageUrls)) {
     pushFinding(findings, "error", `${path}.imageUrls`, "Image URLs must be an array of public HTTPS URLs.");
@@ -133,7 +158,12 @@ export function lintAgentAskRequest(input: unknown): QuestionLintFinding[] {
   }
   questions.forEach((question, index) => {
     findings.push(
-      ...lintAgentQuestion(question, request.question ? "question" : `questions.${index}`, request.templateId),
+      ...lintAgentQuestion(
+        question,
+        request.question ? "question" : `questions.${index}`,
+        request.templateId,
+        request.templateInputs,
+      ),
     );
   });
 

@@ -359,7 +359,8 @@ of the architecture, not only sales copy.
 ### Phase 1: Evaluation Packaging Without Contract Changes
 
 - Rename/market the agent path as "Curyo Human Evals" in docs and SDK examples.
-- Add 5-8 eval-specific templates in `packages/agents/src/templates.ts`.
+- Maintain and extend the eval-specific templates in `packages/agents/src/templates.ts`,
+  including feature acceptance tests for public preview flows.
 - Add JSONL result export for settled asks and bundles.
 - Add batch quote/submit CLI examples for JSONL datasets.
 - Add docs for LangSmith, Label Studio, and generic CI integration patterns.
@@ -410,8 +411,8 @@ These are strong because they match Curyo's current agent and bounty mechanics:
 - Governance proposal review: "Is this proposal clear, actionable, and low-risk?"
 - Safety escalation: "Should this low-confidence output be blocked or sent to an
   expert?"
-- UI release review: "Does this new voting or wallet flow look understandable
-  enough to ship?"
+- Feature acceptance test: "Does this new voting or wallet flow work against
+  the specified test steps well enough to ship?"
 
 ## Risks And Non-Goals
 

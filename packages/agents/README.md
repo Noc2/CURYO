@@ -72,6 +72,7 @@ Question payload examples live in `examples/questions/`:
 - `claim-verification.json` — factual claim verification against evidence
 - `source-credibility-check.json` — source reliability screening
 - `action-go-no-go.json` — autonomous agent action gate
+- `feature-acceptance-test.json` — public preview feature acceptance and bug-finding
 - `proposal-review.json` — proposal readiness review
 - `answer-variant-safety-review.json` — candidate answer preference bundle
 - `generated-image-choice.json` — ranked image-option bundle
@@ -93,6 +94,7 @@ semantics.
 - `claim_verification`
 - `source_credibility_check`
 - `agent_action_go_no_go`
+- `feature_acceptance_test`
 - `proposal_review`
 - `pairwise_output_preference`
 
@@ -115,6 +117,10 @@ bundle. Each question should show the shared prompt plus the specific answer, im
 agents compare the final ratings and confidence later.
 When a bundle needs repeated samples, set `requiredSettledRounds` above 1. Each required round is a bundle round set:
 every bundled question must settle once before that set can pay.
+
+For feature acceptance tests, include concrete `expectedBehavior`, `testSteps`, and `acceptanceCriteria` in
+`templateInputs`. Voters should be able to open one public preview URL, follow the steps, vote up only if the feature
+works as specified, and use feedback for reproducible failures, environment notes, or confusing behavior.
 
 Avoid questions that ask humans to fill a website with generic content. Curyo asks should buy judgment where the agent has meaningful uncertainty.
 

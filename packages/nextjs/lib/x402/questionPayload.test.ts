@@ -97,6 +97,29 @@ test("parseX402QuestionRequest preserves selected agent templates in hashes", ()
   assert.notEqual(goNoGo.questions[0].resultSpecHash, generic.questions[0].resultSpecHash);
 });
 
+test("parseX402QuestionRequest anchors feature acceptance template metadata", () => {
+  const generic = parseX402QuestionRequest(VALID_REQUEST);
+  const featureAcceptance = parseX402QuestionRequest({
+    ...VALID_REQUEST,
+    templateId: "feature_acceptance_test",
+    templateInputs: {
+      acceptanceCriteria: "Vote up only if connect, refresh, and vote all work without manual recovery.",
+      expectedBehavior: "The wallet stays connected after refresh.",
+      testSteps: "1. Open preview. 2. Connect wallet. 3. Refresh. 4. Confirm wallet remains connected.",
+    },
+  });
+
+  assert.equal(featureAcceptance.questions[0].templateId, "feature_acceptance_test");
+  assert.equal(featureAcceptance.questions[0].templateVersion, 1);
+  assert.deepEqual(featureAcceptance.questions[0].templateInputs, {
+    acceptanceCriteria: "Vote up only if connect, refresh, and vote all work without manual recovery.",
+    expectedBehavior: "The wallet stays connected after refresh.",
+    testSteps: "1. Open preview. 2. Connect wallet. 3. Refresh. 4. Confirm wallet remains connected.",
+  });
+  assert.notEqual(featureAcceptance.questions[0].questionMetadataHash, generic.questions[0].questionMetadataHash);
+  assert.notEqual(featureAcceptance.questions[0].resultSpecHash, generic.questions[0].resultSpecHash);
+});
+
 test("parseX402QuestionRequest binds public target audience metadata into the payload", () => {
   const withoutAudience = parseX402QuestionRequest(VALID_REQUEST);
   const withAudience = parseX402QuestionRequest({
