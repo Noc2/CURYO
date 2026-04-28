@@ -269,7 +269,7 @@ contract SelectiveRevelationTest is VotingTestBase {
     // GRACE PERIOD EXPIRY
     // =========================================================================
 
-    /// @notice Unrevealed past-epoch votes block settlement until final grace, then settle if reveal quorum exists.
+    /// @notice Unrevealed past-epoch votes block settlement until reveal grace, then settle if reveal quorum exists.
     function test_FinalGraceExpiry_AllowsSettlementAndCleanupWhenRevealQuorumExists() public {
         uint256 contentId = _submitContent();
 
@@ -282,22 +282,15 @@ contract SelectiveRevelationTest is VotingTestBase {
         }
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
-        RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
+        uint256 revealGraceDeadline = engine.lastCommitRevealableAfter(contentId, roundId) + GRACE_PERIOD;
 
-        // Warp past epoch end + full grace period
-        vm.warp(r.startTime + EPOCH + GRACE_PERIOD + 1);
+        // Warp past the tlock-backed revealable timestamp + full grace period.
+        vm.warp(revealGraceDeadline + 1);
 
         // Only reveal 3 of 4 votes (enough for minVoters)
         _reveal(contentId, roundId, commitKeys[0], true, salts[0]);
         _reveal(contentId, roundId, commitKeys[1], true, salts[1]);
         _reveal(contentId, roundId, commitKeys[2], false, salts[2]);
-
-        vm.expectRevert(RoundVotingEngine.UnrevealedPastEpochVotes.selector);
-        engine.settleRound(contentId, roundId);
-
-        vm.warp(r.startTime + 7 days + GRACE_PERIOD + 1);
-        vm.expectRevert(RoundVotingEngine.ThresholdReached.selector);
-        engine.finalizeRevealFailedRound(contentId, roundId);
 
         engine.settleRound(contentId, roundId);
 
@@ -416,23 +409,18 @@ contract SelectiveRevelationTest is VotingTestBase {
         }
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
-        RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertEq(engine.roundRevealGracePeriodSnapshot(contentId, roundId), GRACE_PERIOD);
 
         ProtocolConfig cfg = ProtocolConfig(address(engine.protocolConfig()));
         vm.prank(owner);
         cfg.setRevealGracePeriod(2 hours);
 
-        vm.warp(r.startTime + EPOCH + GRACE_PERIOD + 1);
+        vm.warp(engine.lastCommitRevealableAfter(contentId, roundId) + GRACE_PERIOD + 1);
 
         _reveal(contentId, roundId, commitKeys[0], true, salts[0]);
         _reveal(contentId, roundId, commitKeys[1], true, salts[1]);
         _reveal(contentId, roundId, commitKeys[2], false, salts[2]);
 
-        vm.expectRevert(RoundVotingEngine.UnrevealedPastEpochVotes.selector);
-        engine.settleRound(contentId, roundId);
-
-        vm.warp(r.startTime + 7 days + GRACE_PERIOD + 1);
         engine.settleRound(contentId, roundId);
 
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
@@ -456,10 +444,10 @@ contract SelectiveRevelationTest is VotingTestBase {
         }
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
-        RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertEq(engine.roundRevealGracePeriodSnapshot(contentId, roundId), 2 hours);
 
-        vm.warp(r.startTime + EPOCH + GRACE_PERIOD + 1);
+        uint256 lastRevealableAfter = engine.lastCommitRevealableAfter(contentId, roundId);
+        vm.warp(lastRevealableAfter + GRACE_PERIOD + 1);
 
         _reveal(contentId, roundId, commitKeys[0], true, salts[0]);
         _reveal(contentId, roundId, commitKeys[1], true, salts[1]);
@@ -468,7 +456,7 @@ contract SelectiveRevelationTest is VotingTestBase {
         vm.expectRevert(RoundVotingEngine.UnrevealedPastEpochVotes.selector);
         engine.settleRound(contentId, roundId);
 
-        vm.warp(r.startTime + 7 days + 2 hours + 1);
+        vm.warp(lastRevealableAfter + 2 hours + 1);
         engine.settleRound(contentId, roundId);
 
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);

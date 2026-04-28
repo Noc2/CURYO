@@ -1189,8 +1189,8 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         _registerFrontend(frontend1);
         uint256 contentId = _submitContent();
 
-        // voter1 commits but never reveals. Before final grace this blocks settlement; after final
-        // grace the honest revealed quorum settles and voter1's stake is cleaned into the reserve.
+        // voter1 commits but never reveals. After per-commit reveal grace, the honest revealed
+        // quorum settles and voter1's stake is cleaned into the reserve.
         _commit(voter1, contentId, true, STAKE);
 
         // voter2, voter3, voter4 commit and reveal (3 = minVoters)
@@ -1199,21 +1199,14 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         (bytes32 ck4, bytes32 s4) = _commit(voter4, contentId, true, STAKE);
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
+        uint256 revealGracePeriod = ProtocolConfig(protocolConfigAddress).revealGracePeriod();
 
-        // Warp past epoch + reveal grace period.
-        RoundLib.Round memory rPU1start = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(rPU1start.startTime + EPOCH + ProtocolConfig(protocolConfigAddress).revealGracePeriod() + 1);
+        // Warp past the tlock-backed revealable timestamp + reveal grace period.
+        vm.warp(engine.lastCommitRevealableAfter(contentId, roundId) + revealGracePeriod + 1);
 
         _reveal(contentId, roundId, ck2, true, s2);
         _reveal(contentId, roundId, ck3, false, s3);
         _reveal(contentId, roundId, ck4, true, s4);
-
-        vm.expectRevert(RoundVotingEngine.UnrevealedPastEpochVotes.selector);
-        engine.settleRound(contentId, roundId);
-
-        vm.warp(rPU1start.startTime + 7 days + ProtocolConfig(protocolConfigAddress).revealGracePeriod() + 1);
-        vm.expectRevert(RoundVotingEngine.ThresholdReached.selector);
-        engine.finalizeRevealFailedRound(contentId, roundId);
 
         engine.settleRound(contentId, roundId);
         RoundLib.Round memory settledRound = RoundEngineReadHelpers.round(engine, contentId, roundId);
@@ -1269,16 +1262,12 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         (bytes32 ck5, bytes32 s5) = _commit(voter5, contentId, false, STAKE);
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
-        RoundLib.Round memory roundStart = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(roundStart.startTime + EPOCH + ProtocolConfig(protocolConfigAddress).revealGracePeriod() + 1);
+        uint256 revealGracePeriod = ProtocolConfig(protocolConfigAddress).revealGracePeriod();
+        vm.warp(engine.lastCommitRevealableAfter(contentId, roundId) + revealGracePeriod + 1);
         _reveal(contentId, roundId, ck3, true, s3);
         _reveal(contentId, roundId, ck4, true, s4);
         _reveal(contentId, roundId, ck5, false, s5);
 
-        vm.expectRevert(RoundVotingEngine.UnrevealedPastEpochVotes.selector);
-        engine.settleRound(contentId, roundId);
-
-        vm.warp(roundStart.startTime + 7 days + ProtocolConfig(protocolConfigAddress).revealGracePeriod() + 1);
         engine.settleRound(contentId, roundId);
         assertEq(engine.roundUnrevealedCleanupRemaining(contentId, roundId), 2);
 
@@ -1341,16 +1330,12 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         (bytes32 ck5, bytes32 s5) = _commit(voter5, contentId, false, STAKE);
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
-        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(round.startTime + EPOCH + ProtocolConfig(protocolConfigAddress).revealGracePeriod() + 1);
+        uint256 revealGracePeriod = ProtocolConfig(protocolConfigAddress).revealGracePeriod();
+        vm.warp(engine.lastCommitRevealableAfter(contentId, roundId) + revealGracePeriod + 1);
         _reveal(contentId, roundId, ck3, true, s3);
         _reveal(contentId, roundId, ck4, true, s4);
         _reveal(contentId, roundId, ck5, false, s5);
 
-        vm.expectRevert(RoundVotingEngine.UnrevealedPastEpochVotes.selector);
-        engine.settleRound(contentId, roundId);
-
-        vm.warp(round.startTime + 7 days + ProtocolConfig(protocolConfigAddress).revealGracePeriod() + 1);
         engine.settleRound(contentId, roundId);
 
         uint256 keeperBalBefore = hrepToken.balanceOf(keeper);

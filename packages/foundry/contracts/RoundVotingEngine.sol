@@ -752,7 +752,7 @@ contract RoundVotingEngine is
         // epochUnrevealedCount entries exist beyond startTime + maxDuration + epochDuration.
         uint256 unrevealedPastEpochCount = _pastEpochUnrevealedCount(contentId, roundId, round, roundCfg);
         if (unrevealedPastEpochCount > 0) {
-            if (!_isFinalRevealGraceElapsed(contentId, roundId, round)) revert UnrevealedPastEpochVotes();
+            if (!_isSettlementRevealGraceElapsed(contentId, roundId, round)) revert UnrevealedPastEpochVotes();
             roundUnrevealedCleanupRemaining[contentId][roundId] = unrevealedPastEpochCount;
         }
 
@@ -1091,6 +1091,24 @@ contract RoundVotingEngine is
         if (finalizationTime == 0) return false;
 
         return block.timestamp >= finalizationTime;
+    }
+
+    function _isSettlementRevealGraceElapsed(uint256 contentId, uint256 roundId, RoundLib.Round storage round)
+        internal
+        view
+        returns (bool)
+    {
+        uint256 lastRevealableAt = lastCommitRevealableAfter[contentId][roundId];
+        if (lastRevealableAt == 0) return false;
+
+        uint256 revealBase = lastRevealableAt;
+        if (round.thresholdReachedAt == 0) {
+            RoundLib.RoundConfig memory roundCfg = _getRoundConfig(contentId, roundId);
+            uint256 votingWindowEnd = uint256(round.startTime) + roundCfg.maxDuration;
+            if (votingWindowEnd > revealBase) revealBase = votingWindowEnd;
+        }
+
+        return block.timestamp >= revealBase + _getRoundRevealGracePeriod(contentId, roundId);
     }
 
     function _pastEpochUnrevealedCount(
