@@ -450,21 +450,21 @@ export function AgentSubmissionPanel() {
 
   const handleRotateToken = useCallback(async () => {
     if (!selectedPolicy) {
-      notification.warning("Save the managed agent before creating an MCP token.");
+      notification.warning("Save the managed agent before creating an access token.");
       return;
     }
     const result = await agentPolicies.rotateToken(selectedPolicy.id);
     if (result.ok && result.token) {
       setGeneratedToken(result.token);
       setGeneratedMcpConfig(JSON.stringify(result.mcpConfig, null, 2));
-      notification.success(selectedPolicy.hasToken ? "MCP token rotated." : "MCP token created.");
+      notification.success(selectedPolicy.hasToken ? "Access token rotated." : "Access token created.");
       return;
     }
     if (result.reason === "rejected") {
-      notification.warning("Signature rejected. MCP token was not changed.");
+      notification.warning("Signature rejected. Access token was not changed.");
       return;
     }
-    notification.error(result.error || "Failed to rotate MCP token.");
+    notification.error(result.error || "Failed to rotate access token.");
   }, [agentPolicies, selectedPolicy]);
 
   const handleRevokeToken = useCallback(async () => {
@@ -473,14 +473,14 @@ export function AgentSubmissionPanel() {
     if (result.ok) {
       setGeneratedToken(null);
       setGeneratedMcpConfig(null);
-      notification.success("MCP token revoked.");
+      notification.success("Access token revoked.");
       return;
     }
     if (result.reason === "rejected") {
-      notification.warning("Signature rejected. MCP token remains active.");
+      notification.warning("Signature rejected. Access token remains active.");
       return;
     }
-    notification.error(result.error || "Failed to revoke MCP token.");
+    notification.error(result.error || "Failed to revoke access token.");
   }, [agentPolicies, selectedPolicy]);
 
   const handleUpdatePolicyStatus = useCallback(
@@ -566,7 +566,7 @@ export function AgentSubmissionPanel() {
     <>
       <dl className="mt-4 space-y-3 text-sm">
         <div className="flex items-center justify-between gap-4">
-          <dt className="text-base-content/60">Token</dt>
+          <dt className="text-base-content/60">Access token</dt>
           <dd>{selectedPolicy.hasToken ? "Active" : "Not created"}</dd>
         </div>
         <div className="flex items-center justify-between gap-4">
@@ -583,7 +583,7 @@ export function AgentSubmissionPanel() {
           onClick={() => void handleRotateToken()}
         >
           <KeyIcon className="h-4 w-4" />
-          {selectedPolicy.hasToken ? "Rotate token" : "Create token"}
+          {selectedPolicy.hasToken ? "Rotate access token" : "Create access token"}
         </button>
         <button
           type="button"
@@ -591,18 +591,21 @@ export function AgentSubmissionPanel() {
           disabled={agentPolicies.isTokenBusy || !selectedPolicy.hasToken}
           onClick={() => void handleRevokeToken()}
         >
-          Revoke token
+          Revoke access token
         </button>
       </div>
 
       {generatedToken ? (
         <div className="mt-4 rounded-lg border border-success/30 bg-success/10 p-3">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-sm font-semibold text-success">New token</span>
+            <span className="text-sm font-semibold text-success">New access token</span>
             <button type="button" className="btn btn-outline btn-xs" onClick={() => void handleCopy(generatedToken)}>
-              Copy
+              Copy token
             </button>
           </div>
+          <p className="mt-1 text-xs text-base-content/70">
+            This token is shown once. Copy it now, or rotate the token later if you lose it.
+          </p>
           <p className="mt-2 break-all font-mono text-xs">{generatedToken}</p>
         </div>
       ) : null}
@@ -610,13 +613,13 @@ export function AgentSubmissionPanel() {
       {generatedMcpConfig ? (
         <div className="mt-3 rounded-lg border border-base-300 bg-base-100/60 p-3">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-sm font-semibold">MCP config</span>
+            <span className="text-sm font-semibold">Agent MCP config</span>
             <button
               type="button"
               className="btn btn-outline btn-xs"
               onClick={() => void handleCopy(generatedMcpConfig)}
             >
-              Copy
+              Copy config
             </button>
           </div>
           <pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap break-words rounded bg-black p-3 text-xs text-white">
@@ -627,7 +630,7 @@ export function AgentSubmissionPanel() {
     </>
   ) : (
     <p className="mt-4 text-sm leading-relaxed text-base-content/65">
-      Save or unlock a managed agent policy to create a token.
+      Save or unlock a managed agent policy to create an access token.
     </p>
   );
 
@@ -808,8 +811,8 @@ export function AgentSubmissionPanel() {
             <div className="surface-card rounded-lg p-5">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold uppercase tracking-wide text-base-content/50">MCP Access</p>
-                  <h3 className="mt-1 text-lg font-semibold">Token lifecycle</h3>
+                  <p className="text-sm font-semibold uppercase tracking-wide text-base-content/50">Agent Access</p>
+                  <h3 className="mt-1 text-lg font-semibold">Access token</h3>
                 </div>
                 <div className="flex flex-wrap items-center justify-end gap-2">
                   <Link href="/docs/ai#mcp-adapter-shape" className="link link-primary text-sm">
