@@ -331,10 +331,10 @@ contract FormalVerification_GovernanceTest is Test {
         assertEq(token.balanceOf(address(300)), 100e6, "Transfer succeeds after lock");
     }
 
-    // ==================== Test 10: Governance Lock Allows Content Voting ====================
+    // ==================== Test 10: Governance Lock Blocks Content Voting ====================
 
-    /// @notice Governance-locked tokens can still be used for content voting (transferable to VotingEngine).
-    function test_GovernanceLock_AllowsContentVoting() public {
+    /// @notice Governance-locked tokens cannot be staked into content voting.
+    function test_GovernanceLock_BlocksContentVoting() public {
         // Set up a mock voting engine as an allowed content voting contract
         address mockVotingEngine = address(500);
         vm.prank(deployer);
@@ -359,14 +359,15 @@ contract FormalVerification_GovernanceTest is Test {
         vm.expectRevert("Exceeds transferable balance (governance locked)");
         token.transfer(address(300), 100e6);
 
-        // Transfer to voting engine (content voting) is allowed
+        // Transfer to voting engine (content voting) is blocked while locked.
         vm.prank(voter);
         token.approve(mockVotingEngine, 100e6);
 
         vm.prank(mockVotingEngine);
+        vm.expectRevert("Exceeds transferable balance (governance locked)");
         token.transferFrom(voter, mockVotingEngine, 100e6);
 
-        assertEq(token.balanceOf(mockVotingEngine), 100e6, "Content voting works during governance lock");
+        assertEq(token.balanceOf(mockVotingEngine), 0, "Content voting stake blocked during governance lock");
     }
 
     /// @notice Arbitrary approved spenders cannot bypass governance locks by pushing into content-voting contracts.

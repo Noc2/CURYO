@@ -37,7 +37,7 @@ contract HumanReputation is ERC20, ERC1363, ERC20Permit, ERC20Votes, AccessContr
     /// @notice Governor contract authorized to lock tokens
     address public governor;
 
-    /// @notice Content voting contracts that can receive locked tokens
+    /// @notice Content voting contracts wired during deployment
     address public votingEngine;
     address public contentRegistry;
 
@@ -72,7 +72,7 @@ contract HumanReputation is ERC20, ERC1363, ERC20Permit, ERC20Votes, AccessContr
         emit GovernorSet(_governor);
     }
 
-    /// @notice Set the content voting contracts that can receive locked tokens
+    /// @notice Set the content voting contract references
     /// @param _votingEngine The voting engine address
     /// @param _contentRegistry The content registry address
     function setContentVotingContracts(address _votingEngine, address _contentRegistry) external onlyRole(CONFIG_ROLE) {
@@ -170,28 +170,11 @@ contract HumanReputation is ERC20, ERC1363, ERC20Permit, ERC20Votes, AccessContr
 
     // --- ERC20Votes Overrides ---
 
-    /// @dev Check governance locks on transfers, but allow only trusted content-voting paths.
-    ///      AUDIT NOTE (L-1): This means the same tokens can count for governance voting power
-    ///      (historical snapshot) and content voting stakes simultaneously. This is by design —
-    ///      governance uses snapshotted balances, so staking after the snapshot doesn't double-count.
+    /// @dev Check governance locks on all transfers, including transfers into protocol staking contracts.
     function _update(address from, address to, uint256 value) internal override(ERC20, ERC20Votes) {
         // Check governance locks for regular transfers (not mints/burns)
         if (from != address(0) && to != address(0)) {
-            bool toVotingEngine = to == votingEngine;
-            bool toContentRegistry = to == contentRegistry;
-            bool toContentVotingContract = toVotingEngine || toContentRegistry;
-
-            // Governance lock bypass is restricted to:
-            // 1) self-initiated transfer/transferAndCall into a content-voting contract, or
-            // 2) pull-based transferFrom initiated by the matching protocol contract itself.
-            bool governanceBypassAllowed = toContentVotingContract
-                && (msg.sender == from
-                    || (toVotingEngine && msg.sender == votingEngine)
-                    || (toContentRegistry && msg.sender == contentRegistry));
-
-            if (!governanceBypassAllowed) {
-                require(value <= getTransferableBalance(from), "Exceeds transferable balance (governance locked)");
-            }
+            require(value <= getTransferableBalance(from), "Exceeds transferable balance (governance locked)");
         }
 
         super._update(from, to, value);

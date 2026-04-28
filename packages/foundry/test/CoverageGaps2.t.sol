@@ -1422,27 +1422,28 @@ contract HumanReputationCoverageTest is Test {
         assertEq(hrep.balanceOf(user1), 5_000e6);
     }
 
-    // --- Transfer to votingEngine allowed while locked ---
+    // --- Transfer to votingEngine blocked while locked ---
 
     function test_TransferToVotingEngineWhileLocked() public {
         vm.prank(governor);
         hrep.lockForGovernance(user1, 10_000e6);
 
-        // Transfer to voting engine should be allowed despite full lock
         vm.prank(user1);
+        vm.expectRevert("Exceeds transferable balance (governance locked)");
         hrep.transfer(votingEngine, 5_000e6);
-        assertEq(hrep.balanceOf(votingEngine), 5_000e6);
+        assertEq(hrep.balanceOf(votingEngine), 0);
     }
 
-    // --- Transfer to contentRegistry allowed while locked ---
+    // --- Transfer to contentRegistry blocked while locked ---
 
     function test_TransferToContentRegistryWhileLocked() public {
         vm.prank(governor);
         hrep.lockForGovernance(user1, 10_000e6);
 
         vm.prank(user1);
+        vm.expectRevert("Exceeds transferable balance (governance locked)");
         hrep.transfer(contentRegistry, 5_000e6);
-        assertEq(hrep.balanceOf(contentRegistry), 5_000e6);
+        assertEq(hrep.balanceOf(contentRegistry), 0);
     }
 
     // --- Third-party transferFrom to content-voting contracts blocked while locked ---
@@ -1547,18 +1548,12 @@ contract HumanReputationCoverageTest is Test {
         assertEq(hrep.getTransferableBalance(user1), 10_000e6);
     }
 
-    // --- getTransferableBalance: locked more than balance ---
+    // --- getTransferableBalance: fully locked balance ---
 
-    function test_GetTransferableBalanceLockedMoreThanBalance() public {
-        // Lock 10,000, transfer some away, locked > balance
+    function test_GetTransferableBalanceFullyLocked() public {
         vm.prank(governor);
         hrep.lockForGovernance(user1, 10_000e6);
 
-        // Transfer to voting engine (allowed)
-        vm.prank(user1);
-        hrep.transfer(votingEngine, 5_000e6);
-
-        // Now balance is 5,000 but locked is 10,000 → transferable = 0
         assertEq(hrep.getTransferableBalance(user1), 0);
     }
 

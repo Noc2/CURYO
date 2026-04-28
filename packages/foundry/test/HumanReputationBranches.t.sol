@@ -88,26 +88,22 @@ contract HumanReputationBranchesTest is Test {
         hrep.transfer(user2, 300e6);
     }
 
-    function test_Transfer_GovernanceLocked_ToVotingEngine_Succeeds() public {
+    function test_Transfer_GovernanceLocked_ToVotingEngine_Reverts() public {
         vm.prank(mockGovernor);
         hrep.lockForGovernance(user1, 800e6);
 
-        // Transfer TO voting engine is allowed even if locked
         vm.prank(user1);
+        vm.expectRevert("Exceeds transferable balance (governance locked)");
         hrep.transfer(mockVotingEngine, 900e6);
-
-        assertEq(hrep.balanceOf(mockVotingEngine), 900e6);
     }
 
-    function test_Transfer_GovernanceLocked_ToContentRegistry_Succeeds() public {
+    function test_Transfer_GovernanceLocked_ToContentRegistry_Reverts() public {
         vm.prank(mockGovernor);
         hrep.lockForGovernance(user1, 800e6);
 
-        // Transfer TO content registry is allowed even if locked
         vm.prank(user1);
+        vm.expectRevert("Exceeds transferable balance (governance locked)");
         hrep.transfer(mockContentRegistry, 900e6);
-
-        assertEq(hrep.balanceOf(mockContentRegistry), 900e6);
     }
 
     function test_TransferFrom_GovernanceLocked_ThirdPartyToVotingEngine_Reverts() public {
@@ -124,7 +120,7 @@ contract HumanReputationBranchesTest is Test {
         hrep.transferFrom(user1, mockVotingEngine, 900e6);
     }
 
-    function test_TransferFrom_GovernanceLocked_VotingEnginePull_Succeeds() public {
+    function test_TransferFrom_GovernanceLocked_VotingEnginePull_Reverts() public {
         vm.prank(mockGovernor);
         hrep.lockForGovernance(user1, 800e6);
 
@@ -132,12 +128,11 @@ contract HumanReputationBranchesTest is Test {
         hrep.approve(mockVotingEngine, 900e6);
 
         vm.prank(mockVotingEngine);
+        vm.expectRevert("Exceeds transferable balance (governance locked)");
         hrep.transferFrom(user1, mockVotingEngine, 900e6);
-
-        assertEq(hrep.balanceOf(mockVotingEngine), 900e6);
     }
 
-    function test_TransferFrom_GovernanceLocked_ContentRegistryPull_Succeeds() public {
+    function test_TransferFrom_GovernanceLocked_ContentRegistryPull_Reverts() public {
         vm.prank(mockGovernor);
         hrep.lockForGovernance(user1, 800e6);
 
@@ -145,9 +140,8 @@ contract HumanReputationBranchesTest is Test {
         hrep.approve(mockContentRegistry, 900e6);
 
         vm.prank(mockContentRegistry);
+        vm.expectRevert("Exceeds transferable balance (governance locked)");
         hrep.transferFrom(user1, mockContentRegistry, 900e6);
-
-        assertEq(hrep.balanceOf(mockContentRegistry), 900e6);
     }
 
     function test_Transfer_GovernanceLocked_PartialTransfer_Succeeds() public {
