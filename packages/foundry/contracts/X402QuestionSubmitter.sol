@@ -33,6 +33,8 @@ contract X402QuestionSubmitter {
     using SafeERC20 for IERC20;
 
     uint8 internal constant REWARD_ASSET_USDC = 1;
+    bytes32 internal constant X402_QUESTION_PAYMENT_DOMAIN =
+        keccak256("curyo-x402-question-payment-v2");
 
     ContentRegistry public immutable registry;
     IERC20 public immutable usdcToken;
@@ -138,7 +140,7 @@ contract X402QuestionSubmitter {
     ) public view returns (bytes32) {
         return keccak256(
             abi.encode(
-                "curyo-x402-question-payment-v1",
+                X402_QUESTION_PAYMENT_DOMAIN,
                 block.chainid,
                 address(registry),
                 questionRewardPoolEscrow,
@@ -148,27 +150,62 @@ contract X402QuestionSubmitter {
                 value,
                 validAfter,
                 validBefore,
-                metadata.url,
-                imageUrls,
-                videoUrl,
-                metadata.title,
-                metadata.description,
-                metadata.tags,
+                _hashSubmissionPayload(metadata, imageUrls, videoUrl, salt),
+                _hashRewardTerms(rewardTerms),
+                _hashRoundConfig(roundConfig),
+                spec.questionMetadataHash,
+                spec.resultSpecHash
+            )
+        );
+    }
+
+    function _hashSubmissionPayload(
+        ContentRegistry.SubmissionMetadata memory metadata,
+        string[] memory imageUrls,
+        string memory videoUrl,
+        bytes32 salt
+    ) private pure returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                keccak256(bytes(metadata.url)),
+                _hashStringArray(imageUrls),
+                keccak256(bytes(videoUrl)),
+                keccak256(bytes(metadata.title)),
+                keccak256(bytes(metadata.description)),
+                keccak256(bytes(metadata.tags)),
                 metadata.categoryId,
-                salt,
+                salt
+            )
+        );
+    }
+
+    function _hashRewardTerms(ContentRegistry.SubmissionRewardTerms memory rewardTerms) private pure returns (bytes32) {
+        return keccak256(
+            abi.encode(
                 rewardTerms.asset,
                 rewardTerms.amount,
                 rewardTerms.requiredVoters,
                 rewardTerms.requiredSettledRounds,
                 rewardTerms.bountyClosesAt,
-                rewardTerms.feedbackClosesAt,
-                roundConfig.epochDuration,
-                roundConfig.maxDuration,
-                roundConfig.minVoters,
-                roundConfig.maxVoters,
-                spec.questionMetadataHash,
-                spec.resultSpecHash
+                rewardTerms.feedbackClosesAt
             )
         );
+    }
+
+    function _hashRoundConfig(RoundLib.RoundConfig memory roundConfig) private pure returns (bytes32) {
+        return keccak256(
+            abi.encode(roundConfig.epochDuration, roundConfig.maxDuration, roundConfig.minVoters, roundConfig.maxVoters)
+        );
+    }
+
+    function _hashStringArray(string[] memory values) private pure returns (bytes32) {
+        bytes32[] memory valueHashes = new bytes32[](values.length);
+        for (uint256 i = 0; i < values.length;) {
+            valueHashes[i] = keccak256(bytes(values[i]));
+            unchecked {
+                ++i;
+            }
+        }
+        return keccak256(abi.encodePacked(valueHashes));
     }
 }
