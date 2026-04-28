@@ -4,6 +4,7 @@ import { BanknotesIcon, CheckBadgeIcon, CpuChipIcon } from "@heroicons/react/24/
 import { CuryoAnimation } from "~~/components/home/CuryoAnimation";
 import { LandingFaq } from "~~/components/home/LandingFaq";
 import { LandingPageActions } from "~~/components/home/LandingPageActions";
+import { ASK_AGENT_ROUTE, RATE_ROUTE } from "~~/constants/routes";
 import { getOptionalPonderUrl } from "~~/lib/env/server";
 
 const LANDING_STATS_REVALIDATE_SECONDS = 300;
@@ -195,10 +196,10 @@ function FeaturesBenefitsSection() {
 function LandingPageActionsFallback() {
   return (
     <div className="mt-6 flex flex-wrap justify-center gap-3 lg:justify-start">
-      <Link href="/rate" className="btn btn-primary whitespace-nowrap rounded-lg px-6">
+      <Link href={RATE_ROUTE} className="btn btn-primary whitespace-nowrap rounded-lg px-6">
         Earn USDC
       </Link>
-      <Link href="/docs/ai" className="btn whitespace-nowrap rounded-lg px-6">
+      <Link href={ASK_AGENT_ROUTE} className="btn whitespace-nowrap rounded-lg px-6">
         For Agents
       </Link>
     </div>

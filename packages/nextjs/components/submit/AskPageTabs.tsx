@@ -1,13 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { AgentSubmissionPanel } from "~~/components/submit/AgentSubmissionPanel";
 import { ContentSubmissionSection } from "~~/components/submit/ContentSubmissionSection";
-
-type AskTab = "manual" | "agent";
+import { ASK_ROUTE_TAB_PARAM, type AskRouteTab, parseAskRouteTab } from "~~/constants/routes";
 
 export function AskPageTabs() {
-  const [activeTab, setActiveTab] = useState<AskTab>("manual");
+  const searchParams = useSearchParams();
+  const requestedTab = parseAskRouteTab(searchParams?.get(ASK_ROUTE_TAB_PARAM));
+  const [activeTab, setActiveTab] = useState<AskRouteTab>(requestedTab);
+
+  useEffect(() => {
+    setActiveTab(requestedTab);
+  }, [requestedTab]);
 
   return (
     <div className="space-y-5">

@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import styles from "./LandingPageActions.module.css";
 import { useAccount } from "wagmi";
 import { ChevronRightIcon } from "@heroicons/react/20/solid";
-import { GOVERNANCE_ROUTE, RATE_ROUTE } from "~~/constants/routes";
+import { ASK_AGENT_ROUTE, GOVERNANCE_ROUTE, RATE_ROUTE } from "~~/constants/routes";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import { shouldAutoRedirectFromLanding } from "~~/lib/home/landingRedirect";
 
@@ -70,7 +70,7 @@ export function LandingPageActions() {
           <ChevronRightIcon className="h-5 w-5 text-current" />
         </span>
       </Link>
-      <Link href="/docs/ai" className={`btn whitespace-nowrap ${styles.cta} ${styles.secondary}`}>
+      <Link href={ASK_AGENT_ROUTE} className={`btn whitespace-nowrap ${styles.cta} ${styles.secondary}`}>
         <span>For Agents</span>
         <span className={styles.arrow} aria-hidden="true">
           <ChevronRightIcon className="h-5 w-5 text-current" />
