@@ -2127,13 +2127,14 @@ export function ContentSubmissionSection() {
   return (
     <>
       <div className="surface-card rounded-2xl p-6 space-y-5">
+        <div>
+          <h1 className={surfaceSectionHeadingClassName}>{pageHeading}</h1>
+        </div>
+
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className={surfaceSectionHeadingClassName}>{pageHeading}</h1>
-          </div>
-          <label
-            className={`flex flex-wrap items-center gap-x-3 gap-y-1 sm:justify-end ${surfaceSectionHeadingClassName}`}
-          >
+          {submissionStepIndicator}
+
+          <label className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium text-base-content/55 sm:justify-end">
             <span className="flex items-center gap-2">
               Number of Questions
               <InfoTooltip text="Choose how many separate questions voters must answer in this submission. The bounty is split across all questions." />
@@ -2145,13 +2146,11 @@ export function ContentSubmissionSection() {
               step={1}
               value={questionCount}
               onChange={event => handleQuestionCountChange(event.target.value)}
-              className="h-10 w-14 rounded-lg border border-base-content/25 bg-base-100 px-2 text-center text-2xl font-semibold leading-none text-base-content shadow-inner outline-none transition-colors hover:border-base-content/40 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
+              className="h-8 w-11 rounded-md border border-base-content/25 bg-base-100 px-2 text-center text-base font-semibold leading-none text-base-content shadow-inner outline-none transition-colors hover:border-base-content/40 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
               aria-label="Number of questions"
             />
           </label>
         </div>
-
-        {submissionStepIndicator}
       </div>
 
       <div className="surface-card rounded-2xl p-6" style={{ overflow: "visible" }}>
