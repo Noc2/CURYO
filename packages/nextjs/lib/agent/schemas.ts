@@ -314,7 +314,7 @@ export const agentQuestionStatusOutputSchema = {
     rewardPoolId: { type: ["string", "null"] },
     resultTool: { type: ["string", "null"] },
     status: {
-      enum: ["not_found", "awaiting_wallet_signature", "payment_settled", "submitting", "submitted", "failed"],
+      enum: ["not_found", "awaiting_wallet_signature", "submitted", "failed"],
       type: "string",
     },
     terminal: { type: "boolean" },

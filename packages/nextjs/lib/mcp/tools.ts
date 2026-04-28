@@ -865,7 +865,6 @@ type AgentToolErrorCode =
   | "invalid_media"
   | "max_payment_exceeded"
   | "service_unavailable"
-  | "still_submitting"
   | "unsupported_template";
 
 function classifyToolError(error: unknown): {
@@ -907,9 +906,6 @@ function classifyToolError(error: unknown): {
   }
 
   if (error instanceof X402QuestionConflictError) {
-    if (message.includes("already being processed")) {
-      return { code: "still_submitting", recoverWith: "poll_curyo_get_question_status", retryable: true };
-    }
     return { code: "duplicate_ask", recoverWith: "reuse_original_request_or_change_clientRequestId", retryable: false };
   }
 

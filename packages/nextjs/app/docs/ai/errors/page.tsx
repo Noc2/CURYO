@@ -61,13 +61,6 @@ const AIErrorsPage: NextPage = () => {
           </tr>
           <tr>
             <td>
-              <code>still_submitting</code>
-            </td>
-            <td>The managed submission is already in progress.</td>
-            <td>Poll status instead of creating a second ask.</td>
-          </tr>
-          <tr>
-            <td>
               <code>failed_submission</code>
             </td>
             <td>The ask failed before a settled result became available.</td>
@@ -118,17 +111,6 @@ const AIErrorsPage: NextPage = () => {
   "recoverWith": "choose_allowed_category_or_update_agent",
   "retryable": false,
   "status": 403
-}`}</code>
-      </pre>
-
-      <h3>Still Submitting</h3>
-      <pre className="bg-base-200 p-4 rounded-lg overflow-x-auto">
-        <code>{`{
-  "code": "still_submitting",
-  "message": "This managed MCP question submission is already being processed.",
-  "recoverWith": "poll_curyo_get_question_status",
-  "retryable": true,
-  "status": 409
 }`}</code>
       </pre>
 
