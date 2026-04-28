@@ -1,22 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
-import { TransientSlot } from "@openzeppelin/contracts/utils/TransientSlot.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import { ICategoryRegistry } from "./interfaces/ICategoryRegistry.sol";
-import { IRoundVotingEngine } from "./interfaces/IRoundVotingEngine.sol";
-import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
-import { RoundLib } from "./libraries/RoundLib.sol";
-import { RatingLib } from "./libraries/RatingLib.sol";
-import { RatingMath } from "./libraries/RatingMath.sol";
-import { ProtocolConfig } from "./ProtocolConfig.sol";
-import { SubmissionMediaValidator } from "./SubmissionMediaValidator.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+import {TransientSlot} from "@openzeppelin/contracts/utils/TransientSlot.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {ICategoryRegistry} from "./interfaces/ICategoryRegistry.sol";
+import {IRoundVotingEngine} from "./interfaces/IRoundVotingEngine.sol";
+import {IVoterIdNFT} from "./interfaces/IVoterIdNFT.sol";
+import {RoundLib} from "./libraries/RoundLib.sol";
+import {RatingLib} from "./libraries/RatingLib.sol";
+import {RatingMath} from "./libraries/RatingMath.sol";
+import {ProtocolConfig} from "./ProtocolConfig.sol";
+import {SubmissionMediaValidator} from "./SubmissionMediaValidator.sol";
 
 interface IQuestionRewardPoolEscrow {
     function createSubmissionRewardPoolFromRegistry(
@@ -1191,30 +1191,59 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         RoundLib.RoundConfig memory roundConfig,
         QuestionSpecCommitment memory spec
     ) internal pure returns (bytes32) {
-        return keccak256(
-            abi.encode(
-                submissionKey,
-                mediaHash,
-                title,
-                description,
-                tags,
-                categoryId,
-                salt,
-                submitter,
-                rewardTerms.asset,
-                rewardTerms.amount,
-                rewardTerms.requiredVoters,
-                rewardTerms.requiredSettledRounds,
-                rewardTerms.bountyClosesAt,
-                rewardTerms.feedbackClosesAt,
-                roundConfig.epochDuration,
-                roundConfig.maxDuration,
-                roundConfig.minVoters,
-                roundConfig.maxVoters,
-                spec.questionMetadataHash,
-                spec.resultSpecHash
-            )
-        );
+        uint256 titleTailLength = _encodedStringTailLength(title);
+        uint256 descriptionTailLength = _encodedStringTailLength(description);
+        uint256 titleOffset = 20 * 32;
+        uint256 descriptionOffset = titleOffset + titleTailLength;
+        uint256 tagsOffset = descriptionOffset + descriptionTailLength;
+        bytes memory encoded = new bytes(tagsOffset + _encodedStringTailLength(tags));
+
+        _writeUint(encoded, 0, uint256(submissionKey));
+        _writeUint(encoded, 32, uint256(mediaHash));
+        _writeUint(encoded, 2 * 32, titleOffset);
+        _writeUint(encoded, 3 * 32, descriptionOffset);
+        _writeUint(encoded, 4 * 32, tagsOffset);
+        _writeUint(encoded, 5 * 32, categoryId);
+        _writeUint(encoded, 6 * 32, uint256(salt));
+        _writeUint(encoded, 7 * 32, uint256(uint160(submitter)));
+        _writeUint(encoded, 8 * 32, uint256(rewardTerms.asset));
+        _writeUint(encoded, 9 * 32, rewardTerms.amount);
+        _writeUint(encoded, 10 * 32, rewardTerms.requiredVoters);
+        _writeUint(encoded, 11 * 32, rewardTerms.requiredSettledRounds);
+        _writeUint(encoded, 12 * 32, rewardTerms.bountyClosesAt);
+        _writeUint(encoded, 13 * 32, rewardTerms.feedbackClosesAt);
+        _writeUint(encoded, 14 * 32, uint256(roundConfig.epochDuration));
+        _writeUint(encoded, 15 * 32, uint256(roundConfig.maxDuration));
+        _writeUint(encoded, 16 * 32, uint256(roundConfig.minVoters));
+        _writeUint(encoded, 17 * 32, uint256(roundConfig.maxVoters));
+        _writeUint(encoded, 18 * 32, uint256(spec.questionMetadataHash));
+        _writeUint(encoded, 19 * 32, uint256(spec.resultSpecHash));
+        _writeStringTail(encoded, titleOffset, title);
+        _writeStringTail(encoded, descriptionOffset, description);
+        _writeStringTail(encoded, tagsOffset, tags);
+        return keccak256(encoded);
+    }
+
+    function _encodedStringTailLength(string memory value) internal pure returns (uint256) {
+        return ((bytes(value).length + 63) / 32) * 32;
+    }
+
+    function _writeUint(bytes memory encoded, uint256 offset, uint256 value) internal pure {
+        assembly ("memory-safe") {
+            mstore(add(add(encoded, 32), offset), value)
+        }
+    }
+
+    function _writeStringTail(bytes memory encoded, uint256 offset, string memory value) internal pure {
+        bytes memory raw = bytes(value);
+        uint256 rawLength = raw.length;
+        _writeUint(encoded, offset, rawLength);
+        for (uint256 i = 0; i < rawLength;) {
+            encoded[offset + 32 + i] = raw[i];
+            unchecked {
+                ++i;
+            }
+        }
     }
 
     function _computeQuestionBundleHash(
