@@ -672,10 +672,12 @@ export function VotingQuestionCard({
                       </div>
                     </div>
                   ) : compact ? (
-                    <div className="grid grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] items-center gap-3">
-                      <div className="justify-self-start">{shareDockButton}</div>
-                      <div className="min-w-0 justify-self-center [&>button]:max-w-full">{centerStatusContent}</div>
-                      <div className="justify-self-end">{feedbackDockButton}</div>
+                    <div className="grid w-full items-center" style={compactDockControlsGridStyle}>
+                      <div className="col-start-1 col-end-5 min-w-0 justify-self-start pr-2 [&>button]:max-w-full [&>button]:justify-start">
+                        {centerStatusContent}
+                      </div>
+                      <div className="col-start-6 justify-self-center">{shareDockButton}</div>
+                      <div className="col-start-8 justify-self-center">{feedbackDockButton}</div>
                     </div>
                   ) : (
                     <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3">
