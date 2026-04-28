@@ -4,6 +4,7 @@ import deployedContracts from "@curyo/contracts/deployedContracts";
 type DeploymentChain = Record<string, { address: `0x${string}`; deployedOnBlock?: number }>;
 
 const sharedDeployments = deployedContracts as Record<number, DeploymentChain | undefined>;
+const chain31337 = sharedDeployments[31337];
 const chain42220 = sharedDeployments[42220];
 const chain11142220 = sharedDeployments[11142220];
 
@@ -22,6 +23,7 @@ const expectedChainStartBlock = getExpectedChainStartBlock(chain11142220);
 const expectedContentRegistryStartBlock = chain11142220?.ContentRegistry?.deployedOnBlock ?? expectedChainStartBlock;
 const itWithSepoliaArtifacts = chain11142220 ? it : it.skip;
 const itWithCeloArtifacts = chain42220 ? it : it.skip;
+const itWithHardhatArtifacts = chain31337 ? it : it.skip;
 const ORIGINAL_ENV = { ...process.env };
 const VALID_ENV = {
   PONDER_NETWORK: "celoSepolia",
@@ -151,5 +153,38 @@ describe("ponder config", () => {
     );
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Ignoring PONDER_CONTENT_REGISTRY_ADDRESS"));
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Ignoring PONDER_CONTENT_REGISTRY_START_BLOCK"));
+  });
+
+  itWithHardhatArtifacts("uses start block 0 for local hardhat even when artifacts contain deployment blocks", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { default: config } = await loadPonderConfig(
+      {
+        PONDER_NETWORK: "hardhat",
+        PONDER_RPC_URL_31337: "http://127.0.0.1:8545",
+        PONDER_CONTENT_REGISTRY_START_BLOCK: String(chain31337!.ContentRegistry.deployedOnBlock ?? 1),
+      },
+      [
+        "PONDER_CONTENT_REGISTRY_ADDRESS",
+        "PONDER_ROUND_VOTING_ENGINE_ADDRESS",
+        "PONDER_ROUND_REWARD_DISTRIBUTOR_ADDRESS",
+        "PONDER_CATEGORY_REGISTRY_ADDRESS",
+        "PONDER_PROFILE_REGISTRY_ADDRESS",
+        "PONDER_FRONTEND_REGISTRY_ADDRESS",
+        "PONDER_VOTER_ID_NFT_ADDRESS",
+        "PONDER_HREP_ADDRESS",
+        "PONDER_HUMAN_FAUCET_ADDRESS",
+        "PONDER_PARTICIPATION_POOL_ADDRESS",
+        "PONDER_QUESTION_REWARD_POOL_ESCROW_ADDRESS",
+        "PONDER_FEEDBACK_BONUS_ESCROW_ADDRESS",
+      ],
+    );
+
+    const loadedConfig = config as any;
+
+    expect(loadedConfig.contracts.ContentRegistry.network.hardhat.address).toBe(chain31337!.ContentRegistry.address);
+    expect(loadedConfig.contracts.ContentRegistry.network.hardhat.startBlock).toBe(0);
+    expect(loadedConfig.contracts.HumanReputation.network.hardhat.startBlock).toBe(0);
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("using start block 0"));
   });
 });

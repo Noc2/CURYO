@@ -74,6 +74,7 @@ function getActiveNetwork(): PonderNetworkName {
 
 const activeNetwork = getActiveNetwork();
 const activeChainId = NETWORKS[activeNetwork].chainId;
+let warnedAboutHardhatStartBlocks = false;
 
 function readEnv(key: string): string | undefined {
   const value = process.env[key]?.trim();
@@ -146,8 +147,20 @@ function resolveAddress(key: string, contractName: string): `0x${string}` {
 }
 
 function resolveStartBlock(key: string, contractName: string): number {
-  const sharedStartBlock = getSharedArtifactStartBlock(activeChainId, contractName);
   const envValue = readEnv(key);
+
+  if (activeNetwork === "hardhat") {
+    if (!warnedAboutHardhatStartBlocks && envValue) {
+      console.warn(
+        "[ponder config] Ignoring hardhat start block overrides; using start block 0 so local Ponder can boot before or after Anvil resets.",
+      );
+      warnedAboutHardhatStartBlocks = true;
+    }
+
+    return 0;
+  }
+
+  const sharedStartBlock = getSharedArtifactStartBlock(activeChainId, contractName);
 
   if (sharedStartBlock !== undefined) {
     if (envValue) {
@@ -164,23 +177,6 @@ function resolveStartBlock(key: string, contractName: string): number {
     }
 
     return sharedStartBlock;
-  }
-
-  if (activeNetwork === "hardhat") {
-    if (envValue) {
-      const parsedEnvValue = Number(envValue);
-      if (!Number.isFinite(parsedEnvValue) || !Number.isInteger(parsedEnvValue) || parsedEnvValue < 0) {
-        console.warn(
-          `[ponder config] Ignoring invalid ${key} value for hardhat; using local start block 0 for ${contractName}.`,
-        );
-      } else if (parsedEnvValue !== 0) {
-        console.warn(
-          `[ponder config] Ignoring ${key}=${envValue} for hardhat; using local start block 0 for ${contractName}.`,
-        );
-      }
-    }
-
-    return 0;
   }
 
   if (!envValue) return 0;
