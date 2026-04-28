@@ -12,7 +12,6 @@ import {
   DEFAULT_BOUNTY_WINDOW_PRESET,
   DEFAULT_CUSTOM_BOUNTY_WINDOW_AMOUNT,
   DEFAULT_CUSTOM_BOUNTY_WINDOW_UNIT,
-  formatBountyWindowDuration,
   getBountyClosesAt,
   getBountyWindowSeconds,
   parseBountyWindowAmount,
@@ -86,7 +85,6 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
     customBountyWindowUnit,
   );
   const bountyWindowAmount = parseBountyWindowAmount(customBountyWindowAmount);
-  const bountyWindowLabel = formatBountyWindowDuration(bountyWindowSeconds);
   const hasValidBountyWindow =
     bountyWindowSeconds !== null && bountyWindowAmount >= (bountyWindowPreset === "custom" ? 1 : 0);
   const canSubmit = Boolean(
@@ -302,16 +300,7 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
                   </select>
                 </label>
               </div>
-            ) : (
-              <label className="form-control">
-                <span className="label-text">Selected window</span>
-                <input
-                  value={bountyWindowLabel}
-                  readOnly
-                  className="input input-bordered bg-base-100 text-base-content/70"
-                />
-              </label>
-            )}
+            ) : null}
           </div>
 
           {!escrowAddress ? (
