@@ -91,6 +91,28 @@ contract DeployCuryoHarness is DeployCuryo {
         });
         _validateMigrationBootstrapConfig(migrationConfig);
     }
+
+    function exposedBootstrapMigratedClaimsInBatchesAndClose(
+        HumanFaucet humanFaucet,
+        address[] memory users,
+        uint256[] memory nullifiers,
+        uint256[] memory amounts,
+        address[] memory referrers,
+        uint256[] memory claimantBonuses,
+        uint256[] memory referrerRewards,
+        uint256 batchSize
+    ) external returns (uint256 batchCount) {
+        MigrationBootstrapConfig memory migrationConfig = MigrationBootstrapConfig({
+            users: users,
+            nullifiers: nullifiers,
+            amounts: amounts,
+            referrers: referrers,
+            claimantBonuses: claimantBonuses,
+            referrerRewards: referrerRewards
+        });
+        batchCount = _bootstrapMigratedClaimsInBatches(humanFaucet, migrationConfig, batchSize);
+        humanFaucet.closeMigrationBootstrap();
+    }
 }
 
 contract DeployCuryoCompilationTest is Test {
@@ -266,6 +288,34 @@ contract DeployCuryoCompilationTest is Test {
         );
     }
 
+    function test_MigrationBootstrapValidation_AcceptsLargeManifest() public {
+        DeployCuryoHarness deployScript = new DeployCuryoHarness();
+        uint256 claimCount = 512;
+        address[] memory users = new address[](claimCount);
+        uint256[] memory nullifiers = new uint256[](claimCount);
+        uint256[] memory amounts = new uint256[](claimCount);
+        address[] memory referrers = new address[](claimCount);
+        uint256[] memory claimantBonuses = new uint256[](claimCount);
+        uint256[] memory referrerRewards = new uint256[](claimCount);
+
+        for (uint256 i = 0; i < claimCount; ++i) {
+            users[i] = address(uint160(0x100000 + i));
+            nullifiers[i] = 10_000_000 + i;
+            uint256 baseAmount = i < 10 ? 10_000e6 : 1_000e6;
+            amounts[i] = baseAmount;
+            if (i > 0 && i % 5 == 0) {
+                referrers[i] = users[i - 1];
+                claimantBonuses[i] = baseAmount / 2;
+                referrerRewards[i] = baseAmount / 2;
+                amounts[i] += claimantBonuses[i];
+            }
+        }
+
+        deployScript.exposedValidateMigrationBootstrapConfig(
+            users, nullifiers, amounts, referrers, claimantBonuses, referrerRewards
+        );
+    }
+
     function test_MigrationBootstrapValidation_AcceptsScheduledReferralAmounts() public {
         DeployCuryoHarness deployScript = new DeployCuryoHarness();
         address[] memory users = new address[](2);
@@ -421,6 +471,76 @@ contract DeployCuryoCompilationTest is Test {
         assertEq(hrepToken.balanceOf(address(faucet)), deployScript.FAUCET_POOL_AMOUNT() - amounts[0]);
         assertEq(faucet.totalClaimed(), amounts[0]);
         deployScript.exposedAssertHumanFaucetLaunchAllocation(hrepToken, faucet);
+    }
+
+    function test_MigrationBootstrap_BatchesClaimsAndCloses() public {
+        DeployCuryoHarness deployScript = new DeployCuryoHarness();
+        HumanReputation hrepToken = new HumanReputation(address(this), address(0xBEEF));
+        VoterIdNFT voterIdNFT = new VoterIdNFT(address(this), address(this));
+        MockIdentityVerificationHub mockHub = new MockIdentityVerificationHub();
+        HumanFaucet faucet = new HumanFaucet(address(hrepToken), address(mockHub), address(deployScript));
+        voterIdNFT.addMinter(address(faucet));
+        faucet.setVoterIdNFT(address(voterIdNFT));
+        hrepToken.mint(address(faucet), deployScript.FAUCET_POOL_AMOUNT());
+
+        address[] memory users = new address[](3);
+        uint256[] memory nullifiers = new uint256[](3);
+        uint256[] memory amounts = new uint256[](3);
+        address[] memory referrers = new address[](3);
+        uint256[] memory claimantBonuses = new uint256[](3);
+        uint256[] memory referrerRewards = new uint256[](3);
+        users[0] = address(0xA11CE);
+        users[1] = address(0xB0B);
+        users[2] = address(0xCAFE);
+        nullifiers[0] = 123;
+        nullifiers[1] = 456;
+        nullifiers[2] = 789;
+        amounts[0] = 10_000e6;
+        amounts[1] = 10_000e6;
+        amounts[2] = 15_000e6;
+        referrers[2] = users[0];
+        claimantBonuses[2] = 5_000e6;
+        referrerRewards[2] = 5_000e6;
+
+        faucet.transferOwnership(address(deployScript));
+        uint256 batchCount = deployScript.exposedBootstrapMigratedClaimsInBatchesAndClose(
+            faucet, users, nullifiers, amounts, referrers, claimantBonuses, referrerRewards, 2
+        );
+
+        assertEq(batchCount, 2);
+        assertTrue(faucet.migrationBootstrapClosed());
+        assertEq(faucet.totalClaimants(), 3);
+        assertEq(faucet.totalClaimed(), 40_000e6);
+        assertEq(hrepToken.balanceOf(users[0]), 15_000e6);
+        assertEq(hrepToken.balanceOf(users[1]), 10_000e6);
+        assertEq(hrepToken.balanceOf(users[2]), 15_000e6);
+        assertTrue(faucet.hasClaimed(users[0]));
+        assertTrue(faucet.hasClaimed(users[1]));
+        assertTrue(faucet.hasClaimed(users[2]));
+        assertTrue(faucet.isNullifierUsed(nullifiers[0]));
+        assertTrue(faucet.isNullifierUsed(nullifiers[1]));
+        assertTrue(faucet.isNullifierUsed(nullifiers[2]));
+        assertTrue(voterIdNFT.hasVoterId(users[0]));
+        assertTrue(voterIdNFT.hasVoterId(users[1]));
+        assertTrue(voterIdNFT.hasVoterId(users[2]));
+    }
+
+    function test_MigrationBootstrap_BatchSizeCannotBeZero() public {
+        DeployCuryoHarness deployScript = new DeployCuryoHarness();
+
+        vm.expectRevert(
+            abi.encodeWithSelector(DeployCuryo.DeploymentRoleVerificationFailed.selector, "Migration batch size zero")
+        );
+        deployScript.exposedBootstrapMigratedClaimsInBatchesAndClose(
+            HumanFaucet(payable(address(0))),
+            new address[](0),
+            new uint256[](0),
+            new uint256[](0),
+            new address[](0),
+            new uint256[](0),
+            new uint256[](0),
+            0
+        );
     }
 
     function test_AssertExactExcludedHolders_PassesForExactOrder() public {

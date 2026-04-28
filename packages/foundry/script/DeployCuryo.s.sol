@@ -62,6 +62,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
     uint256 internal constant MIGRATION_TIER_4_AMOUNT = 1e6;
     uint256 internal constant MIGRATION_REFERRAL_RATIO_BPS = 5_000;
     uint256 internal constant MIGRATION_BPS_SCALE = 10_000;
+    uint256 internal constant DEFAULT_MIGRATION_BOOTSTRAP_BATCH_SIZE = 250;
 
     // Self.xyz IdentityVerificationHub addresses
     address constant CELO_MAINNET_HUB = 0xe57F4773bd9c9d8b6Cd70431117d353298B9f5BF;
@@ -353,15 +354,10 @@ contract DeployCuryo is ScaffoldETHDeploy {
 
             MigrationBootstrapConfig memory migrationConfig = _loadMigrationBootstrapConfig();
             if (migrationConfig.users.length > 0) {
-                humanFaucet.bootstrapMigratedClaims(
-                    migrationConfig.users,
-                    migrationConfig.nullifiers,
-                    migrationConfig.amounts,
-                    migrationConfig.referrers,
-                    migrationConfig.claimantBonuses,
-                    migrationConfig.referrerRewards
-                );
+                uint256 migrationBatchCount =
+                    _bootstrapMigratedClaimsInBatches(humanFaucet, migrationConfig, _migrationBootstrapBatchSize());
                 console.log("Bootstrapped migrated HumanFaucet claims:", migrationConfig.users.length);
+                console.log("Migration bootstrap batches:", migrationBatchCount);
             }
             humanFaucet.closeMigrationBootstrap();
             console.log("Closed HumanFaucet migration bootstrap");
@@ -689,55 +685,170 @@ contract DeployCuryo is ScaffoldETHDeploy {
         return baseAmount * MIGRATION_REFERRAL_RATIO_BPS / MIGRATION_BPS_SCALE;
     }
 
+    function _migrationBootstrapBatchSize() internal view returns (uint256 batchSize) {
+        batchSize = vm.envOr("MIGRATION_BOOTSTRAP_BATCH_SIZE", DEFAULT_MIGRATION_BOOTSTRAP_BATCH_SIZE);
+        _require(batchSize > 0, "Migration batch size zero");
+    }
+
+    function _bootstrapMigratedClaimsInBatches(
+        HumanFaucet humanFaucet,
+        MigrationBootstrapConfig memory migrationConfig,
+        uint256 batchSize
+    ) internal returns (uint256 batchCount) {
+        _require(batchSize > 0, "Migration batch size zero");
+        uint256 claimCount = migrationConfig.users.length;
+        for (uint256 start = 0; start < claimCount;) {
+            uint256 remaining = claimCount - start;
+            uint256 end = start + (remaining < batchSize ? remaining : batchSize);
+            MigrationBootstrapConfig memory batch = _sliceMigrationBootstrapConfig(migrationConfig, start, end);
+            humanFaucet.bootstrapMigratedClaims(
+                batch.users,
+                batch.nullifiers,
+                batch.amounts,
+                batch.referrers,
+                batch.claimantBonuses,
+                batch.referrerRewards
+            );
+            unchecked {
+                ++batchCount;
+                start = end;
+            }
+        }
+    }
+
+    function _sliceMigrationBootstrapConfig(MigrationBootstrapConfig memory migrationConfig, uint256 start, uint256 end)
+        internal
+        pure
+        returns (MigrationBootstrapConfig memory batch)
+    {
+        uint256 length = end - start;
+        batch.users = new address[](length);
+        batch.nullifiers = new uint256[](length);
+        batch.amounts = new uint256[](length);
+        batch.referrers = new address[](length);
+        batch.claimantBonuses = new uint256[](length);
+        batch.referrerRewards = new uint256[](length);
+
+        for (uint256 i = 0; i < length; ++i) {
+            uint256 sourceIndex = start + i;
+            batch.users[i] = migrationConfig.users[sourceIndex];
+            batch.nullifiers[i] = migrationConfig.nullifiers[sourceIndex];
+            batch.amounts[i] = migrationConfig.amounts[sourceIndex];
+            batch.referrers[i] = migrationConfig.referrers[sourceIndex];
+            batch.claimantBonuses[i] = migrationConfig.claimantBonuses[sourceIndex];
+            batch.referrerRewards[i] = migrationConfig.referrerRewards[sourceIndex];
+        }
+    }
+
     function _validateMigrationBootstrapConfig(MigrationBootstrapConfig memory migrationConfig) internal pure {
         uint256 claimCount = migrationConfig.users.length;
+        _validateMigrationBootstrapLengths(migrationConfig, claimCount);
+
+        uint256 tableSize = _migrationLookupTableSize(claimCount);
+        address[] memory seenUsers = new address[](tableSize);
+        uint256[] memory seenNullifiers = new uint256[](tableSize);
+        uint256 totalMigratedClaimed;
+        for (uint256 i = 0; i < claimCount; ++i) {
+            totalMigratedClaimed += _validateMigrationBootstrapEntry(migrationConfig, seenUsers, seenNullifiers, i);
+        }
+        _require(totalMigratedClaimed <= FAUCET_POOL_AMOUNT, "Migration faucet allocation");
+    }
+
+    function _validateMigrationBootstrapLengths(MigrationBootstrapConfig memory migrationConfig, uint256 claimCount)
+        internal
+        pure
+    {
         _require(migrationConfig.nullifiers.length == claimCount, "Migration nullifiers length");
         _require(migrationConfig.amounts.length == claimCount, "Migration amounts length");
         _require(migrationConfig.referrers.length == claimCount, "Migration referrers length");
         _require(migrationConfig.claimantBonuses.length == claimCount, "Migration claimant bonuses length");
         _require(migrationConfig.referrerRewards.length == claimCount, "Migration referrer rewards length");
+    }
 
-        uint256 totalMigratedClaimed;
-        for (uint256 i = 0; i < claimCount; ++i) {
-            _require(migrationConfig.users[i] != address(0), "Migration user zero");
-            _require(migrationConfig.nullifiers[i] != 0, "Migration nullifier zero");
-            for (uint256 j = 0; j < i; ++j) {
-                _require(migrationConfig.users[j] != migrationConfig.users[i], "Migration duplicate user");
-                _require(
-                    migrationConfig.nullifiers[j] != migrationConfig.nullifiers[i], "Migration duplicate nullifier"
-                );
-            }
-            uint256 baseAmount = _migrationBaseClaimAmount(i);
-            uint256 expectedClaimantBonus;
-            uint256 expectedReferrerReward;
+    function _validateMigrationBootstrapEntry(
+        MigrationBootstrapConfig memory migrationConfig,
+        address[] memory seenUsers,
+        uint256[] memory seenNullifiers,
+        uint256 index
+    ) internal pure returns (uint256 totalRequired) {
+        address user = migrationConfig.users[index];
+        uint256 nullifier = migrationConfig.nullifiers[index];
+        _require(user != address(0), "Migration user zero");
+        _require(nullifier != 0, "Migration nullifier zero");
+        _insertMigrationUser(seenUsers, user);
+        _insertMigrationNullifier(seenNullifiers, nullifier);
 
-            if (migrationConfig.referrers[i] == address(0)) {
-                _require(migrationConfig.claimantBonuses[i] == 0, "Migration claimant bonus mismatch");
-                _require(migrationConfig.referrerRewards[i] == 0, "Migration referrer reward mismatch");
-            } else {
-                _require(migrationConfig.referrers[i] != migrationConfig.users[i], "Migration self referral");
-                bool referrerSeen;
-                for (uint256 j = 0; j < i; ++j) {
-                    if (migrationConfig.users[j] == migrationConfig.referrers[i]) {
-                        referrerSeen = true;
-                        break;
-                    }
-                }
-                _require(referrerSeen, "Migration referrer order");
-                expectedClaimantBonus = _migrationReferralAmount(baseAmount);
-                expectedReferrerReward = expectedClaimantBonus;
-                _require(
-                    migrationConfig.claimantBonuses[i] == expectedClaimantBonus, "Migration claimant bonus mismatch"
-                );
-                _require(
-                    migrationConfig.referrerRewards[i] == expectedReferrerReward, "Migration referrer reward mismatch"
-                );
-            }
-
-            _require(migrationConfig.amounts[i] == baseAmount + expectedClaimantBonus, "Migration amount mismatch");
-            totalMigratedClaimed += migrationConfig.amounts[i] + expectedReferrerReward;
+        uint256 baseAmount = _migrationBaseClaimAmount(index);
+        uint256 claimantBonus;
+        uint256 referrerReward;
+        address referrer = migrationConfig.referrers[index];
+        if (referrer == address(0)) {
+            _require(migrationConfig.claimantBonuses[index] == 0, "Migration claimant bonus mismatch");
+            _require(migrationConfig.referrerRewards[index] == 0, "Migration referrer reward mismatch");
+        } else {
+            _require(referrer != user, "Migration self referral");
+            _require(_migrationUserSeen(seenUsers, referrer), "Migration referrer order");
+            claimantBonus = _migrationReferralAmount(baseAmount);
+            referrerReward = claimantBonus;
+            _require(migrationConfig.claimantBonuses[index] == claimantBonus, "Migration claimant bonus mismatch");
+            _require(migrationConfig.referrerRewards[index] == referrerReward, "Migration referrer reward mismatch");
         }
-        _require(totalMigratedClaimed <= FAUCET_POOL_AMOUNT, "Migration faucet allocation");
+
+        _require(migrationConfig.amounts[index] == baseAmount + claimantBonus, "Migration amount mismatch");
+        totalRequired = migrationConfig.amounts[index] + referrerReward;
+    }
+
+    function _migrationLookupTableSize(uint256 claimCount) internal pure returns (uint256 size) {
+        size = 1;
+        uint256 minimumSize = claimCount == 0 ? 1 : claimCount * 2;
+        while (size < minimumSize) {
+            size <<= 1;
+        }
+    }
+
+    function _insertMigrationUser(address[] memory seenUsers, address user) internal pure {
+        uint256 slot = _migrationAddressSlot(user, seenUsers.length);
+        while (true) {
+            address current = seenUsers[slot];
+            if (current == address(0)) {
+                seenUsers[slot] = user;
+                return;
+            }
+            _require(current != user, "Migration duplicate user");
+            slot = (slot + 1) & (seenUsers.length - 1);
+        }
+    }
+
+    function _migrationUserSeen(address[] memory seenUsers, address user) internal pure returns (bool) {
+        uint256 slot = _migrationAddressSlot(user, seenUsers.length);
+        while (true) {
+            address current = seenUsers[slot];
+            if (current == address(0)) return false;
+            if (current == user) return true;
+            slot = (slot + 1) & (seenUsers.length - 1);
+        }
+        return false;
+    }
+
+    function _insertMigrationNullifier(uint256[] memory seenNullifiers, uint256 nullifier) internal pure {
+        uint256 slot = _migrationUintSlot(nullifier, seenNullifiers.length);
+        while (true) {
+            uint256 current = seenNullifiers[slot];
+            if (current == 0) {
+                seenNullifiers[slot] = nullifier;
+                return;
+            }
+            _require(current != nullifier, "Migration duplicate nullifier");
+            slot = (slot + 1) & (seenNullifiers.length - 1);
+        }
+    }
+
+    function _migrationAddressSlot(address value, uint256 tableSize) internal pure returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(value))) & (tableSize - 1);
+    }
+
+    function _migrationUintSlot(uint256 value, uint256 tableSize) internal pure returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(value))) & (tableSize - 1);
     }
 
     function _verifyLaunchMintAllocation(
