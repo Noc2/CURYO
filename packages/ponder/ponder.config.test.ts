@@ -7,6 +7,24 @@ const sharedDeployments = deployedContracts as Record<number, DeploymentChain | 
 const chain31337 = sharedDeployments[31337];
 const chain42220 = sharedDeployments[42220];
 const chain11142220 = sharedDeployments[11142220];
+const REQUIRED_PONDER_CONTRACTS = [
+  "ContentRegistry",
+  "RoundVotingEngine",
+  "RoundRewardDistributor",
+  "CategoryRegistry",
+  "ProfileRegistry",
+  "FrontendRegistry",
+  "VoterIdNFT",
+  "HumanReputation",
+  "HumanFaucet",
+  "ParticipationPool",
+  "QuestionRewardPoolEscrow",
+  "FeedbackBonusEscrow",
+] as const;
+
+function getMissingPonderContracts(chain: DeploymentChain | undefined) {
+  return REQUIRED_PONDER_CONTRACTS.filter(contractName => !chain?.[contractName]?.address);
+}
 
 function getExpectedChainStartBlock(chain: DeploymentChain | undefined) {
   const deployedBlocks = Object.values(chain ?? {})
@@ -21,9 +39,13 @@ const expectedContentRegistry42220StartBlock =
   chain42220?.ContentRegistry?.deployedOnBlock ?? expectedChain42220StartBlock;
 const expectedChainStartBlock = getExpectedChainStartBlock(chain11142220);
 const expectedContentRegistryStartBlock = chain11142220?.ContentRegistry?.deployedOnBlock ?? expectedChainStartBlock;
-const itWithSepoliaArtifacts = chain11142220 ? it : it.skip;
-const itWithCeloArtifacts = chain42220 ? it : it.skip;
-const itWithHardhatArtifacts = chain31337 ? it : it.skip;
+const missingSepoliaPonderContracts = getMissingPonderContracts(chain11142220);
+const missingCeloPonderContracts = getMissingPonderContracts(chain42220);
+const missingHardhatPonderContracts = getMissingPonderContracts(chain31337);
+const itWithSepoliaPonderArtifacts = chain11142220 && missingSepoliaPonderContracts.length === 0 ? it : it.skip;
+const itWithMissingSepoliaPonderArtifacts = chain11142220 && missingSepoliaPonderContracts.length > 0 ? it : it.skip;
+const itWithCeloPonderArtifacts = chain42220 && missingCeloPonderContracts.length === 0 ? it : it.skip;
+const itWithHardhatArtifacts = chain31337 && missingHardhatPonderContracts.length === 0 ? it : it.skip;
 const ORIGINAL_ENV = { ...process.env };
 const VALID_ENV = {
   PONDER_NETWORK: "celoSepolia",
@@ -72,7 +94,7 @@ afterEach(() => {
 });
 
 describe("ponder config", () => {
-  itWithSepoliaArtifacts("derives supported-chain addresses and start blocks from shared deployment artifacts", async () => {
+  itWithSepoliaPonderArtifacts("derives supported-chain addresses and start blocks from shared deployment artifacts", async () => {
     const { default: config } = await loadPonderConfig(
       {},
       [
@@ -106,7 +128,7 @@ describe("ponder config", () => {
     );
   }, 10_000);
 
-  itWithCeloArtifacts("derives Celo mainnet addresses and start blocks from shared deployment artifacts", async () => {
+  itWithCeloPonderArtifacts("derives Celo mainnet addresses and start blocks from shared deployment artifacts", async () => {
     const { default: config } = await loadPonderConfig(
       {
         PONDER_NETWORK: "celo",
@@ -136,7 +158,7 @@ describe("ponder config", () => {
     expect(loadedConfig.contracts.ContentRegistry.network.celo.startBlock).toBe(expectedContentRegistry42220StartBlock);
   });
 
-  itWithSepoliaArtifacts("ignores stale Ponder env overrides when shared deployment artifacts exist", async () => {
+  itWithSepoliaPonderArtifacts("ignores stale Ponder env overrides when shared deployment artifacts exist", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { default: config } = await loadPonderConfig({
       PONDER_CONTENT_REGISTRY_ADDRESS: "0x1111111111111111111111111111111111111111",
@@ -153,6 +175,12 @@ describe("ponder config", () => {
     );
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Ignoring PONDER_CONTENT_REGISTRY_ADDRESS"));
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Ignoring PONDER_CONTENT_REGISTRY_START_BLOCK"));
+  });
+
+  itWithMissingSepoliaPonderArtifacts("rejects non-local env address fallbacks when shared artifacts are missing", async () => {
+    await expect(loadPonderConfig()).rejects.toThrow(
+      `Missing shared deployment artifact for ${missingSepoliaPonderContracts[0]} on chain 11142220`,
+    );
   });
 
   itWithHardhatArtifacts("uses start block 0 for local hardhat even when artifacts contain deployment blocks", async () => {

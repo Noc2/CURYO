@@ -517,15 +517,21 @@ function updatePonderEnv(allGeneratedContracts, deployers = {}) {
   }
 
   const updatedContracts = [];
+  const removedContracts = [];
   for (const [contractName, addressEnvKey] of Object.entries(
     PONDER_CONTRACT_ENV_KEYS
   )) {
     const contractData = chainContracts[contractName];
-    if (!contractData?.address) continue;
+    const blockEnvKey = PONDER_START_BLOCK_ENV_KEYS[contractName];
+    if (!contractData?.address) {
+      delete existingEnv[addressEnvKey];
+      delete existingEnv[blockEnvKey];
+      removedContracts.push(contractName);
+      continue;
+    }
 
     existingEnv[addressEnvKey] = contractData.address;
 
-    const blockEnvKey = PONDER_START_BLOCK_ENV_KEYS[contractName];
     const startBlock = Number(
       contractData.deployedOnBlock || chainStartBlock || 0
     );
@@ -542,6 +548,13 @@ function updatePonderEnv(allGeneratedContracts, deployers = {}) {
       ", "
     )}`
   );
+  if (removedContracts.length > 0) {
+    console.log(
+      `🧹 Removed stale Ponder .env.local entries with no shared deployment artifact: ${removedContracts.join(
+        ", "
+      )}`
+    );
+  }
 }
 
 /**

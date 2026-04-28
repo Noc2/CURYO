@@ -39,3 +39,19 @@ test("required deployment helper reports missing contract definitions per target
 
   assert.deepEqual(missingContracts, ["42220:HumanReputation"]);
 });
+
+test("default required deployment list includes question reward and x402 runtime contracts", () => {
+  const missingContracts = listMissingRequiredTargetContracts([42220], {
+    42220: {
+      ContentRegistry: {},
+      HumanReputation: {},
+      ProtocolConfig: {},
+    },
+  });
+
+  assert.deepEqual(missingContracts, [
+    "42220:QuestionRewardPoolEscrow",
+    "42220:FeedbackBonusEscrow",
+    "42220:X402QuestionSubmitter",
+  ]);
+});

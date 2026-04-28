@@ -157,17 +157,13 @@ function resolveAddress(key: string, contractName: string): `0x${string}` {
     return sharedAddress;
   }
 
-  if (!envValue) {
-    throw new Error(
-      `Missing ${key}. Run \`yarn deploy --network <network>\` to sync Ponder addresses for ${activeNetwork}.`,
-    );
-  }
-
-  if (!isAddress(envValue)) {
-    throw new Error(`${key} must be a valid address.`);
-  }
-
-  return envValue as `0x${string}`;
+  /*
+   * Non-local networks intentionally do not fall back to PONDER_* address env vars.
+   * The frontend, keeper, and indexer must agree on the same shared deployment artifacts.
+   */
+  throw new Error(
+    `Missing shared deployment artifact for ${contractName} on chain ${activeChainId}. Run \`yarn deploy --network <network>\` to refresh shared deployments before starting Ponder for ${activeNetwork}.`,
+  );
 }
 
 function resolveStartBlock(key: string, contractName: string): number {
