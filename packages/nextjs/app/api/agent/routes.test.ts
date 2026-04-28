@@ -169,7 +169,6 @@ async function seedManagedAskAudit(params: {
       "0x0000000000000000000000000000000000000001",
       "1000000",
       "1000000",
-      "0",
       1,
       "submitted",
       contentId,
@@ -185,14 +184,13 @@ async function seedManagedAskAudit(params: {
         payment_asset,
         payment_amount,
         bounty_amount,
-        service_fee_amount,
         question_count,
         status,
         content_id,
         created_at,
         updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
   });
 
@@ -562,7 +560,6 @@ test("lifecycle sweep uses submitted x402 state even when reservation bookkeepin
       "0x0000000000000000000000000000000000000001",
       "1000000",
       "1000000",
-      "0",
       1,
       "submitted",
       "42",
@@ -579,7 +576,6 @@ test("lifecycle sweep uses submitted x402 state even when reservation bookkeepin
         payment_asset,
         payment_amount,
         bounty_amount,
-        service_fee_amount,
         question_count,
         status,
         content_id,
@@ -587,7 +583,7 @@ test("lifecycle sweep uses submitted x402 state even when reservation bookkeepin
         updated_at,
         submitted_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
   });
   await callbackRegistryModule.upsertAgentCallbackSubscription({
@@ -770,7 +766,6 @@ test("agent status route includes live ask guidance for underfunded open markets
       "0x0000000000000000000000000000000000000001",
       "1000000",
       "1000000",
-      "0",
       1,
       "submitted",
       "42",
@@ -786,14 +781,13 @@ test("agent status route includes live ask guidance for underfunded open markets
         payment_asset,
         payment_amount,
         bounty_amount,
-        service_fee_amount,
         question_count,
         status,
         content_id,
         created_at,
         updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
   });
 

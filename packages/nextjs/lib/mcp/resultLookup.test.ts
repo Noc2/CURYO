@@ -86,7 +86,6 @@ test("curyo_get_result requires contentId when an operation maps to multiple bun
       "0x0000000000000000000000000000000000000001",
       "1000000",
       "1000000",
-      "0",
       2,
       "submitted",
       "123",
@@ -104,7 +103,6 @@ test("curyo_get_result requires contentId when an operation maps to multiple bun
         payment_asset,
         payment_amount,
         bounty_amount,
-        service_fee_amount,
         question_count,
         status,
         content_id,
@@ -113,7 +111,7 @@ test("curyo_get_result requires contentId when an operation maps to multiple bun
         updated_at,
         submitted_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
   });
 
@@ -184,7 +182,6 @@ test("curyo_get_result accepts an explicit bundle contentId without bypassing op
       "0x0000000000000000000000000000000000000001",
       "1000000",
       "1000000",
-      "0",
       2,
       "submitted",
       "123",
@@ -202,7 +199,6 @@ test("curyo_get_result accepts an explicit bundle contentId without bypassing op
         payment_asset,
         payment_amount,
         bounty_amount,
-        service_fee_amount,
         question_count,
         status,
         content_id,
@@ -211,7 +207,7 @@ test("curyo_get_result accepts an explicit bundle contentId without bypassing op
         updated_at,
         submitted_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
   });
 

@@ -85,6 +85,13 @@
       "when": 1776785200000,
       "tag": "0011_agent_policy_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1776788800000,
+      "tag": "0012_drop_x402_legacy_columns",
+      "breakpoints": true
     }
   ]
 }

@@ -457,7 +457,6 @@ test("failed submissions return a terminal pending result package without a retr
       "0x0000000000000000000000000000000000000001",
       "1000000",
       "1000000",
-      "0",
       1,
       "failed",
       null,
@@ -473,14 +472,13 @@ test("failed submissions return a terminal pending result package without a retr
         payment_asset,
         payment_amount,
         bounty_amount,
-        service_fee_amount,
         question_count,
         status,
         content_id,
         created_at,
         updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
   });
 
@@ -560,7 +558,6 @@ test("submitted status stays non-terminal until the latest round reaches a final
       "0x0000000000000000000000000000000000000001",
       "1000000",
       "1000000",
-      "0",
       1,
       "submitted",
       "42",
@@ -576,14 +573,13 @@ test("submitted status stays non-terminal until the latest round reaches a final
         payment_asset,
         payment_amount,
         bounty_amount,
-        service_fee_amount,
         question_count,
         status,
         content_id,
         created_at,
         updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
   });
 

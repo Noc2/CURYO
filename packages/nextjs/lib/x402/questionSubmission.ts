@@ -758,14 +758,13 @@ async function recordAgentWalletSubmissionPlan(params: {
           payment_asset,
           payment_amount,
           bounty_amount,
-          service_fee_amount,
           question_count,
           status,
           payment_receipt,
           created_at,
           updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       args: [
         params.operation.operationKey,
@@ -776,7 +775,6 @@ async function recordAgentWalletSubmissionPlan(params: {
         params.config.usdcAddress,
         params.plan.payment.amount,
         params.payload.bounty.amount.toString(),
-        "0",
         params.payload.questions.length,
         "awaiting_wallet_signature",
         receipt,
@@ -797,7 +795,6 @@ async function recordAgentWalletSubmissionPlan(params: {
             payment_asset = ?,
             payment_amount = ?,
             bounty_amount = ?,
-            service_fee_amount = '0',
             question_count = ?,
             status = CASE WHEN status = 'submitted' THEN status ELSE ? END,
             payment_receipt = CASE WHEN status = 'submitted' THEN payment_receipt ELSE ? END,
