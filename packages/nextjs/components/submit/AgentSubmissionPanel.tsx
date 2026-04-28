@@ -1111,15 +1111,6 @@ export function AgentSubmissionPanel() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => void handleCopy(usdcAddress)}
-                  disabled={!usdcAddress}
-                  className="btn btn-outline btn-sm"
-                >
-                  <ClipboardDocumentIcon className="h-4 w-4" />
-                  Copy USDC
-                </button>
-                <button
-                  type="button"
                   onClick={() => void handleApproveEscrow()}
                   disabled={
                     !address ||
