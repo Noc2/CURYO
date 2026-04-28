@@ -437,7 +437,34 @@ contract DeployCuryo is ScaffoldETHDeploy {
             voterIdNFT.addMinter(anvilAccount0);
         }
 
-        // 13. Renounce deployer's temporary roles
+        // 13. Register addresses for scaffold-eth ABI generation before any public launch transaction.
+        if (address(timelock) != address(0)) {
+            deployments.push(Deployment("TimelockController", address(timelock)));
+        }
+        if (address(governor) != address(0)) {
+            deployments.push(Deployment("CuryoGovernor", address(governor)));
+        }
+        deployments.push(Deployment("HumanReputation", address(hrepToken)));
+        deployments.push(Deployment("FrontendRegistry", address(frontendRegistryProxy)));
+        deployments.push(Deployment("ProfileRegistry", address(profileRegistryProxy)));
+        deployments.push(Deployment("ContentRegistry", address(registryProxy)));
+        deployments.push(Deployment("RoundVotingEngine", address(votingEngineProxy)));
+        deployments.push(Deployment("ProtocolConfig", address(protocolConfigProxy)));
+        deployments.push(Deployment("RoundRewardDistributor", address(rewardDistributorProxy)));
+        deployments.push(Deployment("QuestionRewardPoolEscrow", address(questionRewardPoolEscrowProxy)));
+        deployments.push(Deployment("X402QuestionSubmitter", address(x402QuestionSubmitter)));
+        deployments.push(Deployment("FeedbackBonusEscrow", address(feedbackBonusEscrowProxy)));
+        if (isLocalDev && usdcTokenAddress != address(0)) {
+            deployments.push(Deployment("MockERC20", usdcTokenAddress));
+        }
+        deployments.push(Deployment("CategoryRegistry", address(categoryRegistry)));
+        deployments.push(Deployment("VoterIdNFT", address(voterIdNFT)));
+        deployments.push(Deployment("ParticipationPool", address(participationPool)));
+        if (address(humanFaucet) != address(0)) {
+            deployments.push(Deployment("HumanFaucet", address(humanFaucet)));
+        }
+
+        // 14. Renounce deployer's temporary roles
         // Local dev: deployer IS governance, so don't renounce (need roles for dev)
         if (!isLocalDev) {
             // Production/testnet dev faucet grants now require governance after deployment.
@@ -502,6 +529,9 @@ contract DeployCuryo is ScaffoldETHDeploy {
             );
             console.log("Verified governance ownership, deployer role renunciation, and paused faucet pre-launch");
 
+            exportDeployments();
+            console.log("Exported deployment addresses before opening HumanFaucet claims");
+
             humanFaucet.openClaimsAndTransferOwnership();
             console.log("Opened HumanFaucet public claims and transferred ownership to governance");
 
@@ -531,33 +561,6 @@ contract DeployCuryo is ScaffoldETHDeploy {
         } else {
             // Local dev: just revoke MINTER_ROLE as before
             hrepToken.revokeRole(hrepToken.MINTER_ROLE(), deployer);
-        }
-
-        // 14. Register addresses for scaffold-eth ABI generation
-        if (address(timelock) != address(0)) {
-            deployments.push(Deployment("TimelockController", address(timelock)));
-        }
-        if (address(governor) != address(0)) {
-            deployments.push(Deployment("CuryoGovernor", address(governor)));
-        }
-        deployments.push(Deployment("HumanReputation", address(hrepToken)));
-        deployments.push(Deployment("FrontendRegistry", address(frontendRegistryProxy)));
-        deployments.push(Deployment("ProfileRegistry", address(profileRegistryProxy)));
-        deployments.push(Deployment("ContentRegistry", address(registryProxy)));
-        deployments.push(Deployment("RoundVotingEngine", address(votingEngineProxy)));
-        deployments.push(Deployment("ProtocolConfig", address(protocolConfigProxy)));
-        deployments.push(Deployment("RoundRewardDistributor", address(rewardDistributorProxy)));
-        deployments.push(Deployment("QuestionRewardPoolEscrow", address(questionRewardPoolEscrowProxy)));
-        deployments.push(Deployment("X402QuestionSubmitter", address(x402QuestionSubmitter)));
-        deployments.push(Deployment("FeedbackBonusEscrow", address(feedbackBonusEscrowProxy)));
-        if (isLocalDev && usdcTokenAddress != address(0)) {
-            deployments.push(Deployment("MockERC20", usdcTokenAddress));
-        }
-        deployments.push(Deployment("CategoryRegistry", address(categoryRegistry)));
-        deployments.push(Deployment("VoterIdNFT", address(voterIdNFT)));
-        deployments.push(Deployment("ParticipationPool", address(participationPool)));
-        if (address(humanFaucet) != address(0)) {
-            deployments.push(Deployment("HumanFaucet", address(humanFaucet)));
         }
 
         // Log deployed addresses
