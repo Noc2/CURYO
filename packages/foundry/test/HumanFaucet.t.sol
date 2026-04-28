@@ -175,6 +175,15 @@ contract HumanFaucetTest is Test {
         assertEq(hrepToken.balanceOf(user), TIER_0_AMOUNT);
     }
 
+    function test_RecipientAuthorizationCannotBeDisabledAfterEnabling() public {
+        vm.startPrank(admin);
+        faucet.setRecipientAuthorizationRequired(true);
+
+        vm.expectRevert(HumanFaucet.RecipientAuthorizationCannotBeDisabled.selector);
+        faucet.setRecipientAuthorizationRequired(false);
+        vm.stopPrank();
+    }
+
     function test_RecipientAuthorizationRejectsDifferentRecipientSignature() public {
         uint256 privateKey = 0xA11CE;
         address user = vm.addr(privateKey);

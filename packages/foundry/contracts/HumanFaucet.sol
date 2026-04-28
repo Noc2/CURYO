@@ -211,6 +211,9 @@ contract HumanFaucet is SelfVerificationRoot, EIP712, Ownable, Pausable {
     /// @notice Thrown when a production faucet claim omits recipient authorization.
     error MissingClaimAuthorization();
 
+    /// @notice Thrown when governance tries to disable recipient authorization after enabling it.
+    error RecipientAuthorizationCannotBeDisabled();
+
     /// @notice Thrown when a faucet recipient authorization is expired.
     error ClaimAuthorizationExpired();
 
@@ -280,6 +283,7 @@ contract HumanFaucet is SelfVerificationRoot, EIP712, Ownable, Pausable {
     /// @notice Require recipient-signed EIP-712 authorization in Self callback userData.
     /// @dev Production launch requires this to be enabled before ownership handoff.
     function setRecipientAuthorizationRequired(bool required) external onlyOwner {
+        if (!required && recipientAuthorizationRequired) revert RecipientAuthorizationCannotBeDisabled();
         recipientAuthorizationRequired = required;
         emit RecipientAuthorizationRequiredSet(required);
     }
