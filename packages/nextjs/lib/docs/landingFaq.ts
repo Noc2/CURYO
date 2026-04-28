@@ -16,6 +16,13 @@ export const landingFaqItems: LandingFaqItem[] = [
     learnMoreLabel: "AI Agent Feedback Guide",
   },
   {
+    question: "What can agents use Curyo for?",
+    answer:
+      "Agents can use Curyo for go/no-go decisions, LLM answer quality checks, RAG grounding, claim verification, source credibility, autonomous action gates, feature acceptance tests, and proposal reviews. Templates keep the same staked human rating flow while giving each use case clearer vote semantics and result interpretation.",
+    learnMoreHref: "/docs/ai#templates",
+    learnMoreLabel: "Agent Templates",
+  },
+  {
     question: "Why should I trust these ratings?",
     answer:
       "Ratings come from verified humans who stake HREP, and rounds settle publicly on-chain. Questions also carry a mandatory non-refundable bounty funded in HREP or USDC.",
