@@ -187,4 +187,25 @@ describe("ponder config", () => {
     expect(warnSpy).toHaveBeenCalledTimes(1);
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("using start block 0"));
   });
+
+  itWithHardhatArtifacts("prefers local hardhat env addresses over shared deployment artifacts", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const localContentRegistryAddress = "0x1111111111111111111111111111111111111111";
+    const { default: config } = await loadPonderConfig({
+      PONDER_NETWORK: "hardhat",
+      PONDER_RPC_URL_31337: "http://127.0.0.1:8545",
+      PONDER_CONTENT_REGISTRY_ADDRESS: localContentRegistryAddress,
+      PONDER_CONTENT_REGISTRY_START_BLOCK: String(chain31337!.ContentRegistry.deployedOnBlock ?? 1),
+    });
+
+    const loadedConfig = config as any;
+
+    expect(loadedConfig.contracts.ContentRegistry.network.hardhat.address).toBe(localContentRegistryAddress);
+    expect(loadedConfig.contracts.ContentRegistry.network.hardhat.address).not.toBe(
+      chain31337!.ContentRegistry.address,
+    );
+    expect(loadedConfig.contracts.ContentRegistry.network.hardhat.startBlock).toBe(0);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Using PONDER_CONTENT_REGISTRY_ADDRESS"));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("using start block 0"));
+  });
 });

@@ -11,6 +11,7 @@ const CHAIN_NAMES: Record<number, string> = {
   42220: "Celo",
 };
 
+const LOCAL_HARDHAT_CHAIN_ID = 31337;
 const isProduction = process.env.NODE_ENV === "production";
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 function readEnv(name: string): string | undefined {
@@ -159,6 +160,29 @@ function resolveContractAddress(params: {
   const { chainId, envName, contractName, errors, warnings } = params;
   const sharedAddress = getSharedArtifactAddress(chainId, contractName);
   const envValue = readEnv(envName);
+
+  if (chainId === LOCAL_HARDHAT_CHAIN_ID) {
+    if (envValue) {
+      if (!isAddress(envValue)) {
+        errors.push(`${envName} must be a valid address`);
+        return ZERO_ADDRESS;
+      }
+
+      if (sharedAddress && envValue.toLowerCase() !== sharedAddress.toLowerCase()) {
+        warnings.push(
+          `Using ${envName}=${envValue} for local chain ${chainId}; shared ${contractName} artifact points at ${sharedAddress}.`,
+        );
+      }
+
+      return envValue as `0x${string}`;
+    }
+
+    if (sharedAddress) {
+      return sharedAddress;
+    }
+
+    return requireAddressEnv(envName, errors);
+  }
 
   if (sharedAddress) {
     if (envValue) {

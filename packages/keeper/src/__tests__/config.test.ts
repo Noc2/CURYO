@@ -150,16 +150,32 @@ describe("keeper config", () => {
     expect(config.contracts.contentRegistry).toBe(chain42220!.ContentRegistry.address);
   });
 
-  it("ignores stale local contract env values in favor of shared deployment artifacts", async () => {
+  it("prefers local hardhat contract env values over shared deployment artifacts", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const localVotingEngine = "0x196dBCBb54b8ec4958c959D8949EBFE87aC2Aaaf";
+    const localContentRegistry = "0x82Dc47734901ee7d4f4232f398752cB9Dd5dACcC";
     const { config } = await loadKeeperConfig({
       CHAIN_ID: "31337",
+      VOTING_ENGINE_ADDRESS: localVotingEngine,
+      CONTENT_REGISTRY_ADDRESS: localContentRegistry,
+    });
+
+    expect(config.contracts.votingEngine).toBe(localVotingEngine);
+    expect(config.contracts.contentRegistry).toBe(localContentRegistry);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Using VOTING_ENGINE_ADDRESS"));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Using CONTENT_REGISTRY_ADDRESS"));
+  });
+
+  itWithCeloArtifacts("ignores stale live contract env values in favor of shared deployment artifacts", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { config } = await loadKeeperConfig({
+      CHAIN_ID: "42220",
       VOTING_ENGINE_ADDRESS: "0x196dBCBb54b8ec4958c959D8949EBFE87aC2Aaaf",
       CONTENT_REGISTRY_ADDRESS: "0x82Dc47734901ee7d4f4232f398752cB9Dd5dACcC",
     });
 
-    expect(config.contracts.votingEngine).toBe(LOCAL_VOTING_ENGINE);
-    expect(config.contracts.contentRegistry).toBe(LOCAL_CONTENT_REGISTRY);
+    expect(config.contracts.votingEngine).toBe(chain42220!.RoundVotingEngine.address);
+    expect(config.contracts.contentRegistry).toBe(chain42220!.ContentRegistry.address);
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Ignoring VOTING_ENGINE_ADDRESS"));
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Ignoring CONTENT_REGISTRY_ADDRESS"));
   });

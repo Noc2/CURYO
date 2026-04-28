@@ -40,14 +40,16 @@ Within the package directory, additional scripts are available:
 | `PONDER_RPC_URL_31337`                     | RPC URL for local Hardhat/Anvil chain                                                            |
 | `PONDER_RPC_URL_11142220`                  | RPC URL for Celo Sepolia                                                                         |
 | `PONDER_RPC_URL_42220`                     | RPC URL for Celo mainnet                                                                         |
-| `PONDER_CONTENT_REGISTRY_ADDRESS` etc.     | Optional fallback addresses when the active chain has no shared deployment in `@curyo/contracts` |
+| `PONDER_CONTENT_REGISTRY_ADDRESS` etc.     | Local Hardhat address overrides; fallback addresses when the active chain has no shared deployment in `@curyo/contracts` |
 | `PONDER_CONTENT_REGISTRY_START_BLOCK` etc. | Optional fallback start blocks when the active chain has no shared deployment metadata           |
 | `CORS_ORIGIN`                              | Allowed origins (comma-separated; required in production)                                        |
 | `RATE_LIMIT_TRUSTED_IP_HEADERS`            | Comma-separated proxy IP headers to trust for API rate limiting in production                    |
 
-For supported chains, Ponder treats `@curyo/contracts` as the source of truth and ignores stale address/start-block env values.
-After `yarn deploy`, the Foundry deployment script refreshes `packages/ponder/.env.local` to match the deployment
-target. Local deploys set `PONDER_NETWORK=hardhat`; live deploys such as
+For live supported chains, Ponder treats `@curyo/contracts` as the source of truth and ignores stale address/start-block env values.
+For local Hardhat/Anvil, Ponder prefers the address env values generated into `packages/ponder/.env.local` so a fresh
+`yarn deploy` does not need machine-specific addresses committed to the shared deployment artifact. After `yarn deploy`,
+the Foundry deployment script refreshes `packages/ponder/.env.local` to match the deployment target. Local deploys set
+`PONDER_NETWORK=hardhat`; live deploys such as
 `yarn deploy --network celoSepolia --keystore <name>` set the matching live network.
 
 ## Project Structure
