@@ -51,7 +51,7 @@ const AGENT_PAYMENT_HELP_TEXT =
   "Both modes fund protocol escrow directly. Choose the shape your agent client can execute today.";
 const AGENT_POLICY_HELP_TEXT =
   "These limits are signed by the connected owner wallet and enforced by the managed MCP policy.";
-const AGENT_MCP_HELP_TEXT = "Create or rotate the bearer token your agent client uses for Curyo MCP tools.";
+const AGENT_MCP_HELP_TEXT = "Create or rotate the access token your agent client uses for Curyo MCP tools.";
 
 type AgentSetupStep = (typeof SETUP_STEP_ORDER)[number];
 type PaymentMode = "wallet_calls" | "x402_authorization";
@@ -260,7 +260,7 @@ export function AgentSubmissionPanel() {
     {
       complete: Boolean(selectedPolicy?.hasToken || generatedToken),
       id: "mcp",
-      label: "MCP access",
+      label: "Agent access",
     },
   ];
 
@@ -703,7 +703,7 @@ export function AgentSubmissionPanel() {
           <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
             <div>
               <p className="text-sm font-semibold uppercase tracking-wide text-base-content/50">Configured Agent</p>
-              <h2 className="mt-1 text-2xl font-semibold">Managed submit dashboard</h2>
+              <h2 className="mt-1 text-2xl font-semibold">Agent dashboard</h2>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {policySelector}
@@ -875,7 +875,7 @@ export function AgentSubmissionPanel() {
             {renderUnlockAgentPoliciesButton()}
             {selectedPolicy ? (
               <button type="button" className="btn btn-outline btn-sm" onClick={() => setIsSetupMode(false)}>
-                Dashboard
+                Manage agent
               </button>
             ) : null}
           </div>
@@ -1266,12 +1266,12 @@ export function AgentSubmissionPanel() {
                 Step {activeStepNumber} of {SETUP_STEP_ORDER.length}
               </p>
               <h3 className="mt-1 flex items-center gap-2 text-xl font-semibold">
-                Create MCP access
+                Connect agent
                 <InfoTooltip text={AGENT_MCP_HELP_TEXT} position="right" />
               </h3>
             </div>
             <Link href="/docs/ai#generic-mcp-config" className="link link-primary text-sm">
-              MCP setup
+              Setup guide
             </Link>
           </div>
 
