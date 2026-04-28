@@ -451,6 +451,52 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         assertTrue(registry.submissionKeyUsed(submissionKey));
     }
 
+    function test_SubmitQuestion_AllowsSupportedYouTubeVideoShapes() public view {
+        registry.previewQuestionSubmissionKey(
+            "https://example.com/context",
+            _emptyImageUrls(),
+            "https://youtu.be/jNQXAC9IVRw?t=1",
+            "Question?",
+            "Context",
+            "Video",
+            1
+        );
+        registry.previewQuestionSubmissionKey(
+            "https://example.com/context",
+            _emptyImageUrls(),
+            "https://www.youtube.com/embed/jNQXAC9IVRw",
+            "Question?",
+            "Context",
+            "Video",
+            1
+        );
+        registry.previewQuestionSubmissionKey(
+            "https://example.com/context",
+            _emptyImageUrls(),
+            "https://youtube.com/watch?feature=share&v=jNQXAC9IVRw",
+            "Question?",
+            "Context",
+            "Video",
+            1
+        );
+    }
+
+    function test_SubmitQuestion_RejectsMalformedYouTubeVideoUrls() public {
+        string[] memory urls = new string[](5);
+        urls[0] = "https://www.youtube.com/watch?av=jNQXAC9IVRw";
+        urls[1] = "https://www.youtube.com/watch?v=";
+        urls[2] = "https://youtu.be/";
+        urls[3] = "https://www.youtube.com/embed/";
+        urls[4] = "https://youtu.be/bad/id";
+
+        for (uint256 i = 0; i < urls.length; i++) {
+            vm.expectRevert("Invalid media URL");
+            registry.previewQuestionSubmissionKey(
+                "https://example.com/context", _emptyImageUrls(), urls[i], "Question?", "Context", "Video", 1
+            );
+        }
+    }
+
     function test_SubmitQuestion_AllowsMultipleOptionalImages() public {
         string[] memory imageUrls = new string[](2);
         imageUrls[0] = "https://example.com/a.jpg";

@@ -61,16 +61,11 @@ contract SubmissionMediaValidator {
     }
 
     function _isSupportedVideoUrl(string memory url) internal pure returns (bool) {
-        if (_hasPrefix(url, "https://youtu.be/")) return bytes(url).length > bytes("https://youtu.be/").length;
-        if (_hasPrefix(url, "https://www.youtube.com/embed/")) {
-            return bytes(url).length > bytes("https://www.youtube.com/embed/").length;
-        }
-        if (
-            _hasPrefix(url, "https://youtube.com/watch?") || _hasPrefix(url, "https://www.youtube.com/watch?")
-                || _hasPrefix(url, "https://m.youtube.com/watch?")
-        ) {
-            return _contains(url, "v=");
-        }
+        if (_hasValidYoutubePathId(url, "https://youtu.be/")) return true;
+        if (_hasValidYoutubePathId(url, "https://www.youtube.com/embed/")) return true;
+        if (_hasValidYoutubeWatchId(url, "https://youtube.com/watch?")) return true;
+        if (_hasValidYoutubeWatchId(url, "https://www.youtube.com/watch?")) return true;
+        if (_hasValidYoutubeWatchId(url, "https://m.youtube.com/watch?")) return true;
         return false;
     }
 
@@ -130,23 +125,63 @@ contract SubmissionMediaValidator {
         return true;
     }
 
-    function _contains(string memory value, string memory needle) internal pure returns (bool) {
+    function _hasValidYoutubePathId(string memory value, string memory prefix) internal pure returns (bool) {
         bytes memory valueBytes = bytes(value);
-        bytes memory needleBytes = bytes(needle);
-        if (needleBytes.length == 0) return true;
-        if (valueBytes.length < needleBytes.length) return false;
+        bytes memory prefixBytes = bytes(prefix);
+        if (!_hasPrefix(value, prefix)) return false;
 
-        for (uint256 i = 0; i <= valueBytes.length - needleBytes.length; i++) {
-            bool matched = true;
-            for (uint256 j = 0; j < needleBytes.length; j++) {
-                if (valueBytes[i + j] != needleBytes[j]) {
-                    matched = false;
-                    break;
+        bool hasId = false;
+        for (uint256 i = prefixBytes.length; i < valueBytes.length; i++) {
+            bytes1 char = valueBytes[i];
+            if (char == "?" || char == "#") break;
+            if (char == "/" || !_isYoutubeIdByte(char)) return false;
+            hasId = true;
+        }
+        return hasId;
+    }
+
+    function _hasValidYoutubeWatchId(string memory value, string memory prefix) internal pure returns (bool) {
+        bytes memory valueBytes = bytes(value);
+        bytes memory prefixBytes = bytes(prefix);
+        if (!_hasPrefix(value, prefix)) return false;
+
+        uint256 i = prefixBytes.length;
+        while (i < valueBytes.length) {
+            if (valueBytes[i] == "#") return false;
+            if (
+                (i == prefixBytes.length || valueBytes[i - 1] == "&") && i + 1 < valueBytes.length
+                    && valueBytes[i] == "v" && valueBytes[i + 1] == "="
+            ) {
+                return _hasValidYoutubeQueryValue(valueBytes, i + 2);
+            }
+            while (i < valueBytes.length && valueBytes[i] != "&" && valueBytes[i] != "#") {
+                unchecked {
+                    ++i;
                 }
             }
-            if (matched) return true;
+            if (i < valueBytes.length && valueBytes[i] == "&") {
+                unchecked {
+                    ++i;
+                }
+            }
         }
         return false;
+    }
+
+    function _hasValidYoutubeQueryValue(bytes memory valueBytes, uint256 start) internal pure returns (bool) {
+        bool hasId = false;
+        for (uint256 i = start; i < valueBytes.length; i++) {
+            bytes1 char = valueBytes[i];
+            if (char == "&" || char == "#") break;
+            if (!_isYoutubeIdByte(char)) return false;
+            hasId = true;
+        }
+        return hasId;
+    }
+
+    function _isYoutubeIdByte(bytes1 char) internal pure returns (bool) {
+        return (char >= 0x30 && char <= 0x39) || (char >= 0x41 && char <= 0x5A) || (char >= 0x61 && char <= 0x7A)
+            || char == "_" || char == "-";
     }
 
     function _toLowerByte(bytes1 char) internal pure returns (bytes1) {
