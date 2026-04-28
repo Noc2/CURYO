@@ -30,7 +30,6 @@ import {
 } from "~~/hooks/useAgentPolicies";
 import { useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
 import {
-  ERC20_APPROVAL_ABI,
   formatSubmissionRewardAmount,
   getConfiguredQuestionRewardPoolEscrowAddress,
   getDefaultUsdcAddress,
@@ -42,13 +41,12 @@ import { notification } from "~~/utils/scaffold-eth";
 const CELO_MAINNET_CHAIN_ID = 42220;
 const DEFAULT_FUNDING_AMOUNT_USDC = "10";
 const DEFAULT_PER_ASK_CAP_ATOMIC = 2_000_000n;
-const DEFAULT_DAILY_CAP_ATOMIC = 10_000_000n;
 const DEFAULT_AGENT_SCOPES = ["curyo:ask", "curyo:read", "curyo:quote", "curyo:balance"];
 const SETUP_STEP_ORDER = ["wallet", "fund", "payment", "policy", "mcp"] as const;
 const AGENT_WALLET_HELP_TEXT =
   "The owner wallet signs policy changes. The agent wallet is the address your MCP client uses as walletAddress when it submits paid asks.";
 const AGENT_FUND_HELP_TEXT =
-  "Add Celo USDC to the agent wallet. Wallet-call payments also need an escrow allowance from that same wallet.";
+  "Add Celo USDC to the agent wallet. Runtime wallet-call plans include the exact approval needed when the agent submits an ask.";
 const AGENT_PAYMENT_HELP_TEXT =
   "Both modes fund protocol escrow directly. Choose the shape your agent client can execute today.";
 const AGENT_POLICY_HELP_TEXT =
@@ -163,7 +161,6 @@ export function AgentSubmissionPanel() {
   const { targetNetwork } = useTargetNetwork();
   const { copyToClipboard, isCopiedToClipboard } = useCopyToClipboard({ successDurationMs: 1500 });
   const { writeContractAsync } = useWriteContract();
-  const [isApprovingEscrow, setIsApprovingEscrow] = useState(false);
   const [isTransferringUsdc, setIsTransferringUsdc] = useState(false);
   const [transferAmount, setTransferAmount] = useState("5");
   const [selectedPolicyId, setSelectedPolicyId] = useState<string | null>(null);
@@ -193,8 +190,6 @@ export function AgentSubmissionPanel() {
     explicitAgentWalletAddress ?? (policyForm.agentWalletAddress.trim() ? undefined : connectedWalletAddress);
   const agentWalletInputInvalid = policyForm.agentWalletAddress.trim().length > 0 && !explicitAgentWalletAddress;
   const agentWalletMatchesConnectedWallet = addressesMatch(agentWalletAddress, address);
-  const requiresEscrowAllowance = paymentMode === "wallet_calls";
-
   const { data: balanceRaw, refetch: refetchBalance } = useReadContract({
     address: usdcAddress,
     abi: erc20Abi,
@@ -202,19 +197,9 @@ export function AgentSubmissionPanel() {
     args: agentWalletAddress ? [agentWalletAddress] : undefined,
     query: { enabled: Boolean(agentWalletAddress && usdcAddress) },
   });
-  const { data: allowanceRaw, refetch: refetchAllowance } = useReadContract({
-    address: usdcAddress,
-    abi: erc20Abi,
-    functionName: "allowance",
-    args: agentWalletAddress && escrowAddress ? [agentWalletAddress, escrowAddress] : undefined,
-    query: { enabled: Boolean(agentWalletAddress && escrowAddress && usdcAddress) },
-  });
-
   const balance = typeof balanceRaw === "bigint" ? balanceRaw : 0n;
-  const allowance = typeof allowanceRaw === "bigint" ? allowanceRaw : 0n;
   const hasUsdcForDefaultAsk = balance >= DEFAULT_PER_ASK_CAP_ATOMIC;
-  const hasEscrowAllowanceForDefaultAsk = allowance >= DEFAULT_PER_ASK_CAP_ATOMIC;
-  const fundingReady = hasUsdcForDefaultAsk && (!requiresEscrowAllowance || hasEscrowAllowanceForDefaultAsk);
+  const fundingReady = hasUsdcForDefaultAsk;
   const ready = Boolean(
     address && agentWalletAddress && escrowAddress && usdcAddress && fundingReady && selectedPolicy,
   );
@@ -279,54 +264,6 @@ export function AgentSubmissionPanel() {
     [copyToClipboard],
   );
 
-  const handleApproveEscrow = useCallback(async () => {
-    if (!address) {
-      notification.error("Connect your wallet before approving escrow.");
-      return;
-    }
-    if (!agentWalletAddress) {
-      notification.error("Enter a valid agent wallet before approving escrow.");
-      return;
-    }
-    if (!agentWalletMatchesConnectedWallet) {
-      notification.warning("Connect the agent wallet before approving escrow for wallet-call payments.");
-      return;
-    }
-    if (!escrowAddress || !usdcAddress) {
-      notification.error("Celo USDC or reward escrow is not configured for this network.");
-      return;
-    }
-
-    setIsApprovingEscrow(true);
-    try {
-      const approveHash = await writeContractAsync({
-        address: usdcAddress,
-        abi: ERC20_APPROVAL_ABI,
-        functionName: "approve",
-        args: [escrowAddress, DEFAULT_DAILY_CAP_ATOMIC],
-      });
-      await waitForTransactionReceipt(wagmiConfig, { hash: approveHash });
-      await refetchAllowance();
-      notification.success(`Escrow allowance set to ${formatUsdc(DEFAULT_DAILY_CAP_ATOMIC)}.`);
-    } catch (error) {
-      notification.error(
-        (error as { shortMessage?: string; message?: string } | undefined)?.shortMessage ||
-          (error as { shortMessage?: string; message?: string } | undefined)?.message ||
-          "Failed to approve escrow",
-      );
-    } finally {
-      setIsApprovingEscrow(false);
-    }
-  }, [
-    address,
-    agentWalletAddress,
-    agentWalletMatchesConnectedWallet,
-    escrowAddress,
-    refetchAllowance,
-    usdcAddress,
-    wagmiConfig,
-    writeContractAsync,
-  ]);
 
   const handleTransferUsdc = useCallback(async () => {
     if (!address) {
@@ -804,7 +741,7 @@ export function AgentSubmissionPanel() {
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
                   <p className="text-sm font-semibold uppercase tracking-wide text-base-content/50">Wallet Readiness</p>
-                  <h3 className="mt-1 text-lg font-semibold">Funding and allowance</h3>
+                  <h3 className="mt-1 text-lg font-semibold">Funding</h3>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button
@@ -816,32 +753,14 @@ export function AgentSubmissionPanel() {
                     <ClipboardDocumentIcon className="h-4 w-4" />
                     {isCopiedToClipboard ? "Copied" : "Copy wallet"}
                   </button>
-                  <button
-                    type="button"
-                    className="btn btn-primary btn-sm"
-                    disabled={!address || !agentWalletMatchesConnectedWallet || !escrowAddress || !usdcAddress}
-                    onClick={() => void handleApproveEscrow()}
-                  >
-                    <KeyIcon className="h-4 w-4" />
-                    Approve escrow
-                  </button>
                 </div>
               </div>
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <div className="mt-4 grid gap-3">
                 <div className="rounded-lg border border-base-300 bg-base-100/50 p-4">
                   <p className="text-sm text-base-content/60">Celo USDC</p>
                   <p className="mt-1 text-xl font-semibold">{formatUsdc(balance)}</p>
                 </div>
-                <div className="rounded-lg border border-base-300 bg-base-100/50 p-4">
-                  <p className="text-sm text-base-content/60">Escrow allowance</p>
-                  <p className="mt-1 text-xl font-semibold">{formatUsdc(allowance)}</p>
-                </div>
               </div>
-              {!agentWalletMatchesConnectedWallet ? (
-                <p className="mt-3 text-sm text-base-content/60">
-                  Escrow approval must be sent from the configured agent wallet.
-                </p>
-              ) : null}
             </div>
 
             <div className="surface-card rounded-lg p-5">
@@ -1045,20 +964,13 @@ export function AgentSubmissionPanel() {
                 <InfoTooltip text={AGENT_FUND_HELP_TEXT} position="right" />
               </h3>
 
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="mt-4 grid gap-3">
                 <div className="rounded-lg border border-base-300 bg-base-100/50 p-4">
                   <div className="flex items-center gap-2 text-sm font-medium text-base-content/60">
                     <CpuChipIcon className="h-4 w-4" />
                     <span>Celo USDC</span>
                   </div>
                   <p className="mt-2 text-lg font-semibold">{formatUsdc(balance)}</p>
-                </div>
-                <div className="rounded-lg border border-base-300 bg-base-100/50 p-4">
-                  <div className="flex items-center gap-2 text-sm font-medium text-base-content/60">
-                    <KeyIcon className="h-4 w-4" />
-                    <span>Escrow allowance</span>
-                  </div>
-                  <p className="mt-2 text-lg font-semibold">{formatUsdc(allowance)}</p>
                 </div>
               </div>
 
@@ -1115,28 +1027,7 @@ export function AgentSubmissionPanel() {
                   <ClipboardDocumentIcon className="h-4 w-4" />
                   {isCopiedToClipboard ? "Copied" : "Copy wallet"}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => void handleApproveEscrow()}
-                  disabled={
-                    !address ||
-                    !agentWalletAddress ||
-                    !agentWalletMatchesConnectedWallet ||
-                    !escrowAddress ||
-                    !usdcAddress ||
-                    isApprovingEscrow
-                  }
-                  className="btn btn-primary btn-sm"
-                >
-                  <KeyIcon className="h-4 w-4" />
-                  {isApprovingEscrow ? "Approving..." : "Approve escrow"}
-                </button>
               </div>
-              {!agentWalletMatchesConnectedWallet && agentWalletAddress ? (
-                <p className="mt-3 text-sm text-base-content/60">
-                  Approval is disabled until the connected wallet matches the agent wallet.
-                </p>
-              ) : null}
             </div>
 
             <div className="min-w-0">
@@ -1215,8 +1106,8 @@ export function AgentSubmissionPanel() {
 
           {paymentMode === "wallet_calls" ? (
             <p className="mt-4 text-sm leading-relaxed text-base-content/65">
-              Wallet-call mode requires the agent wallet to keep enough USDC balance and escrow allowance for returned
-              transaction plans.
+              Wallet-call mode requires the agent wallet to keep enough USDC balance. Each returned transaction plan
+              includes the exact USDC approval needed for that ask.
             </p>
           ) : (
             <p className="mt-4 text-sm leading-relaxed text-base-content/65">
