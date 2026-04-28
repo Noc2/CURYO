@@ -376,7 +376,13 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
         voterIdNFT.resetNullifier(444_002);
         voterIdNFT.mint(voter1, 444_002);
 
-        _settleRoundWith(_threeVoters(), contentId, _directions(true, true, false));
+        _expectSelfVoteCommitRevert(voter1, contentId, keccak256("feedback-reminted-submitter"));
+
+        address[] memory voters = new address[](3);
+        voters[0] = voter2;
+        voters[1] = voter3;
+        voters[2] = voter4;
+        _settleRoundWith(voters, contentId, _directions(true, true, false));
 
         vm.prank(funder);
         vm.expectRevert("Excluded voter");
@@ -608,6 +614,25 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
         }
 
         votingEngine.settleRound(contentId, roundId);
+    }
+
+    function _expectSelfVoteCommitRevert(address voter, uint256 contentId, bytes32 salt) internal {
+        TestCommitArtifacts memory artifacts =
+            _buildTestCommitArtifacts(address(votingEngine), voter, true, salt, contentId);
+        vm.startPrank(voter);
+        hrepToken.approve(address(votingEngine), STAKE);
+        vm.expectRevert(RoundVotingEngine.SelfVote.selector);
+        votingEngine.commitVote(
+            contentId,
+            artifacts.roundReferenceRatingBps,
+            artifacts.targetRound,
+            artifacts.drandChainHash,
+            artifacts.commitHash,
+            artifacts.ciphertext,
+            STAKE,
+            address(0)
+        );
+        vm.stopPrank();
     }
 
     function _registerFrontend(address frontend) internal {
