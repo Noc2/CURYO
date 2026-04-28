@@ -512,6 +512,8 @@ test("supported sponsored operation families are allowlisted", async () => {
     [encodeCall(rewardDistributorContract, "claimFrontendFee", [1n, 1n, WALLET])],
     [encodeCall(rewardDistributorContract, "claimParticipationReward", [1n, 1n])],
     [encodeCall(rewardDistributorContract, "claimReward", [1n, 1n])],
+    [encodeCall(rewardEscrowContract, "claimQuestionReward", [1n, 1n])],
+    [encodeCall(rewardEscrowContract, "claimQuestionBundleReward", [1n, 0n])],
   ] as const;
 
   for (const calls of supportedCases) {

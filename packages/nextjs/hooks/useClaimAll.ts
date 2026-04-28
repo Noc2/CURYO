@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { type Abi } from "viem";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
 import { type ClaimableRewardItem, sortClaimableRewardItems } from "~~/hooks/claimableRewards";
-import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import { useDeployedContractInfo, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { useGasBalanceStatus } from "~~/hooks/useGasBalanceStatus";
+import { useThirdwebSponsoredSubmitCalls } from "~~/hooks/useThirdwebSponsoredSubmitCalls";
 import { useWalletRpcRecovery } from "~~/hooks/useWalletRpcRecovery";
 import {
   getClaimGasErrorMessage,
@@ -22,6 +24,13 @@ import { notification } from "~~/utils/scaffold-eth";
 /**
  * Hook for claiming all outstanding rewards in sequence.
  */
+type SponsoredClaimCall = {
+  abi: Abi;
+  address: `0x${string}`;
+  functionName: string;
+  args?: readonly unknown[];
+};
+
 function getClaimableRewardLabel(item: ClaimableRewardItem) {
   switch (item.claimType) {
     case "participation_reward":
@@ -46,6 +55,14 @@ export function useClaimAll() {
   const { requireAcceptance } = useTermsAcceptance();
   const { targetNetwork } = useTargetNetwork();
   const questionRewardPoolEscrowAddress = getConfiguredQuestionRewardPoolEscrowAddress(targetNetwork.id);
+  const { canUseSponsoredSubmitCalls, executeSponsoredCalls, isAwaitingSponsoredSubmitCalls } =
+    useThirdwebSponsoredSubmitCalls();
+  const { data: distributorInfo } = useDeployedContractInfo({ contractName: "RoundRewardDistributor" });
+  const { data: votingEngineInfo } = useDeployedContractInfo({ contractName: "RoundVotingEngine" as any });
+  const { data: frontendRegistryInfo } = useDeployedContractInfo({ contractName: "FrontendRegistry" });
+  const { data: questionRewardPoolEscrowInfo } = useDeployedContractInfo({
+    contractName: "QuestionRewardPoolEscrow" as any,
+  });
   const {
     canShowFreeTransactionAllowance,
     canSponsorTransactions,
@@ -76,6 +93,73 @@ export function useClaimAll() {
   const { writeContractAsync: writeQuestionRewardPoolEscrow } = useScaffoldWriteContract({
     contractName: "QuestionRewardPoolEscrow",
   } as any);
+
+  const getSponsoredClaimCall = (item: ClaimableRewardItem): SponsoredClaimCall => {
+    if (item.claimType === "refund") {
+      if (!votingEngineInfo) throw new Error("Round voting engine is unavailable right now.");
+      return {
+        abi: votingEngineInfo.abi as Abi,
+        address: votingEngineInfo.address as `0x${string}`,
+        args: [item.contentId, item.roundId],
+        functionName: "claimCancelledRoundRefund",
+      };
+    }
+
+    if (item.claimType === "frontend_registry_fee") {
+      if (!frontendRegistryInfo) throw new Error("Frontend registry is unavailable right now.");
+      return {
+        abi: frontendRegistryInfo.abi as Abi,
+        address: frontendRegistryInfo.address as `0x${string}`,
+        functionName: "claimFees",
+      };
+    }
+
+    if (item.claimType === "question_reward") {
+      if (!questionRewardPoolEscrowInfo) throw new Error("Question reward escrow is unavailable right now.");
+      return {
+        abi: questionRewardPoolEscrowInfo.abi as Abi,
+        address: questionRewardPoolEscrowInfo.address as `0x${string}`,
+        args: [item.rewardPoolId, item.roundId],
+        functionName: "claimQuestionReward",
+      };
+    }
+
+    if (item.claimType === "question_bundle_reward") {
+      if (!questionRewardPoolEscrowInfo) throw new Error("Question reward escrow is unavailable right now.");
+      return {
+        abi: questionRewardPoolEscrowInfo.abi as Abi,
+        address: questionRewardPoolEscrowInfo.address as `0x${string}`,
+        args: [item.bundleId, item.roundSetIndex],
+        functionName: "claimQuestionBundleReward",
+      };
+    }
+
+    if (!distributorInfo) throw new Error("Round reward distributor is unavailable right now.");
+    if (item.claimType === "participation_reward") {
+      return {
+        abi: distributorInfo.abi as Abi,
+        address: distributorInfo.address as `0x${string}`,
+        args: [item.contentId, item.roundId],
+        functionName: "claimParticipationReward",
+      };
+    }
+
+    if (item.claimType === "frontend_round_fee") {
+      return {
+        abi: distributorInfo.abi as Abi,
+        address: distributorInfo.address as `0x${string}`,
+        args: [item.contentId, item.roundId, item.frontend],
+        functionName: "claimFrontendFee",
+      };
+    }
+
+    return {
+      abi: distributorInfo.abi as Abi,
+      address: distributorInfo.address as `0x${string}`,
+      args: [item.contentId, item.roundId],
+      functionName: "claimReward",
+    };
+  };
 
   const claimAll = async (items: ClaimableRewardItem[], onComplete?: () => void) => {
     if (items.length === 0) return;
@@ -125,7 +209,16 @@ export function useClaimAll() {
         const claimLabel = getClaimableRewardLabel(item);
 
         try {
-          if (item.claimType === "refund") {
+          if (item.claimType === "frontend_registry_fee" && item.reward <= 0n && creditedFrontendRoundCount === 0) {
+            continue;
+          }
+
+          if (canUseSponsoredSubmitCalls) {
+            await executeSponsoredCalls([getSponsoredClaimCall(item)], { action: claimLabel });
+            if (item.claimType === "frontend_round_fee") {
+              creditedFrontendRoundCount += 1;
+            }
+          } else if (item.claimType === "refund") {
             await (writeVotingEngine as any)(
               {
                 functionName: "claimCancelledRoundRefund",
@@ -151,10 +244,6 @@ export function useClaimAll() {
             );
             creditedFrontendRoundCount += 1;
           } else if (item.claimType === "frontend_registry_fee") {
-            if (item.reward <= 0n && creditedFrontendRoundCount === 0) {
-              continue;
-            }
-
             await (writeFrontendRegistry as any)(
               {
                 functionName: "claimFees",
@@ -213,7 +302,10 @@ export function useClaimAll() {
     claimAll,
     isClaiming,
     isPreparingClaim:
-      isAwaitingFreeTransactionAllowance || isAwaitingSelfFundedWalletReconnect || isAwaitingSponsoredWalletReconnect,
+      isAwaitingFreeTransactionAllowance ||
+      isAwaitingSelfFundedWalletReconnect ||
+      isAwaitingSponsoredSubmitCalls ||
+      isAwaitingSponsoredWalletReconnect,
     progress,
   };
 }

@@ -791,6 +791,11 @@ function validateSponsoredCalls(
           continue;
         }
         return { ok: false, debugCode: "unsupported_operation" };
+      case "QuestionRewardPoolEscrow":
+        if (functionName === "claimQuestionReward" || functionName === "claimQuestionBundleReward") {
+          continue;
+        }
+        return { ok: false, debugCode: "unsupported_operation" };
       default:
         return { ok: false, debugCode: "target_not_allowlisted" };
     }
