@@ -108,7 +108,7 @@ function LiveRoundActivity({
     snapshot.phase !== "voting"
       ? snapshot.hasRound
         ? `${formatHrepAmount(snapshot.totalStake, 0)} HREP locked in the last round`
-        : "A new round forms with the next vote."
+        : ""
       : snapshot.isEpoch1
         ? condensed
           ? blindDetail
@@ -128,7 +128,7 @@ function LiveRoundActivity({
   const showsDedicatedProgressRow = Boolean(progress);
 
   if (condensed) {
-    if (showsDedicatedProgressRow) {
+    if (showsDedicatedProgressRow || (snapshot.phase !== "voting" && !snapshot.hasRound)) {
       return null;
     }
 
