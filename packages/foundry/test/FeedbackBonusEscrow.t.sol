@@ -561,7 +561,15 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
         );
         vm.warp(block.timestamp + 1);
         contentId = registry.submitQuestion(
-            "https://example.com/context", imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, salt
+            "https://example.com/context",
+            imageUrls,
+            "",
+            QUESTION,
+            DESCRIPTION,
+            TAGS,
+            CATEGORY_ID,
+            salt,
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }

@@ -136,6 +136,7 @@ type X402QuestionSubmissionConfig = {
   rpcUrl: string;
   targetNetwork: NonNullable<ReturnType<typeof getPrimaryServerTargetNetwork>>;
   usdcAddress: Address;
+  x402QuestionSubmitterAddress?: Address;
 };
 
 export class X402QuestionConfigError extends Error {
@@ -158,7 +159,7 @@ export class X402QuestionConflictError extends Error {
 
 let x402QuestionSubmissionTestOverrides: X402QuestionSubmissionTestOverrides | null = null;
 
-const ContentRegistryX402Abi = [
+const X402QuestionSubmitterAbi = [
   {
     inputs: [
       {
@@ -416,6 +417,7 @@ export function resolveX402QuestionConfig(chainId: number): X402QuestionSubmissi
 
   const contentRegistryAddress = getSharedDeploymentAddress(chainId, "ContentRegistry");
   const questionRewardPoolEscrowAddress = getSharedDeploymentAddress(chainId, "QuestionRewardPoolEscrow");
+  const x402QuestionSubmitterAddress = getSharedDeploymentAddress(chainId, "X402QuestionSubmitter");
   if (!contentRegistryAddress || !questionRewardPoolEscrowAddress) {
     throw new X402QuestionConfigError("Curyo contracts are not deployed for the requested chain.");
   }
@@ -432,6 +434,7 @@ export function resolveX402QuestionConfig(chainId: number): X402QuestionSubmissi
     rpcUrl,
     targetNetwork,
     usdcAddress,
+    x402QuestionSubmitterAddress,
   };
 }
 
@@ -894,6 +897,9 @@ export async function buildNativeX402QuestionSubmissionPlan(params: {
   if (params.payload.questions.length !== 1) {
     throw new X402QuestionConflictError("Native x402 authorization currently supports single-question asks only.");
   }
+  if (!params.config.x402QuestionSubmitterAddress) {
+    throw new X402QuestionConfigError("Native x402 question submissions require the X402 submitter deployment.");
+  }
 
   const publicClient = createPublicQuestionClient(params.config);
   const operation = buildX402QuestionOperation(params.payload);
@@ -927,8 +933,8 @@ export async function buildNativeX402QuestionSubmissionPlan(params: {
   }
 
   const computedNonce = (await publicClient.readContract({
-    address: params.config.contentRegistryAddress,
-    abi: ContentRegistryX402Abi,
+    address: params.config.x402QuestionSubmitterAddress,
+    abi: X402QuestionSubmitterAbi,
     functionName: "computeX402QuestionPaymentNonce",
     args: [
       {
@@ -945,7 +951,7 @@ export async function buildNativeX402QuestionSubmissionPlan(params: {
       context.roundConfigAbi,
       question.spec,
       params.walletAddress,
-      params.config.questionRewardPoolEscrowAddress,
+      params.config.x402QuestionSubmitterAddress,
       params.payload.bounty.amount,
       validAfter,
       validBefore,
@@ -959,9 +965,9 @@ export async function buildNativeX402QuestionSubmissionPlan(params: {
   }
   if (
     inputAuthorization.to &&
-    inputAuthorization.to.toLowerCase() !== params.config.questionRewardPoolEscrowAddress.toLowerCase()
+    inputAuthorization.to.toLowerCase() !== params.config.x402QuestionSubmitterAddress.toLowerCase()
   ) {
-    throw new X402QuestionConflictError("paymentAuthorization.to must be the Curyo reward escrow.");
+    throw new X402QuestionConflictError("paymentAuthorization.to must be the Curyo x402 submitter.");
   }
   if (inputAuthorization.value && BigInt(inputAuthorization.value) !== params.payload.bounty.amount) {
     throw new X402QuestionConflictError("paymentAuthorization.value must equal the bounty amount.");
@@ -971,7 +977,7 @@ export async function buildNativeX402QuestionSubmissionPlan(params: {
     from: params.walletAddress,
     nonce: computedNonce,
     signature: inputAuthorization.signature,
-    to: params.config.questionRewardPoolEscrowAddress,
+    to: params.config.x402QuestionSubmitterAddress,
     validAfter: validAfter.toString(),
     validBefore: validBefore.toString(),
     value: params.payload.bounty.amount.toString(),
@@ -980,7 +986,7 @@ export async function buildNativeX402QuestionSubmissionPlan(params: {
     ? [
         {
           data: encodeFunctionData({
-            abi: ContentRegistryX402Abi,
+            abi: X402QuestionSubmitterAbi,
             functionName: "submitQuestionWithX402Payment",
             args: [
               question.contextUrl,
@@ -1009,7 +1015,7 @@ export async function buildNativeX402QuestionSubmissionPlan(params: {
           functionName: "submitQuestionWithX402Payment",
           id: "submit-x402-question",
           phase: "submit_x402_question",
-          to: params.config.contentRegistryAddress,
+          to: params.config.x402QuestionSubmitterAddress,
           value: "0",
         },
       ]
@@ -1025,7 +1031,7 @@ export async function buildNativeX402QuestionSubmissionPlan(params: {
       asset: "USDC",
       bountyAmount: params.payload.bounty.amount.toString(),
       decimals: X402_USDC_DECIMALS,
-      spender: params.config.questionRewardPoolEscrowAddress,
+      spender: params.config.x402QuestionSubmitterAddress,
       tokenAddress: params.config.usdcAddress,
     },
     payloadHash: operation.payloadHash,

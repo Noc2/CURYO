@@ -708,7 +708,9 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         vm.warp(block.timestamp + 1);
         vm.expectEmit(true, true, false, true);
         emit ContentSubmitted(1, submitter, expectedHash, contextUrl, title, description, tags, 1);
-        uint256 id = registry.submitQuestion(contextUrl, imageUrls, "", title, description, tags, 1, salt);
+        uint256 id = registry.submitQuestion(
+            contextUrl, imageUrls, "", title, description, tags, 1, salt, _defaultQuestionSpec()
+        );
         vm.stopPrank();
 
         assertEq(id, 1);
@@ -722,7 +724,9 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         vm.startPrank(submitter);
         hrep.approve(address(registry), 10e6);
         vm.expectRevert("Invalid URL");
-        registry.submitQuestion("", _emptyImageUrls(), "", "goal", "goal", "tag1", 1, bytes32(0));
+        registry.submitQuestion(
+            "", _emptyImageUrls(), "", "goal", "goal", "tag1", 1, bytes32(0), _defaultQuestionSpec()
+        );
         vm.stopPrank();
     }
 
@@ -737,7 +741,15 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         hrep.approve(address(registry), 10e6);
         vm.expectRevert("Invalid URL");
         registry.submitQuestion(
-            "https://example.com/context", _singleImageUrls(string(longUrl)), "", "goal", "goal", "tag1", 1, bytes32(0)
+            "https://example.com/context",
+            _singleImageUrls(string(longUrl)),
+            "",
+            "goal",
+            "goal",
+            "tag1",
+            1,
+            bytes32(0),
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }
@@ -756,7 +768,8 @@ contract ContentRegistryCoverageTest is VotingTestBase {
             "",
             "tag1",
             1,
-            bytes32(0)
+            bytes32(0),
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }
@@ -780,7 +793,8 @@ contract ContentRegistryCoverageTest is VotingTestBase {
             string(longGoal),
             "tag1",
             1,
-            bytes32(0)
+            bytes32(0),
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }
@@ -797,7 +811,8 @@ contract ContentRegistryCoverageTest is VotingTestBase {
             "description",
             "tag1",
             1,
-            bytes32(0)
+            bytes32(0),
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }
@@ -829,7 +844,8 @@ contract ContentRegistryCoverageTest is VotingTestBase {
             "description",
             "tag1",
             1,
-            bytes32(0)
+            bytes32(0),
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }
@@ -869,7 +885,8 @@ contract ContentRegistryCoverageTest is VotingTestBase {
             "description",
             "tag1",
             1,
-            bytes32(0)
+            bytes32(0),
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }
@@ -908,7 +925,8 @@ contract ContentRegistryCoverageTest is VotingTestBase {
             string(longDescription),
             "tag1",
             1,
-            bytes32(0)
+            bytes32(0),
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }
@@ -927,7 +945,8 @@ contract ContentRegistryCoverageTest is VotingTestBase {
             "goal",
             "",
             1,
-            bytes32(0)
+            bytes32(0),
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }
@@ -950,7 +969,8 @@ contract ContentRegistryCoverageTest is VotingTestBase {
             "goal",
             string(longTags),
             1,
-            bytes32(0)
+            bytes32(0),
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }
@@ -963,7 +983,15 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         _submitContentWithReservation(registry, "https://example.com/dup", "goal", "goal", "tag1", 0);
         vm.expectRevert("Question already submitted");
         registry.submitQuestion(
-            "https://example.com/dup", _emptyImageUrls(), "", "goal", "goal", "tag1", 1, keccak256("dup-salt")
+            "https://example.com/dup",
+            _emptyImageUrls(),
+            "",
+            "goal",
+            "goal",
+            "tag1",
+            1,
+            keccak256("dup-salt"),
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }
@@ -1012,7 +1040,8 @@ contract ContentRegistryCoverageTest is VotingTestBase {
             "goal",
             "tag1",
             999,
-            bytes32(0)
+            bytes32(0),
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }
@@ -1229,7 +1258,8 @@ contract ContentRegistryCoverageTest is VotingTestBase {
             "goal",
             "tag1",
             1,
-            bytes32(0)
+            bytes32(0),
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }

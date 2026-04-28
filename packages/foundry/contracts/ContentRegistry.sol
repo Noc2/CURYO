@@ -18,16 +18,6 @@ import { RatingMath } from "./libraries/RatingMath.sol";
 import { ProtocolConfig } from "./ProtocolConfig.sol";
 import { SubmissionMediaValidator } from "./SubmissionMediaValidator.sol";
 
-struct Eip3009Authorization {
-    address from;
-    address to;
-    uint256 value;
-    uint256 validAfter;
-    uint256 validBefore;
-    bytes32 nonce;
-    bytes signature;
-}
-
 interface IQuestionRewardPoolEscrow {
     function createSubmissionRewardPoolFromRegistry(
         uint256 contentId,
@@ -38,17 +28,6 @@ interface IQuestionRewardPoolEscrow {
         uint256 requiredSettledRounds,
         uint256 bountyClosesAt,
         uint256 feedbackClosesAt
-    ) external returns (uint256 rewardPoolId);
-
-    function createSubmissionRewardPoolFromRegistryWithAuthorization(
-        uint256 contentId,
-        address funder,
-        uint256 amount,
-        uint256 requiredVoters,
-        uint256 requiredSettledRounds,
-        uint256 bountyClosesAt,
-        uint256 feedbackClosesAt,
-        Eip3009Authorization calldata authorization
     ) external returns (uint256 rewardPoolId);
 
     function createSubmissionBundleFromRegistry(
@@ -77,6 +56,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     bytes32 public constant TREASURY_ROLE = keccak256("TREASURY_ROLE");
     bytes32 public constant TREASURY_ADMIN_ROLE = keccak256("TREASURY_ADMIN_ROLE");
+    bytes32 public constant X402_GATEWAY_ROLE = keccak256("X402_GATEWAY_ROLE");
 
     // --- Constants ---
     uint256 internal constant REVIVAL_STAKE = 5e6; // 5 HREP (6 decimals)
@@ -256,12 +236,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         uint256 feedbackClosesAt,
         uint256 rewardPoolId
     );
-    event X402QuestionSubmitted(
-        uint256 indexed contentId,
-        address indexed submitter,
-        bytes32 indexed paymentNonce,
-        uint256 rewardPoolId
-    );
     event QuestionBundleSubmitted(
         uint256 indexed bundleId,
         address indexed submitter,
@@ -325,6 +299,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         _grantRole(PAUSER_ROLE, _governance);
         _setRoleAdmin(TREASURY_ROLE, TREASURY_ADMIN_ROLE);
         _setRoleAdmin(TREASURY_ADMIN_ROLE, TREASURY_ADMIN_ROLE);
+        _setRoleAdmin(X402_GATEWAY_ROLE, CONFIG_ROLE);
         _grantRole(TREASURY_ADMIN_ROLE, _governance);
         _grantRole(TREASURY_ADMIN_ROLE, _treasuryAuthority);
         _grantRole(TREASURY_ROLE, _treasuryAuthority);
@@ -475,26 +450,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         return contentId;
     }
 
-    function submitQuestionWithRewardAndRoundConfig(
-        string memory contextUrl,
-        string[] memory imageUrls,
-        string memory videoUrl,
-        string memory title,
-        string memory description,
-        string memory tags,
-        uint256 categoryId,
-        bytes32 salt,
-        SubmissionRewardTerms memory rewardTerms,
-        RoundLib.RoundConfig memory roundConfig
-    ) public returns (uint256) {
-        SubmissionMetadata memory metadata = _validatedContextSubmissionMetadata(
-            contextUrl, imageUrls, videoUrl, title, description, tags, categoryId
-        );
-        return _submitQuestionWithRewardAndRoundConfig(
-            metadata, imageUrls, videoUrl, salt, rewardTerms, _validatedRoundConfig(roundConfig), _genericQuestionSpec()
-        );
-    }
-
     function submitQuestionBundleWithRewardAndRoundConfig(
         BundleQuestionInput[] calldata questions,
         SubmissionRewardTerms calldata rewardTerms,
@@ -633,7 +588,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     }
 
     /// @notice Submit a question with a required context link and optional preview media.
-    /// @dev Attaches the governance minimum HREP bounty.
+    /// @dev Attaches the governance minimum HREP bounty and default round configuration.
     function submitQuestion(
         string memory contextUrl,
         string[] memory imageUrls,
@@ -645,93 +600,23 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         bytes32 salt,
         QuestionSpecCommitment memory spec
     ) public returns (uint256) {
-        _enterQuestionSubmissionGuard();
-        _requireNotPaused();
-        uint256 contentId = _submitValidatedQuestionWithMedia(
-            _validatedContextSubmissionMetadata(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId),
-            imageUrls,
-            videoUrl,
-            salt,
-            _defaultSubmissionRewardTerms(SUBMISSION_REWARD_ASSET_HREP),
-            _defaultRoundConfig(),
-            0,
-            0,
-            spec
-        );
-        _exitQuestionSubmissionGuard();
-        return contentId;
-    }
+        SubmissionRewardTerms memory rewardTerms = SubmissionRewardTerms({
+            asset: SUBMISSION_REWARD_ASSET_HREP,
+            amount: _minimumSubmissionReward(SUBMISSION_REWARD_ASSET_HREP),
+            requiredVoters: MIN_SUBMISSION_REWARD_REQUIRED_VOTERS,
+            requiredSettledRounds: MIN_SUBMISSION_REWARD_SETTLED_ROUNDS,
+            bountyClosesAt: 0,
+            feedbackClosesAt: 0
+        });
+        SubmissionMetadata memory metadata =
+            _validatedContextSubmissionMetadata(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId);
 
-    function submitQuestion(
-        string memory contextUrl,
-        string[] memory imageUrls,
-        string memory videoUrl,
-        string memory title,
-        string memory description,
-        string memory tags,
-        uint256 categoryId,
-        bytes32 salt
-    ) public returns (uint256) {
-        return submitQuestion(
-            contextUrl, imageUrls, videoUrl, title, description, tags, categoryId, salt, _genericQuestionSpec()
+        return _submitQuestionWithRewardAndRoundConfig(
+            metadata, imageUrls, videoUrl, salt, rewardTerms, _defaultRoundConfig(), spec
         );
     }
 
-    function submitQuestionWithRoundConfig(
-        string memory contextUrl,
-        string[] memory imageUrls,
-        string memory videoUrl,
-        string memory title,
-        string memory description,
-        string memory tags,
-        uint256 categoryId,
-        bytes32 salt,
-        RoundLib.RoundConfig memory roundConfig,
-        QuestionSpecCommitment memory spec
-    ) public returns (uint256) {
-        _enterQuestionSubmissionGuard();
-        _requireNotPaused();
-        uint256 contentId = _submitValidatedQuestionWithMedia(
-            _validatedContextSubmissionMetadata(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId),
-            imageUrls,
-            videoUrl,
-            salt,
-            _defaultSubmissionRewardTerms(SUBMISSION_REWARD_ASSET_HREP),
-            _validatedRoundConfig(roundConfig),
-            0,
-            0,
-            spec
-        );
-        _exitQuestionSubmissionGuard();
-        return contentId;
-    }
-
-    function submitQuestionWithRoundConfig(
-        string memory contextUrl,
-        string[] memory imageUrls,
-        string memory videoUrl,
-        string memory title,
-        string memory description,
-        string memory tags,
-        uint256 categoryId,
-        bytes32 salt,
-        RoundLib.RoundConfig memory roundConfig
-    ) public returns (uint256) {
-        return submitQuestionWithRoundConfig(
-            contextUrl,
-            imageUrls,
-            videoUrl,
-            title,
-            description,
-            tags,
-            categoryId,
-            salt,
-            roundConfig,
-            _genericQuestionSpec()
-        );
-    }
-
-    function submitQuestionWithX402Payment(
+    function submitQuestionFromX402Gateway(
         string memory contextUrl,
         string[] memory imageUrls,
         string memory videoUrl,
@@ -743,62 +628,39 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         SubmissionRewardTerms memory rewardTerms,
         RoundLib.RoundConfig memory roundConfig,
         QuestionSpecCommitment memory spec,
-        Eip3009Authorization calldata paymentAuthorization
-    ) external nonReentrant whenNotPaused returns (uint256 contentId) {
-        SubmissionMetadata memory metadata = _validatedContextSubmissionMetadata(
-            contextUrl, imageUrls, videoUrl, title, description, tags, categoryId
-        );
+        address submitter
+    ) external onlyRole(X402_GATEWAY_ROLE) returns (uint256 contentId) {
+        require(submitter != address(0), "Invalid submitter");
+        require(rewardTerms.asset == SUBMISSION_REWARD_ASSET_USDC, "USDC required");
+        _enterQuestionSubmissionGuard();
+        _requireNotPaused();
+        SubmissionMetadata memory metadata =
+            _validatedContextSubmissionMetadata(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId);
         RoundLib.RoundConfig memory validatedRoundConfig = _validatedRoundConfig(roundConfig);
-        (uint256 resolvedCategoryId, bytes32 submissionKey) = _prepareX402QuestionSubmission(
-            metadata, imageUrls, videoUrl, salt, rewardTerms, validatedRoundConfig, spec, paymentAuthorization
-        );
-        bytes32 contentHash = _questionContentHash(metadata, imageUrls, videoUrl, resolvedCategoryId, spec);
-        contentId = _storeSubmittedContent(
+        _validateQuestionSpec(spec);
+        uint256 resolvedCategoryId = _resolveQuestionSubmissionCategory(metadata);
+        bytes32 submissionKey = _deriveQuestionMediaSubmissionKey(metadata, resolvedCategoryId);
+        require(!submissionKeyUsed[submissionKey], "Question already submitted");
+        require(salt != bytes32(0), "Salt required");
+        _validateSubmissionReward(rewardTerms);
+        require(rewardTerms.requiredVoters <= validatedRoundConfig.maxVoters, "Voters exceed max");
+        submissionKeyUsed[submissionKey] = true;
+        contentId = _storeQuestionAndAttachReward(
             submissionKey,
-            paymentAuthorization.from,
+            submitter,
+            msg.sender,
             false,
-            contentHash,
+            metadata,
+            imageUrls,
+            videoUrl,
             resolvedCategoryId,
+            rewardTerms,
             validatedRoundConfig,
             0,
-            0
+            0,
+            spec
         );
-        uint256 rewardPoolId = IQuestionRewardPoolEscrow(questionRewardPoolEscrow)
-            .createSubmissionRewardPoolFromRegistryWithAuthorization(
-                contentId,
-                paymentAuthorization.from,
-                rewardTerms.amount,
-                rewardTerms.requiredVoters,
-                rewardTerms.requiredSettledRounds,
-                rewardTerms.bountyClosesAt,
-                rewardTerms.feedbackClosesAt,
-                paymentAuthorization
-            );
-
-        emit ContentSubmitted(
-            contentId,
-            paymentAuthorization.from,
-            contentHash,
-            metadata.url,
-            metadata.title,
-            metadata.description,
-            metadata.tags,
-            resolvedCategoryId
-        );
-        emit QuestionSpecAnchored(contentId, spec.questionMetadataHash, spec.resultSpecHash);
-        emit ContentMediaSubmitted(contentId, imageUrls, videoUrl);
-        emit SubmissionRewardPoolAttached(
-            contentId,
-            paymentAuthorization.from,
-            rewardTerms.asset,
-            rewardTerms.amount,
-            rewardTerms.requiredVoters,
-            rewardTerms.requiredSettledRounds,
-            rewardTerms.bountyClosesAt,
-            rewardTerms.feedbackClosesAt,
-            rewardPoolId
-        );
-        emit X402QuestionSubmitted(contentId, paymentAuthorization.from, paymentAuthorization.nonce, rewardPoolId);
+        _exitQuestionSubmissionGuard();
     }
 
     function getContentRoundConfig(uint256 contentId) public view returns (RoundLib.RoundConfig memory cfg) {
@@ -878,53 +740,20 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     ) internal returns (uint256 contentId) {
         (uint256 resolvedCategoryId, bytes32 submissionKey, PendingSubmission memory pending) =
             _prepareQuestionMediaSubmission(metadata, imageUrls, videoUrl, salt, rewardTerms, roundConfig, spec);
-        bytes32 contentHash = keccak256(
-            abi.encode(
-                "curyo-question-context-v2",
-                metadata.url,
-                imageUrls,
-                videoUrl,
-                metadata.title,
-                metadata.description,
-                metadata.tags,
-                resolvedCategoryId,
-                spec.questionMetadataHash,
-                spec.resultSpecHash
-            )
-        );
-        contentId = _storeSubmittedContent(
+        contentId = _storeQuestionAndAttachReward(
             submissionKey,
             pending.submitter,
+            msg.sender,
             rewardTerms.asset != SUBMISSION_REWARD_ASSET_USDC,
-            contentHash,
+            metadata,
+            imageUrls,
+            videoUrl,
             resolvedCategoryId,
+            rewardTerms,
             roundConfig,
             bundleId,
-            bundleIndex
-        );
-        uint256 rewardPoolId = _attachSubmissionRewardPool(contentId, rewardTerms);
-        emit ContentSubmitted(
-            contentId,
-            msg.sender,
-            contentHash,
-            metadata.url,
-            metadata.title,
-            metadata.description,
-            metadata.tags,
-            resolvedCategoryId
-        );
-        emit QuestionSpecAnchored(contentId, spec.questionMetadataHash, spec.resultSpecHash);
-        emit ContentMediaSubmitted(contentId, imageUrls, videoUrl);
-        emit SubmissionRewardPoolAttached(
-            contentId,
-            msg.sender,
-            rewardTerms.asset,
-            rewardTerms.amount,
-            rewardTerms.requiredVoters,
-            rewardTerms.requiredSettledRounds,
-            rewardTerms.bountyClosesAt,
-            rewardTerms.feedbackClosesAt,
-            rewardPoolId
+            bundleIndex,
+            spec
         );
     }
 
@@ -972,49 +801,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         submissionKeyUsed[submissionKey] = true;
     }
 
-    function _prepareX402QuestionSubmission(
-        SubmissionMetadata memory metadata,
-        string[] memory imageUrls,
-        string memory videoUrl,
-        bytes32 salt,
-        SubmissionRewardTerms memory rewardTerms,
-        RoundLib.RoundConfig memory roundConfig,
-        QuestionSpecCommitment memory spec,
-        Eip3009Authorization calldata paymentAuthorization
-    ) internal returns (uint256 resolvedCategoryId, bytes32 submissionKey) {
-        require(questionRewardPoolEscrow != address(0), "Bounty escrow not set");
-        _validateQuestionSpec(spec);
-        require(rewardTerms.asset == SUBMISSION_REWARD_ASSET_USDC, "USDC required");
-        require(paymentAuthorization.from != address(0), "Invalid payer");
-        require(paymentAuthorization.to == questionRewardPoolEscrow, "Bad payee");
-        require(paymentAuthorization.value == rewardTerms.amount, "Bad amount");
-        resolvedCategoryId = _resolveQuestionSubmissionCategory(metadata);
-        submissionKey = _deriveQuestionMediaSubmissionKey(metadata, resolvedCategoryId);
-        require(!submissionKeyUsed[submissionKey], "Question already submitted");
-        require(salt != bytes32(0), "Salt required");
-        _validateSubmissionReward(rewardTerms);
-        require(rewardTerms.requiredVoters <= roundConfig.maxVoters, "Voters exceed max");
-        require(
-            paymentAuthorization.nonce
-                == computeX402QuestionPaymentNonce(
-                    metadata,
-                    imageUrls,
-                    videoUrl,
-                    salt,
-                    rewardTerms,
-                    roundConfig,
-                    spec,
-                    paymentAuthorization.from,
-                    paymentAuthorization.to,
-                    paymentAuthorization.value,
-                    paymentAuthorization.validAfter,
-                    paymentAuthorization.validBefore
-                ),
-            "Bad nonce"
-        );
-        submissionKeyUsed[submissionKey] = true;
-    }
-
     function _submissionMediaHash(string[] memory imageUrls, string memory videoUrl) internal pure returns (bytes32) {
         return keccak256(abi.encode(imageUrls, videoUrl));
     }
@@ -1056,13 +842,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     function _validateQuestionSpec(QuestionSpecCommitment memory spec) internal pure {
         require(spec.questionMetadataHash != bytes32(0), "Bad metadata");
         require(spec.resultSpecHash != bytes32(0), "Bad spec");
-    }
-
-    function _genericQuestionSpec() internal pure returns (QuestionSpecCommitment memory) {
-        return QuestionSpecCommitment({
-            questionMetadataHash: keccak256(bytes("curyo.generic.question.metadata.v1")),
-            resultSpecHash: keccak256(bytes("curyo.generic.result.spec.v1"))
-        });
     }
 
     function _resolveQuestionSubmissionCategory(SubmissionMetadata memory metadata)
@@ -1143,15 +922,37 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         delete dormantKeyReleasableAt[contentId];
     }
 
-    function _attachSubmissionRewardPool(uint256 contentId, SubmissionRewardTerms memory rewardTerms)
-        internal
-        returns (uint256 rewardPoolId)
-    {
+    function _storeQuestionAndAttachReward(
+        bytes32 submissionKey,
+        address submitter,
+        address funder,
+        bool requireSubmitterVoterId,
+        SubmissionMetadata memory metadata,
+        string[] memory imageUrls,
+        string memory videoUrl,
+        uint256 resolvedCategoryId,
+        SubmissionRewardTerms memory rewardTerms,
+        RoundLib.RoundConfig memory roundConfig,
+        uint256 bundleId,
+        uint256 bundleIndex,
+        QuestionSpecCommitment memory spec
+    ) internal returns (uint256 contentId) {
+        bytes32 contentHash = _questionContentHash(metadata, imageUrls, videoUrl, resolvedCategoryId, spec);
+        contentId = _storeSubmittedContent(
+            submissionKey,
+            submitter,
+            requireSubmitterVoterId,
+            contentHash,
+            resolvedCategoryId,
+            roundConfig,
+            bundleId,
+            bundleIndex
+        );
         require(questionRewardPoolEscrow != address(0), "Bounty escrow not set");
-        rewardPoolId = IQuestionRewardPoolEscrow(questionRewardPoolEscrow)
+        uint256 rewardPoolId = IQuestionRewardPoolEscrow(questionRewardPoolEscrow)
             .createSubmissionRewardPoolFromRegistry(
                 contentId,
-                msg.sender,
+                funder,
                 rewardTerms.asset,
                 rewardTerms.amount,
                 rewardTerms.requiredVoters,
@@ -1159,6 +960,30 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
                 rewardTerms.bountyClosesAt,
                 rewardTerms.feedbackClosesAt
             );
+
+        emit ContentSubmitted(
+            contentId,
+            submitter,
+            contentHash,
+            metadata.url,
+            metadata.title,
+            metadata.description,
+            metadata.tags,
+            resolvedCategoryId
+        );
+        emit QuestionSpecAnchored(contentId, spec.questionMetadataHash, spec.resultSpecHash);
+        emit ContentMediaSubmitted(contentId, imageUrls, videoUrl);
+        emit SubmissionRewardPoolAttached(
+            contentId,
+            submitter,
+            rewardTerms.asset,
+            rewardTerms.amount,
+            rewardTerms.requiredVoters,
+            rewardTerms.requiredSettledRounds,
+            rewardTerms.bountyClosesAt,
+            rewardTerms.feedbackClosesAt,
+            rewardPoolId
+        );
     }
 
     /// @notice Mark content as dormant if it hasn't reached milestone 0 within DORMANCY_PERIOD.
@@ -1366,62 +1191,30 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         RoundLib.RoundConfig memory roundConfig,
         QuestionSpecCommitment memory spec
     ) internal pure returns (bytes32) {
-        uint256 titleTailLength = _encodedStringTailLength(title);
-        uint256 descriptionTailLength = _encodedStringTailLength(description);
-        uint256 titleOffset = 20 * 32;
-        uint256 descriptionOffset = titleOffset + titleTailLength;
-        uint256 tagsOffset = descriptionOffset + descriptionTailLength;
-        bytes memory encoded = new bytes(tagsOffset + _encodedStringTailLength(tags));
-
-        _writeBytes32(encoded, 0, submissionKey);
-        _writeBytes32(encoded, 32, mediaHash);
-        _writeUint(encoded, 2 * 32, titleOffset);
-        _writeUint(encoded, 3 * 32, descriptionOffset);
-        _writeUint(encoded, 4 * 32, tagsOffset);
-        _writeUint(encoded, 5 * 32, categoryId);
-        _writeBytes32(encoded, 6 * 32, salt);
-        _writeUint(encoded, 7 * 32, uint256(uint160(submitter)));
-        _writeUint(encoded, 8 * 32, uint256(rewardTerms.asset));
-        _writeUint(encoded, 9 * 32, rewardTerms.amount);
-        _writeUint(encoded, 10 * 32, rewardTerms.requiredVoters);
-        _writeUint(encoded, 11 * 32, rewardTerms.requiredSettledRounds);
-        _writeUint(encoded, 12 * 32, rewardTerms.bountyClosesAt);
-        _writeUint(encoded, 13 * 32, rewardTerms.feedbackClosesAt);
-        _writeUint(encoded, 14 * 32, uint256(roundConfig.epochDuration));
-        _writeUint(encoded, 15 * 32, uint256(roundConfig.maxDuration));
-        _writeUint(encoded, 16 * 32, uint256(roundConfig.minVoters));
-        _writeUint(encoded, 17 * 32, uint256(roundConfig.maxVoters));
-        _writeBytes32(encoded, 18 * 32, spec.questionMetadataHash);
-        _writeBytes32(encoded, 19 * 32, spec.resultSpecHash);
-        _writeStringTail(encoded, titleOffset, title);
-        _writeStringTail(encoded, descriptionOffset, description);
-        _writeStringTail(encoded, tagsOffset, tags);
-        return keccak256(encoded);
-    }
-
-    function _encodedStringTailLength(string memory value) internal pure returns (uint256) {
-        uint256 roundedDataLength = (bytes(value).length + 31) & ~uint256(31);
-        return 32 + roundedDataLength;
-    }
-
-    function _writeBytes32(bytes memory encoded, uint256 offset, bytes32 value) internal pure {
-        assembly ("memory-safe") {
-            mstore(add(add(encoded, 32), offset), value)
-        }
-    }
-
-    function _writeUint(bytes memory encoded, uint256 offset, uint256 value) internal pure {
-        assembly ("memory-safe") {
-            mstore(add(add(encoded, 32), offset), value)
-        }
-    }
-
-    function _writeStringTail(bytes memory encoded, uint256 offset, string memory value) internal pure {
-        bytes memory raw = bytes(value);
-        _writeUint(encoded, offset, raw.length);
-        for (uint256 i = 0; i < raw.length; i++) {
-            encoded[offset + 32 + i] = raw[i];
-        }
+        return keccak256(
+            abi.encode(
+                submissionKey,
+                mediaHash,
+                title,
+                description,
+                tags,
+                categoryId,
+                salt,
+                submitter,
+                rewardTerms.asset,
+                rewardTerms.amount,
+                rewardTerms.requiredVoters,
+                rewardTerms.requiredSettledRounds,
+                rewardTerms.bountyClosesAt,
+                rewardTerms.feedbackClosesAt,
+                roundConfig.epochDuration,
+                roundConfig.maxDuration,
+                roundConfig.minVoters,
+                roundConfig.maxVoters,
+                spec.questionMetadataHash,
+                spec.resultSpecHash
+            )
+        );
     }
 
     function _computeQuestionBundleHash(
@@ -1476,55 +1269,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         );
     }
 
-    function computeX402QuestionPaymentNonce(
-        SubmissionMetadata memory metadata,
-        string[] memory imageUrls,
-        string memory videoUrl,
-        bytes32 salt,
-        SubmissionRewardTerms memory rewardTerms,
-        RoundLib.RoundConfig memory roundConfig,
-        QuestionSpecCommitment memory spec,
-        address payer,
-        address payee,
-        uint256 value,
-        uint256 validAfter,
-        uint256 validBefore
-    ) public view returns (bytes32) {
-        return keccak256(
-            abi.encode(
-                "curyo-x402-question-payment-v1",
-                block.chainid,
-                address(this),
-                questionRewardPoolEscrow,
-                payer,
-                payee,
-                value,
-                validAfter,
-                validBefore,
-                metadata.url,
-                imageUrls,
-                videoUrl,
-                metadata.title,
-                metadata.description,
-                metadata.tags,
-                metadata.categoryId,
-                salt,
-                rewardTerms.asset,
-                rewardTerms.amount,
-                rewardTerms.requiredVoters,
-                rewardTerms.requiredSettledRounds,
-                rewardTerms.bountyClosesAt,
-                rewardTerms.feedbackClosesAt,
-                roundConfig.epochDuration,
-                roundConfig.maxDuration,
-                roundConfig.minVoters,
-                roundConfig.maxVoters,
-                spec.questionMetadataHash,
-                spec.resultSpecHash
-            )
-        );
-    }
-
     function _validateSubmissionReward(SubmissionRewardTerms memory rewardTerms) internal view {
         require(
             rewardTerms.asset == SUBMISSION_REWARD_ASSET_HREP || rewardTerms.asset == SUBMISSION_REWARD_ASSET_USDC,
@@ -1555,21 +1299,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
                 : protocolConfig.minSubmissionUsdcPool();
         }
         return minimum == 0 ? DEFAULT_MIN_SUBMISSION_REWARD_POOL : minimum;
-    }
-
-    function _defaultSubmissionRewardTerms(uint8 rewardAsset)
-        internal
-        view
-        returns (SubmissionRewardTerms memory rewardTerms)
-    {
-        rewardTerms = SubmissionRewardTerms({
-            asset: rewardAsset,
-            amount: _minimumSubmissionReward(rewardAsset),
-            requiredVoters: MIN_SUBMISSION_REWARD_REQUIRED_VOTERS,
-            requiredSettledRounds: MIN_SUBMISSION_REWARD_SETTLED_ROUNDS,
-            bountyClosesAt: 0,
-            feedbackClosesAt: 0
-        });
     }
 
     function _defaultRoundConfig() internal view returns (RoundLib.RoundConfig memory cfg) {

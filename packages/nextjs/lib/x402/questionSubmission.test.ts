@@ -59,6 +59,7 @@ const TEST_CONFIG = {
   rpcUrl: "http://localhost:8545",
   targetNetwork: { id: 42220 } as never,
   usdcAddress: "0x0000000000000000000000000000000000000014" as const,
+  x402QuestionSubmitterAddress: "0x0000000000000000000000000000000000000015" as const,
 };
 
 before(() => {
@@ -165,7 +166,7 @@ test("prepareNativeX402QuestionSubmissionRequest returns an authorization reques
           from: walletAddress,
           nonce: `0x${"4".repeat(64)}` as const,
           signature,
-          to: TEST_CONFIG.questionRewardPoolEscrowAddress,
+          to: TEST_CONFIG.x402QuestionSubmitterAddress,
           validAfter: "0",
           validBefore: "1762000000",
           value: payload.bounty.amount.toString(),
@@ -178,7 +179,7 @@ test("prepareNativeX402QuestionSubmissionRequest returns an authorization reques
                 functionName: "submitQuestionWithX402Payment",
                 id: "submit-x402-question",
                 phase: "submit_x402_question",
-                to: TEST_CONFIG.contentRegistryAddress,
+                to: TEST_CONFIG.x402QuestionSubmitterAddress,
                 value: "0",
               },
             ]
@@ -190,7 +191,7 @@ test("prepareNativeX402QuestionSubmissionRequest returns an authorization reques
           asset: "USDC",
           bountyAmount: payload.bounty.amount.toString(),
           decimals: 6,
-          spender: TEST_CONFIG.questionRewardPoolEscrowAddress,
+          spender: TEST_CONFIG.x402QuestionSubmitterAddress,
           tokenAddress: TEST_CONFIG.usdcAddress,
         },
         payloadHash: `payload:${payload.clientRequestId}`,

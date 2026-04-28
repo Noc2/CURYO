@@ -320,7 +320,8 @@ contract AuditGapTests is VotingTestBase {
             "goal",
             "tag",
             1,
-            bytes32(0)
+            bytes32(0),
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }

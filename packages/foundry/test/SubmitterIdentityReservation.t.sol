@@ -96,7 +96,9 @@ contract SubmitterIdentityReservationTest is Test, ContentSubmissionTestBase {
         vm.warp(block.timestamp + 1);
 
         vm.startPrank(delegate);
-        uint256 contentId = registry.submitQuestion(contextUrl, imageUrls, "", title, description, tags, 1, salt);
+        uint256 contentId = registry.submitQuestion(
+            contextUrl, imageUrls, "", title, description, tags, 1, salt, _defaultQuestionSpec()
+        );
         vm.stopPrank();
 
         assertEq(registry.getSubmitterIdentity(contentId), delegate);
@@ -129,7 +131,8 @@ contract SubmitterIdentityReservationTest is Test, ContentSubmissionTestBase {
         vm.warp(block.timestamp + 1);
 
         vm.startPrank(delegate);
-        uint256 contentId = registry.submitQuestion(url, imageUrls, "", title, description, tags, 1, salt);
+        uint256 contentId =
+            registry.submitQuestion(url, imageUrls, "", title, description, tags, 1, salt, _defaultQuestionSpec());
         vm.stopPrank();
 
         assertEq(registry.getSubmitterIdentity(contentId), delegate);

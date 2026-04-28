@@ -1410,6 +1410,11 @@ export const HumanFaucetAbi = [
   },
   {
     "type": "error",
+    "name": "MigrationBootstrapBatchTooLarge",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "MinimumAgeNotMet",
     "inputs": []
   },
@@ -1444,6 +1449,11 @@ export const HumanFaucetAbi = [
         "internalType": "address"
       }
     ]
+  },
+  {
+    "type": "error",
+    "name": "RecipientAuthorizationCannotBeDisabled",
+    "inputs": []
   },
   {
     "type": "error",

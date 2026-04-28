@@ -416,6 +416,22 @@ abstract contract ContentSubmissionTestBase {
         return DEFAULT_SUBMISSION_REWARD_POOL;
     }
 
+    function _defaultSubmissionRewardTerms(ContentRegistry registry)
+        internal
+        view
+        returns (ContentRegistry.SubmissionRewardTerms memory)
+    {
+        uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
+        return ContentRegistry.SubmissionRewardTerms({
+            asset: DEFAULT_SUBMISSION_REWARD_ASSET_HREP,
+            amount: rewardAmount,
+            requiredVoters: DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+            requiredSettledRounds: DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+            bountyClosesAt: DEFAULT_SUBMISSION_REWARD_BOUNTY_CLOSES_AT,
+            feedbackClosesAt: DEFAULT_SUBMISSION_REWARD_FEEDBACK_CLOSES_AT
+        });
+    }
+
     function _activeSubmissionProtocolConfig() internal view virtual returns (ProtocolConfig) {
         return ProtocolConfig(address(0));
     }
@@ -939,13 +955,11 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         );
     }
 
-    function _buildTestCommitArtifacts(
-        address engine,
-        address voter,
-        bool isUp,
-        bytes32 salt,
-        uint256 contentId
-    ) internal view returns (TestCommitArtifacts memory artifacts) {
+    function _buildTestCommitArtifacts(address engine, address voter, bool isUp, bytes32 salt, uint256 contentId)
+        internal
+        view
+        returns (TestCommitArtifacts memory artifacts)
+    {
         artifacts = _buildTestCommitArtifacts(voter, isUp, salt, contentId);
         artifacts.roundId = _previewTestCommitRoundId(engine, contentId);
         artifacts.commitHash = _commitHash(

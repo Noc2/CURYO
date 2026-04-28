@@ -32,45 +32,6 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "MAX_DESCRIPTION_LENGTH",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "MAX_QUESTION_BUNDLE_COUNT",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "MAX_QUESTION_LENGTH",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "PAUSER_ROLE",
     "inputs": [],
     "outputs": [
@@ -78,19 +39,6 @@ export const ContentRegistryAbi = [
         "name": "",
         "type": "bytes32",
         "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "SLASH_RATING_THRESHOLD",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -111,6 +59,19 @@ export const ContentRegistryAbi = [
   {
     "type": "function",
     "name": "TREASURY_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "X402_GATEWAY_ROLE",
     "inputs": [],
     "outputs": [
       {
@@ -189,25 +150,6 @@ export const ContentRegistryAbi = [
   {
     "type": "function",
     "name": "contentBundleId",
-    "inputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "contentBundleIndex",
     "inputs": [
       {
         "name": "",
@@ -686,29 +628,6 @@ export const ContentRegistryAbi = [
       }
     ],
     "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "initialize",
-    "inputs": [
-      {
-        "name": "_admin",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "_governance",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "_hrepToken",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -1269,60 +1188,6 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "submitQuestion",
-    "inputs": [
-      {
-        "name": "contextUrl",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "imageUrls",
-        "type": "string[]",
-        "internalType": "string[]"
-      },
-      {
-        "name": "videoUrl",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "title",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "description",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "tags",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "categoryId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "salt",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "submitQuestionBundleWithRewardAndRoundConfig",
     "inputs": [
       {
@@ -1470,7 +1335,7 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "submitQuestionWithRewardAndRoundConfig",
+    "name": "submitQuestionFromX402Gateway",
     "inputs": [
       {
         "name": "contextUrl",
@@ -1592,11 +1457,16 @@ export const ContentRegistryAbi = [
             "internalType": "bytes32"
           }
         ]
+      },
+      {
+        "name": "submitter",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [
       {
-        "name": "",
+        "name": "contentId",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -1683,168 +1553,6 @@ export const ContentRegistryAbi = [
             "internalType": "uint256"
           }
         ]
-      },
-      {
-        "name": "roundConfig",
-        "type": "tuple",
-        "internalType": "struct RoundLib.RoundConfig",
-        "components": [
-          {
-            "name": "epochDuration",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "maxDuration",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "minVoters",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "maxVoters",
-            "type": "uint16",
-            "internalType": "uint16"
-          }
-        ]
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "submitQuestionWithRoundConfig",
-    "inputs": [
-      {
-        "name": "contextUrl",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "imageUrls",
-        "type": "string[]",
-        "internalType": "string[]"
-      },
-      {
-        "name": "videoUrl",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "title",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "description",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "tags",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "categoryId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "salt",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
-      {
-        "name": "roundConfig",
-        "type": "tuple",
-        "internalType": "struct RoundLib.RoundConfig",
-        "components": [
-          {
-            "name": "epochDuration",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "maxDuration",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "minVoters",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "maxVoters",
-            "type": "uint16",
-            "internalType": "uint16"
-          }
-        ]
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "submitQuestionWithRoundConfig",
-    "inputs": [
-      {
-        "name": "contextUrl",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "imageUrls",
-        "type": "string[]",
-        "internalType": "string[]"
-      },
-      {
-        "name": "videoUrl",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "title",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "description",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "tags",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "categoryId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "salt",
-        "type": "bytes32",
-        "internalType": "bytes32"
       },
       {
         "name": "roundConfig",

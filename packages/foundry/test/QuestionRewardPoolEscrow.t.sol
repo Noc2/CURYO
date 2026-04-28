@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
-import { ContentRegistry, Eip3009Authorization } from "../contracts/ContentRegistry.sol";
+import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { HumanReputation } from "../contracts/HumanReputation.sol";
 import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
 import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
@@ -14,6 +14,7 @@ import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol"
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
 import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
+import { Eip3009Authorization, X402QuestionSubmitter } from "../contracts/X402QuestionSubmitter.sol";
 import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
 
 contract QuestionRewardPoolEscrowTest is VotingTestBase {
@@ -23,6 +24,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
     RoundRewardDistributor public rewardDistributor;
     FrontendRegistry public frontendRegistry;
     QuestionRewardPoolEscrow public rewardPoolEscrow;
+    X402QuestionSubmitter public x402QuestionSubmitter;
     ProtocolConfig public protocolConfig;
     MockERC20 public usdc;
     MockVoterIdNFT public voterIdNFT;
@@ -180,6 +182,8 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         registry.setCategoryRegistry(address(mockCategoryRegistry));
         registry.setVoterIdNFT(address(voterIdNFT));
         registry.setQuestionRewardPoolEscrow(address(rewardPoolEscrow));
+        x402QuestionSubmitter = new X402QuestionSubmitter(registry, address(usdc), address(rewardPoolEscrow));
+        registry.grantRole(registry.X402_GATEWAY_ROLE(), address(x402QuestionSubmitter));
 
         frontendRegistry.setVotingEngine(address(votingEngine));
         frontendRegistry.setVoterIdNFT(address(voterIdNFT));
@@ -1570,7 +1574,17 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         uint256 expectedContentId = registry.nextContentId();
 
         uint256 contentId = registry.submitQuestionWithRewardAndRoundConfig(
-            contextUrl, imageUrls, "", title, description, tags, CATEGORY_ID, salt, rewardTerms, roundConfig
+            contextUrl,
+            imageUrls,
+            "",
+            title,
+            description,
+            tags,
+            CATEGORY_ID,
+            salt,
+            rewardTerms,
+            roundConfig,
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
 
@@ -1601,7 +1615,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         uint256 escrowBalanceBefore = usdc.balanceOf(address(rewardPoolEscrow));
         uint256 agentBalanceBefore = usdc.balanceOf(agentWallet);
 
-        uint256 contentId = registry.submitQuestionWithX402Payment(
+        uint256 contentId = x402QuestionSubmitter.submitQuestionWithX402Payment(
             question.contextUrl,
             question.imageUrls,
             "",
@@ -1746,7 +1760,9 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
             registry, contextUrl, imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, salt, submitter
         );
         vm.warp(block.timestamp + 1);
-        contentId = registry.submitQuestion(contextUrl, imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, salt);
+        contentId = registry.submitQuestion(
+            contextUrl, imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, salt, _defaultQuestionSpec()
+        );
         vm.stopPrank();
     }
 
@@ -1787,8 +1803,18 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         hrepToken.approve(address(rewardPoolEscrow), rewardAmount);
         registry.reserveSubmission(revealCommitment);
         vm.warp(block.timestamp + 1);
-        contentId = registry.submitQuestionWithRoundConfig(
-            "https://example.com/context", imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, salt, roundConfig
+        contentId = registry.submitQuestionWithRewardAndRoundConfig(
+            "https://example.com/context",
+            imageUrls,
+            "",
+            QUESTION,
+            DESCRIPTION,
+            TAGS,
+            CATEGORY_ID,
+            salt,
+            _defaultSubmissionRewardTerms(registry),
+            roundConfig,
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }
@@ -1812,8 +1838,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
             feedbackClosesAt: block.timestamp + 30 days
         });
         question.spec = ContentRegistry.QuestionSpecCommitment({
-            questionMetadataHash: keccak256("x402-question-metadata"),
-            resultSpecHash: keccak256("x402-result-spec")
+            questionMetadataHash: keccak256("x402-question-metadata"), resultSpecHash: keccak256("x402-result-spec")
         });
         question.salt = keccak256("x402-usdc-no-voter-id");
     }
@@ -1834,11 +1859,11 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         });
         authorization = Eip3009Authorization({
             from: agentWallet,
-            to: address(rewardPoolEscrow),
+            to: address(x402QuestionSubmitter),
             value: question.rewardTerms.amount,
             validAfter: validAfter,
             validBefore: validBefore,
-            nonce: registry.computeX402QuestionPaymentNonce(
+            nonce: x402QuestionSubmitter.computeX402QuestionPaymentNonce(
                 metadata,
                 question.imageUrls,
                 "",
@@ -1847,7 +1872,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
                 question.roundConfig,
                 question.spec,
                 agentWallet,
-                address(rewardPoolEscrow),
+                address(x402QuestionSubmitter),
                 question.rewardTerms.amount,
                 validAfter,
                 validBefore
@@ -1902,7 +1927,17 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
             vm.expectRevert("Voter ID required");
         }
         contentId = registry.submitQuestionWithRewardAndRoundConfig(
-            contextUrl, imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, salt, rewardTerms, roundConfig
+            contextUrl,
+            imageUrls,
+            "",
+            QUESTION,
+            DESCRIPTION,
+            TAGS,
+            CATEGORY_ID,
+            salt,
+            rewardTerms,
+            roundConfig,
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }

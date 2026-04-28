@@ -394,7 +394,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
         );
         vm.warp(block.timestamp + 1);
-        uint256 id = registry.submitQuestion(contextUrl, imageUrls, "", "Question?", "Context", "Products", 1, salt);
+        uint256 id = registry.submitQuestion(
+            contextUrl, imageUrls, "", "Question?", "Context", "Products", 1, salt, _defaultQuestionSpec()
+        );
         vm.stopPrank();
 
         assertEq(id, 1);
@@ -412,7 +414,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             "Context",
             "Products",
             1,
-            bytes32(0)
+            bytes32(0),
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }
@@ -442,7 +445,15 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         );
         vm.warp(block.timestamp + 1);
         uint256 id = registry.submitQuestion(
-            "https://example.com/context", imageUrls, url, title, description, tags, categoryId, salt
+            "https://example.com/context",
+            imageUrls,
+            url,
+            title,
+            description,
+            tags,
+            categoryId,
+            salt,
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
 
@@ -531,7 +542,15 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         );
         vm.warp(block.timestamp + 1);
         uint256 id = registry.submitQuestion(
-            "https://example.com/context", imageUrls, "", title, description, tags, categoryId, salt
+            "https://example.com/context",
+            imageUrls,
+            "",
+            title,
+            description,
+            tags,
+            categoryId,
+            salt,
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
 
@@ -570,7 +589,15 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.warp(block.timestamp + 1);
         vm.expectRevert("Reservation not found");
         registry.submitQuestion(
-            "https://example.com/context", changedImageUrls, "", title, description, tags, categoryId, salt
+            "https://example.com/context",
+            changedImageUrls,
+            "",
+            title,
+            description,
+            tags,
+            categoryId,
+            salt,
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }
@@ -604,7 +631,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         );
         vm.warp(block.timestamp + 1);
         vm.expectRevert("Reservation not found");
-        registry.submitQuestion(contextUrl, changedImageUrls, "", title, description, tags, categoryId, salt);
+        registry.submitQuestion(
+            contextUrl, changedImageUrls, "", title, description, tags, categoryId, salt, _defaultQuestionSpec()
+        );
         vm.stopPrank();
     }
 
@@ -657,7 +686,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             categoryId,
             salt,
             rewardTerms,
-            _defaultContentRoundConfig()
+            _defaultContentRoundConfig(),
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
 
@@ -667,8 +697,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         assertEq(mockQuestionRewardPoolEscrow.lastAmount(), rewardAmount);
         assertEq(mockQuestionRewardPoolEscrow.lastRequiredVoters(), requiredVoters);
         assertEq(mockQuestionRewardPoolEscrow.lastRequiredSettledRounds(), requiredSettledRounds);
-        assertEq(mockQuestionRewardPoolEscrow.lastBountyClosesAt(), rewardPoolExpiresAt);
-        assertEq(mockQuestionRewardPoolEscrow.lastFeedbackClosesAt(), rewardPoolExpiresAt);
+        assertEq(mockQuestionRewardPoolEscrow.lastBountyClosesAt(), rewardTerms.bountyClosesAt, "bounty close");
+        assertEq(mockQuestionRewardPoolEscrow.lastFeedbackClosesAt(), rewardTerms.feedbackClosesAt, "feedback close");
     }
 
     function test_SubmitQuestionWithReward_UsesAgentWalletAsEscrowFunder() public {
@@ -725,7 +755,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             categoryId,
             salt,
             rewardTerms,
-            _defaultContentRoundConfig()
+            _defaultContentRoundConfig(),
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
 
@@ -763,7 +794,17 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         );
         vm.warp(block.timestamp + 1);
         uint256 id = registry.submitQuestionWithRewardAndRoundConfig(
-            contextUrl, imageUrls, "", title, description, tags, categoryId, salt, rewardTerms, roundConfig
+            contextUrl,
+            imageUrls,
+            "",
+            title,
+            description,
+            tags,
+            categoryId,
+            salt,
+            rewardTerms,
+            roundConfig,
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
 
@@ -810,7 +851,17 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.warp(block.timestamp + 1);
         vm.expectRevert("Voters exceed max");
         registry.submitQuestionWithRewardAndRoundConfig(
-            contextUrl, imageUrls, "", title, description, tags, categoryId, salt, rewardTerms, roundConfig
+            contextUrl,
+            imageUrls,
+            "",
+            title,
+            description,
+            tags,
+            categoryId,
+            salt,
+            rewardTerms,
+            roundConfig,
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }
@@ -853,12 +904,32 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         );
         vm.warp(block.timestamp + 1);
         vm.expectRevert("Reservation not found");
-        registry.submitQuestionWithRoundConfig(
-            contextUrl, imageUrls, "", title, description, tags, categoryId, salt, alteredConfig
+        registry.submitQuestionWithRewardAndRoundConfig(
+            contextUrl,
+            imageUrls,
+            "",
+            title,
+            description,
+            tags,
+            categoryId,
+            salt,
+            rewardTerms,
+            alteredConfig,
+            _defaultQuestionSpec()
         );
 
-        uint256 id = registry.submitQuestionWithRoundConfig(
-            contextUrl, imageUrls, "", title, description, tags, categoryId, salt, reservedConfig
+        uint256 id = registry.submitQuestionWithRewardAndRoundConfig(
+            contextUrl,
+            imageUrls,
+            "",
+            title,
+            description,
+            tags,
+            categoryId,
+            salt,
+            rewardTerms,
+            reservedConfig,
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
 
@@ -888,7 +959,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
                 DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
                 DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
             ),
-            _defaultContentRoundConfig()
+            _defaultContentRoundConfig(),
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }
@@ -915,7 +987,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
                 0,
                 DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
             ),
-            _defaultContentRoundConfig()
+            _defaultContentRoundConfig(),
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }
@@ -942,7 +1015,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
                 DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
                 DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
             ),
-            _defaultContentRoundConfig()
+            _defaultContentRoundConfig(),
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }
@@ -969,7 +1043,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
                 DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
                 block.timestamp
             ),
-            _defaultContentRoundConfig()
+            _defaultContentRoundConfig(),
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }
@@ -1202,7 +1277,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
                 DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
                 DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
             ),
-            _defaultContentRoundConfig()
+            _defaultContentRoundConfig(),
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }
@@ -1337,7 +1413,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             "goal",
             "tags",
             1,
-            bytes32(0)
+            bytes32(0),
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }
@@ -1354,7 +1431,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             "goal",
             "tags",
             1,
-            bytes32(0)
+            bytes32(0),
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }
@@ -1371,7 +1449,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             "goal",
             "tags",
             1,
-            bytes32(0)
+            bytes32(0),
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }
@@ -1392,7 +1471,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             "goal",
             "tags",
             99,
-            bytes32(0)
+            bytes32(0),
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }
@@ -1428,7 +1508,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         );
         vm.warp(block.timestamp + 1);
         vm.expectRevert();
-        registry.submitQuestion("https://example.com/context", imageUrls, "", title, description, tags, 1, salt);
+        registry.submitQuestion(
+            "https://example.com/context", imageUrls, "", title, description, tags, 1, salt, _defaultQuestionSpec()
+        );
         vm.stopPrank();
     }
 
@@ -1466,7 +1548,15 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.warp(block.timestamp + 1);
         vm.expectRevert();
         registry.submitQuestion(
-            "https://example.com/context", imageUrls, "", title, description, tags, oversizedCategoryId, salt
+            "https://example.com/context",
+            imageUrls,
+            "",
+            title,
+            description,
+            tags,
+            oversizedCategoryId,
+            salt,
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }
@@ -1488,7 +1578,15 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         hrepToken.approve(address(registry), 10e6);
         vm.expectRevert("Invalid URL");
         registry.submitQuestion(
-            "https://example.com/context", _singleImageUrls(longUrl), "", "goal", "goal", "tags", 1, bytes32(0)
+            "https://example.com/context",
+            _singleImageUrls(longUrl),
+            "",
+            "goal",
+            "goal",
+            "tags",
+            1,
+            bytes32(0),
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }
@@ -1548,7 +1646,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             string(longGoal),
             "tags",
             1,
-            bytes32(0)
+            bytes32(0),
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }
@@ -1570,7 +1669,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             "goal",
             string(longTags),
             1,
-            bytes32(0)
+            bytes32(0),
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }
@@ -1581,7 +1681,15 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         _submitContentWithReservation(registry, "https://example.com/1", "goal", "goal", "tags", 0);
         vm.expectRevert("Question already submitted");
         registry.submitQuestion(
-            "https://example.com/1", _emptyImageUrls(), "", "goal", "goal", "tags", 1, keccak256("dup1-salt")
+            "https://example.com/1",
+            _emptyImageUrls(),
+            "",
+            "goal",
+            "goal",
+            "tags",
+            1,
+            keccak256("dup1-salt"),
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }
@@ -1590,7 +1698,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.startPrank(submitter);
         hrepToken.approve(address(registry), 10e6);
         vm.expectRevert("Invalid URL");
-        registry.submitQuestion("", _emptyImageUrls(), "", "goal", "goal", "tags", 1, bytes32(0));
+        registry.submitQuestion(
+            "", _emptyImageUrls(), "", "goal", "goal", "tags", 1, bytes32(0), _defaultQuestionSpec()
+        );
         vm.stopPrank();
     }
 
@@ -1606,7 +1716,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             "",
             "tags",
             1,
-            bytes32(0)
+            bytes32(0),
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }
@@ -1623,7 +1734,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             "goal",
             "",
             1,
-            bytes32(0)
+            bytes32(0),
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }
@@ -1955,7 +2067,15 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         hrepToken.approve(address(registry), 10e6);
         vm.expectRevert("Question already submitted");
         registry.submitQuestion(
-            url, _emptyImageUrls(), "", "goal", "goal", "tags", 1, keccak256("revive-conflict-salt")
+            url,
+            _emptyImageUrls(),
+            "",
+            "goal",
+            "goal",
+            "tags",
+            1,
+            keccak256("revive-conflict-salt"),
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }
@@ -2069,7 +2189,15 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         // the check runs after URL/category/submissionKey validation.
         vm.expectRevert("Salt required");
         registry.submitQuestion(
-            "https://example.com/salt-required", _emptyImageUrls(), "", "Question?", "Context.", "tag", 1, bytes32(0)
+            "https://example.com/salt-required",
+            _emptyImageUrls(),
+            "",
+            "Question?",
+            "Context.",
+            "tag",
+            1,
+            bytes32(0),
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }

@@ -10,6 +10,7 @@ export { QuestionRewardPoolEscrowAbi } from "./QuestionRewardPoolEscrowAbi";
 export { RoundRewardDistributorAbi } from "./RoundRewardDistributorAbi";
 export { RoundVotingEngineAbi } from "./RoundVotingEngineAbi";
 export { VoterIdNFTAbi } from "./VoterIdNFTAbi";
+export { X402QuestionSubmitterAbi } from "./X402QuestionSubmitterAbi";
 export { HumanFaucetAbi } from "./HumanFaucetAbi";
 export { ParticipationPoolAbi } from "./ParticipationPoolAbi";
 export { TimelockControllerAbi } from "./TimelockControllerAbi";
