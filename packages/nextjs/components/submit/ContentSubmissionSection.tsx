@@ -1692,7 +1692,7 @@ export function ContentSubmissionSection() {
 
   const prohibitedContentNotice = (
     <div className="rounded-lg bg-error/10 p-4">
-      <p className="mb-2 text-base font-medium text-error">Prohibited Content</p>
+      <p className="mb-2 text-base font-medium text-base-content">Prohibited Content</p>
       <p className="text-base text-base-content/70">
         Do not submit questions with illegal or harmful content. This includes but is not limited to: child exploitation
         material, non-consensual intimate imagery, content promoting violence or terrorism, doxxing, or
