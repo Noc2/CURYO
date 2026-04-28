@@ -190,6 +190,7 @@ export function AgentSubmissionPanel() {
     explicitAgentWalletAddress ?? (policyForm.agentWalletAddress.trim() ? undefined : connectedWalletAddress);
   const agentWalletInputInvalid = policyForm.agentWalletAddress.trim().length > 0 && !explicitAgentWalletAddress;
   const agentWalletMatchesConnectedWallet = addressesMatch(agentWalletAddress, address);
+
   const { data: balanceRaw, refetch: refetchBalance } = useReadContract({
     address: usdcAddress,
     abi: erc20Abi,
@@ -197,6 +198,7 @@ export function AgentSubmissionPanel() {
     args: agentWalletAddress ? [agentWalletAddress] : undefined,
     query: { enabled: Boolean(agentWalletAddress && usdcAddress) },
   });
+
   const balance = typeof balanceRaw === "bigint" ? balanceRaw : 0n;
   const hasUsdcForDefaultAsk = balance >= DEFAULT_PER_ASK_CAP_ATOMIC;
   const fundingReady = hasUsdcForDefaultAsk;
@@ -263,7 +265,6 @@ export function AgentSubmissionPanel() {
     },
     [copyToClipboard],
   );
-
 
   const handleTransferUsdc = useCallback(async () => {
     if (!address) {
@@ -1153,9 +1154,9 @@ export function AgentSubmissionPanel() {
           </div>
 
           <div className="mt-5 grid gap-3 md:grid-cols-2">
-            <label className="form-control">
+            <label className="form-control gap-2 sm:grid sm:grid-cols-[max-content_minmax(0,1fr)] sm:items-center sm:gap-x-6">
               <span className="label-text text-sm font-medium">Per submission cap</span>
-              <div className="join mt-1">
+              <div className="join mt-1 min-w-0 sm:mt-0">
                 <input
                   className="input input-bordered join-item w-full"
                   value={policyForm.perAskCap}
@@ -1167,9 +1168,9 @@ export function AgentSubmissionPanel() {
                 </span>
               </div>
             </label>
-            <label className="form-control">
+            <label className="form-control gap-2 sm:grid sm:grid-cols-[max-content_minmax(0,1fr)] sm:items-center sm:gap-x-6">
               <span className="label-text text-sm font-medium">Daily cap</span>
-              <div className="join mt-1">
+              <div className="join mt-1 min-w-0 sm:mt-0">
                 <input
                   className="input input-bordered join-item w-full"
                   value={policyForm.dailyCap}
