@@ -709,17 +709,19 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         vm.prank(owner);
         hrepToken.mint(remintedSubmitter, 10_000e6);
 
+        _expectSelfVoteCommitRevert(remintedSubmitter, contentIds[0], keccak256("bundle-reminted-submitter"));
+
         address[] memory voters = new address[](3);
-        voters[0] = remintedSubmitter;
-        voters[1] = voter2;
-        voters[2] = voter3;
+        voters[0] = voter2;
+        voters[1] = voter3;
+        voters[2] = voter4;
         bool[] memory directions = _directions(true, true, false);
 
         _settleRoundWith(voters, contentIds[0], directions);
         _settleRoundWith(voters, contentIds[1], directions);
 
         assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, remintedSubmitter), 0);
-        assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter2), 0);
+        assertGt(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter2), 0);
     }
 
     function testBundleClaimRecordsOutOfOrderFutureRoundSetTerminal() public {
