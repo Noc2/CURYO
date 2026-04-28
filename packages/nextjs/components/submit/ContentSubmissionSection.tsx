@@ -2126,11 +2126,10 @@ export function ContentSubmissionSection() {
 
   return (
     <>
-      <div className="surface-card rounded-2xl p-6 space-y-5" style={{ overflow: "visible" }}>
+      <div className="surface-card rounded-2xl p-6 space-y-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className={surfaceSectionHeadingClassName}>{pageHeading}</h1>
-            <p className="mt-1 text-sm font-medium text-base-content/50">{pageContext}</p>
           </div>
           <label
             className={`flex flex-wrap items-center gap-x-3 gap-y-1 sm:justify-end ${surfaceSectionHeadingClassName}`}
@@ -2152,8 +2151,14 @@ export function ContentSubmissionSection() {
           </label>
         </div>
 
+        {submissionStepIndicator}
+      </div>
+
+      <div className="surface-card rounded-2xl p-6" style={{ overflow: "visible" }}>
         <form onSubmit={handleSubmit} noValidate className="space-y-6">
-          {submissionStepIndicator}
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-wide text-base-content/50">{pageContext}</p>
+          </div>
 
           {submissionStep === "question" ? (
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.9fr)] xl:items-start">
