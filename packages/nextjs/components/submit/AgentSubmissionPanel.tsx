@@ -47,6 +47,13 @@ const DEFAULT_AGENT_SCOPES = ["curyo:ask", "curyo:read", "curyo:quote", "curyo:b
 const SETUP_STEP_ORDER = ["wallet", "fund", "payment", "policy", "mcp"] as const;
 const AGENT_WALLET_HELP_TEXT =
   "The owner wallet signs policy changes. The agent wallet is the address your MCP client uses as walletAddress when it submits paid asks.";
+const AGENT_FUND_HELP_TEXT =
+  "Add Celo USDC to the agent wallet. Wallet-call payments also need an escrow allowance from that same wallet.";
+const AGENT_PAYMENT_HELP_TEXT =
+  "Both modes fund protocol escrow directly. Choose the shape your agent client can execute today.";
+const AGENT_POLICY_HELP_TEXT =
+  "These limits are signed by the connected owner wallet and enforced by the managed MCP policy.";
+const AGENT_MCP_HELP_TEXT = "Create or rotate the bearer token your agent client uses for Curyo MCP tools.";
 
 type AgentSetupStep = (typeof SETUP_STEP_ORDER)[number];
 type PaymentMode = "wallet_calls" | "x402_authorization";
@@ -1033,11 +1040,10 @@ export function AgentSubmissionPanel() {
               <p className="text-sm font-semibold uppercase tracking-wide text-base-content/50">
                 Step {activeStepNumber} of {SETUP_STEP_ORDER.length}
               </p>
-              <h3 className="mt-1 text-xl font-semibold">Fund the wallet</h3>
-              <p className="mt-2 text-sm leading-relaxed text-base-content/65">
-                Add Celo USDC to the agent wallet. Wallet-call payments also need an escrow allowance from that same
-                wallet.
-              </p>
+              <h3 className="mt-1 flex items-center gap-2 text-xl font-semibold">
+                Fund the wallet
+                <InfoTooltip text={AGENT_FUND_HELP_TEXT} position="right" />
+              </h3>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <div className="rounded-lg border border-base-300 bg-base-100/50 p-4">
@@ -1176,10 +1182,10 @@ export function AgentSubmissionPanel() {
             <p className="text-sm font-semibold uppercase tracking-wide text-base-content/50">
               Step {activeStepNumber} of {SETUP_STEP_ORDER.length}
             </p>
-            <h3 className="mt-1 text-xl font-semibold">Pick the payment mode</h3>
-            <p className="mt-2 text-sm leading-relaxed text-base-content/65">
-              Both modes fund protocol escrow directly. Choose the shape your agent client can execute today.
-            </p>
+            <h3 className="mt-1 flex items-center gap-2 text-xl font-semibold">
+              Pick the payment mode
+              <InfoTooltip text={AGENT_PAYMENT_HELP_TEXT} position="right" />
+            </h3>
           </div>
 
           <div className="mt-5 grid gap-3 md:grid-cols-2">
@@ -1241,10 +1247,10 @@ export function AgentSubmissionPanel() {
               <p className="text-sm font-semibold uppercase tracking-wide text-base-content/50">
                 Step {activeStepNumber} of {SETUP_STEP_ORDER.length}
               </p>
-              <h3 className="mt-1 text-xl font-semibold">Set policy limits</h3>
-              <p className="mt-2 text-sm leading-relaxed text-base-content/65">
-                These limits are signed by the connected owner wallet and enforced by the managed MCP policy.
-              </p>
+              <h3 className="mt-1 flex items-center gap-2 text-xl font-semibold">
+                Set policy limits
+                <InfoTooltip text={AGENT_POLICY_HELP_TEXT} position="right" />
+              </h3>
             </div>
             {selectedPolicy ? (
               <span
@@ -1349,10 +1355,10 @@ export function AgentSubmissionPanel() {
               <p className="text-sm font-semibold uppercase tracking-wide text-base-content/50">
                 Step {activeStepNumber} of {SETUP_STEP_ORDER.length}
               </p>
-              <h3 className="mt-1 text-xl font-semibold">Create MCP access</h3>
-              <p className="mt-2 text-sm leading-relaxed text-base-content/65">
-                Create or rotate the bearer token your agent client uses for Curyo MCP tools.
-              </p>
+              <h3 className="mt-1 flex items-center gap-2 text-xl font-semibold">
+                Create MCP access
+                <InfoTooltip text={AGENT_MCP_HELP_TEXT} position="right" />
+              </h3>
             </div>
             <Link href="/docs/ai#generic-mcp-config" className="link link-primary text-sm">
               MCP setup
