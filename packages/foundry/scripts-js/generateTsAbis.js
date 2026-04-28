@@ -236,6 +236,26 @@ function processAllDeployments(broadcastPath) {
   };
 }
 
+function readExistingDeployedContracts(targetFile) {
+  if (!existsSync(targetFile)) return {};
+
+  const content = readFileSync(targetFile, "utf8");
+  const match = content.match(
+    /const deployedContracts(?::[^=]+)?=\s*({[\s\S]*?});\s*export default deployedContracts;/
+  );
+  if (!match) return {};
+
+  try {
+    return Function(`"use strict"; return (${match[1]});`)();
+  } catch (error) {
+    console.warn(
+      `Warning: Could not preserve existing deployed contracts from ${targetFile}:`,
+      error.message
+    );
+    return {};
+  }
+}
+
 function main() {
   const current_path_to_broadcast = join(__dirname, "..", "broadcast");
   const current_path_to_deployments = join(__dirname, "..", "deployments");
@@ -306,8 +326,20 @@ function main() {
     mkdirSync(CONTRACTS_TARGET_DIR, { recursive: true });
   }
 
+  const deployedContractsTargetFile = join(
+    CONTRACTS_TARGET_DIR,
+    "deployedContracts.ts"
+  );
+  const existingContracts = readExistingDeployedContracts(
+    deployedContractsTargetFile
+  );
+  const mergedContracts = {
+    ...existingContracts,
+    ...allGeneratedContracts,
+  };
+
   // Generate the shared deployedContracts content
-  const fileContent = Object.entries(allGeneratedContracts).reduce(
+  const fileContent = Object.entries(mergedContracts).reduce(
     (content, [chainId, chainConfig]) => {
       const cleanedChainConfig = Object.fromEntries(
         Object.entries(chainConfig).map(([contractName, contractData]) => {
@@ -335,17 +367,14 @@ function main() {
   `;
 
   writeFileSync(
-    join(CONTRACTS_TARGET_DIR, "deployedContracts.ts"),
+    deployedContractsTargetFile,
     format(fileTemplate, {
       parser: "typescript",
     })
   );
 
   console.log(
-    `📝 Updated shared contract definition file on ${join(
-      CONTRACTS_TARGET_DIR,
-      "deployedContracts.ts"
-    )}`
+    `📝 Updated shared contract definition file on ${deployedContractsTargetFile}`
   );
 
   // --- Auto-generate ABI files for the shared contracts package ---
@@ -535,6 +564,7 @@ const ABI_TARGETS = [
   { contract: "FrontendRegistry", targets: ["contracts/src/abis"] },
   { contract: "RoundRewardDistributor", targets: ["contracts/src/abis"] },
   { contract: "QuestionRewardPoolEscrow", targets: ["contracts/src/abis"] },
+  { contract: "X402QuestionSubmitter", targets: ["contracts/src/abis"] },
   { contract: "FeedbackBonusEscrow", targets: ["contracts/src/abis"] },
   { contract: "ProfileRegistry", targets: ["contracts/src/abis"] },
   { contract: "ProtocolConfig", targets: ["contracts/src/abis"] },
