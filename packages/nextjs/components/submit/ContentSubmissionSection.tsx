@@ -30,7 +30,6 @@ import {
   DEFAULT_BOUNTY_WINDOW_PRESET,
   DEFAULT_CUSTOM_BOUNTY_WINDOW_AMOUNT,
   DEFAULT_CUSTOM_BOUNTY_WINDOW_UNIT,
-  formatBountyWindowDuration,
   getBountyClosesAt,
   getBountyWindowSeconds,
   parseBountyWindowAmount,
@@ -842,7 +841,6 @@ export function ContentSubmissionSection() {
   const estimatedVoterCapClaimDenominator = estimatedVoterCap * selectedRequiredSettledRounds;
   const estimatedVoterCapGrossReward = divideRewardAmount(estimatedBountyAmount, estimatedVoterCapClaimDenominator);
   const estimatedVoterCapReward = applyEstimatedFrontendFee(estimatedVoterCapGrossReward, frontendFeeBps);
-  const bountyWindowLabel = formatBountyWindowDuration(bountyWindowSeconds);
   const oneTokenPerMinimumVoterBounty = selectedRequiredVoters * selectedRequiredSettledRounds * 1_000_000n;
   const bountyRecommendation = rewardAmountError
     ? "Increase the bounty until the estimate is valid before submitting."
@@ -1835,16 +1833,7 @@ export function ContentSubmissionSection() {
               </select>
             </label>
           </div>
-        ) : (
-          <label className="form-control">
-            <span className="label-text">Selected window</span>
-            <input
-              value={bountyWindowLabel}
-              readOnly
-              className="input input-bordered bg-base-100 text-base-content/70"
-            />
-          </label>
-        )}
+        ) : null}
         {bountyStepAttempted && rewardExpiryError ? <p className="text-base text-error">{rewardExpiryError}</p> : null}
       </div>
     </div>
