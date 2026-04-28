@@ -533,10 +533,10 @@ contract DeployCuryoCompilationTest is Test {
         assertTrue(voterIdNFT.hasVoterId(users[2]));
     }
 
-    function test_MigrationBootstrap_DefaultBatchSizeStaysBelowCeloGasLimit() public {
+    function test_MigrationBootstrap_DefaultBatchSizeKeepsDeployGasMultiplierHeadroom() public {
         DeployCuryoHarness deployScript = new DeployCuryoHarness();
 
-        assertEq(deployScript.exposedDefaultMigrationBootstrapBatchSize(), 40);
+        assertEq(deployScript.exposedDefaultMigrationBootstrapBatchSize(), 20);
     }
 
     function test_MigrationBootstrap_BatchSizeEnvOverrideCannotBeZero() public {
@@ -551,7 +551,7 @@ contract DeployCuryoCompilationTest is Test {
         );
         deployScript.exposedMigrationBootstrapBatchSize();
 
-        vm.setEnv("MIGRATION_BOOTSTRAP_BATCH_SIZE", "40");
+        vm.setEnv("MIGRATION_BOOTSTRAP_BATCH_SIZE", "20");
     }
 
     function test_MigrationBootstrap_BatchSizeCannotBeZero() public {

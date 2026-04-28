@@ -62,7 +62,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
     uint256 internal constant MIGRATION_TIER_4_AMOUNT = 1e6;
     uint256 internal constant MIGRATION_REFERRAL_RATIO_BPS = 5_000;
     uint256 internal constant MIGRATION_BPS_SCALE = 10_000;
-    uint256 internal constant DEFAULT_MIGRATION_BOOTSTRAP_BATCH_SIZE = 40;
+    uint256 internal constant DEFAULT_MIGRATION_BOOTSTRAP_BATCH_SIZE = 20;
 
     // Self.xyz IdentityVerificationHub addresses
     address constant CELO_MAINNET_HUB = 0xe57F4773bd9c9d8b6Cd70431117d353298B9f5BF;
