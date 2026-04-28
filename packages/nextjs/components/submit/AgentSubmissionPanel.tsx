@@ -989,16 +989,6 @@ export function AgentSubmissionPanel() {
             </label>
           </div>
 
-          <div className="mt-5 rounded-lg border border-base-300 bg-base-100/50 p-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-base-content/60">
-              <WalletIcon className="h-4 w-4" />
-              <span>Connected owner</span>
-            </div>
-            <p className="mt-2 text-sm text-base-content/70">
-              {address ? "Connected for policy signatures" : "Connect a wallet to save policies"}
-            </p>
-          </div>
-
           <div className="mt-5 grid gap-3 md:grid-cols-3">
             <div className="rounded-lg border border-base-300 bg-base-100/50 p-4">
               <h4 className="text-sm font-semibold">Programmatic wallet</h4>
