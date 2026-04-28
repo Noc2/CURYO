@@ -1266,29 +1266,84 @@ export function AgentSubmissionPanel() {
                 Step {activeStepNumber} of {SETUP_STEP_ORDER.length}
               </p>
               <h3 className="mt-1 flex items-center gap-2 text-xl font-semibold">
-                Connect agent
+                {selectedPolicy ? "Agent policy saved" : "Connect agent"}
                 <InfoTooltip text={AGENT_MCP_HELP_TEXT} position="right" />
               </h3>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-base-content/65">
+                {selectedPolicy
+                  ? "Your agent can now submit asks within these limits. Create an access token when you are ready to connect it to an AI client."
+                  : "Save a policy before creating agent access."}
+              </p>
             </div>
             <Link href="/docs/ai#generic-mcp-config" className="link link-primary text-sm">
               Setup guide
             </Link>
           </div>
 
-          {tokenAccessPanel}
+          {selectedPolicy ? (
+            <>
+              <div className="mt-5 grid gap-3 md:grid-cols-3">
+                <div className="rounded-lg border border-base-300 bg-base-100/70 p-4">
+                  <div className="flex items-center gap-2 text-sm font-medium text-base-content/60">
+                    <CpuChipIcon className="h-4 w-4" />
+                    <span>Agent id</span>
+                  </div>
+                  <p className="mt-2 break-words text-lg font-semibold">{selectedPolicy.agentId}</p>
+                </div>
+                <div className="rounded-lg border border-base-300 bg-base-100/70 p-4">
+                  <div className="flex items-center gap-2 text-sm font-medium text-base-content/60">
+                    <WalletIcon className="h-4 w-4" />
+                    <span>Agent wallet</span>
+                  </div>
+                  <p className="mt-2 font-mono text-sm">{shortAddress(selectedPolicy.agentWalletAddress)}</p>
+                </div>
+                <div className="rounded-lg border border-base-300 bg-base-100/70 p-4">
+                  <div className="flex items-center gap-2 text-sm font-medium text-base-content/60">
+                    <KeyIcon className="h-4 w-4" />
+                    <span>Spend caps</span>
+                  </div>
+                  <p className="mt-2 text-sm text-base-content/75">
+                    {formatSubmissionRewardAmount(selectedPolicy.perAskLimitAtomic, "usdc")} per ask
+                  </p>
+                  <p className="mt-1 text-sm text-base-content/60">
+                    {formatSubmissionRewardAmount(selectedPolicy.dailyBudgetAtomic, "usdc")} daily
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-5 rounded-lg border border-base-300 bg-base-100/50 p-4">
+                <h4 className="font-semibold">Access token</h4>
+                <p className="mt-1 text-sm leading-relaxed text-base-content/60">
+                  Use this token and config in the agent client that will call Curyo tools.
+                </p>
+                {tokenAccessPanel}
+              </div>
+            </>
+          ) : (
+            <div className="mt-5 rounded-lg border border-warning/30 bg-warning/10 p-4">
+              <h4 className="font-semibold text-warning">No saved agent policy selected</h4>
+              <p className="mt-2 text-sm leading-relaxed text-base-content/70">
+                Go back to Policy and save your agent policy first. If you already saved one, unlock managed agents and
+                select it here.
+              </p>
+              <div className="mt-3">{renderUnlockAgentPoliciesButton("xs")}</div>
+            </div>
+          )}
 
           <div className="mt-5 flex flex-wrap gap-2">
             <button type="button" className="btn btn-outline btn-sm" onClick={() => setActiveSetupStep("policy")}>
               Back
             </button>
-            <button
-              type="button"
-              className="btn btn-primary btn-sm"
-              disabled={!selectedPolicy}
-              onClick={() => setIsSetupMode(false)}
-            >
-              Open dashboard
-            </button>
+            {selectedPolicy && !(selectedPolicy.hasToken || generatedToken) ? (
+              <button type="button" className="btn btn-outline btn-sm" onClick={() => setIsSetupMode(false)}>
+                Finish without token
+              </button>
+            ) : null}
+            {selectedPolicy && (selectedPolicy.hasToken || generatedToken) ? (
+              <button type="button" className="btn btn-primary btn-sm" onClick={() => setIsSetupMode(false)}>
+                Manage agent
+              </button>
+            ) : null}
           </div>
         </div>
       ) : null}
