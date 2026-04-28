@@ -256,6 +256,33 @@ function readExistingDeployedContracts(targetFile) {
   }
 }
 
+function assertFreshTargetDeployment(allGeneratedContracts, existingContracts) {
+  const deployTarget = process.env.DEPLOY_TARGET_NETWORK;
+  if (!deployTarget) return;
+
+  const targetChainId = DEPLOY_TARGET_TO_CHAIN_ID[deployTarget];
+  if (!targetChainId) return;
+
+  const generatedTargetContracts = allGeneratedContracts[String(targetChainId)];
+  if (
+    generatedTargetContracts &&
+    Object.keys(generatedTargetContracts).length > 0
+  ) {
+    return;
+  }
+
+  const existingTargetContracts = Object.keys(
+    existingContracts[String(targetChainId)] || {}
+  );
+  const existingSummary = existingTargetContracts.length
+    ? ` Existing entries for ${existingTargetContracts.join(", ")} would be stale.`
+    : "";
+
+  throw new Error(
+    `No fresh deployment data found for DEPLOY_TARGET_NETWORK='${deployTarget}' (chainId ${targetChainId}). Refusing to preserve existing shared deployment artifacts.${existingSummary}`
+  );
+}
+
 function main() {
   const current_path_to_broadcast = join(__dirname, "..", "broadcast");
   const current_path_to_deployments = join(__dirname, "..", "deployments");
@@ -333,6 +360,7 @@ function main() {
   const existingContracts = readExistingDeployedContracts(
     deployedContractsTargetFile
   );
+  assertFreshTargetDeployment(allGeneratedContracts, existingContracts);
   const mergedContracts = {
     ...existingContracts,
     ...allGeneratedContracts,
@@ -398,6 +426,12 @@ const DEPLOY_TARGET_TO_PONDER_NETWORK = {
   localhost: "hardhat",
   celoSepolia: "celoSepolia",
   celo: "celo",
+};
+
+const DEPLOY_TARGET_TO_CHAIN_ID = {
+  localhost: 31337,
+  celoSepolia: 11142220,
+  celo: 42220,
 };
 
 const PONDER_NETWORK_TO_CHAIN_ID = {

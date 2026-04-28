@@ -141,15 +141,13 @@ function resolveAddress(key: string, contractName: string): `0x${string}` {
 
   if (sharedAddress) {
     if (envValue) {
-      if (isAddress(envValue)) {
-        if (envValue.toLowerCase() !== sharedAddress.toLowerCase()) {
-          console.warn(
-            `[ponder config] Ignoring ${key}=${envValue} for chain ${activeChainId}; using ${contractName} from shared deployment artifacts (${sharedAddress}).`,
-          );
-        }
-      } else {
-        console.warn(
-          `[ponder config] Ignoring invalid ${key} value for chain ${activeChainId}; using ${contractName} from shared deployment artifacts (${sharedAddress}).`,
+      if (!isAddress(envValue)) {
+        throw new Error(`${key} must be a valid address when provided for chain ${activeChainId}.`);
+      }
+
+      if (envValue.toLowerCase() !== sharedAddress.toLowerCase()) {
+        throw new Error(
+          `${key}=${envValue} conflicts with ${contractName} from shared deployment artifacts (${sharedAddress}) for chain ${activeChainId}. Remove the env override or refresh shared deployments.`,
         );
       }
     }
@@ -186,12 +184,10 @@ function resolveStartBlock(key: string, contractName: string): number {
     if (envValue) {
       const parsedEnvValue = Number(envValue);
       if (!Number.isFinite(parsedEnvValue) || !Number.isInteger(parsedEnvValue) || parsedEnvValue < 0) {
-        console.warn(
-          `[ponder config] Ignoring invalid ${key} value for chain ${activeChainId}; using ${contractName} start block from shared deployment artifacts (${sharedStartBlock}).`,
-        );
+        throw new Error(`${key} must be a non-negative integer when provided for chain ${activeChainId}.`);
       } else if (parsedEnvValue !== sharedStartBlock) {
-        console.warn(
-          `[ponder config] Ignoring ${key}=${envValue} for chain ${activeChainId}; using ${contractName} start block from shared deployment artifacts (${sharedStartBlock}).`,
+        throw new Error(
+          `${key}=${envValue} conflicts with ${contractName} start block from shared deployment artifacts (${sharedStartBlock}) for chain ${activeChainId}. Remove the env override or refresh shared deployments.`,
         );
       }
     }

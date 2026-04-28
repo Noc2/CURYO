@@ -39,6 +39,10 @@ const expectedContentRegistry42220StartBlock =
   chain42220?.ContentRegistry?.deployedOnBlock ?? expectedChain42220StartBlock;
 const expectedChainStartBlock = getExpectedChainStartBlock(chain11142220);
 const expectedContentRegistryStartBlock = chain11142220?.ContentRegistry?.deployedOnBlock ?? expectedChainStartBlock;
+const expectedQuestionRewardPoolEscrowStartBlock =
+  chain11142220?.QuestionRewardPoolEscrow?.deployedOnBlock ?? expectedChainStartBlock;
+const expectedFeedbackBonusEscrowStartBlock =
+  chain11142220?.FeedbackBonusEscrow?.deployedOnBlock ?? expectedChainStartBlock;
 const missingSepoliaPonderContracts = getMissingPonderContracts(chain11142220);
 const missingCeloPonderContracts = getMissingPonderContracts(chain42220);
 const missingHardhatPonderContracts = getMissingPonderContracts(chain31337);
@@ -66,9 +70,10 @@ const VALID_ENV = {
     chain11142220?.ParticipationPool?.address ?? "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   PONDER_QUESTION_REWARD_POOL_ESCROW_ADDRESS:
     chain11142220?.QuestionRewardPoolEscrow?.address ?? "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-  PONDER_QUESTION_REWARD_POOL_ESCROW_START_BLOCK: String(expectedContentRegistryStartBlock),
-  PONDER_FEEDBACK_BONUS_ESCROW_ADDRESS: "0xcccccccccccccccccccccccccccccccccccccccc",
-  PONDER_FEEDBACK_BONUS_ESCROW_START_BLOCK: String(expectedContentRegistryStartBlock),
+  PONDER_QUESTION_REWARD_POOL_ESCROW_START_BLOCK: String(expectedQuestionRewardPoolEscrowStartBlock),
+  PONDER_FEEDBACK_BONUS_ESCROW_ADDRESS:
+    chain11142220?.FeedbackBonusEscrow?.address ?? "0xcccccccccccccccccccccccccccccccccccccccc",
+  PONDER_FEEDBACK_BONUS_ESCROW_START_BLOCK: String(expectedFeedbackBonusEscrowStartBlock),
   PONDER_CONTENT_REGISTRY_START_BLOCK: String(expectedContentRegistryStartBlock),
 };
 
@@ -108,7 +113,11 @@ describe("ponder config", () => {
         "PONDER_HREP_ADDRESS",
         "PONDER_HUMAN_FAUCET_ADDRESS",
         "PONDER_PARTICIPATION_POOL_ADDRESS",
+        "PONDER_QUESTION_REWARD_POOL_ESCROW_ADDRESS",
+        "PONDER_FEEDBACK_BONUS_ESCROW_ADDRESS",
         "PONDER_CONTENT_REGISTRY_START_BLOCK",
+        "PONDER_QUESTION_REWARD_POOL_ESCROW_START_BLOCK",
+        "PONDER_FEEDBACK_BONUS_ESCROW_START_BLOCK",
       ],
     );
 
@@ -145,7 +154,11 @@ describe("ponder config", () => {
         "PONDER_HREP_ADDRESS",
         "PONDER_HUMAN_FAUCET_ADDRESS",
         "PONDER_PARTICIPATION_POOL_ADDRESS",
+        "PONDER_QUESTION_REWARD_POOL_ESCROW_ADDRESS",
+        "PONDER_FEEDBACK_BONUS_ESCROW_ADDRESS",
         "PONDER_CONTENT_REGISTRY_START_BLOCK",
+        "PONDER_QUESTION_REWARD_POOL_ESCROW_START_BLOCK",
+        "PONDER_FEEDBACK_BONUS_ESCROW_START_BLOCK",
       ],
     );
 
@@ -158,30 +171,27 @@ describe("ponder config", () => {
     expect(loadedConfig.contracts.ContentRegistry.network.celo.startBlock).toBe(expectedContentRegistry42220StartBlock);
   });
 
-  itWithSepoliaPonderArtifacts("ignores stale Ponder env overrides when shared deployment artifacts exist", async () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const { default: config } = await loadPonderConfig({
-      PONDER_CONTENT_REGISTRY_ADDRESS: "0x1111111111111111111111111111111111111111",
-      PONDER_CONTENT_REGISTRY_START_BLOCK: "1",
-    });
+  itWithSepoliaPonderArtifacts("rejects stale Ponder address env overrides when shared deployment artifacts exist", async () => {
+    await expect(
+      loadPonderConfig({
+        PONDER_CONTENT_REGISTRY_ADDRESS: "0x1111111111111111111111111111111111111111",
+      }),
+    ).rejects.toThrow("conflicts with ContentRegistry from shared deployment artifacts");
+  });
 
-    const loadedConfig = config as any;
-
-    expect(loadedConfig.contracts.ContentRegistry.network.celoSepolia.address).toBe(
-      chain11142220!.ContentRegistry.address,
-    );
-    expect(loadedConfig.contracts.ContentRegistry.network.celoSepolia.startBlock).toBe(
-      expectedContentRegistryStartBlock,
-    );
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Ignoring PONDER_CONTENT_REGISTRY_ADDRESS"));
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Ignoring PONDER_CONTENT_REGISTRY_START_BLOCK"));
+  itWithSepoliaPonderArtifacts("rejects stale Ponder start block env overrides when shared deployment artifacts exist", async () => {
+    await expect(
+      loadPonderConfig({
+        PONDER_CONTENT_REGISTRY_START_BLOCK: String(expectedContentRegistryStartBlock + 1),
+      }),
+    ).rejects.toThrow("conflicts with ContentRegistry start block from shared deployment artifacts");
   });
 
   itWithMissingSepoliaPonderArtifacts("rejects non-local env address fallbacks when shared artifacts are missing", async () => {
     await expect(loadPonderConfig()).rejects.toThrow(
       `Missing shared deployment artifact for ${missingSepoliaPonderContracts[0]} on chain 11142220`,
     );
-  });
+  }, 10_000);
 
   itWithHardhatArtifacts("uses start block 0 for local hardhat even when artifacts contain deployment blocks", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});

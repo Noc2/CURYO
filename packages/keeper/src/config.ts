@@ -186,15 +186,14 @@ function resolveContractAddress(params: {
 
   if (sharedAddress) {
     if (envValue) {
-      if (isAddress(envValue)) {
-        if (envValue.toLowerCase() !== sharedAddress.toLowerCase()) {
-          warnings.push(
-            `Ignoring ${envName}=${envValue} for chain ${chainId}; using ${contractName} from shared deployment artifacts (${sharedAddress}).`,
-          );
-        }
-      } else {
-        warnings.push(
-          `Ignoring invalid ${envName} value for chain ${chainId}; using ${contractName} from shared deployment artifacts (${sharedAddress}).`,
+      if (!isAddress(envValue)) {
+        errors.push(`${envName} must be a valid address when provided for chain ${chainId}`);
+        return ZERO_ADDRESS;
+      }
+
+      if (envValue.toLowerCase() !== sharedAddress.toLowerCase()) {
+        errors.push(
+          `${envName}=${envValue} conflicts with ${contractName} from shared deployment artifacts (${sharedAddress}) for chain ${chainId}. Remove the env override or refresh shared deployments.`,
         );
       }
     }
