@@ -77,9 +77,7 @@ Key environment variables (see `.env.example` for the full list):
 | `NOTIFICATION_DELIVERY_SECRET`                    | Secret for the email delivery cron endpoint                                                                                              |
 | `NEXT_PUBLIC_PONDER_URL`                          | Public Ponder indexer URL (required in production)                                                                                       |
 | `THIRDWEB_SERVER_VERIFIER_SECRET`                 | Shared secret used by the thirdweb server verifier webhook                                                                               |
-| `CURYO_X402_EXECUTOR_PRIVATE_KEY`                 | Legacy executor key for local compatibility tests; non-custodial agent asks use wallet-signed transaction plans instead                |
-| `CURYO_X402_SERVICE_FEE_USDC`                     | Optional managed-agent accounting fee in atomic USDC                                                                                     |
-| `CURYO_X402_USDC_ADDRESS`                         | Optional USDC override for managed-agent bounty accounting; Celo and Celo Sepolia default automatically                                  |
+| `CURYO_X402_USDC_ADDRESS`                         | Optional Celo USDC override for native x402/direct agent bounty planning; Celo and Celo Sepolia default automatically                    |
 | `NEXT_PUBLIC_QUESTION_REWARD_POOL_ESCROW_ADDRESS` | Optional question reward escrow override; supported chains default from `@curyo/contracts`                                               |
 | `NEXT_PUBLIC_CELO_USDC_ADDRESS`                   | Optional browser-side Celo USDC override for USDC Bounties                                                                               |
 | `CURYO_MCP_AGENTS`                                | JSON array of paid MCP agents, bearer token hashes, scopes, daily budgets, per-ask caps, wallet addresses, and optional category allowlists |
@@ -108,7 +106,7 @@ Notes:
 - For local development, `yarn dev:db` and `yarn dev:stack` manage a Docker Postgres container when `DATABASE_URL` points to localhost. `yarn dev:stack` only runs `db:push` automatically for local databases; non-local databases require a manual `yarn workspace @curyo/nextjs db:push` or the explicit `CURYO_DEV_STACK_ALLOW_REMOTE_DB_PUSH=1` opt-in.
 - On Next.js 15, `NextRequest.ip` is not reliably populated. On non-Vercel production hosts you must configure `RATE_LIMIT_TRUSTED_IP_HEADERS` to the header(s) your hosting proxy overwrites. Vercel auto-trusts `x-real-ip`, and localhost shortcuts are only enabled for development or explicit local production-style E2E builds. Protected API routes fail closed when no trusted client IP can be derived or when the rate-limit store is unavailable.
 - The free transaction quota is enforced by the thirdweb server verifier route at `/api/thirdweb/verify-transaction`. Configure the same secret in thirdweb’s dashboard and in `THIRDWEB_SERVER_VERIFIER_SECRET`.
-- The old x402 question route has been removed. Future x402-compatible funding should pay or authorize protocol escrow directly and let any relayer submit without taking custody.
+- The old x402 question route has been removed. Native x402-compatible funding pays or authorizes protocol escrow directly; no Curyo executor, relayer requirement, custody path, or separate service fee is part of the ask flow. USDC-funded asks do not require a Voter ID, while voting and identity-gated claim flows still do.
 - The Next.js dev faucet reads `KEYSTORE_ACCOUNT`/`KEYSTORE_PASSWORD` or `FAUCET_PRIVATE_KEY` from `packages/nextjs/.env.local`. Keeper wallet settings live separately in `packages/keeper/.env.local`.
 
 ## Project Structure

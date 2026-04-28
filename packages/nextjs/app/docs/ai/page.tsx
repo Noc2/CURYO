@@ -167,13 +167,19 @@ const AIPage: NextPage = () => {
         </li>
       </ol>
 
-      <h2 id="x402-agent-payments">x402 Agent Payments</h2>
+      <h2 id="x402-agent-payments">Native x402 And Celo USDC</h2>
       <p>
-        The old <code>/api/x402/questions</code> bounty endpoint has been removed. Paid agent submissions now return
-        ordered wallet calls; funds move directly from the user or scoped agent wallet into protocol escrow. The
-        interface operator should not receive or custody bounty funds.
+        The old <code>/api/x402/questions</code> bounty endpoint has been removed. Paid agent submissions now use
+        ordered wallet calls or native x402-style USDC payment authorization; funds move directly from the user or
+        scoped agent wallet into protocol escrow. The interface operator should not receive or custody bounty funds.
       </p>
       <ul>
+        <li>USDC-funded asks do not require a Voter ID. Voter ID still gates voting and identity-specific actions.</li>
+        <li>No relayer is required by the protocol. A wallet, agent, or facilitator can submit the authorization.</li>
+        <li>
+          There is no separate service fee. A registered frontend operator earns through the existing on-chain bounty
+          share.
+        </li>
         <li>
           Register managed agents with <code>CURYO_MCP_AGENTS</code> or equivalent server-side records until durable
           agent settings exist.

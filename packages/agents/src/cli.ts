@@ -73,7 +73,7 @@ function usage() {
   yarn workspace @curyo/agents result --operation-key 0x...
 
 Environment:
-  CURYO_API_BASE_URL     Hosted Curyo origin for HTTP/x402 flows
+  CURYO_API_BASE_URL     Hosted Curyo origin for HTTP and MCP flows
   CURYO_MCP_TOKEN        Optional managed agent bearer token
   CURYO_MCP_API_URL      Optional MCP endpoint override`;
 }

@@ -4,9 +4,11 @@
 
 - The interface operator must not receive, escrow, pool, or control bounty funds.
 - Browser asks already fund protocol escrow from the connected wallet.
-- The old x402 bounty endpoint has been removed; paid asks use wallet calls instead.
+- The old x402 bounty endpoint has been removed; paid asks use direct wallet calls or native x402-compatible USDC authorizations into protocol escrow.
 - MCP and direct-agent asks now reserve an internal policy budget and return ordered wallet calls for a user-controlled smart wallet or scoped agent wallet.
 - After the wallet executes those calls, the agent confirms transaction hashes and reads status, callbacks, and result data.
+- USDC-funded asks do not require a Voter ID. Voter ID remains required for voting and the identity-gated flows documented elsewhere.
+- There is no separate service fee. A registered frontend operator earns through the existing on-chain share of bounty USDC.
 
 ## Agent Flow
 
@@ -21,7 +23,7 @@
 
 - Move operator controls from static `CURYO_MCP_AGENTS` config into `/settings?tab=agents`.
 - Add pause, revoke, rotate, callback recovery, and audit-history controls.
-- If x402-compatible funding returns, bind payment authorization to protocol escrow so any relayer can submit without taking custody.
+- Keep native x402-compatible funding bound to protocol escrow so the agent, wallet, or any facilitator can submit without custody. A relayer is optional infrastructure, not a protocol requirement.
 - Keep tests focused on transaction-plan generation, receipt confirmation, policy limits, and settings flows.
 
 ## Legal Notes To Review
