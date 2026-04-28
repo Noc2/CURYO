@@ -439,7 +439,8 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         (bool ok,) = address(rewardPoolEscrow).call(abi.encodeWithSignature("setVotingEngine(address)", newEngine));
         assertFalse(ok);
 
-        assertEq(address(rewardPoolEscrow.votingEngine()), address(votingEngine));
+        (,,, address configuredVotingEngine,) = rewardPoolEscrow.getWiring();
+        assertEq(configuredVotingEngine, address(votingEngine));
     }
 
     function testSetVotingEngineRejectsZeroAddress() public {

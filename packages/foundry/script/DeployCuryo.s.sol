@@ -1253,26 +1253,18 @@ contract DeployCuryo is ScaffoldETHDeploy {
     }
 
     function _verifyProductionEscrowWiring(ProductionDeploymentRoleVerification memory targets) internal view {
-        _require(
-            address(targets.questionRewardPoolEscrow.hrepToken()) == address(targets.hrepToken),
-            "QuestionRewardPoolEscrow HREP"
-        );
-        _require(
-            address(targets.questionRewardPoolEscrow.voterIdNFT()) == address(targets.voterIdNFT),
-            "QuestionRewardPoolEscrow voterIdNFT"
-        );
-        _require(
-            address(targets.questionRewardPoolEscrow.registry()) == address(targets.registry),
-            "QuestionRewardPoolEscrow registry"
-        );
-        _require(
-            address(targets.questionRewardPoolEscrow.votingEngine()) == address(targets.votingEngine),
-            "QuestionRewardPoolEscrow voting engine"
-        );
-        _require(
-            address(targets.questionRewardPoolEscrow.usdcToken()) == _resolveCeloUsdcAddress(),
-            "QuestionRewardPoolEscrow USDC"
-        );
+        (
+            address questionHrep,
+            address questionUsdc,
+            address questionRegistry,
+            address questionVotingEngine,
+            address questionVoterIdNFT
+        ) = targets.questionRewardPoolEscrow.getWiring();
+        _require(questionHrep == address(targets.hrepToken), "QuestionRewardPoolEscrow HREP");
+        _require(questionVoterIdNFT == address(targets.voterIdNFT), "QuestionRewardPoolEscrow voterIdNFT");
+        _require(questionRegistry == address(targets.registry), "QuestionRewardPoolEscrow registry");
+        _require(questionVotingEngine == address(targets.votingEngine), "QuestionRewardPoolEscrow voting engine");
+        _require(questionUsdc == _resolveCeloUsdcAddress(), "QuestionRewardPoolEscrow USDC");
         _require(
             address(targets.feedbackBonusEscrow.voterIdNFT()) == address(targets.voterIdNFT),
             "FeedbackBonusEscrow voterIdNFT"

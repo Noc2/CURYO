@@ -15,6 +15,7 @@ import { ProtocolConfig } from "./ProtocolConfig.sol";
 import { IFrontendRegistry } from "./interfaces/IFrontendRegistry.sol";
 import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
 import { RoundLib } from "./libraries/RoundLib.sol";
+import { TokenTransferLib } from "./libraries/TokenTransferLib.sol";
 
 /// @title FeedbackBonusEscrow
 /// @notice Holds optional USDC bonuses for useful voter feedback and pays awarded feedback hashes after a round ends.
@@ -416,13 +417,7 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
         returns (uint256 paidAmount)
     {
         if (amount == 0 || frontendRecipient == address(0)) return 0;
-        return _tryTokenTransfer(token, frontendRecipient, amount) ? amount : 0;
-    }
-
-    function _tryTokenTransfer(IERC20 token, address recipient, uint256 amount) internal returns (bool) {
-        (bool success, bytes memory data) =
-            address(token).call(abi.encodeCall(IERC20.transfer, (recipient, amount)));
-        return success && (data.length == 0 || (data.length == 32 && abi.decode(data, (bool))));
+        return TokenTransferLib.tryTransfer(token, frontendRecipient, amount) ? amount : 0;
     }
 
     function _roundVoterIdNft(uint256 contentId, uint256 roundId) internal view returns (IVoterIdNFT) {

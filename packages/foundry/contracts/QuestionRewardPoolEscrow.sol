@@ -16,6 +16,7 @@ import {IVoterIdNFT} from "./interfaces/IVoterIdNFT.sol";
 import {RoundLib} from "./libraries/RoundLib.sol";
 import {QuestionRewardPoolEscrowClaimLib} from "./libraries/QuestionRewardPoolEscrowClaimLib.sol";
 import {QuestionRewardPoolEscrowQualificationLib} from "./libraries/QuestionRewardPoolEscrowQualificationLib.sol";
+import {TokenTransferLib} from "./libraries/TokenTransferLib.sol";
 
 /// @title QuestionRewardPoolEscrow
 /// @notice Holds per-question USDC bounties and pays equal per-round rewards to revealed voters.
@@ -119,11 +120,11 @@ contract QuestionRewardPoolEscrow is
         uint256 frontendFeeAllocation;
     }
 
-    IERC20 public hrepToken;
-    IERC20 public usdcToken;
-    ContentRegistry public registry;
-    RoundVotingEngine public votingEngine;
-    IVoterIdNFT public voterIdNFT;
+    IERC20 internal hrepToken;
+    IERC20 internal usdcToken;
+    ContentRegistry internal registry;
+    RoundVotingEngine internal votingEngine;
+    IVoterIdNFT internal voterIdNFT;
     uint256 public nextRewardPoolId;
 
     mapping(uint256 => RewardPool) private rewardPools;
@@ -377,7 +378,7 @@ contract QuestionRewardPoolEscrow is
             uint256 submitterNullifier =
                 QuestionRewardPoolEscrowQualificationLib.resolveSubmitterNullifier(registry, voterIdNFT, contentId);
             bundleQuestions[bundleId].push(
-                BundleQuestion({contentId: contentId, submitterNullifier: submitterNullifier})
+                BundleQuestion({ contentId: contentId, submitterNullifier: submitterNullifier })
             );
             unchecked {
                 ++i;
@@ -888,6 +889,14 @@ contract QuestionRewardPoolEscrow is
         );
     }
 
+    function getWiring()
+        external
+        view
+        returns (address hrep, address usdc, address registry_, address votingEngine_, address voterIdNft_)
+    {
+        return (address(hrepToken), address(usdcToken), address(registry), address(votingEngine), address(voterIdNFT));
+    }
+
     function setVoterIdNFT(address voterIdNFT_) external onlyRole(CONFIG_ROLE) {
         require(voterIdNFT_ != address(0), "Invalid Voter ID");
         voterIdNFT = IVoterIdNFT(voterIdNFT_);
@@ -937,13 +946,7 @@ contract QuestionRewardPoolEscrow is
         returns (uint256 paidAmount)
     {
         if (amount == 0 || frontendRecipient == address(0)) return 0;
-        return _tryTokenTransfer(token, frontendRecipient, amount) ? amount : 0;
-    }
-
-    function _tryTokenTransfer(IERC20 token, address recipient, uint256 amount) internal returns (bool) {
-        (bool success, bytes memory data) =
-            address(token).call(abi.encodeCall(IERC20.transfer, (recipient, amount)));
-        return success && (data.length == 0 || (data.length == 32 && abi.decode(data, (bool))));
+        return TokenTransferLib.tryTransfer(token, frontendRecipient, amount) ? amount : 0;
     }
 
     function _requireFutureBountyWindow(uint256 bountyClosesAt) internal view {

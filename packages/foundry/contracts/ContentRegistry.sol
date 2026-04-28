@@ -175,7 +175,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     mapping(uint256 => uint256) public contentSubmitterNullifier;
 
     /// @notice Per-question round settings selected at submission and bounded by governance.
-    mapping(uint256 => RoundLib.RoundConfig) public contentRoundConfig;
+    mapping(uint256 => RoundLib.RoundConfig) internal contentRoundConfig;
 
     /// @notice Ordered content IDs for a submitted question bundle.
     mapping(uint256 => uint256[]) internal questionBundleContentIds;
@@ -198,10 +198,10 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     mapping(uint256 => uint256) public dormantKeyReleasableAt;
 
     /// @notice Rich rating state used by the score-relative rating system.
-    mapping(uint256 => RatingLib.RatingState) public ratingState;
+    mapping(uint256 => RatingLib.RatingState) internal ratingState;
 
     /// @notice Slash policy frozen at content creation so governance cannot retroactively rewrite stake terms.
-    mapping(uint256 => RatingLib.SlashConfig) public contentSlashConfigSnapshot;
+    mapping(uint256 => RatingLib.SlashConfig) internal contentSlashConfigSnapshot;
 
     SubmissionMediaValidator internal immutable SUBMISSION_MEDIA_VALIDATOR;
 
