@@ -206,11 +206,14 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
         if (awardVoterId != voterId) voterIdAwarded[poolId][voterId] = true;
         feedbackHashAwarded[poolId][feedbackHash] = true;
 
+        uint256 paidFrontendFee = _routeFrontendFee(usdcToken, frontendRecipient, frontendFee);
+        if (paidFrontendFee != frontendFee) {
+            recipientAmount += frontendFee;
+            frontendFee = 0;
+            frontendRecipient = address(0);
+        }
         if (recipientAmount > 0) {
             usdcToken.safeTransfer(rewardRecipient, recipientAmount);
-        }
-        if (frontendFee > 0) {
-            usdcToken.safeTransfer(frontendRecipient, frontendFee);
         }
 
         emit FeedbackBonusAwarded(
@@ -406,6 +409,20 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
         } catch {
             return false;
         }
+    }
+
+    function _routeFrontendFee(IERC20 token, address frontendRecipient, uint256 amount)
+        internal
+        returns (uint256 paidAmount)
+    {
+        if (amount == 0 || frontendRecipient == address(0)) return 0;
+        return _tryTokenTransfer(token, frontendRecipient, amount) ? amount : 0;
+    }
+
+    function _tryTokenTransfer(IERC20 token, address recipient, uint256 amount) internal returns (bool) {
+        (bool success, bytes memory data) =
+            address(token).call(abi.encodeCall(IERC20.transfer, (recipient, amount)));
+        return success && (data.length == 0 || (data.length == 32 && abi.decode(data, (bool))));
     }
 
     function _roundVoterIdNft(uint256 contentId, uint256 roundId) internal view returns (IVoterIdNFT) {

@@ -580,11 +580,14 @@ contract QuestionRewardPoolEscrow is
         rewardPool.claimedAmount += grossAmount;
 
         IERC20 rewardToken = _rewardToken(rewardPool.asset);
+        uint256 paidFrontendFee = _routeFrontendFee(rewardToken, frontendRecipient, frontendFee);
+        if (paidFrontendFee != frontendFee) {
+            rewardAmount += frontendFee;
+            frontendFee = 0;
+            frontendRecipient = address(0);
+        }
         if (rewardAmount > 0) {
             rewardToken.safeTransfer(rewardRecipient, rewardAmount);
-        }
-        if (frontendFee > 0) {
-            rewardToken.safeTransfer(frontendRecipient, frontendFee);
         }
         emit QuestionRewardClaimed(
             rewardPoolId,
@@ -683,11 +686,14 @@ contract QuestionRewardPoolEscrow is
         bundle.claimedAmount += grossAmount;
 
         IERC20 rewardToken = _rewardToken(bundle.asset);
+        uint256 paidFrontendFee = _routeFrontendFee(rewardToken, frontendRecipient, reservedFrontendFee);
+        if (paidFrontendFee != reservedFrontendFee) {
+            rewardAmount += reservedFrontendFee;
+            reservedFrontendFee = 0;
+            frontendRecipient = address(0);
+        }
         if (rewardAmount > 0) {
             rewardToken.safeTransfer(rewardRecipient, rewardAmount);
-        }
-        if (reservedFrontendFee > 0) {
-            rewardToken.safeTransfer(frontendRecipient, reservedFrontendFee);
         }
 
         emit QuestionBundleRewardClaimed(
@@ -924,6 +930,20 @@ contract QuestionRewardPoolEscrow is
         token.safeTransferFrom(funder, address(this), amount);
         receivedAmount = token.balanceOf(address(this)) - balanceBefore;
         require(receivedAmount == amount, "Bad token");
+    }
+
+    function _routeFrontendFee(IERC20 token, address frontendRecipient, uint256 amount)
+        internal
+        returns (uint256 paidAmount)
+    {
+        if (amount == 0 || frontendRecipient == address(0)) return 0;
+        return _tryTokenTransfer(token, frontendRecipient, amount) ? amount : 0;
+    }
+
+    function _tryTokenTransfer(IERC20 token, address recipient, uint256 amount) internal returns (bool) {
+        (bool success, bytes memory data) =
+            address(token).call(abi.encodeCall(IERC20.transfer, (recipient, amount)));
+        return success && (data.length == 0 || (data.length == 32 && abi.decode(data, (bool))));
     }
 
     function _requireFutureBountyWindow(uint256 bountyClosesAt) internal view {

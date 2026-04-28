@@ -267,6 +267,25 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
         assertEq(remainingAmount, 90e6);
     }
 
+    function testAwardFrontendTransferFailureFallsBackToVoter() public {
+        _registerFrontend(frontend1);
+        uint256 contentId = _submitQuestion("");
+        uint256 poolId = _createFeedbackBonusPool(contentId);
+        _settleRoundWithFrontend(_threeVoters(), contentId, _directions(true, true, false), frontend1);
+
+        usdc.setBlockedRecipient(frontend1, true);
+
+        uint256 voterBalanceBefore = usdc.balanceOf(voter1);
+        uint256 frontendBalanceBefore = usdc.balanceOf(frontend1);
+
+        vm.prank(funder);
+        uint256 recipientAmount = feedbackBonusEscrow.awardFeedbackBonus(poolId, voter1, FEEDBACK_HASH, 10e6);
+
+        assertEq(recipientAmount, 10e6);
+        assertEq(usdc.balanceOf(voter1), voterBalanceBefore + 10e6);
+        assertEq(usdc.balanceOf(frontend1), frontendBalanceBefore);
+    }
+
     function testAwardAfterRemintUsesOriginalCommitKeyForFrontendFee() public {
         _registerFrontend(frontend1);
         uint256 nullifier = 333_333;

@@ -9,6 +9,7 @@ import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 contract MockERC20 is ERC20 {
     uint8 private immutable _decimals;
     mapping(address => mapping(bytes32 => bool)) public authorizationState;
+    mapping(address => bool) public blockedRecipients;
 
     constructor(string memory name, string memory symbol, uint8 decimals_) ERC20(name, symbol) {
         _decimals = decimals_;
@@ -21,6 +22,10 @@ contract MockERC20 is ERC20 {
     /// @notice Mint tokens to any address (for testing)
     function mint(address to, uint256 amount) external {
         _mint(to, amount);
+    }
+
+    function setBlockedRecipient(address recipient, bool blocked) external {
+        blockedRecipients[recipient] = blocked;
     }
 
     function receiveWithAuthorization(
@@ -38,5 +43,10 @@ contract MockERC20 is ERC20 {
         require(!authorizationState[from][nonce], "MockERC20: authorization used");
         authorizationState[from][nonce] = true;
         _transfer(from, to, value);
+    }
+
+    function _update(address from, address to, uint256 value) internal override {
+        require(!blockedRecipients[to], "MockERC20: recipient blocked");
+        super._update(from, to, value);
     }
 }

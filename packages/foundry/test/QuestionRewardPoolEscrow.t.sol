@@ -356,6 +356,29 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(usdc.balanceOf(address(rewardPoolEscrow)), 0);
     }
 
+    function testFrontendTransferFailureFallsBackToQuestionRewardVoter() public {
+        _registerFrontend(frontend1);
+
+        uint256 contentId = _submitQuestion("");
+        uint256 rewardPoolId = _createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1);
+
+        address[] memory voters = _threeVoters();
+        bool[] memory directions = _directions(true, true, false);
+        uint256 roundId = _settleRoundWithFrontend(voters, contentId, directions, frontend1);
+
+        usdc.setBlockedRecipient(frontend1, true);
+
+        uint256 voterBalanceBefore = usdc.balanceOf(voter1);
+        uint256 frontendBalanceBefore = usdc.balanceOf(frontend1);
+
+        vm.prank(voter1);
+        uint256 reward = rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
+
+        assertEq(reward, REWARD_POOL_AMOUNT / 3);
+        assertEq(usdc.balanceOf(voter1), voterBalanceBefore + REWARD_POOL_AMOUNT / 3);
+        assertEq(usdc.balanceOf(frontend1), frontendBalanceBefore);
+    }
+
     function testExitPendingFrontendReceivesHistoricalQuestionRewardFees() public {
         _registerFrontend(frontend1);
 
