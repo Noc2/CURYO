@@ -582,16 +582,18 @@ contract RoundVotingEngine is
             voterIdCommitKey[contentId][roundId],
             commitVoterId[contentId][roundId],
             voterNullifierCommitKey[contentId][roundId],
-            contentId,
-            roundId,
-            commitKey,
-            epochEnd,
-            effectiveRevealableAfter,
-            voter,
-            commitHash,
-            voterId,
-            roundVoterIdNft,
-            useTokenIdentity
+            RoundCleanupLib.CommitIndexParams({
+                contentId: contentId,
+                roundId: roundId,
+                commitKey: commitKey,
+                epochEnd: epochEnd,
+                effectiveRevealableAfter: effectiveRevealableAfter,
+                voter: voter,
+                commitHash: commitHash,
+                voterId: voterId,
+                voterIdNft: roundVoterIdNft,
+                useTokenIdentity: useTokenIdentity
+            })
         );
     }
 

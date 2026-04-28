@@ -25,6 +25,19 @@ library RoundCleanupLib {
     error VoteNotRevealed();
     error NothingProcessed();
 
+    struct CommitIndexParams {
+        uint256 contentId;
+        uint256 roundId;
+        bytes32 commitKey;
+        uint256 epochEnd;
+        uint256 effectiveRevealableAfter;
+        address voter;
+        bytes32 commitHash;
+        uint256 voterId;
+        IVoterIdNFT voterIdNft;
+        bool useTokenIdentity;
+    }
+
     function targetRoundRevealableAt(
         mapping(uint256 => bytes32) storage roundDrandChainHashSnapshot,
         mapping(uint256 => uint64) storage roundDrandGenesisTimeSnapshot,
@@ -117,35 +130,26 @@ library RoundCleanupLib {
         mapping(uint256 => bytes32) storage roundVoterIdCommitKey,
         mapping(bytes32 => uint256) storage roundCommitVoterId,
         mapping(uint256 => bytes32) storage roundVoterNullifierCommitKey,
-        uint256 contentId,
-        uint256 roundId,
-        bytes32 commitKey,
-        uint256 epochEnd,
-        uint256 effectiveRevealableAfter,
-        address voter,
-        bytes32 commitHash,
-        uint256 voterId,
-        IVoterIdNFT voterIdNft,
-        bool useTokenIdentity
+        CommitIndexParams memory params
     ) external {
-        roundCommitHashes.push(commitKey);
-        epochUnrevealedCount[epochEnd]++;
-        if (effectiveRevealableAfter > lastCommitRevealableAfter[roundId]) {
-            lastCommitRevealableAfter[roundId] = effectiveRevealableAfter;
+        roundCommitHashes.push(params.commitKey);
+        epochUnrevealedCount[params.epochEnd]++;
+        if (params.effectiveRevealableAfter > lastCommitRevealableAfter[params.roundId]) {
+            lastCommitRevealableAfter[params.roundId] = params.effectiveRevealableAfter;
         }
 
-        roundVoterCommitHash[voter] = commitHash;
-        if (!contentHasCommits[contentId]) {
-            contentHasCommits[contentId] = true;
+        roundVoterCommitHash[params.voter] = params.commitHash;
+        if (!contentHasCommits[params.contentId]) {
+            contentHasCommits[params.contentId] = true;
         }
-        if (useTokenIdentity) {
-            roundHasTokenIdCommitted[voterId] = true;
-            roundVoterIdCommitKey[voterId] = commitKey;
-            roundCommitVoterId[commitKey] = voterId;
-            uint256 voterNullifier = voterIdNft.getNullifier(voterId);
+        if (params.useTokenIdentity) {
+            roundHasTokenIdCommitted[params.voterId] = true;
+            roundVoterIdCommitKey[params.voterId] = params.commitKey;
+            roundCommitVoterId[params.commitKey] = params.voterId;
+            uint256 voterNullifier = params.voterIdNft.getNullifier(params.voterId);
             if (voterNullifier != 0) {
                 if (roundVoterNullifierCommitKey[voterNullifier] == bytes32(0)) {
-                    roundVoterNullifierCommitKey[voterNullifier] = commitKey;
+                    roundVoterNullifierCommitKey[voterNullifier] = params.commitKey;
                 }
             }
         }
