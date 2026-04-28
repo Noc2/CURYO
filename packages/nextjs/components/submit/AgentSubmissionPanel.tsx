@@ -1058,14 +1058,20 @@ export function AgentSubmissionPanel() {
 
       {activeSetupStep === "payment" ? (
         <div className="surface-card rounded-lg p-5">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-base-content/50">
-              Step {activeStepNumber} of {SETUP_STEP_ORDER.length}
-            </p>
-            <h3 className="mt-1 flex items-center gap-2 text-xl font-semibold">
-              Pick the payment mode
-              <InfoTooltip text={AGENT_PAYMENT_HELP_TEXT} position="right" />
-            </h3>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-wide text-base-content/50">
+                Step {activeStepNumber} of {SETUP_STEP_ORDER.length}
+              </p>
+              <h3 className="mt-1 flex items-center gap-2 text-xl font-semibold">
+                Pick the payment mode
+                <InfoTooltip text={AGENT_PAYMENT_HELP_TEXT} position="right" />
+              </h3>
+            </div>
+            <Link href="/docs/ai#x402-agent-payments" className="btn btn-outline btn-sm self-start">
+              Payment docs
+              <ArrowTopRightOnSquareIcon className="h-4 w-4" />
+            </Link>
           </div>
 
           <div className="mt-5 grid gap-3 md:grid-cols-2">
@@ -1112,10 +1118,6 @@ export function AgentSubmissionPanel() {
             <button type="button" className="btn btn-primary btn-sm" onClick={() => setActiveSetupStep("policy")}>
               Continue
             </button>
-            <Link href="/docs/ai#x402-agent-payments" className="btn btn-outline btn-sm">
-              Payment docs
-              <ArrowTopRightOnSquareIcon className="h-4 w-4" />
-            </Link>
           </div>
         </div>
       ) : null}
