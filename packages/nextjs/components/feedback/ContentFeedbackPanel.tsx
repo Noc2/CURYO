@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useAccount } from "wagmi";
 import { ArrowTopRightOnSquareIcon, ChatBubbleLeftEllipsisIcon, LockClosedIcon } from "@heroicons/react/24/outline";
 import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
@@ -22,6 +22,9 @@ interface ContentFeedbackPanelProps {
   variant?: "rail" | "sheet";
   onRequestConnect?: () => void;
 }
+
+const FEATURE_ACCEPTANCE_RESULT_SPEC_HASH = "0x2245ce23320cf4fafe1fe8d340b04dacf0a769aff01929dd7676b331087514f5";
+const FEATURE_ACCEPTANCE_PLACEHOLDER = "Actual result:\nExpected result:\nSteps to reproduce:\nEnvironment:";
 
 function shortenAddress(address: string) {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -75,6 +78,11 @@ export function ContentFeedbackPanel({ item, variant = "rail", onRequestConnect 
   const [body, setBody] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
   const isSheet = variant === "sheet";
+  const isFeatureAcceptanceTest = item?.resultSpecHash?.toLowerCase() === FEATURE_ACCEPTANCE_RESULT_SPEC_HASH;
+  const defaultFeedbackType: ContentFeedbackType = isFeatureAcceptanceTest ? "bug_report" : "evidence";
+  const feedbackPlaceholder = isFeatureAcceptanceTest
+    ? FEATURE_ACCEPTANCE_PLACEHOLDER
+    : "Evidence, ambiguity, missing context, source issues...";
   const bodyLength = body.trim().length;
   const openRoundId = item?.openRound?.roundId ?? 0n;
   const { data: myCommitHash } = useScaffoldReadContract({
@@ -99,6 +107,10 @@ export function ContentFeedbackPanel({ item, variant = "rail", onRequestConnect 
     feedback.ownHiddenCount > 0
       ? `${feedback.ownHiddenCount} hidden note${feedback.ownHiddenCount === 1 ? "" : "s"} from you`
       : null;
+
+  useEffect(() => {
+    setFeedbackType(defaultFeedbackType);
+  }, [defaultFeedbackType, item?.id]);
 
   const visibleItems = useMemo(() => {
     return [...items].sort((a, b) => {
@@ -143,7 +155,9 @@ export function ContentFeedbackPanel({ item, variant = "rail", onRequestConnect 
     >
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="text-base font-semibold leading-tight text-base-content">Optional Feedback</h3>
+          <h3 className="text-base font-semibold leading-tight text-base-content">
+            {isFeatureAcceptanceTest ? "Feature Feedback" : "Optional Feedback"}
+          </h3>
         </div>
         <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-base-content/[0.07] px-2.5 py-1 text-xs font-semibold leading-none text-base-content/62">
           <LockClosedIcon className="h-3.5 w-3.5" />
@@ -192,7 +206,7 @@ export function ContentFeedbackPanel({ item, variant = "rail", onRequestConnect 
           maxLength={CONTENT_FEEDBACK_BODY_MAX_LENGTH}
           rows={isSheet ? 4 : 3}
           className="textarea min-h-24 w-full resize-none rounded-lg border-base-content/10 bg-base-200 text-sm leading-relaxed focus:outline-none"
-          placeholder="Evidence, ambiguity, missing context, source issues..."
+          placeholder={feedbackPlaceholder}
           disabled={!item || isSubmitting}
         />
 

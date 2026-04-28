@@ -28,6 +28,17 @@ type RoundLike = {
   voteCount?: number | null;
 };
 
+const FEATURE_ACCEPTANCE_TEMPLATE_ID = "feature_acceptance_test";
+const OBJECTION_FEEDBACK_TYPES = new Set([
+  "concern",
+  "counterpoint",
+  "source_quality",
+  "bug_report",
+  "repro_steps",
+  "usability_blocker",
+]);
+const FEATURE_FAILURE_FEEDBACK_TYPES = new Set(["bug_report", "repro_steps", "usability_blocker"]);
+
 export type AgentResultPackage = {
   ready: boolean;
   answer: AgentDecisionAnswer;
@@ -68,6 +79,18 @@ export type AgentResultPackage = {
     sourceUrl: string | null;
     roundId: string | null;
   }>;
+  featureTest: {
+    verdict: "works" | "works_with_issues" | "blocked" | "inconclusive";
+    blockingReportCount: number;
+    reproducibleReportCount: number;
+    environmentNoteCount: number;
+    topFailureReports: Array<{
+      type: string;
+      summary: string;
+      sourceUrl: string | null;
+      roundId: string | null;
+    }>;
+  } | null;
   dissentingView: string | null;
   feedbackQuality: {
     actionability: "none" | "low" | "medium" | "high";
@@ -176,7 +199,7 @@ function buildMajorObjections(
   downShare: number | null,
 ): AgentResultPackage["majorObjections"] {
   const objections: AgentResultPackage["majorObjections"] = feedback
-    .filter(item => ["concern", "counterpoint", "source_quality"].includes(item.feedbackType))
+    .filter(item => OBJECTION_FEEDBACK_TYPES.has(item.feedbackType))
     .slice(0, 5)
     .map(item => ({
       roundId: item.roundId,
@@ -195,6 +218,43 @@ function buildMajorObjections(
   }
 
   return objections;
+}
+
+function buildFeatureTestSummary(params: {
+  answer: AgentDecisionAnswer;
+  feedback: readonly ContentFeedbackItem[];
+  template: AgentResultTemplate;
+}): AgentResultPackage["featureTest"] {
+  if (params.template.id !== FEATURE_ACCEPTANCE_TEMPLATE_ID) {
+    return null;
+  }
+
+  const failureReports = params.feedback.filter(item => FEATURE_FAILURE_FEEDBACK_TYPES.has(item.feedbackType));
+  const blockingReportCount = params.feedback.filter(item => item.feedbackType === "usability_blocker").length;
+  const reproducibleReportCount = params.feedback.filter(item => item.feedbackType === "repro_steps").length;
+  const environmentNoteCount = params.feedback.filter(item => item.feedbackType === "environment_note").length;
+  const topFailureReports = failureReports.slice(0, 5).map(item => ({
+    roundId: item.roundId,
+    sourceUrl: item.sourceUrl,
+    summary: summarizeObjectionBody(item.body),
+    type: item.feedbackType,
+  }));
+  const verdict =
+    params.answer === "do_not_proceed" || params.answer === "revise_and_resubmit"
+      ? "blocked"
+      : params.answer === "proceed" || params.answer === "proceed_with_caution"
+        ? failureReports.length > 0
+          ? "works_with_issues"
+          : "works"
+        : "inconclusive";
+
+  return {
+    blockingReportCount,
+    environmentNoteCount,
+    reproducibleReportCount,
+    topFailureReports,
+    verdict,
+  };
 }
 
 function confidenceLevel(score: number): AgentResultPackage["confidence"]["level"] {
@@ -297,6 +357,7 @@ export function buildAgentResultPackage(params: {
     score: confidenceScore,
   };
   const majorObjections = buildMajorObjections(params.feedback, downShare);
+  const featureTest = buildFeatureTestSummary({ answer, feedback: params.feedback, template });
   const feedbackQuality = buildFeedbackQuality(params.feedback, majorObjections);
   const action = recommendedNextAction(answer, confidence.level, majorObjections.length);
   const cohortSummary = buildAgentCohortSummary(params.audienceContext);
@@ -347,6 +408,7 @@ export function buildAgentResultPackage(params: {
       },
     },
     dissentingView,
+    featureTest,
     feedbackQuality,
     liveAskGuidance,
     limitations,

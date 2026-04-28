@@ -69,6 +69,19 @@ test("normalizes structured feedback input", () => {
   });
 });
 
+test("normalizes feature testing feedback types", () => {
+  const normalized = contentFeedback.normalizeContentFeedbackInput({
+    address: WALLET,
+    contentId: "43",
+    feedbackType: "REPRO_STEPS",
+    body: "Steps: open preview, connect wallet, refresh, and observe the disconnected state.",
+  });
+
+  assert.equal(normalized.ok, true);
+  if (!normalized.ok) return;
+  assert.equal(normalized.payload.feedbackType, "repro_steps");
+});
+
 test("rejects invalid feedback fields", () => {
   assert.equal(
     contentFeedback.normalizeContentFeedbackInput({

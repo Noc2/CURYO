@@ -6,6 +6,10 @@ export const CONTENT_FEEDBACK_TYPES = [
   "source_quality",
   "ai_note",
   "vote_rationale",
+  "bug_report",
+  "repro_steps",
+  "environment_note",
+  "usability_blocker",
 ] as const;
 
 export type ContentFeedbackType = (typeof CONTENT_FEEDBACK_TYPES)[number];
@@ -18,9 +22,13 @@ export const CONTENT_FEEDBACK_TYPE_LABELS: Record<ContentFeedbackType, string> =
   source_quality: "Source quality",
   ai_note: "AI note",
   vote_rationale: "Vote rationale",
+  bug_report: "Bug report",
+  repro_steps: "Repro steps",
+  environment_note: "Environment note",
+  usability_blocker: "Usability blocker",
 };
 
-export const CONTENT_FEEDBACK_BODY_MAX_LENGTH = 800;
+export const CONTENT_FEEDBACK_BODY_MAX_LENGTH = 1500;
 export const CONTENT_FEEDBACK_SOURCE_URL_MAX_LENGTH = 2048;
 
 export interface ContentFeedbackItem {

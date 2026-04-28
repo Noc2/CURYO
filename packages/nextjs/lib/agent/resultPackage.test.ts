@@ -7,6 +7,9 @@ import type { ContentFeedbackItem } from "~~/lib/feedback/types";
 import type { PonderContentItem } from "~~/services/ponder/client";
 
 const GENERIC_TEMPLATE = listAgentResultTemplates()[0];
+const FEATURE_ACCEPTANCE_TEMPLATE = listAgentResultTemplates().find(
+  template => template.id === "feature_acceptance_test",
+)!;
 
 function content(overrides: Partial<PonderContentItem> = {}): PonderContentItem {
   return {
@@ -148,6 +151,81 @@ test("buildAgentResultPackage exposes feedback source URLs for agents", () => {
   assert.equal(result.feedbackQuality.actionability, "high");
   assert.equal(result.feedbackQuality.sourceUrlCount, 2);
   assert.deepEqual(result.sourceUrls, ["https://example.com/source-a", "https://example.com/source-b"]);
+});
+
+test("buildAgentResultPackage summarizes feature acceptance failures for agents", () => {
+  const result = buildAgentResultPackage({
+    audienceContext: null,
+    content: content({
+      description: "Test the wallet reconnect preview.",
+      questionMetadataHash: `0x${"6".repeat(64)}`,
+      resultSpecHash: FEATURE_ACCEPTANCE_TEMPLATE.resultSpecHash,
+      title: "Does wallet reconnect work?",
+    }),
+    feedback: [
+      feedback({
+        body: "Actual result: refresh disconnects MetaMask. Expected result: the wallet remains connected. Steps: connect, refresh, try vote.",
+        feedbackType: "bug_report",
+        feedbackTypeLabel: "Bug report",
+        id: 11,
+        sourceUrl: "https://example.com/repro",
+      }),
+      feedback({
+        body: "Reproduced on Chrome 124 with MetaMask after following the preview steps.",
+        feedbackType: "repro_steps",
+        feedbackTypeLabel: "Repro steps",
+        id: 12,
+      }),
+      feedback({
+        body: "Firefox worked, Chrome failed.",
+        feedbackType: "environment_note",
+        feedbackTypeLabel: "Environment note",
+        id: 13,
+      }),
+    ],
+    latestRound: {
+      conservativeRatingBps: 7000,
+      downCount: 2,
+      downPool: "250",
+      ratingBps: 7800,
+      revealedCount: 8,
+      roundId: "2",
+      settledAt: "100",
+      state: ROUND_STATE.Settled,
+      totalStake: "1000",
+      upCount: 6,
+      upPool: "750",
+      upWins: true,
+      voteCount: 8,
+    },
+    publicUrl: "https://curyo.xyz/rate?content=123",
+  });
+
+  assert.equal(result.methodology.templateId, "feature_acceptance_test");
+  assert.equal(result.answer, "proceed");
+  assert.equal(result.recommendedNextAction, "proceed_after_addressing_objections");
+  assert.equal(result.majorObjections[0]?.type, "bug_report");
+  assert.deepEqual(result.featureTest, {
+    blockingReportCount: 0,
+    environmentNoteCount: 1,
+    reproducibleReportCount: 1,
+    topFailureReports: [
+      {
+        roundId: "2",
+        sourceUrl: "https://example.com/repro",
+        summary:
+          "Actual result: refresh disconnects MetaMask. Expected result: the wallet remains connected. Steps: connect, refresh, try vote.",
+        type: "bug_report",
+      },
+      {
+        roundId: "2",
+        sourceUrl: null,
+        summary: "Reproduced on Chrome 124 with MetaMask after following the preview steps.",
+        type: "repro_steps",
+      },
+    ],
+    verdict: "works_with_issues",
+  });
 });
 
 test("buildAgentResultPackage keeps open rounds pending", () => {

@@ -456,6 +456,88 @@ test("getResult can build a tokenless public result when contentId is known", as
   assert.deepEqual(result.sourceUrls, ["https://example.com/pricing-note"]);
 });
 
+test("getResult summarizes tokenless feature acceptance feedback", async () => {
+  const featureSpecHash = "0x2245ce23320cf4fafe1fe8d340b04dacf0a769aff01929dd7676b331087514f5";
+  const agent = createCuryoAgentClient({
+    apiBaseUrl: API_BASE_URL,
+    fetchImpl: async (input: URL | RequestInfo) => {
+      const url = String(input);
+      if (url.includes("/content/77")) {
+        return jsonResponse({
+          audienceContext: null,
+          content: {
+            categoryId: "5",
+            id: "77",
+            question: "Does wallet reconnect work?",
+            rating: 78,
+            ratingBps: 7800,
+            ratingSettledRounds: 1,
+            resultSpecHash: featureSpecHash,
+            status: 1,
+            title: "Wallet reconnect preview",
+            totalVotes: 8,
+          },
+          ratings: [],
+          rounds: [
+            {
+              contentId: "77",
+              conservativeRatingBps: 7000,
+              downCount: 2,
+              downPool: "250",
+              id: "round-7",
+              ratingBps: 7800,
+              revealedCount: 8,
+              roundId: "7",
+              settledAt: "2026-04-23T12:00:00.000Z",
+              state: ROUND_STATE.Settled,
+              totalStake: "1000",
+              upCount: 6,
+              upPool: "750",
+              voteCount: 8,
+            },
+          ],
+        });
+      }
+      if (url.includes("/api/feedback?contentId=77")) {
+        return jsonResponse({
+          count: 2,
+          items: [
+            {
+              body: "Actual result: refresh disconnects MetaMask. Expected: wallet remains connected.",
+              contentId: "77",
+              feedbackType: "bug_report",
+              id: 1,
+              isPublic: true,
+              roundId: "7",
+              sourceUrl: "https://example.com/repro",
+            },
+            {
+              body: "Reproduced on Chrome with MetaMask after following the preview steps.",
+              contentId: "77",
+              feedbackType: "repro_steps",
+              id: 2,
+              isPublic: true,
+              roundId: "7",
+            },
+          ],
+          publicCount: 2,
+        });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    },
+  });
+
+  const result = await agent.getResult({ contentId: "77" });
+
+  assert.equal(result.answer, "proceed");
+  assert.equal(result.methodology?.templateId, "feature_acceptance_test");
+  assert.equal(result.recommendedNextAction, "proceed_after_addressing_objections");
+  assert.equal(result.majorObjections?.[0]?.type, "bug_report");
+  assert.equal(result.featureTest?.verdict, "works_with_issues");
+  assert.equal(result.featureTest?.reproducibleReportCount, 1);
+  assert.deepEqual(result.sourceUrls, ["https://example.com/repro"]);
+});
+
 test("getResult rejects tokenless operation lookups until a public content id is available", async () => {
   let fetchCalls = 0;
   const agent = createCuryoAgentClient({

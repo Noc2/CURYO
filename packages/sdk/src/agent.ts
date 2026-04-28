@@ -277,6 +277,7 @@ export interface CuryoAgentResult {
   stakeMass?: JsonRecord;
   rationaleSummary?: string;
   majorObjections?: JsonRecord[];
+  featureTest?: JsonRecord | null;
   dissentingView?: string | null;
   liveAskGuidance?: CuryoAgentLiveAskGuidance | null;
   recommendedNextAction?: string;
@@ -380,6 +381,29 @@ const DEFAULT_AGENT_RESULT_TEMPLATE = {
   ratingSystem: "curyo.binary_staked_rating.v1",
   version: 1,
 } as const;
+
+const FEATURE_ACCEPTANCE_RESULT_TEMPLATE = {
+  id: "feature_acceptance_test",
+  interpretation: {
+    cautionRatingBps: 6000,
+    proceedConservativeRatingBps: 6500,
+    proceedRatingBps: 7500,
+    reviseRatingBps: 5000,
+  },
+  ratingSystem: "curyo.binary_staked_rating.v1",
+  resultSpecHash: "0x2245ce23320cf4fafe1fe8d340b04dacf0a769aff01929dd7676b331087514f5",
+  version: 1,
+} as const;
+
+const OBJECTION_FEEDBACK_TYPES = new Set([
+  "concern",
+  "counterpoint",
+  "source_quality",
+  "bug_report",
+  "repro_steps",
+  "usability_blocker",
+]);
+const FEATURE_FAILURE_FEEDBACK_TYPES = new Set(["bug_report", "repro_steps", "usability_blocker"]);
 
 export function createCuryoAgentClient(
   options: CuryoAgentClientOptions = {},
@@ -587,6 +611,7 @@ function formatPublicAgentResult(params: {
 }): CuryoAgentResult {
   const latestRound = latestRoundFromContentDetails(params.contentResponse);
   const content = params.contentResponse.content as JsonRecord;
+  const template = publicResultTemplateFromHash(content.resultSpecHash);
   const roundState = toNumberValue(latestRound?.state, null);
   const ratingBps =
     toNumberValue(content.ratingBps, null) ??
@@ -610,6 +635,7 @@ function formatPublicAgentResult(params: {
     conservativeRatingBps,
     ratingBps,
     roundState,
+    template,
   });
   const participationTarget =
     Math.max(toNumberValue(content.roundMinVoters, 3) ?? 3, 1) * 2;
@@ -630,6 +656,11 @@ function formatPublicAgentResult(params: {
     score: confidenceScore,
   };
   const majorObjections = buildMajorObjections(params.feedback, downShare);
+  const featureTest = buildFeatureTestSummary({
+    answer,
+    feedback: params.feedback,
+    templateId: template.id,
+  });
   const feedbackQuality = buildFeedbackQuality(params.feedback, majorObjections);
   const ready = isTerminalRoundState(roundState);
   const stateLabel =
@@ -683,6 +714,7 @@ function formatPublicAgentResult(params: {
         stake: upStake.toString(),
       },
     },
+    featureTest,
     feedbackQuality,
     limitations,
     liveAskGuidance: null,
@@ -692,13 +724,13 @@ function formatPublicAgentResult(params: {
         typeof content.questionMetadataHash === "string"
           ? content.questionMetadataHash
           : null,
-      ratingSystem: DEFAULT_AGENT_RESULT_TEMPLATE.ratingSystem,
+      ratingSystem: template.ratingSystem,
       resultSpecHash:
         typeof content.resultSpecHash === "string" ? content.resultSpecHash : null,
       sources: ["ponder.content", "ponder.rounds", "public.content_feedback"],
-      templateId: DEFAULT_AGENT_RESULT_TEMPLATE.id,
-      templateVersion: DEFAULT_AGENT_RESULT_TEMPLATE.version,
-      thresholds: DEFAULT_AGENT_RESULT_TEMPLATE.interpretation,
+      templateId: template.id,
+      templateVersion: template.version,
+      thresholds: template.interpretation,
     },
     operation: params.operation,
     protocolState: {
@@ -1022,10 +1054,21 @@ function confidenceLevel(score: number): "none" | "low" | "medium" | "high" {
   return "high";
 }
 
+function publicResultTemplateFromHash(value: unknown) {
+  if (
+    typeof value === "string" &&
+    value.toLowerCase() === FEATURE_ACCEPTANCE_RESULT_TEMPLATE.resultSpecHash
+  ) {
+    return FEATURE_ACCEPTANCE_RESULT_TEMPLATE;
+  }
+  return DEFAULT_AGENT_RESULT_TEMPLATE;
+}
+
 function classifyPublicAnswer(params: {
   conservativeRatingBps: number | null;
   ratingBps: number | null;
   roundState: number | null;
+  template: typeof DEFAULT_AGENT_RESULT_TEMPLATE | typeof FEATURE_ACCEPTANCE_RESULT_TEMPLATE;
 }): CuryoAgentAnswer {
   if (params.roundState === ROUND_STATE.Open || params.roundState === null) return "pending";
   if (params.roundState === ROUND_STATE.Tied) return "inconclusive";
@@ -1040,17 +1083,17 @@ function classifyPublicAnswer(params: {
   const ratingBps = params.ratingBps ?? 5000;
   const conservativeRatingBps =
     params.conservativeRatingBps ?? params.ratingBps ?? 5000;
+  const thresholds = params.template.interpretation;
   if (
-    ratingBps >= DEFAULT_AGENT_RESULT_TEMPLATE.interpretation.proceedRatingBps &&
-    conservativeRatingBps >=
-      DEFAULT_AGENT_RESULT_TEMPLATE.interpretation.proceedConservativeRatingBps
+    ratingBps >= thresholds.proceedRatingBps &&
+    conservativeRatingBps >= thresholds.proceedConservativeRatingBps
   ) {
     return "proceed";
   }
-  if (ratingBps >= DEFAULT_AGENT_RESULT_TEMPLATE.interpretation.cautionRatingBps) {
+  if (ratingBps >= thresholds.cautionRatingBps) {
     return "proceed_with_caution";
   }
-  if (ratingBps >= DEFAULT_AGENT_RESULT_TEMPLATE.interpretation.reviseRatingBps) {
+  if (ratingBps >= thresholds.reviseRatingBps) {
     return "revise_and_resubmit";
   }
   return "do_not_proceed";
@@ -1106,7 +1149,7 @@ function buildMajorObjections(
     .filter(
       (item) =>
         typeof item.feedbackType === "string" &&
-        ["concern", "counterpoint", "source_quality"].includes(item.feedbackType) &&
+        OBJECTION_FEEDBACK_TYPES.has(item.feedbackType) &&
         typeof item.body === "string",
     )
     .slice(0, 5)
@@ -1127,6 +1170,53 @@ function buildMajorObjections(
   }
 
   return objections;
+}
+
+function buildFeatureTestSummary(params: {
+  answer: CuryoAgentAnswer;
+  feedback: readonly PublicFeedbackItem[];
+  templateId: string;
+}): JsonRecord | null {
+  if (params.templateId !== FEATURE_ACCEPTANCE_RESULT_TEMPLATE.id) {
+    return null;
+  }
+
+  const failureReports = params.feedback.filter(
+    (item) =>
+      typeof item.feedbackType === "string" &&
+      FEATURE_FAILURE_FEEDBACK_TYPES.has(item.feedbackType) &&
+      typeof item.body === "string",
+  );
+  const blockingReportCount = params.feedback.filter(
+    (item) => item.feedbackType === "usability_blocker",
+  ).length;
+  const reproducibleReportCount = params.feedback.filter(
+    (item) => item.feedbackType === "repro_steps",
+  ).length;
+  const environmentNoteCount = params.feedback.filter(
+    (item) => item.feedbackType === "environment_note",
+  ).length;
+  const verdict =
+    params.answer === "do_not_proceed" || params.answer === "revise_and_resubmit"
+      ? "blocked"
+      : params.answer === "proceed" || params.answer === "proceed_with_caution"
+        ? failureReports.length > 0
+          ? "works_with_issues"
+          : "works"
+        : "inconclusive";
+
+  return {
+    blockingReportCount,
+    environmentNoteCount,
+    reproducibleReportCount,
+    topFailureReports: failureReports.slice(0, 5).map((item) => ({
+      roundId: typeof item.roundId === "string" ? item.roundId : null,
+      sourceUrl: typeof item.sourceUrl === "string" ? item.sourceUrl : null,
+      summary: summarizeObjectionBody(item.body as string),
+      type: item.feedbackType as string,
+    })),
+    verdict,
+  };
 }
 
 function buildFeedbackQuality(

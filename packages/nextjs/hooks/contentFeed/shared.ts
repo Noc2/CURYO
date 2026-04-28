@@ -44,6 +44,8 @@ export interface ContentItem {
   tags: string[];
   submitter: string;
   contentHash: string;
+  questionMetadataHash?: string | null;
+  resultSpecHash?: string | null;
   isOwnContent: boolean;
   categoryId: bigint;
   rating: number;
@@ -167,6 +169,8 @@ export function mapContentItem(
     tags: string;
     submitter: string;
     contentHash: string;
+    questionMetadataHash?: string | null;
+    resultSpecHash?: string | null;
     categoryId: string;
     rating: number;
     ratingBps?: number;
@@ -321,6 +325,8 @@ export function mapContentItem(
     tags: parseTags(item.tags),
     submitter: item.submitter,
     contentHash: item.contentHash,
+    questionMetadataHash: item.questionMetadataHash ?? null,
+    resultSpecHash: item.resultSpecHash ?? null,
     isOwnContent: ownSubmitterAddressSet.has(item.submitter.toLowerCase()),
     categoryId: BigInt(item.categoryId),
     rating: displayedRating,

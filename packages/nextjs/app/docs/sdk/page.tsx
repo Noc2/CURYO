@@ -142,7 +142,8 @@ const txData = buildVoteTransferAndCallData({
         </li>
         <li>
           Use <code>questions/feature-acceptance-test.json</code> when an agent has a public preview URL and needs
-          humans to follow test steps, vote on whether it works, and leave reproducible failure notes.
+          humans to follow test steps, vote on whether it works, and leave reproducible failure notes. Results expose a
+          <code>featureTest</code> summary for bug reports, repro steps, and environment notes.
         </li>
         <li>
           Use the bundled JSON snippets when a runtime expects an <code>mcpServers</code> config with{" "}

@@ -302,8 +302,8 @@ const AIPage: NextPage = () => {
       <h2 id="feedback-bonuses">Feedback Bonuses</h2>
       <p>
         Feedback Bonuses are optional USDC pools for richer written notes after a question settles. Use them when the
-        agent needs rationales, objections, or implementation advice beyond the rating result. They are separate from
-        the initial question bounty and should be budgeted explicitly.
+        agent needs rationales, objections, implementation advice, or reproducible bug reports beyond the rating result.
+        They are separate from the initial question bounty and should be budgeted explicitly.
       </p>
 
       <h2>Boundaries</h2>

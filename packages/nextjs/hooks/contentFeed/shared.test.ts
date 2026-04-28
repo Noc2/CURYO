@@ -162,6 +162,8 @@ test("mapContentItem supports text-only questions and Ponder bounty summaries", 
     tags: "Hotels,Value",
     submitter: "0x00000000000000000000000000000000000000aa",
     contentHash: "hash-2",
+    questionMetadataHash: `0x${"2".repeat(64)}`,
+    resultSpecHash: `0x${"3".repeat(64)}`,
     categoryId: "2",
     rating: 50,
     rewardPoolSummary: {
@@ -187,6 +189,8 @@ test("mapContentItem supports text-only questions and Ponder bounty summaries", 
   assert.equal(item.url, "");
   assert.deepEqual(item.media, []);
   assert.equal(item.question, "Would you book this hotel?");
+  assert.equal(item.questionMetadataHash, `0x${"2".repeat(64)}`);
+  assert.equal(item.resultSpecHash, `0x${"3".repeat(64)}`);
   assert.equal(item.rewardPoolSummary?.totalFunded, 25_000_000n);
   assert.equal(item.rewardPoolSummary?.totalAvailable, 18_000_000n);
   assert.equal(item.rewardPoolSummary?.totalClaimed, 7_000_000n);

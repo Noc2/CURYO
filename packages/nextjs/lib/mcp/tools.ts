@@ -572,6 +572,7 @@ async function buildQuestionResult(args: JsonObject, agent: McpAgentAuth) {
         up: { count: 0, share: null, stake: "0" },
       },
       dissentingView: null,
+      featureTest: null,
       feedbackQuality: {
         actionability: "none",
         objectionCount: 0,
