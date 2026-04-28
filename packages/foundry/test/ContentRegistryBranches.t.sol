@@ -77,7 +77,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(registryImpl),
-                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(hrepToken)))
+                    abi.encodeCall(ContentRegistry.initializeWithTreasury, (owner, owner, owner, address(hrepToken)))
                 )
             )
         );
@@ -1286,7 +1286,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(registryImpl2),
-                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(hrepToken)))
+                    abi.encodeCall(ContentRegistry.initializeWithTreasury, (owner, owner, owner, address(hrepToken)))
                 )
             )
         );
@@ -1531,7 +1531,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     }
 
     function test_SubmitContent_TitleTooLong_Reverts() public {
-        uint256 maxQuestionLength = registry.MAX_QUESTION_LENGTH() + 1;
+        uint256 maxQuestionLength = 121;
         bytes memory longGoal = new bytes(maxQuestionLength);
         for (uint256 i = 0; i < maxQuestionLength; i++) {
             longGoal[i] = "a";
@@ -1701,7 +1701,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(registryImpl2),
-                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(hrepToken)))
+                    abi.encodeCall(ContentRegistry.initializeWithTreasury, (owner, owner, owner, address(hrepToken)))
                 )
             )
         );
@@ -1773,7 +1773,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(registryImpl2),
-                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(hrepToken)))
+                    abi.encodeCall(ContentRegistry.initializeWithTreasury, (owner, owner, owner, address(hrepToken)))
                 )
             )
         );

@@ -80,7 +80,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(registryImpl),
-                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(hrepToken)))
+                    abi.encodeCall(ContentRegistry.initializeWithTreasury, (owner, owner, owner, address(hrepToken)))
                 )
             )
         );
@@ -1974,7 +1974,8 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         bytes32 badSalt = keccak256(abi.encodePacked(voter1, block.timestamp, "floor target"));
         bytes memory badCiphertext = _testCiphertext(true, badSalt, contentId, floorTargetRound, drandChainHash);
-        bytes32 badCommitHash = _commitHash(true, badSalt, voter1, contentId, floorTargetRound, drandChainHash, badCiphertext);
+        bytes32 badCommitHash =
+            _commitHash(true, badSalt, voter1, contentId, floorTargetRound, drandChainHash, badCiphertext);
 
         vm.startPrank(voter1);
         hrepToken.approve(address(engine), STAKE);

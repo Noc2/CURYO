@@ -644,7 +644,8 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         registry = ContentRegistry(
             address(
                 new ERC1967Proxy(
-                    address(impl), abi.encodeCall(ContentRegistry.initialize, (admin, admin, address(hrep)))
+                    address(impl),
+                    abi.encodeCall(ContentRegistry.initializeWithTreasury, (admin, admin, admin, address(hrep)))
                 )
             )
         );
@@ -763,7 +764,7 @@ contract ContentRegistryCoverageTest is VotingTestBase {
     // --- submitContent: question too long ---
 
     function test_SubmitContentTitleTooLongReverts_LegacyShape() public {
-        uint256 maxQuestionLength = registry.MAX_QUESTION_LENGTH() + 1;
+        uint256 maxQuestionLength = 121;
         bytes memory longGoal = new bytes(maxQuestionLength);
         for (uint256 i = 0; i < maxQuestionLength; i++) {
             longGoal[i] = "b";
@@ -812,7 +813,7 @@ contract ContentRegistryCoverageTest is VotingTestBase {
     }
 
     function test_SubmitContentTitleTooLongReverts() public {
-        uint256 maxQuestionLength = registry.MAX_QUESTION_LENGTH() + 1;
+        uint256 maxQuestionLength = 121;
         bytes memory longTitle = new bytes(maxQuestionLength);
         for (uint256 i = 0; i < maxQuestionLength; i++) {
             longTitle[i] = "b";
@@ -834,7 +835,7 @@ contract ContentRegistryCoverageTest is VotingTestBase {
     }
 
     function test_SubmitContentTitleAtMaxLengthSucceeds() public {
-        uint256 maxQuestionLength = registry.MAX_QUESTION_LENGTH();
+        uint256 maxQuestionLength = 120;
         bytes memory title = new bytes(maxQuestionLength);
         for (uint256 i = 0; i < maxQuestionLength; i++) {
             title[i] = "c";
@@ -851,7 +852,7 @@ contract ContentRegistryCoverageTest is VotingTestBase {
     }
 
     function test_SubmitContentTitleLongerThanMaxByOneReverts() public {
-        uint256 maxQuestionLength = registry.MAX_QUESTION_LENGTH();
+        uint256 maxQuestionLength = 120;
         bytes memory title = new bytes(maxQuestionLength + 1);
         for (uint256 i = 0; i < maxQuestionLength + 1; i++) {
             title[i] = "d";
@@ -874,7 +875,7 @@ contract ContentRegistryCoverageTest is VotingTestBase {
     }
 
     function test_SubmitContentDescriptionAtMaxLengthSucceeds() public {
-        uint256 maxDescriptionLength = registry.MAX_DESCRIPTION_LENGTH();
+        uint256 maxDescriptionLength = 280;
         bytes memory description = new bytes(maxDescriptionLength);
         for (uint256 i = 0; i < maxDescriptionLength; i++) {
             description[i] = "b";
@@ -891,7 +892,7 @@ contract ContentRegistryCoverageTest is VotingTestBase {
     }
 
     function test_SubmitContentDescriptionTooLongReverts() public {
-        uint256 maxDescriptionLength = registry.MAX_DESCRIPTION_LENGTH() + 1;
+        uint256 maxDescriptionLength = 281;
         bytes memory longDescription = new bytes(maxDescriptionLength);
         for (uint256 i = 0; i < maxDescriptionLength; i++) {
             longDescription[i] = "b";
@@ -1079,7 +1080,8 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         ContentRegistry reg2 = ContentRegistry(
             address(
                 new ERC1967Proxy(
-                    address(impl), abi.encodeCall(ContentRegistry.initialize, (admin, admin, address(hrep)))
+                    address(impl),
+                    abi.encodeCall(ContentRegistry.initializeWithTreasury, (admin, admin, admin, address(hrep)))
                 )
             )
         );
@@ -1269,19 +1271,27 @@ contract ContentRegistryCoverageTest is VotingTestBase {
     function test_InitializeZeroAdminReverts() public {
         ContentRegistry impl = new ContentRegistry();
         vm.expectRevert("Invalid admin");
-        new ERC1967Proxy(address(impl), abi.encodeCall(ContentRegistry.initialize, (address(0), admin, address(hrep))));
+        new ERC1967Proxy(
+            address(impl),
+            abi.encodeCall(ContentRegistry.initializeWithTreasury, (address(0), admin, admin, address(hrep)))
+        );
     }
 
     function test_InitializeZeroGovernanceReverts() public {
         ContentRegistry impl = new ContentRegistry();
         vm.expectRevert("Invalid governance");
-        new ERC1967Proxy(address(impl), abi.encodeCall(ContentRegistry.initialize, (admin, address(0), address(hrep))));
+        new ERC1967Proxy(
+            address(impl),
+            abi.encodeCall(ContentRegistry.initializeWithTreasury, (admin, address(0), address(0), address(hrep)))
+        );
     }
 
     function test_InitializeZeroTokenReverts() public {
         ContentRegistry impl = new ContentRegistry();
         vm.expectRevert("Invalid HREP token");
-        new ERC1967Proxy(address(impl), abi.encodeCall(ContentRegistry.initialize, (admin, admin, address(0))));
+        new ERC1967Proxy(
+            address(impl), abi.encodeCall(ContentRegistry.initializeWithTreasury, (admin, admin, admin, address(0)))
+        );
     }
 
     function _submitContent(address who, string memory url) internal returns (uint256) {
@@ -1591,7 +1601,8 @@ contract RoundSettlementBranchTest is VotingTestBase {
         registry = ContentRegistry(
             address(
                 new ERC1967Proxy(
-                    address(regImpl), abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(hrep)))
+                    address(regImpl),
+                    abi.encodeCall(ContentRegistry.initializeWithTreasury, (owner, owner, owner, address(hrep)))
                 )
             )
         );

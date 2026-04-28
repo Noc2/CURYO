@@ -18,16 +18,6 @@ import { RatingMath } from "./libraries/RatingMath.sol";
 import { ProtocolConfig } from "./ProtocolConfig.sol";
 import { SubmissionMediaValidator } from "./SubmissionMediaValidator.sol";
 
-struct Eip3009Authorization {
-    address from;
-    address to;
-    uint256 value;
-    uint256 validAfter;
-    uint256 validBefore;
-    bytes32 nonce;
-    bytes signature;
-}
-
 interface IQuestionRewardPoolEscrow {
     function createSubmissionRewardPoolFromRegistry(
         uint256 contentId,
@@ -38,17 +28,6 @@ interface IQuestionRewardPoolEscrow {
         uint256 requiredSettledRounds,
         uint256 bountyClosesAt,
         uint256 feedbackClosesAt
-    ) external returns (uint256 rewardPoolId);
-
-    function createSubmissionRewardPoolFromRegistryWithAuthorization(
-        uint256 contentId,
-        address funder,
-        uint256 amount,
-        uint256 requiredVoters,
-        uint256 requiredSettledRounds,
-        uint256 bountyClosesAt,
-        uint256 feedbackClosesAt,
-        Eip3009Authorization calldata authorization
     ) external returns (uint256 rewardPoolId);
 
     function createSubmissionBundleFromRegistry(
@@ -91,10 +70,10 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     uint256 internal constant MIN_SUBMISSION_REWARD_REQUIRED_VOTERS = 3;
     uint256 internal constant MIN_SUBMISSION_REWARD_SETTLED_ROUNDS = 1;
     uint256 internal constant MAX_SUBMISSION_REWARD_SETTLED_ROUNDS = 16;
-    uint256 public constant MAX_QUESTION_BUNDLE_COUNT = 10;
+    uint256 internal constant MAX_QUESTION_BUNDLE_COUNT = 10;
 
     // Rating safety thresholds
-    uint256 public constant SLASH_RATING_THRESHOLD = 25; // Rating below this triggers slash
+    uint256 internal constant SLASH_RATING_THRESHOLD = 25; // Rating below this triggers slash
     uint16 internal constant DEFAULT_SLASH_THRESHOLD_BPS = 2500;
     uint16 internal constant DEFAULT_MIN_SLASH_SETTLED_ROUNDS = 2;
     uint48 internal constant DEFAULT_MIN_SLASH_LOW_DURATION = 7 days;
@@ -103,8 +82,8 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
     // String length limits (prevent storage bloat)
     uint256 internal constant MAX_URL_LENGTH = 2048;
-    uint256 public constant MAX_QUESTION_LENGTH = 120;
-    uint256 public constant MAX_DESCRIPTION_LENGTH = 280;
+    uint256 internal constant MAX_QUESTION_LENGTH = 120;
+    uint256 internal constant MAX_DESCRIPTION_LENGTH = 280;
     uint256 internal constant MAX_TAGS_LENGTH = 256;
     uint256 internal constant MAX_IMAGE_URLS = 4;
     uint16 internal constant MAX_QUESTION_BUNDLE_ROUND_VOTERS = 100;
@@ -201,7 +180,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     mapping(uint256 => uint256[]) internal questionBundleContentIds;
 
     mapping(uint256 => uint256) public contentBundleId;
-    mapping(uint256 => uint256) public contentBundleIndex;
+    mapping(uint256 => uint256) internal contentBundleIndex;
 
     /// @notice Meaningful-activity anchor used for dormancy checks.
     /// @dev Vote commits still update `lastActivityAt` for UI/analytics, but only submission, revival,
@@ -256,12 +235,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         uint256 feedbackClosesAt,
         uint256 rewardPoolId
     );
-    event X402QuestionSubmitted(
-        uint256 indexed contentId,
-        address indexed submitter,
-        bytes32 indexed paymentNonce,
-        uint256 rewardPoolId
-    );
     event QuestionBundleSubmitted(
         uint256 indexed bundleId,
         address indexed submitter,
@@ -303,10 +276,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         _disableInitializers();
     }
 
-    function initialize(address _admin, address _governance, address _hrepToken) public initializer {
-        _initialize(_admin, _governance, _governance, _hrepToken);
-    }
-
     function initializeWithTreasury(address _admin, address _governance, address _treasuryAuthority, address _hrepToken)
         public
         initializer
@@ -320,7 +289,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
         require(_admin != address(0), "Invalid admin");
         require(_governance != address(0), "Invalid governance");
-        require(_treasuryAuthority != address(0), "Invalid treasury authority");
+        require(_treasuryAuthority != address(0), "Bad treasury");
         require(_hrepToken != address(0), "Invalid HREP token");
 
         // Governance gets all permanent roles
@@ -735,76 +704,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         );
     }
 
-    function submitQuestionWithX402Payment(
-        string memory contextUrl,
-        string[] memory imageUrls,
-        string memory videoUrl,
-        string memory title,
-        string memory description,
-        string memory tags,
-        uint256 categoryId,
-        bytes32 salt,
-        SubmissionRewardTerms memory rewardTerms,
-        RoundLib.RoundConfig memory roundConfig,
-        QuestionSpecCommitment memory spec,
-        Eip3009Authorization calldata paymentAuthorization
-    ) external nonReentrant whenNotPaused returns (uint256 contentId) {
-        SubmissionMetadata memory metadata = _validatedContextSubmissionMetadata(
-            contextUrl, imageUrls, videoUrl, title, description, tags, categoryId
-        );
-        RoundLib.RoundConfig memory validatedRoundConfig = _validatedRoundConfig(roundConfig);
-        (uint256 resolvedCategoryId, bytes32 submissionKey) = _prepareX402QuestionSubmission(
-            metadata, imageUrls, videoUrl, salt, rewardTerms, validatedRoundConfig, spec, paymentAuthorization
-        );
-        bytes32 contentHash = _questionContentHash(metadata, imageUrls, videoUrl, resolvedCategoryId, spec);
-        contentId = _storeSubmittedContent(
-            submissionKey,
-            paymentAuthorization.from,
-            false,
-            contentHash,
-            resolvedCategoryId,
-            validatedRoundConfig,
-            0,
-            0
-        );
-        uint256 rewardPoolId = IQuestionRewardPoolEscrow(questionRewardPoolEscrow)
-            .createSubmissionRewardPoolFromRegistryWithAuthorization(
-                contentId,
-                paymentAuthorization.from,
-                rewardTerms.amount,
-                rewardTerms.requiredVoters,
-                rewardTerms.requiredSettledRounds,
-                rewardTerms.bountyClosesAt,
-                rewardTerms.feedbackClosesAt,
-                paymentAuthorization
-            );
-
-        emit ContentSubmitted(
-            contentId,
-            paymentAuthorization.from,
-            contentHash,
-            metadata.url,
-            metadata.title,
-            metadata.description,
-            metadata.tags,
-            resolvedCategoryId
-        );
-        emit QuestionSpecAnchored(contentId, spec.questionMetadataHash, spec.resultSpecHash);
-        emit ContentMediaSubmitted(contentId, imageUrls, videoUrl);
-        emit SubmissionRewardPoolAttached(
-            contentId,
-            paymentAuthorization.from,
-            rewardTerms.asset,
-            rewardTerms.amount,
-            rewardTerms.requiredVoters,
-            rewardTerms.requiredSettledRounds,
-            rewardTerms.bountyClosesAt,
-            rewardTerms.feedbackClosesAt,
-            rewardPoolId
-        );
-        emit X402QuestionSubmitted(contentId, paymentAuthorization.from, paymentAuthorization.nonce, rewardPoolId);
-    }
-
     function getContentRoundConfig(uint256 contentId) public view returns (RoundLib.RoundConfig memory cfg) {
         cfg = contentRoundConfig[contentId];
         if (cfg.epochDuration == 0) {
@@ -866,7 +765,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             url: contextUrl, title: title, description: description, tags: tags, categoryId: categoryId
         });
         _validateTextFields(metadata);
-        require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
+        require(address(categoryRegistry) != address(0), "Category unset");
     }
 
     function _submitValidatedQuestionWithMedia(
@@ -882,7 +781,20 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     ) internal returns (uint256 contentId) {
         (uint256 resolvedCategoryId, bytes32 submissionKey, PendingSubmission memory pending) =
             _prepareQuestionMediaSubmission(metadata, imageUrls, videoUrl, salt, rewardTerms, roundConfig, spec);
-        bytes32 contentHash = _questionContentHash(metadata, imageUrls, videoUrl, resolvedCategoryId, spec);
+        bytes32 contentHash = keccak256(
+            abi.encode(
+                "curyo-question-context-v2",
+                metadata.url,
+                imageUrls,
+                videoUrl,
+                metadata.title,
+                metadata.description,
+                metadata.tags,
+                resolvedCategoryId,
+                spec.questionMetadataHash,
+                spec.resultSpecHash
+            )
+        );
         contentId = _storeSubmittedContent(
             submissionKey,
             pending.submitter,
@@ -960,49 +872,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         require(block.timestamp >= pending.reservedAt + RESERVED_SUBMISSION_MIN_AGE, "Reservation too new");
 
         delete pendingSubmissions[reservationKey];
-        submissionKeyUsed[submissionKey] = true;
-    }
-
-    function _prepareX402QuestionSubmission(
-        SubmissionMetadata memory metadata,
-        string[] memory imageUrls,
-        string memory videoUrl,
-        bytes32 salt,
-        SubmissionRewardTerms memory rewardTerms,
-        RoundLib.RoundConfig memory roundConfig,
-        QuestionSpecCommitment memory spec,
-        Eip3009Authorization calldata paymentAuthorization
-    ) internal returns (uint256 resolvedCategoryId, bytes32 submissionKey) {
-        require(questionRewardPoolEscrow != address(0), "Bounty escrow not set");
-        _validateQuestionSpec(spec);
-        require(rewardTerms.asset == SUBMISSION_REWARD_ASSET_USDC, "USDC required");
-        require(paymentAuthorization.from != address(0), "Invalid payer");
-        require(paymentAuthorization.to == questionRewardPoolEscrow, "Bad payee");
-        require(paymentAuthorization.value == rewardTerms.amount, "Bad amount");
-        resolvedCategoryId = _resolveQuestionSubmissionCategory(metadata);
-        submissionKey = _deriveQuestionMediaSubmissionKey(metadata, resolvedCategoryId);
-        require(!submissionKeyUsed[submissionKey], "Question already submitted");
-        require(salt != bytes32(0), "Salt required");
-        _validateSubmissionReward(rewardTerms);
-        require(rewardTerms.requiredVoters <= roundConfig.maxVoters, "Voters exceed max");
-        require(
-            paymentAuthorization.nonce
-                == computeX402QuestionPaymentNonce(
-                    metadata,
-                    imageUrls,
-                    videoUrl,
-                    salt,
-                    rewardTerms,
-                    roundConfig,
-                    spec,
-                    paymentAuthorization.from,
-                    paymentAuthorization.to,
-                    paymentAuthorization.value,
-                    paymentAuthorization.validAfter,
-                    paymentAuthorization.validBefore
-                ),
-            "Bad nonce"
-        );
         submissionKeyUsed[submissionKey] = true;
     }
 
@@ -1467,55 +1336,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         );
     }
 
-    function computeX402QuestionPaymentNonce(
-        SubmissionMetadata memory metadata,
-        string[] memory imageUrls,
-        string memory videoUrl,
-        bytes32 salt,
-        SubmissionRewardTerms memory rewardTerms,
-        RoundLib.RoundConfig memory roundConfig,
-        QuestionSpecCommitment memory spec,
-        address payer,
-        address payee,
-        uint256 value,
-        uint256 validAfter,
-        uint256 validBefore
-    ) public view returns (bytes32) {
-        return keccak256(
-            abi.encode(
-                "curyo-x402-question-payment-v1",
-                block.chainid,
-                address(this),
-                questionRewardPoolEscrow,
-                payer,
-                payee,
-                value,
-                validAfter,
-                validBefore,
-                metadata.url,
-                imageUrls,
-                videoUrl,
-                metadata.title,
-                metadata.description,
-                metadata.tags,
-                metadata.categoryId,
-                salt,
-                rewardTerms.asset,
-                rewardTerms.amount,
-                rewardTerms.requiredVoters,
-                rewardTerms.requiredSettledRounds,
-                rewardTerms.bountyClosesAt,
-                rewardTerms.feedbackClosesAt,
-                roundConfig.epochDuration,
-                roundConfig.maxDuration,
-                roundConfig.minVoters,
-                roundConfig.maxVoters,
-                spec.questionMetadataHash,
-                spec.resultSpecHash
-            )
-        );
-    }
-
     function _validateSubmissionReward(SubmissionRewardTerms memory rewardTerms) internal view {
         require(
             rewardTerms.asset == SUBMISSION_REWARD_ASSET_HREP || rewardTerms.asset == SUBMISSION_REWARD_ASSET_USDC,
@@ -1530,8 +1350,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         );
         require(rewardTerms.bountyClosesAt == 0 || rewardTerms.bountyClosesAt > block.timestamp, "Bad close");
         require(
-            rewardTerms.feedbackClosesAt == 0 || rewardTerms.feedbackClosesAt > block.timestamp,
-            "Invalid feedback close"
+            rewardTerms.feedbackClosesAt == 0 || rewardTerms.feedbackClosesAt > block.timestamp, "Bad feedback close"
         );
         require(
             rewardTerms.bountyClosesAt == 0 || rewardTerms.feedbackClosesAt == 0

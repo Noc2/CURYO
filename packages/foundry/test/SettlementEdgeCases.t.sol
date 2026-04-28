@@ -62,7 +62,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(registryImpl),
-                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(hrepToken)))
+                    abi.encodeCall(ContentRegistry.initializeWithTreasury, (owner, owner, owner, address(hrepToken)))
                 )
             )
         );
@@ -231,7 +231,8 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         registry_ = ContentRegistry(
             address(
                 new ERC1967Proxy(
-                    address(registryImpl), abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(token)))
+                    address(registryImpl),
+                    abi.encodeCall(ContentRegistry.initializeWithTreasury, (owner, owner, owner, address(token)))
                 )
             )
         );

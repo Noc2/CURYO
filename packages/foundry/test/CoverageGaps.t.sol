@@ -553,7 +553,8 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         registry = ContentRegistry(
             address(
                 new ERC1967Proxy(
-                    address(regImpl), abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(hrep)))
+                    address(regImpl),
+                    abi.encodeCall(ContentRegistry.initializeWithTreasury, (owner, owner, owner, address(hrep)))
                 )
             )
         );
@@ -818,7 +819,8 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         ContentRegistry registry2 = ContentRegistry(
             address(
                 new ERC1967Proxy(
-                    address(regImpl2), abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(hrep)))
+                    address(regImpl2),
+                    abi.encodeCall(ContentRegistry.initializeWithTreasury, (owner, owner, owner, address(hrep)))
                 )
             )
         );

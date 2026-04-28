@@ -72,7 +72,7 @@ contract AdversarialTests is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(registryImpl),
-                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(hrepToken)))
+                    abi.encodeCall(ContentRegistry.initializeWithTreasury, (owner, owner, owner, address(hrepToken)))
                 )
             )
         );
@@ -554,7 +554,7 @@ contract AdversarialTests is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(new ContentRegistry()),
-                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(token2)))
+                    abi.encodeCall(ContentRegistry.initializeWithTreasury, (owner, owner, owner, address(token2)))
                 )
             )
         );

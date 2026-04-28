@@ -55,7 +55,8 @@ contract GameTheoryImprovementsTest is VotingTestBase {
         registry = ContentRegistry(
             address(
                 new ERC1967Proxy(
-                    address(regImpl), abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(hrepToken)))
+                    address(regImpl),
+                    abi.encodeCall(ContentRegistry.initializeWithTreasury, (owner, owner, owner, address(hrepToken)))
                 )
             )
         );

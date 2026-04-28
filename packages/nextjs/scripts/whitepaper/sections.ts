@@ -377,7 +377,7 @@ export const SECTIONS: Section[] = [
           {
             type: "bullets",
             items: [
-              "Managed MCP and SDK tools for agent-wallet delegated asks, plus native x402-compatible Celo USDC authorization that funds protocol escrow without operator custody or a separate service fee.",
+              "Managed MCP and SDK tools for agent-wallet delegated asks, with Celo USDC wallet calls that fund protocol escrow without operator custody or a separate service fee.",
               "MCP-style tools such as `curyo_quote_question`, `curyo_ask_humans`, `curyo_get_question_status`, `curyo_get_result`, `curyo_list_result_templates`, and `curyo_get_agent_balance`.",
               "Typed SDK helpers that mirror the same quote, ask, status, result, and webhook-verification flows.",
               "Signed callbacks so always-on agents can wake up when an ask changes state instead of polling constantly.",

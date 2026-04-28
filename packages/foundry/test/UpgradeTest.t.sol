@@ -97,7 +97,7 @@ contract UpgradeTest is Test {
         TransparentUpgradeableProxy crProxy = new TransparentUpgradeableProxy(
             address(crImpl),
             governance,
-            abi.encodeCall(ContentRegistry.initialize, (admin, governance, address(hrepToken)))
+            abi.encodeCall(ContentRegistry.initializeWithTreasury, (admin, governance, governance, address(hrepToken)))
         );
         contentRegistry = ContentRegistry(address(crProxy));
         contentRegistryAdmin = _proxyAdmin(address(crProxy));
@@ -182,7 +182,7 @@ contract UpgradeTest is Test {
     function test_ContentRegistry_CannotReinitialize() public {
         vm.prank(admin);
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        contentRegistry.initialize(admin, governance, address(hrepToken));
+        contentRegistry.initializeWithTreasury(admin, governance, governance, address(hrepToken));
     }
 
     function test_ContentRegistry_StatePreservedAfterUpgrade() public {
@@ -413,7 +413,7 @@ contract UpgradeTest is Test {
         // Each implementation should have _disableInitializers() in its constructor
         ContentRegistry crImpl = new ContentRegistry();
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        crImpl.initialize(admin, governance, address(hrepToken));
+        crImpl.initializeWithTreasury(admin, governance, governance, address(hrepToken));
 
         RoundVotingEngine veImpl = new RoundVotingEngine();
         vm.expectRevert(Initializable.InvalidInitialization.selector);

@@ -99,7 +99,7 @@ contract RoundIntegrationTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(registryImpl),
-                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(hrepToken)))
+                    abi.encodeCall(ContentRegistry.initializeWithTreasury, (owner, owner, owner, address(hrepToken)))
                 )
             )
         );
@@ -1659,7 +1659,7 @@ contract RoundIntegrationTest is VotingTestBase {
         _settleRoundWith(voters, contentId, dirs, 100e6);
 
         (,,,,,,,, uint256 rating,) = registry.contents(contentId);
-        assertGe(rating, registry.SLASH_RATING_THRESHOLD(), "round should not be slashable");
+        assertGe(rating, 25, "round should not be slashable");
         assertEq(hrepToken.balanceOf(submitter), submitterBalanceBefore, "submitter receives no removed stake payout");
         assertEq(hrepToken.balanceOf(treasury), treasuryBalanceBefore, "treasury should not receive a slash");
     }
@@ -3332,7 +3332,10 @@ contract RoundIntegrationTest is VotingTestBase {
         registry.setVotingEngine(address(0xBEEF));
 
         votingEngine.settleRound(contentId, roundId);
-        assertEq(uint8(RoundEngineReadHelpers.round(votingEngine, contentId, roundId).state), uint8(RoundLib.RoundState.Settled));
+        assertEq(
+            uint8(RoundEngineReadHelpers.round(votingEngine, contentId, roundId).state),
+            uint8(RoundLib.RoundState.Settled)
+        );
     }
 
     // =========================================================================

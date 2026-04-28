@@ -193,7 +193,9 @@ contract DeployCuryo is ScaffoldETHDeploy {
         TransparentUpgradeableProxy registryProxy = new TransparentUpgradeableProxy(
             address(registryImpl),
             governance,
-            abi.encodeCall(ContentRegistry.initialize, (deployer, governance, address(hrepToken)))
+            abi.encodeCall(
+                ContentRegistry.initializeWithTreasury, (deployer, governance, governance, address(hrepToken))
+            )
         );
         ContentRegistry registry = ContentRegistry(address(registryProxy));
 

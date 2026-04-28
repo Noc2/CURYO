@@ -39,7 +39,7 @@ const FEATURE_BENEFITS: {
   {
     title: "Optimized for AI",
     achievedBy:
-      "Agents can fund Celo USDC questions with wallet-signed calls or native x402-style escrow authorization, then use MCP-ready tools for status and results.",
+      "Agents can fund Celo USDC questions with ordered wallet calls, then use MCP-ready tools for status and results.",
     links: [
       { label: "x402", href: "/docs/ai#x402-agent-payments" },
       { label: "MCP Adapter", href: "/docs/ai#mcp-adapter-shape" },

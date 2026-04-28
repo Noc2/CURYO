@@ -68,7 +68,8 @@ abstract contract SecurityHarnessBase is VotingTestBase {
         registry = ContentRegistry(
             address(
                 new ERC1967Proxy(
-                    address(registryImpl), abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(token)))
+                    address(registryImpl),
+                    abi.encodeCall(ContentRegistry.initializeWithTreasury, (owner, owner, owner, address(token)))
                 )
             )
         );
@@ -615,7 +616,7 @@ contract SecurityAccessControlTest is Test {
             address(
                 new ERC1967Proxy(
                     address(registryImpl),
-                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(hrepToken)))
+                    abi.encodeCall(ContentRegistry.initializeWithTreasury, (owner, owner, owner, address(hrepToken)))
                 )
             )
         );
