@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useQuery } from "@tanstack/react-query";
 import { decodeEventLog, toHex } from "viem";
-import { useAccount, useConfig } from "wagmi";
+import { useAccount, useConfig, useReadContract } from "wagmi";
 import { getPublicClient, waitForTransactionReceipt, writeContract } from "wagmi/actions";
 import { ChevronDownIcon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { ContentEmbed } from "~~/components/content/ContentEmbed";
@@ -58,6 +58,7 @@ import {
   MAX_REWARD_POOL_SETTLED_ROUNDS,
   MIN_REWARD_POOL_REQUIRED_VOTERS,
   MIN_REWARD_POOL_SETTLED_ROUNDS,
+  QUESTION_REWARD_POOL_ESCROW_WIRING_ABI,
   QUESTION_SUBMISSION_ABI,
   SUBMISSION_REWARD_ASSET_HREP,
   SUBMISSION_REWARD_ASSET_USDC,
@@ -679,14 +680,15 @@ export function ContentSubmissionSection() {
   const registryAddress = registryInfo?.address as `0x${string}` | undefined;
   const hrepAddress = hrepInfo?.address as `0x${string}` | undefined;
   const rewardEscrowAddress = rewardEscrowInfo?.address as `0x${string}` | undefined;
-  const { data: escrowUsdcToken } = useScaffoldReadContract({
-    contractName: "QuestionRewardPoolEscrow" as any,
-    functionName: "usdcToken" as any,
-    watch: false,
+  const { data: rewardEscrowWiring } = useReadContract({
+    address: rewardEscrowAddress,
+    abi: QUESTION_REWARD_POOL_ESCROW_WIRING_ABI,
+    functionName: "getWiring",
     query: {
+      enabled: Boolean(rewardEscrowAddress),
       staleTime: 300_000,
     },
-  } as any);
+  });
   const { data: defaultFrontendFeeBps } = useScaffoldReadContract({
     contractName: "QuestionRewardPoolEscrow" as any,
     functionName: "defaultFrontendFeeBps" as any,
@@ -956,7 +958,7 @@ export function ContentSubmissionSection() {
           ? "A wide voter cap can dilute the per-voter payout if participation is high; use it when broader input matters more than payout density."
           : "These settings give a clear payout target for a small qualifying round.";
   const rewardTokenAddress =
-    rewardAsset === "hrep" ? hrepAddress : ((escrowUsdcToken as `0x${string}` | undefined) ?? undefined);
+    rewardAsset === "hrep" ? hrepAddress : ((rewardEscrowWiring?.[1] as `0x${string}` | undefined) ?? undefined);
   const { refetch: refetchNextContentId } = useScaffoldReadContract({
     contractName: "ContentRegistry",
     functionName: "nextContentId",
