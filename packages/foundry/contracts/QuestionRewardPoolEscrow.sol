@@ -343,31 +343,25 @@ contract QuestionRewardPoolEscrow is
         uint256 fundedAmount = _pullExactToken(funder, asset, amount);
         (uint256 funderVoterId, address funderIdentity, uint256 funderNullifier) = _resolveFunderIdentity(funder, asset);
 
-        bundleRewards[bundleId] = BundleReward({
-            id: bundleId.toUint64(),
-            bountyOpensAt: block.timestamp.toUint64(),
-            bountyClosesAt: bountyClosesAt.toUint64(),
-            feedbackClosesAt: normalizedFeedbackClosesAt.toUint64(),
-            funder: funder,
-            funderIdentity: funderIdentity,
-            asset: asset,
-            questionCount: contentIds.length.toUint32(),
-            requiredCompleters: requiredCompleters.toUint32(),
-            requiredSettledRounds: requiredSettledRounds.toUint32(),
-            completedRoundSets: 0,
-            claimedCount: 0,
-            eligibleClaimCount: 0,
-            frontendFeeBps: defaultFrontendFeeBps,
-            funderNullifier: funderNullifier,
-            fundedAmount: fundedAmount,
-            unallocatedAmount: fundedAmount,
-            claimedAmount: 0,
-            refunded: false,
-            // Registry-initiated submissions carry the mandatory-bounty anti-spam model:
-            // unclaimed residue is forfeited to treasury rather than refunded, matching
-            // the single-pool path (`createSubmissionRewardPoolFromRegistry`).
-            nonRefundable: true
-        });
+        BundleReward storage bundle = bundleRewards[bundleId];
+        bundle.id = bundleId.toUint64();
+        bundle.bountyOpensAt = block.timestamp.toUint64();
+        bundle.bountyClosesAt = bountyClosesAt.toUint64();
+        bundle.feedbackClosesAt = normalizedFeedbackClosesAt.toUint64();
+        bundle.funder = funder;
+        bundle.funderIdentity = funderIdentity;
+        bundle.asset = asset;
+        bundle.questionCount = contentIds.length.toUint32();
+        bundle.requiredCompleters = requiredCompleters.toUint32();
+        bundle.requiredSettledRounds = requiredSettledRounds.toUint32();
+        bundle.frontendFeeBps = defaultFrontendFeeBps;
+        bundle.funderNullifier = funderNullifier;
+        bundle.fundedAmount = fundedAmount;
+        bundle.unallocatedAmount = fundedAmount;
+        // Registry-initiated submissions carry the mandatory-bounty anti-spam model:
+        // unclaimed residue is forfeited to treasury rather than refunded, matching
+        // the single-pool path (`createSubmissionRewardPoolFromRegistry`).
+        bundle.nonRefundable = true;
 
         for (uint256 i = 0; i < contentIds.length;) {
             uint256 contentId = contentIds[i];
