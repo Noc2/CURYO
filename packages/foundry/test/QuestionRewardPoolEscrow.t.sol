@@ -1596,21 +1596,56 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(usdc.balanceOf(agentWallet), agentBalanceBefore - rewardTerms.amount);
     }
 
-    function testUndelegatedAgentQuestionSubmissionWithUsdcRewardSucceedsWithoutVoterId() public {
+    function testUndelegatedAgentQuestionSubmissionWithUsdcRewardRequiresVoterId() public {
         address agentWallet = address(0xA11CE);
-        (uint256 contentId,) = _submitAgentQuestionWithUsdcReward(agentWallet, "agent-undelegated-no-voter-id", false);
+        uint256 nextContentIdBefore = registry.nextContentId();
+        uint256 nextRewardPoolIdBefore = rewardPoolEscrow.nextRewardPoolId();
 
-        (,, address storedSubmitter,,,,,,,) = registry.contents(contentId);
-        assertEq(storedSubmitter, agentWallet);
-        assertEq(registry.getSubmitterIdentity(contentId), agentWallet);
-        assertEq(registry.contentSubmitterNullifier(contentId), 0);
+        _submitAgentQuestionWithUsdcReward(agentWallet, "agent-undelegated-no-voter-id", true);
+
+        assertEq(registry.nextContentId(), nextContentIdBefore);
+        assertEq(rewardPoolEscrow.nextRewardPoolId(), nextRewardPoolIdBefore);
     }
 
-    function testX402QuestionSubmissionConsumesUsdcAuthorizationWithoutVoterId() public {
+    function testX402QuestionSubmissionRequiresVoterId() public {
         address agentWallet = address(0xA11CE);
         X402TestQuestion memory question = _x402TestQuestion();
         Eip3009Authorization memory authorization = _x402Authorization(agentWallet, question);
 
+        usdc.mint(agentWallet, question.rewardTerms.amount);
+        uint256 escrowBalanceBefore = usdc.balanceOf(address(rewardPoolEscrow));
+        uint256 agentBalanceBefore = usdc.balanceOf(agentWallet);
+        uint256 nextContentIdBefore = registry.nextContentId();
+
+        vm.expectRevert("Voter ID required");
+        x402QuestionSubmitter.submitQuestionWithX402Payment(
+            question.contextUrl,
+            question.imageUrls,
+            "",
+            question.title,
+            question.description,
+            question.tags,
+            CATEGORY_ID,
+            question.salt,
+            question.rewardTerms,
+            question.roundConfig,
+            question.spec,
+            authorization
+        );
+
+        assertFalse(usdc.authorizationState(agentWallet, authorization.nonce));
+        assertEq(registry.nextContentId(), nextContentIdBefore);
+        assertEq(usdc.balanceOf(address(rewardPoolEscrow)), escrowBalanceBefore);
+        assertEq(usdc.balanceOf(agentWallet), agentBalanceBefore);
+    }
+
+    function testX402QuestionSubmissionConsumesUsdcAuthorizationWithDelegatedVoterId() public {
+        address agentWallet = address(0xA11CE);
+        X402TestQuestion memory question = _x402TestQuestion();
+        Eip3009Authorization memory authorization = _x402Authorization(agentWallet, question);
+
+        vm.prank(submitter);
+        voterIdNFT.setDelegate(agentWallet);
         usdc.mint(agentWallet, question.rewardTerms.amount);
         uint256 escrowBalanceBefore = usdc.balanceOf(address(rewardPoolEscrow));
         uint256 agentBalanceBefore = usdc.balanceOf(agentWallet);
@@ -1632,8 +1667,10 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
 
         (,, address storedSubmitter,,,,,,,) = registry.contents(contentId);
         assertEq(storedSubmitter, agentWallet);
-        assertEq(registry.getSubmitterIdentity(contentId), agentWallet);
-        assertEq(registry.contentSubmitterNullifier(contentId), 0);
+        assertEq(registry.getSubmitterIdentity(contentId), submitter);
+        assertEq(
+            registry.contentSubmitterNullifier(contentId), voterIdNFT.getNullifier(voterIdNFT.getTokenId(submitter))
+        );
         assertTrue(usdc.authorizationState(agentWallet, authorization.nonce));
         assertEq(usdc.balanceOf(address(rewardPoolEscrow)), escrowBalanceBefore + question.rewardTerms.amount);
         assertEq(usdc.balanceOf(agentWallet), agentBalanceBefore - question.rewardTerms.amount);
