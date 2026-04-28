@@ -47,6 +47,7 @@ const missingSepoliaPonderContracts = getMissingPonderContracts(chain11142220);
 const missingCeloPonderContracts = getMissingPonderContracts(chain42220);
 const missingHardhatPonderContracts = getMissingPonderContracts(chain31337);
 const itWithSepoliaPonderArtifacts = chain11142220 && missingSepoliaPonderContracts.length === 0 ? it : it.skip;
+const itWithSepoliaContentRegistryArtifact = chain11142220?.ContentRegistry ? it : it.skip;
 const itWithMissingSepoliaPonderArtifacts = chain11142220 && missingSepoliaPonderContracts.length > 0 ? it : it.skip;
 const itWithCeloPonderArtifacts = chain42220 && missingCeloPonderContracts.length === 0 ? it : it.skip;
 const itWithHardhatArtifacts = chain31337 && missingHardhatPonderContracts.length === 0 ? it : it.skip;
@@ -171,13 +172,16 @@ describe("ponder config", () => {
     expect(loadedConfig.contracts.ContentRegistry.network.celo.startBlock).toBe(expectedContentRegistry42220StartBlock);
   });
 
-  itWithSepoliaPonderArtifacts("rejects stale Ponder address env overrides when shared deployment artifacts exist", async () => {
-    await expect(
-      loadPonderConfig({
-        PONDER_CONTENT_REGISTRY_ADDRESS: "0x1111111111111111111111111111111111111111",
-      }),
-    ).rejects.toThrow("conflicts with ContentRegistry from shared deployment artifacts");
-  });
+  itWithSepoliaContentRegistryArtifact(
+    "rejects stale Ponder address env overrides when shared deployment artifacts exist",
+    async () => {
+      await expect(
+        loadPonderConfig({
+          PONDER_CONTENT_REGISTRY_ADDRESS: "0x1111111111111111111111111111111111111111",
+        }),
+      ).rejects.toThrow("conflicts with ContentRegistry from shared deployment artifacts");
+    },
+  );
 
   itWithSepoliaPonderArtifacts("rejects stale Ponder start block env overrides when shared deployment artifacts exist", async () => {
     await expect(
