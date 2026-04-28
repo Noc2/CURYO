@@ -482,12 +482,16 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     }
 
     function test_SubmitQuestion_RejectsMalformedYouTubeVideoUrls() public {
-        string[] memory urls = new string[](5);
+        string[] memory urls = new string[](9);
         urls[0] = "https://www.youtube.com/watch?av=jNQXAC9IVRw";
         urls[1] = "https://www.youtube.com/watch?v=";
         urls[2] = "https://youtu.be/";
         urls[3] = "https://www.youtube.com/embed/";
         urls[4] = "https://youtu.be/bad/id";
+        urls[5] = "https://youtu.be/a";
+        urls[6] = "https://youtu.be/jNQXAC9IVRwx";
+        urls[7] = "https://www.youtube.com/watch?v=a";
+        urls[8] = "https://www.youtube.com/watch?v=jNQXAC9IVRwx";
 
         for (uint256 i = 0; i < urls.length; i++) {
             vm.expectRevert("Invalid media URL");

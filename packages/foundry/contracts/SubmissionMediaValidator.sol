@@ -7,6 +7,7 @@ pragma solidity ^0.8.24;
 contract SubmissionMediaValidator {
     uint256 public constant MAX_IMAGE_URLS = 4;
     uint256 public constant MAX_URL_LENGTH = 2048;
+    uint256 internal constant YOUTUBE_VIDEO_ID_LENGTH = 11;
 
     function validateSingleMediaUrl(string calldata url) external pure {
         require(_isValidSubmissionUrl(url), "Invalid URL");
@@ -130,14 +131,16 @@ contract SubmissionMediaValidator {
         bytes memory prefixBytes = bytes(prefix);
         if (!_hasPrefix(value, prefix)) return false;
 
-        bool hasId = false;
+        uint256 idLength;
         for (uint256 i = prefixBytes.length; i < valueBytes.length; i++) {
             bytes1 char = valueBytes[i];
             if (char == "?" || char == "#") break;
             if (char == "/" || !_isYoutubeIdByte(char)) return false;
-            hasId = true;
+            unchecked {
+                ++idLength;
+            }
         }
-        return hasId;
+        return idLength == YOUTUBE_VIDEO_ID_LENGTH;
     }
 
     function _hasValidYoutubeWatchId(string memory value, string memory prefix) internal pure returns (bool) {
@@ -169,14 +172,16 @@ contract SubmissionMediaValidator {
     }
 
     function _hasValidYoutubeQueryValue(bytes memory valueBytes, uint256 start) internal pure returns (bool) {
-        bool hasId = false;
+        uint256 idLength;
         for (uint256 i = start; i < valueBytes.length; i++) {
             bytes1 char = valueBytes[i];
             if (char == "&" || char == "#") break;
             if (!_isYoutubeIdByte(char)) return false;
-            hasId = true;
+            unchecked {
+                ++idLength;
+            }
         }
-        return hasId;
+        return idLength == YOUTUBE_VIDEO_ID_LENGTH;
     }
 
     function _isYoutubeIdByte(bytes1 char) internal pure returns (bool) {
