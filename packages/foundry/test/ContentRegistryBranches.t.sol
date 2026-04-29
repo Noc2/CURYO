@@ -10,6 +10,7 @@ import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol"
 import { HumanReputation } from "../contracts/HumanReputation.sol";
 import { ParticipationPool } from "../contracts/ParticipationPool.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
+import { RatingLib } from "../contracts/libraries/RatingLib.sol";
 import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
 import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
@@ -1902,6 +1903,47 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         votingEngine.settleRound(1, roundId);
 
         assertGt(registry.getRating(1), 5000);
+    }
+
+    function test_SetVotingEngine_OldEngineCannotSettleAfterReplacementSettlement() public {
+        vm.startPrank(submitter);
+        hrepToken.approve(address(registry), 10e6);
+        _submitContentWithReservation(registry, "https://example.com/out-of-order-engine", "goal", "goal", "tags", 0);
+        vm.stopPrank();
+
+        (bytes32 ck1, bytes32 salt1) = _commit(voter1, 1, true);
+        (bytes32 ck2, bytes32 salt2) = _commit(voter2, 1, true);
+        (bytes32 ck3, bytes32 salt3) = _commit(voter3, 1, false);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, 1);
+
+        RoundVotingEngine replacementEngine = _deployReplacementVotingEngine();
+        vm.startPrank(owner);
+        registry.pause();
+        registry.setVotingEngine(address(replacementEngine));
+        registry.unpause();
+        vm.stopPrank();
+
+        RatingLib.RatingState memory replacementState = registry.getRatingState(1);
+        replacementState.ratingBps = 5200;
+        replacementState.conservativeRatingBps = 5200;
+        replacementState.settledRounds += 1;
+        replacementState.lastUpdatedAt = uint48(block.timestamp);
+        vm.prank(address(replacementEngine));
+        registry.updateRatingState(1, 1, 5000, replacementState);
+
+        _warpPastTlockRevealTime(block.timestamp + 1 hours);
+        votingEngine.revealVoteByCommitKey(1, roundId, ck1, true, salt1);
+        votingEngine.revealVoteByCommitKey(1, roundId, ck2, true, salt2);
+        votingEngine.revealVoteByCommitKey(1, roundId, ck3, false, salt3);
+
+        vm.expectRevert("Stale VotingEngine");
+        votingEngine.settleRound(1, roundId);
+
+        assertEq(registry.getRating(1), 5200);
+        assertEq(
+            uint8(RoundEngineReadHelpers.round(votingEngine, 1, roundId).state),
+            uint8(RoundLib.RoundState.Open)
+        );
     }
 
     function test_CancelContent_VotingEngineNotSet_AllowsCancel() public {

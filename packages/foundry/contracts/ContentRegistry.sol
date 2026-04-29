@@ -164,7 +164,9 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
     /// @notice Escrow that holds mandatory bounties.
     address public questionRewardPoolEscrow;
-    mapping(address => bool) internal votingEngineCallbackAuthorized;
+    uint256 internal votingEngineGeneration;
+    mapping(address => uint256) internal votingEngineCallbackGeneration;
+    mapping(uint256 => uint256) internal contentSettlementEngineGeneration;
 
     /// @notice Canonical submission key per content ID (for releasing/reserving uniqueness on status changes)
     mapping(uint256 => bytes32) internal contentSubmissionKey;
@@ -326,8 +328,13 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         require(_votingEngine.code.length != 0, "No code");
         if (votingEngine == _votingEngine) return;
         require(votingEngine == address(0) || paused(), "Pause required");
+        uint256 nextGeneration;
+        unchecked {
+            nextGeneration = votingEngineGeneration + 1;
+        }
         votingEngine = _votingEngine;
-        votingEngineCallbackAuthorized[_votingEngine] = true;
+        votingEngineGeneration = nextGeneration;
+        votingEngineCallbackGeneration[_votingEngine] = nextGeneration;
     }
 
     /// @notice Set the CategoryRegistry address (can only be called by CONFIG_ROLE).
@@ -1083,7 +1090,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
     /// @notice Called by VotingEngine when content reaches milestone 0 through a settled round.
     function recordMeaningfulActivity(uint256 contentId) external {
-        require(votingEngineCallbackAuthorized[msg.sender], "Only VotingEngine");
+        require(votingEngineCallbackGeneration[msg.sender] != 0, "Only VotingEngine");
         contents[contentId].lastActivityAt = uint48(block.timestamp);
         dormancyAnchorAt[contentId] = block.timestamp;
     }
@@ -1094,10 +1101,13 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         uint16 referenceRatingBps,
         RatingLib.RatingState calldata nextState
     ) external {
-        require(votingEngineCallbackAuthorized[msg.sender], "Only VotingEngine");
+        uint256 callerGeneration = votingEngineCallbackGeneration[msg.sender];
+        require(callerGeneration != 0, "Only VotingEngine");
+        require(callerGeneration >= contentSettlementEngineGeneration[contentId], "Stale VotingEngine");
 
         Content storage c = contents[contentId];
         require(c.id != 0, "Content does not exist");
+        contentSettlementEngineGeneration[contentId] = callerGeneration;
 
         RatingLib.RatingState storage state = ratingState[contentId];
         uint16 oldRatingBps = state.ratingBps == 0 ? uint16(uint256(c.rating) * 100) : state.ratingBps;
