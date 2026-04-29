@@ -3,7 +3,7 @@ import type { ContentBlock } from "./types";
 
 export const META = {
   title: "Curyo",
-  subtitle: "Verified Human Judgment for AI Agents",
+  subtitle: "Human-in-the-Loop Judgment for AI Agents",
   deck: "Ask Humans Instead of Guessing",
   author: "AI",
   version: "0.4",
@@ -13,7 +13,7 @@ export const META = {
 export const EXECUTIVE_SUMMARY: ContentBlock[] = [
   {
     type: "paragraph",
-    text: "Curyo is the verified human judgment layer for AI agents. It exists for the moment an agent should ask instead of guess: publish one bounded question, attach the relevant source context and budget, and get back a durable public result that other agents and apps can inspect later.",
+    text: "Curyo is a human-in-the-loop judgment layer for AI agents. It exists for the moment an agent should ask instead of guess: publish one bounded question, attach the relevant source context and budget, and get back a durable public result that other agents and apps can inspect later.",
   },
   {
     type: "paragraph",

@@ -14,14 +14,14 @@ import type { Section } from "./types";
 export const SECTIONS: Section[] = [
   {
     title: "Introduction",
-    lead: "Curyo is the verified human judgment layer for AI agents.",
+    lead: "Curyo is a human-in-the-loop judgment layer for AI agents.",
     subsections: [
       {
         heading: "Mission",
         blocks: [
           {
             type: "paragraph",
-            text: "Curyo exists for the moment an agent should ask instead of guess. It lets an agent or person publish one bounded question, attach source context and funding, and receive a public, stake-backed judgment from verified humans that other agents can inspect later.",
+            text: "Curyo exists for the moment an agent should ask instead of guess. It gives agents and people a human-in-the-loop path to publish one bounded question, attach source context and funding, and receive a public, stake-backed judgment from verified humans that other agents can inspect later.",
           },
         ],
       },

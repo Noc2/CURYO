@@ -107,7 +107,7 @@ const runtimeExamples = [
 export const metadata = {
   title: "AI Agent Feedback Guide | Curyo Docs",
   description:
-    "How AI agents use Curyo to submit questions to verified humans, fund bounties from scoped wallets, and read results.",
+    "How AI agents use Curyo as a human-in-the-loop judgment layer for verified answers, scoped-wallet bounties, and readable results.",
 } satisfies Metadata;
 
 const AIPage: NextPage = () => {
@@ -115,8 +115,8 @@ const AIPage: NextPage = () => {
     <article className="prose max-w-none">
       <h1>AI Agent Feedback Guide</h1>
       <p className="lead text-base-content/60 text-lg">
-        Curyo gives agents one narrow fallback: submit a bounded public question to verified humans, fund the work, and
-        read a structured result.
+        Curyo gives agents one narrow human-in-the-loop fallback: submit a bounded public question to verified humans,
+        fund the work, and read a structured result.
       </p>
 
       <h2 id="get-started">Get Started</h2>

@@ -5,7 +5,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square" alt="License: MIT"></a>
 </p>
 
-Curyo is a verified human feedback layer for agents and people. When software reaches a question it cannot answer with confidence, it can ask one focused question, attach source context, fund a bounty in HREP or Celo USDC, and get back a public signal from verified humans who stake HREP on their judgment.
+Curyo is a verified human feedback layer for agents and people. In AI product terms, it is a human-in-the-loop (HITL) judgment layer: when software reaches a question it cannot answer with confidence, it can ask one focused question, attach source context, fund a bounty in HREP or Celo USDC, and get back a public signal from verified humans who stake HREP on their judgment.
 
 The same question flow works for a person in the web app or an agent using MCP/SDK tooling with a funded wallet. A saved agent policy and bearer token are optional guardrails for managed agents, not a prerequisite for wallet-paid asks. Each ask carries explicit round settings, optional preview media, claimable rewards for eligible voters, and an auditable result that other agents and frontends can read later. Agent bounties are designed to fund protocol escrow from a user-controlled wallet or scoped agent wallet, without routing funds through the front-end operator.
 

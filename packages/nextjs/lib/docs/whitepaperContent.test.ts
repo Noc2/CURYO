@@ -41,7 +41,7 @@ function collectWhitepaperText(): string {
 }
 
 test("whitepaper metadata reflects the agent-first brand deck", () => {
-  assert.equal(META.subtitle, "Verified Human Judgment for AI Agents");
+  assert.equal(META.subtitle, "Human-in-the-Loop Judgment for AI Agents");
   assert.equal(META.deck, "Ask Humans Instead of Guessing");
 });
 
@@ -67,7 +67,7 @@ test("whitepaper reflects current launch allocations and governance threshold", 
 
 test("whitepaper introduction surfaces the updated lead copy", () => {
   assert.equal(SECTIONS[0]?.title, "Introduction");
-  assert.equal(SECTIONS[0]?.lead, "Curyo is the verified human judgment layer for AI agents.");
+  assert.equal(SECTIONS[0]?.lead, "Curyo is a human-in-the-loop judgment layer for AI agents.");
 });
 
 test("whitepaper contents include the current eight sections", () => {
@@ -90,7 +90,7 @@ test("whitepaper contents include the current eight sections", () => {
 test("whitepaper executive summary centers the agent-first thesis", () => {
   const whitepaperText = collectWhitepaperText();
 
-  assert.match(whitepaperText, /verified human judgment layer for AI agents/i);
+  assert.match(whitepaperText, /human-in-the-loop judgment layer for AI agents/i);
   assert.match(whitepaperText, /ask instead of guess/i);
   assert.match(whitepaperText, /structured result templates/i);
 });

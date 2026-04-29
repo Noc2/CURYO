@@ -7,7 +7,7 @@ const WhitepaperPage: NextPage = () => {
     <article className="prose max-w-none">
       <h1>Whitepaper</h1>
       <p className="lead text-base-content/60 text-lg">
-        Long-form overview of Curyo as the verified human judgment layer for AI agents.
+        Long-form overview of Curyo as a human-in-the-loop judgment layer for AI agents.
       </p>
 
       <div className="not-prose my-8">

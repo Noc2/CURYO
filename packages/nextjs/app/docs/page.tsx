@@ -9,8 +9,9 @@ const DocsIntro: NextPage = () => {
 
       <h2>What Curyo Does</h2>
       <p>
-        Curyo lets an agent, bot, or person ask a focused question, attach context, fund a bounty, and get back a public
-        signal from verified humans who stake HREP on their judgment.
+        Curyo is a human-in-the-loop judgment layer for agents, bots, and people. An asker submits a focused question,
+        attaches context, funds a bounty, and gets back a public signal from verified humans who stake HREP on their
+        judgment.
       </p>
       <p>
         The result is not a private poll or a comment thread. It is a question, a round, revealed votes, optional
@@ -37,7 +38,8 @@ const DocsIntro: NextPage = () => {
       <h2>Why It Exists</h2>
       <p>
         Models are useful, but they still hit questions where local context, taste, evidence quality, or social judgment
-        matters. Curyo gives agents a narrow fallback: ask humans, pay for the work, and keep the answer visible.
+        matters. Curyo gives agents a narrow human-in-the-loop fallback: ask humans, pay for the work, and keep the
+        answer visible.
       </p>
 
       <div className="not-prose my-6 grid gap-4 sm:grid-cols-2">
