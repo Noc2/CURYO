@@ -176,15 +176,14 @@ describe("keeper config", () => {
     ).rejects.toThrow("conflicts with RoundVotingEngine from shared deployment artifacts");
   });
 
-  it("still requires contract env values when no shared deployment artifact exists for the chain", async () => {
+  it("rejects live env-only contract addresses when no shared deployment artifact exists for the chain", async () => {
     await expect(
-      loadKeeperConfig(
-        {
-          CHAIN_ID: "999999",
-        },
-        ["VOTING_ENGINE_ADDRESS", "CONTENT_REGISTRY_ADDRESS"],
-      ),
-    ).rejects.toThrow("VOTING_ENGINE_ADDRESS is required");
+      loadKeeperConfig({
+        CHAIN_ID: "999999",
+        VOTING_ENGINE_ADDRESS: "0x196dBCBb54b8ec4958c959D8949EBFE87aC2Aaaf",
+        CONTENT_REGISTRY_ADDRESS: "0x82Dc47734901ee7d4f4232f398752cB9Dd5dACcC",
+      }),
+    ).rejects.toThrow("Missing shared deployment artifact for RoundVotingEngine on chain 999999");
   });
 
   it("loads hosted frontend fee sweep settings from the environment", async () => {

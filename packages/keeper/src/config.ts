@@ -201,7 +201,13 @@ function resolveContractAddress(params: {
     return sharedAddress;
   }
 
-  return requireAddressEnv(envName, errors);
+  if (envValue && !isAddress(envValue)) {
+    errors.push(`${envName} must be a valid address when provided for chain ${chainId}`);
+  }
+  errors.push(
+    `Missing shared deployment artifact for ${contractName} on chain ${chainId}. Refresh @curyo/contracts deployedContracts.ts before starting the keeper for live networks.`,
+  );
+  return ZERO_ADDRESS;
 }
 
 function loadConfig() {
