@@ -22,38 +22,47 @@ const genericMcpConfig = `{
   "mcpServers": {
     "curyo": {
       "transport": "streamable-http",
+      "url": "https://curyo.xyz/api/mcp/public",
+      "headers": {
+        "MCP-Protocol-Version": "2025-11-25"
+      }
+    }
+  }
+}`;
+
+const managedMcpConfig = `{
+  "mcpServers": {
+    "curyo": {
+      "transport": "streamable-http",
       "url": "https://curyo.xyz/api/mcp",
       "headers": {
         "Authorization": "Bearer <curyo-agent-token>",
         "MCP-Protocol-Version": "2025-11-25"
-      },
-      "walletAddress": "<user-or-agent-smart-wallet>"
+      }
     }
   }
 }`;
 
 const firstMcpSession = `1. curyo_list_result_templates
-2. curyo_get_agent_balance
-3. curyo_quote_question
-4. curyo_ask_humans
-5. Execute transactionPlan.calls in order
-6. curyo_confirm_ask_transactions
-7. curyo_get_question_status
-8. curyo_get_result`;
+2. curyo_quote_question with walletAddress
+3. curyo_ask_humans with walletAddress
+4. Execute transactionPlan.calls in order
+5. curyo_confirm_ask_transactions
+6. curyo_get_question_status
+7. curyo_get_result`;
 
 const firstFundedAskSteps = [
-  "Fund the signer wallet with Celo USDC, then approve the reward escrow for a small first-run allowance.",
-  "Run curyo_get_agent_balance before asking so the agent can see balance, allowance, and walletAddress.",
-  "Quote with curyo_quote_question and keep the returned payment amount under the per-ask cap.",
+  "Fund the signer wallet with Celo USDC.",
+  "Quote with curyo_quote_question, include walletAddress, and keep the returned payment amount within the agent's own spend rules.",
   "Ask with curyo_ask_humans, execute the returned wallet calls in order, then confirm hashes with curyo_confirm_ask_transactions.",
   "Recover with curyo_get_question_status and curyo_get_result if the callback is missed.",
 ] as const;
 
 const operatorControls = [
   {
-    title: "Token lifecycle",
+    title: "Optional token lifecycle",
     description:
-      "Create separate MCP bearer tokens per autonomous agent, then revoke or rotate them without touching contracts.",
+      "Create separate MCP bearer tokens per autonomous agent when you want managed policy controls, then revoke or rotate them without touching contracts.",
   },
   {
     title: "Budget guards",
@@ -81,12 +90,12 @@ const runtimeExamples = [
   {
     title: "Persistent agents",
     description:
-      "Use the remote MCP endpoint with managed agent budgets, wallet-signed transaction plans, signed callback webhooks, and memory entries for operation keys and public result URLs.",
+      "Use the public MCP endpoint when the agent controls a funded wallet. Add managed budgets, signed callback webhooks, and audit exports only when the agent needs that service layer.",
   },
   {
     title: "Gemini CLI or coding agents",
     description:
-      "Use the same mcpServers shape from the local workspace config. Keep the bearer token scoped to quote, ask, read, and balance.",
+      "Use the same mcpServers shape from the local workspace config. Public MCP needs no bearer token; managed MCP tokens should stay scoped to quote, ask, read, and balance.",
   },
   {
     title: "Backend workers",
@@ -113,8 +122,8 @@ const AIPage: NextPage = () => {
       <h2 id="get-started">Get Started</h2>
       <ol>
         <li>
-          Open <Link href="/ask">Submit</Link>, switch to <strong>Agent</strong>, and connect the wallet that will sign
-          paid submissions.
+          Open <Link href="/ask">Submit</Link>, switch to <strong>Agent</strong>, and choose{" "}
+          <strong>Wallet direct</strong> unless you need Curyo-managed policy caps or callbacks.
         </li>
         <li>
           Add Celo USDC to that signer. On Celo mainnet, use the in-page <strong>Add Celo USDC</strong> funding widget
@@ -122,14 +131,17 @@ const AIPage: NextPage = () => {
           local faucet from the wallet menu.
         </li>
         <li>
-          Approve the reward escrow for a small operating limit. The app defaults to a 2 USDC per-submission cap and a
-          10 USDC daily draft cap for first tests.
+          Keep the first bounty small. The app uses 2 USDC as its first-run funding target when no managed policy is
+          selected.
         </li>
         <li>
-          Copy the <a href="#generic-mcp-config">MCP endpoint config</a>, and set <code>walletAddress</code> to the
-          funded signer or scoped agent wallet.
+          Copy the <a href="#generic-mcp-config">public MCP endpoint config</a>, and pass <code>walletAddress</code> as
+          the funded signer or scoped agent wallet in quote and ask calls.
         </li>
-        <li>Run a quote first, then submit one low-budget question and confirm the returned transaction hashes.</li>
+        <li>
+          Run a quote first, submit one low-budget question, execute the returned payment calls, and confirm the
+          transaction hashes.
+        </li>
       </ol>
 
       <h2>When To Submit</h2>
@@ -185,10 +197,10 @@ const AIPage: NextPage = () => {
           share.
         </li>
         <li>
-          Register managed agents with <code>CURYO_MCP_AGENTS</code> or equivalent server-side records until durable
-          agent settings exist.
+          Saved managed agents are optional. Use them when the Curyo service should enforce scopes, category allowlists,
+          daily budgets, per-submission caps, callback delivery, or audit exports.
         </li>
-        <li>Use narrow scopes, daily budgets, per-submission caps, category allowlists, expiry, and revocation.</li>
+        <li>For wallet-direct agents, enforce policy in the agent runtime or wallet system before it signs.</li>
         <li>
           Keep live submissions stable; future controls can pause or tighten the next submission, not rewrite an active
           market.
@@ -198,8 +210,9 @@ const AIPage: NextPage = () => {
       <h2>Funding And Escrow Approval</h2>
       <p>
         Agent submissions are paid in Celo USDC. API payment amounts use atomic 6-decimal strings, while the in-app
-        thirdweb funding widget uses normal decimal USDC amounts such as <code>10</code>. Before an agent spends, check{" "}
-        <code>curyo_get_agent_balance</code> and make sure the signer wallet has enough Celo USDC for the quoted bounty.
+        thirdweb funding widget uses normal decimal USDC amounts such as <code>10</code>. Before an agent spends, make
+        sure the signer wallet has enough Celo USDC for the quoted bounty. Managed agents can also use{" "}
+        <code>curyo_get_agent_balance</code> to inspect configured wallet state.
       </p>
       <p>
         <code>curyo_ask_humans</code> returns a transaction plan instead of moving funds from Curyo&apos;s server. The
@@ -210,9 +223,9 @@ const AIPage: NextPage = () => {
 
       <h2 id="operator-controls">Operator Controls</h2>
       <p>
-        Agent operator controls belong in a durable service layer today, not in user settings. They are off-chain guard
-        rails for connectors, persistent agents, terminal agents, and backend workers; they do not change Curyo protocol
-        rules or store subjective agent data on-chain.
+        Wallet-direct agents can bring their own policy layer and spend controls. Curyo-managed operator controls are an
+        optional service layer for connectors, persistent agents, terminal agents, and backend workers; they do not
+        change Curyo protocol rules or store subjective agent data on-chain.
       </p>
       <div className="not-prose grid gap-4 md:grid-cols-2">
         {operatorControls.map(control => (
@@ -224,15 +237,24 @@ const AIPage: NextPage = () => {
       </div>
 
       <h2 id="generic-mcp-config">Generic MCP Agent Config</h2>
+      <p>
+        Use the public endpoint when the agent controls a funded wallet and passes <code>walletAddress</code> with paid
+        tools.
+      </p>
       <pre className="bg-base-200 p-4 rounded-lg overflow-x-auto">
         <code>{genericMcpConfig}</code>
       </pre>
       <p>
-        Tokens should carry only the scopes each agent needs: <code>curyo:quote</code>, <code>curyo:ask</code>,{" "}
-        <code>curyo:read</code>, and <code>curyo:balance</code>. Curyo&apos;s current remote MCP route is a POST
-        streamable HTTP endpoint; SSE is not enabled for this release. Protect the internal callback delivery route with{" "}
-        <code>CURYO_AGENT_CALLBACK_DELIVERY_SECRET</code>, and teach agents to recover with{" "}
-        <code>curyo_get_question_status</code> if a webhook is missed.
+        For managed agents, use the authenticated endpoint and keep tokens scoped only to what each agent needs:{" "}
+        <code>curyo:quote</code>, <code>curyo:ask</code>, <code>curyo:read</code>, and <code>curyo:balance</code>.
+      </p>
+      <pre className="bg-base-200 p-4 rounded-lg overflow-x-auto">
+        <code>{managedMcpConfig}</code>
+      </pre>
+      <p>
+        Curyo&apos;s current remote MCP routes are POST streamable HTTP endpoints; SSE is not enabled for this release.
+        Protect the internal callback delivery route with <code>CURYO_AGENT_CALLBACK_DELIVERY_SECRET</code>, and teach
+        agents to recover with <code>curyo_get_question_status</code> if a webhook is missed.
       </p>
 
       <h2 id="first-funded-ask">First Funded Ask</h2>
@@ -277,7 +299,7 @@ const AIPage: NextPage = () => {
         <li>
           <strong>MCP:</strong> use <code>curyo_quote_question</code>, <code>curyo_ask_humans</code>,{" "}
           <code>curyo_confirm_ask_transactions</code>, <code>curyo_get_question_status</code>,{" "}
-          <code>curyo_get_result</code>, <code>curyo_list_result_templates</code>, and{" "}
+          <code>curyo_get_result</code>, and <code>curyo_list_result_templates</code>. Managed agents also get{" "}
           <code>curyo_get_agent_balance</code>.
         </li>
         <li>

@@ -79,8 +79,11 @@ import { createCuryoAgentClient, buildWebhookVerifier } from "@curyo/sdk/agent";
 
 const agent = createCuryoAgentClient({
   apiBaseUrl: "https://curyo.example",
+  // Optional. Add only when using a saved managed policy.
   mcpAccessToken: process.env.CURYO_MCP_TOKEN,
 });
+
+const walletAddress = "0xYourFundedAgentWallet";
 
 const quote = await agent.quoteQuestion({
   clientRequestId: "launch-check-1",
@@ -98,6 +101,7 @@ const quote = await agent.quoteQuestion({
     categoryId: "1",
     tags: ["agent", "launch"],
   },
+  walletAddress,
 });
 
 const ask = await agent.askHumans({
@@ -116,6 +120,7 @@ const ask = await agent.askHumans({
     categoryId: "1",
     tags: ["agent", "launch"],
   },
+  walletAddress,
 });
 
 const status = await agent.getQuestionStatus({
@@ -133,7 +138,7 @@ Question `description` is optional. Submission helpers normalize it to an empty 
 
 For ranked-option bundles, `requiredSettledRounds` is the number of completed bundle round sets to fund. Each round set requires every question in the bundle to settle once, and eligible voters claim each completed set separately.
 
-For agent flows, treat `quote -> ask -> execute wallet calls -> confirm -> wait -> result` as the safe default. `askHumans` requires an authenticated MCP/direct-agent token. Paid asks return ordered wallet calls from a user-controlled smart wallet or scoped agent wallet; after execution, call `confirmAskTransactions` with the transaction hashes. The SDK stays wallet-agnostic and does not import a signing implementation.
+For agent flows, treat `quote -> ask -> execute wallet calls -> confirm -> wait -> result` as the safe default. A hosted direct HTTP client only needs `apiBaseUrl` plus a funded `walletAddress`; `mcpAccessToken` is optional and adds managed policy enforcement, callbacks, balance tooling, and audit surfaces. Paid asks return ordered wallet calls from a user-controlled smart wallet or scoped agent wallet; after execution, call `confirmAskTransactions` with the transaction hashes. The SDK stays wallet-agnostic and does not import a signing implementation.
 
 ## Agent Examples
 

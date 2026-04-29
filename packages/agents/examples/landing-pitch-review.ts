@@ -3,6 +3,7 @@ import { pathToFileURL } from "node:url";
 
 const apiBaseUrl = process.env.CURYO_API_BASE_URL ?? "https://curyo.example";
 const mcpAccessToken = process.env.CURYO_MCP_TOKEN;
+const walletAddress = process.env.CURYO_AGENT_WALLET_ADDRESS;
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -19,8 +20,8 @@ async function writeResultToMemory(memory: {
 }
 
 export async function main() {
-  if (!mcpAccessToken) {
-    throw new Error("Set CURYO_MCP_TOKEN before running the landing-page review example.");
+  if (!mcpAccessToken && !walletAddress) {
+    throw new Error("Set CURYO_AGENT_WALLET_ADDRESS for wallet-direct asks, or CURYO_MCP_TOKEN for a managed agent.");
   }
 
   const agent = createCuryoAgentClient({
@@ -52,6 +53,7 @@ export async function main() {
     chainId: 42220,
     bounty,
     question,
+    walletAddress,
   });
 
   console.log("Quote guidance:", JSON.stringify(quote.fastLane, null, 2));
@@ -61,9 +63,27 @@ export async function main() {
     maxPaymentAmount: quote.payment?.amount ?? bounty.amount,
     bounty,
     question,
+    walletAddress,
   });
 
-  console.log("Submitted ask:", JSON.stringify(ask, null, 2));
+  console.log("Prepared ask:", JSON.stringify(ask, null, 2));
+
+  if (ask.transactionPlan?.calls?.length) {
+    const hashes = (process.env.CURYO_CONFIRM_TX_HASHES ?? "")
+      .split(",")
+      .map(hash => hash.trim())
+      .filter(Boolean);
+    if (hashes.length === 0) {
+      console.log("Execute transactionPlan.calls from walletAddress, then rerun with CURYO_CONFIRM_TX_HASHES.");
+      return;
+    }
+
+    const confirmed = await agent.confirmAskTransactions({
+      operationKey: ask.operationKey,
+      transactionHashes: hashes,
+    });
+    console.log("Confirmed ask:", JSON.stringify(confirmed, null, 2));
+  }
 
   for (;;) {
     const status = await agent.getQuestionStatus({ operationKey: ask.operationKey });

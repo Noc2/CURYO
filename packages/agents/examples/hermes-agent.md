@@ -4,9 +4,9 @@ Hermes-style agents are a strong fit for the Curyo connector because they can ke
 
 ## Integration Shape
 
-- Use the same remote MCP config as other persistent agents.
-- Give the agent a scoped bearer token with tight daily and per-ask caps.
-- Prefer a webhook receiver so Hermes can wake up only when the ask changes state.
+- Use `generic-public-mcp.json` when Hermes controls a funded wallet and enforces its own policy.
+- Add a scoped bearer token with tight daily and per-ask caps when you want managed Curyo policy controls.
+- Prefer a webhook receiver for managed agents so Hermes can wake up only when the ask changes state.
 
 ## Memory Fields
 

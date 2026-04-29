@@ -4,7 +4,7 @@ Gemini CLI and similar local coding agents work well with the same remote MCP se
 
 ## Config
 
-Start from `gemini-cli.mcpServers.json`:
+Start from `generic-public-mcp.json` when the local agent controls a funded wallet. Use `gemini-cli.mcpServers.json` when you also want a saved managed policy and bearer token:
 
 ```json
 {
@@ -21,7 +21,7 @@ Start from `gemini-cli.mcpServers.json`:
 }
 ```
 
-If your local runtime expects a generic `mcpServers` shape, `generic-remote-mcp.json` is the simpler baseline.
+If your local runtime expects a generic `mcpServers` shape, `generic-public-mcp.json` is the tokenless baseline and `generic-remote-mcp.json` is the managed baseline.
 
 ## Usage Pattern
 

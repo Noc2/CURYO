@@ -22,7 +22,8 @@ These examples keep one loop stable across runtimes:
 - `questions/answer-variant-safety-review.json`: candidate answer preference bundle
 - `questions/generated-image-choice.json`: ranked image-option bundle
 - `questions/local-context-check.json`: local-context sanity check
-- `generic-remote-mcp.json`: baseline remote MCP config for clients that read an `mcpServers` object
+- `generic-public-mcp.json`: tokenless remote MCP config for clients that read an `mcpServers` object
+- `generic-remote-mcp.json`: managed remote MCP config for clients that read an `mcpServers` object
 - `openclaw.mcpServers.json`: OpenClaw-oriented `mcpServers` example
 - `openclaw.md`: OpenClaw-specific setup notes and loop guidance
 - `gemini-cli.mcpServers.json`: Gemini CLI-oriented `mcpServers` example
@@ -48,18 +49,20 @@ leave reproducible failure notes in feedback.
 
 ## First Funded Ask
 
-Before the first paid ask, fund the configured `walletAddress` with Celo USDC and approve the Curyo reward escrow for a
-small operating limit. In the MCP flow, call `curyo_get_agent_balance`, quote with `curyo_quote_question`, then call
-`curyo_ask_humans`. Execute the returned `transactionPlan.calls` in order; the plan includes USDC approval, submission
-reservation, and question submission. Finish by sending the transaction hashes to `curyo_confirm_ask_transactions`.
+Before the first paid ask, fund the configured `walletAddress` with Celo USDC. In the public MCP flow, quote with
+`curyo_quote_question`, then call `curyo_ask_humans`. Execute the returned `transactionPlan.calls` in order; the plan
+includes USDC approval, submission reservation, and question submission. Finish by sending the transaction hashes to
+`curyo_confirm_ask_transactions`. Managed agents can also call `curyo_get_agent_balance`, use signed callbacks, and rely
+on Curyo-enforced per-ask or daily caps.
 
 ## Runtime Notes
 
 ### OpenClaw
 
 - Use `openclaw.mcpServers.json` as the starting point.
-- Prefer bearer tokens scoped to `curyo:quote`, `curyo:ask`, `curyo:read`, and `curyo:balance`.
-- Keep daily and per-ask budget caps small until the loop has proven stable.
+- Start with the public MCP config when the agent already controls a funded wallet.
+- Add bearer tokens scoped to `curyo:quote`, `curyo:ask`, `curyo:read`, and `curyo:balance` only when you want managed caps or callbacks.
+- Keep daily and per-ask budget caps small until the managed loop has proven stable.
 - Write `operationKey`, `clientRequestId`, `publicUrl`, and `answer` into memory so the agent can avoid duplicate asks.
 
 ### Hermes
@@ -76,13 +79,13 @@ reservation, and question submission. Finish by sending the transaction hashes t
 
 ### Gemini CLI and local coding agents
 
-- Use `gemini-cli.mcpServers.json` or `generic-remote-mcp.json`.
+- Use `generic-public-mcp.json` for wallet-direct asks, or `gemini-cli.mcpServers.json` / `generic-remote-mcp.json` for managed token flows.
 - Prefer polling over a local callback unless your runtime already exposes a webhook receiver.
 - Write the returned `publicUrl` into the task log or session memory so later steps can cite the human checkpoint.
 
 ### Backend workers
 
 - Start from `landing-pitch-review.ts`.
-- Use a managed MCP token with a configured wallet address.
+- Use `CURYO_API_BASE_URL` plus a funded `CURYO_AGENT_WALLET_ADDRESS` for public direct HTTP, or add a managed MCP token for Curyo-enforced caps.
 - Prepare the ask, execute the approved wallet calls with a user-scoped session key, then confirm the transaction hashes.
 - Keep live asks stable after submission. If response is weak, top up additively or retry later instead of mutating the existing market.

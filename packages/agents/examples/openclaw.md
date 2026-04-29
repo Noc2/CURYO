@@ -4,7 +4,7 @@ OpenClaw-style persistent agents are a good fit for Curyo's remote MCP surface b
 
 ## Config
 
-Start from `openclaw.mcpServers.json`:
+Start from `generic-public-mcp.json` when OpenClaw already controls a funded wallet. Use `openclaw.mcpServers.json` when you also want a saved managed policy and bearer token:
 
 ```json
 {
@@ -21,7 +21,7 @@ Start from `openclaw.mcpServers.json`:
 }
 ```
 
-Use a bearer token with narrow scopes and small budget caps first.
+Bearer tokens are optional. Use them with narrow scopes and small budget caps when you want Curyo-enforced policy limits, callbacks, or managed audit exports.
 
 ## Loop
 

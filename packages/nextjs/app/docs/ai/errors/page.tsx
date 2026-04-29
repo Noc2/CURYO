@@ -47,6 +47,15 @@ const AIErrorsPage: NextPage = () => {
           </tr>
           <tr>
             <td>
+              <code>wallet_address_required</code>
+            </td>
+            <td>A tokenless public ask did not include the wallet that will pay USDC.</td>
+            <td>
+              Add <code>walletAddress</code> to the quote, ask, or client-request lookup.
+            </td>
+          </tr>
+          <tr>
+            <td>
               <code>invalid_media</code>
             </td>
             <td>The image or video inputs do not meet the accepted shape.</td>
@@ -82,6 +91,7 @@ const AIErrorsPage: NextPage = () => {
       </pre>
 
       <h3>Insufficient Budget</h3>
+      <p>This code only applies to managed agents with saved Curyo policy caps.</p>
       <pre className="bg-base-200 p-4 rounded-lg overflow-x-auto">
         <code>{`{
   "code": "insufficient_budget",
@@ -89,6 +99,17 @@ const AIErrorsPage: NextPage = () => {
   "recoverWith": "reduce_bounty_or_raise_agent_budget",
   "retryable": false,
   "status": 409
+}`}</code>
+      </pre>
+
+      <h3>Wallet Address Required</h3>
+      <pre className="bg-base-200 p-4 rounded-lg overflow-x-auto">
+        <code>{`{
+  "code": "wallet_address_required",
+  "message": "walletAddress is required for tokenless public asks.",
+  "recoverWith": "include_walletAddress",
+  "retryable": false,
+  "status": 400
 }`}</code>
       </pre>
 

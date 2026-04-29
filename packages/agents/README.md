@@ -29,17 +29,18 @@ yarn agents:status --operation-key 0x...
 yarn agents:result --operation-key 0x...
 ```
 
-The CLI reads `.env` from the current process environment. Use a managed agent token for authenticated HTTP or MCP flows. Paid asks return wallet calls for a user-controlled smart wallet or scoped agent wallet.
+The CLI reads `.env` from the current process environment. For the default wallet-direct path, set `CURYO_API_BASE_URL` and include a funded `walletAddress` in the ask payload. `CURYO_MCP_TOKEN` is optional and only needed when you want a saved managed policy, Curyo-enforced caps, balance tooling, callbacks, or audit exports.
 
 ## First Funded Ask
 
 1. Fund the signer wallet with Celo USDC. On the Next.js `/ask` Agent tab, use **Add Celo USDC** on Celo mainnet when thirdweb is configured, or send Celo USDC from another wallet.
-2. Set `walletAddress` in the MCP config to the funded signer or scoped agent wallet.
-3. Run `curyo_get_agent_balance` and confirm the balance and escrow allowance cover the intended ask.
-4. Quote with `curyo_quote_question` before reserving spend.
-5. Call `curyo_ask_humans`, execute the returned `transactionPlan.calls` in order, and keep every transaction hash.
-6. Confirm those hashes with `curyo_confirm_ask_transactions`.
-7. Poll `curyo_get_question_status` or read `curyo_get_result` after settlement.
+2. Pass that address as `walletAddress` when quoting or asking. For public MCP, use `/api/mcp/public`; for direct HTTP, use `/api/agent`.
+3. Quote with `curyo_quote_question` before reserving spend.
+4. Call `curyo_ask_humans`, execute the returned `transactionPlan.calls` in order, and keep every transaction hash.
+5. Confirm those hashes with `curyo_confirm_ask_transactions`.
+6. Poll `curyo_get_question_status` or read `curyo_get_result` after settlement.
+
+Managed agents can also call `curyo_get_agent_balance` and can attach signed callbacks, but those controls require a saved policy and bearer token.
 
 ## Configuration
 
@@ -49,10 +50,11 @@ cp packages/agents/.env.example packages/agents/.env
 
 | Variable                     | Description                                                                                |
 | ---------------------------- | ------------------------------------------------------------------------------------------ |
-| `CURYO_API_BASE_URL`         | Hosted Curyo origin, for example `https://curyo.example`                                   |
-| `CURYO_MCP_TOKEN`            | Optional managed agent bearer token with quote, ask, read, and balance scopes              |
-| `CURYO_MCP_API_URL`          | Optional MCP endpoint override; defaults to `${CURYO_API_BASE_URL}/api/mcp` in SDK clients |
-| `CURYO_MCP_PROTOCOL_VERSION` | Optional MCP protocol version override                                                     |
+| `CURYO_API_BASE_URL`         | Hosted Curyo origin, for example `https://curyo.example`                                                |
+| `CURYO_AGENT_WALLET_ADDRESS` | Funded wallet address for tokenless public asks                                                         |
+| `CURYO_MCP_TOKEN`            | Optional managed agent bearer token with quote, ask, read, and balance scopes                           |
+| `CURYO_MCP_API_URL`          | Optional MCP endpoint override; tokenless SDK clients default to `${CURYO_API_BASE_URL}/api/mcp/public` |
+| `CURYO_MCP_PROTOCOL_VERSION` | Optional MCP protocol version override                                                                  |
 
 ## Examples
 

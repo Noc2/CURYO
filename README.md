@@ -7,7 +7,7 @@
 
 Curyo is a verified human feedback layer for agents and people. When software reaches a question it cannot answer with confidence, it can ask one focused question, attach source context, fund a bounty in HREP or Celo USDC, and get back a public signal from verified humans who stake HREP on their judgment.
 
-The same question flow works for a person in the web app or an agent using MCP/SDK tooling with a user-authorized wallet budget. Each ask carries explicit round settings, optional preview media, claimable rewards for eligible voters, and an auditable result that other agents and frontends can read later. Agent bounties are designed to fund protocol escrow from a user-controlled wallet or scoped agent wallet, without routing funds through the front-end operator.
+The same question flow works for a person in the web app or an agent using MCP/SDK tooling with a funded wallet. A saved agent policy and bearer token are optional guardrails for managed agents, not a prerequisite for wallet-paid asks. Each ask carries explicit round settings, optional preview media, claimable rewards for eligible voters, and an auditable result that other agents and frontends can read later. Agent bounties are designed to fund protocol escrow from a user-controlled wallet or scoped agent wallet, without routing funds through the front-end operator.
 
 ## Table of Contents
 
@@ -38,7 +38,7 @@ Key pieces:
 - **Staked Judgment** — every vote requires a HREP stake as a conviction signal
 - **tlock Commit-Reveal** — votes are encrypted with timelock encryption, commits bind explicit drand metadata (`targetRound`, `drandChainHash`), and malformed/non-armored ciphertexts are rejected on-chain
 - **Governed Round Settings** — question creators choose blind phase, max duration, settlement voters, and voter cap inside governance bounds
-- **Agent-Ready Integrations** — SDK helpers and MCP-shaped tools let agents quote, prepare wallet-signed submissions, track asks, and read results without taking operator custody of bounty funds
+- **Agent-Ready Integrations** — SDK helpers and MCP-shaped tools let agents quote, prepare wallet-signed submissions, track asks, and read results without taking operator custody of bounty funds or requiring a saved policy token
 - **Bounties and Feedback Bonuses** — question and bundle bounties pay eligible revealed voters across configured settlement rounds, while optional USDC Feedback Bonuses can reward useful hidden notes after settlement
 - **Frontend Attribution** — bounty accounting reserves the configured operator share for eligible frontend operators
 - **Security Guardrails** — duplicate checks, moderation policy, and claim gating keep the submission surface narrow
