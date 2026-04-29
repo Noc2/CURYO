@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {ContentRegistry} from "./ContentRegistry.sol";
-import {RoundLib} from "./libraries/RoundLib.sol";
+import { ContentRegistry } from "./ContentRegistry.sol";
+import { RoundLib } from "./libraries/RoundLib.sol";
 
 struct Eip3009Authorization {
     address from;
@@ -33,8 +33,7 @@ contract X402QuestionSubmitter {
     using SafeERC20 for IERC20;
 
     uint8 internal constant REWARD_ASSET_USDC = 1;
-    bytes32 internal constant X402_QUESTION_PAYMENT_DOMAIN =
-        keccak256("curyo-x402-question-payment-v2");
+    bytes32 internal constant X402_QUESTION_PAYMENT_DOMAIN = keccak256("curyo-x402-question-payment-v2");
 
     ContentRegistry public immutable registry;
     IERC20 public immutable usdcToken;
@@ -91,6 +90,8 @@ contract X402QuestionSubmitter {
                 ),
             "Bad nonce"
         );
+
+        require(registry.questionRewardPoolEscrow() == questionRewardPoolEscrow, "Stale escrow");
 
         IReceiveWithAuthorizationToken(address(usdcToken))
             .receiveWithAuthorization(

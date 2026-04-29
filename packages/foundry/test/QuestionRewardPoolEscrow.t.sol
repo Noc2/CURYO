@@ -1734,6 +1734,68 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(usdc.balanceOf(agentWallet), agentBalanceBefore);
     }
 
+    function testX402QuestionSubmissionRejectsStaleEscrowBeforeUsdcAuthorization() public {
+        address agentWallet = address(0xA11CE);
+        X402TestQuestion memory question = _x402TestQuestion();
+        Eip3009Authorization memory authorization = _x402Authorization(agentWallet, question);
+
+        vm.prank(submitter);
+        voterIdNFT.setDelegate(agentWallet);
+        usdc.mint(agentWallet, question.rewardTerms.amount);
+        uint256 escrowBalanceBefore = usdc.balanceOf(address(rewardPoolEscrow));
+        uint256 agentBalanceBefore = usdc.balanceOf(agentWallet);
+        uint256 nextContentIdBefore = registry.nextContentId();
+
+        _reserveX402Question(agentWallet, question);
+        vm.warp(block.timestamp + 1);
+
+        QuestionRewardPoolEscrow replacementEscrow = QuestionRewardPoolEscrow(
+            address(
+                new ERC1967Proxy(
+                    address(new QuestionRewardPoolEscrow()),
+                    abi.encodeCall(
+                        QuestionRewardPoolEscrow.initialize,
+                        (
+                            owner,
+                            address(hrepToken),
+                            address(usdc),
+                            address(registry),
+                            address(votingEngine),
+                            address(voterIdNFT)
+                        )
+                    )
+                )
+            )
+        );
+
+        vm.startPrank(owner);
+        registry.pause();
+        registry.setQuestionRewardPoolEscrow(address(replacementEscrow));
+        registry.unpause();
+        vm.stopPrank();
+
+        vm.expectRevert("Stale escrow");
+        x402QuestionSubmitter.submitQuestionWithX402Payment(
+            question.contextUrl,
+            question.imageUrls,
+            "",
+            question.title,
+            question.description,
+            question.tags,
+            CATEGORY_ID,
+            question.salt,
+            question.rewardTerms,
+            question.roundConfig,
+            question.spec,
+            authorization
+        );
+
+        assertFalse(usdc.authorizationState(agentWallet, authorization.nonce));
+        assertEq(registry.nextContentId(), nextContentIdBefore);
+        assertEq(usdc.balanceOf(address(rewardPoolEscrow)), escrowBalanceBefore);
+        assertEq(usdc.balanceOf(agentWallet), agentBalanceBefore);
+    }
+
     function testX402QuestionSubmissionConsumesUsdcAuthorizationWithDelegatedVoterId() public {
         address agentWallet = address(0xA11CE);
         X402TestQuestion memory question = _x402TestQuestion();
@@ -1983,7 +2045,13 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         returns (bytes32 revealCommitment)
     {
         (, bytes32 submissionKey) = registry.previewQuestionSubmissionKey(
-            question.contextUrl, question.imageUrls, "", question.title, question.description, question.tags, CATEGORY_ID
+            question.contextUrl,
+            question.imageUrls,
+            "",
+            question.title,
+            question.description,
+            question.tags,
+            CATEGORY_ID
         );
         revealCommitment = _questionRevealCommitment(
             submissionKey,
