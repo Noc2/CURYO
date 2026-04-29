@@ -288,6 +288,66 @@
         height: 10px;
       }
 
+      .round-c-logo {
+        position: relative;
+        display: inline-grid;
+        width: 48px;
+        height: 48px;
+        flex: 0 0 auto;
+        place-items: center;
+      }
+
+      .round-c-logo::before {
+        content: "";
+        position: absolute;
+        width: 35px;
+        height: 35px;
+        border: 5px solid #ffffff;
+        border-right-color: transparent;
+        border-radius: 50%;
+      }
+
+      .round-c-logo::after {
+        content: "";
+        position: absolute;
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        background: var(--orange);
+      }
+
+      .round-c-logo.small {
+        width: 24px;
+        height: 24px;
+      }
+
+      .round-c-logo.small::before {
+        width: 18px;
+        height: 18px;
+        border-width: 3px;
+      }
+
+      .round-c-logo.small::after {
+        width: 7px;
+        height: 7px;
+      }
+
+      .round-c-logo.large {
+        width: 92px;
+        height: 92px;
+      }
+
+      .round-c-logo.large::before {
+        width: 68px;
+        height: 68px;
+        border-width: 8px;
+      }
+
+      .round-c-logo.large::after {
+        width: 28px;
+        height: 28px;
+      }
+
       .app-icon-preview {
         gap: 18px;
       }
@@ -303,6 +363,10 @@
       }
 
       .app-icon-box.mug {
+        border-color: rgb(242 100 38 / 0.44);
+      }
+
+      .app-icon-box.logo {
         border-color: rgb(242 100 38 / 0.44);
       }
 
@@ -1387,179 +1451,35 @@
         </aside>
       </section>
 
-      <h2 class="section-title">Logo / Favicon Directions</h2>
-      <section class="identity-card identity-direction" aria-label="Logo and favicon direction samples">
-        <div class="identity-options">
-          <article class="identity-option">
-            <div class="kicker">Recommended</div>
-            <h2>Round C Core</h2>
-            <div class="mark-stage" aria-hidden="true">
-              <div class="mark-size-stack">
-                <span class="loop-mark white-outside">
-                  <span class="c-outer"></span>
-                  <span class="c-fill"></span>
-                </span>
-                <span class="loop-mark white-outside small">
-                  <span class="c-outer"></span>
-                  <span class="c-fill"></span>
-                </span>
-              </div>
-              <span class="brand-name">Curyo</span>
+      <h2 class="section-title">Logo / Favicon Lockup</h2>
+      <section class="identity-card" aria-label="Round C logo and favicon samples">
+        <div class="identity-samples">
+          <div class="brand-lockup">
+            <span class="round-c-logo" aria-hidden="true"></span>
+            <span class="brand-name">Curyo</span>
+          </div>
+          <div class="browser-tab">
+            <span class="round-c-logo small" aria-hidden="true"></span>
+            <span>Curyo - AI Asks, Humans Earn</span>
+          </div>
+          <div class="app-icon-preview">
+            <div class="app-icon-box logo">
+              <span class="round-c-logo large" aria-hidden="true"></span>
             </div>
-            <p>
-              Best fit with the new hero: a round white C outside, a separated orange core inside, and no mascot face
-              details. It scales down cleanly for favicon use.
-            </p>
-          </article>
-
-          <article class="identity-option">
-            <div class="kicker">Brandable</div>
-            <h2>Loop C Mark</h2>
-            <div class="mark-stage" aria-hidden="true">
-              <div class="mark-size-stack">
-                <span class="loop-c-mark"><span class="ai-capsule"></span></span>
-                <span class="loop-c-mark small"><span class="ai-capsule"></span></span>
-              </div>
-              <span class="brand-name">Curyo</span>
-            </div>
-            <p>
-              More logo-like: the orange loop can read as a C while still borrowing the orbit language from the hero
-              art and avatar system.
-            </p>
-          </article>
-
-          <article class="identity-option">
-            <div class="kicker">Secondary signal</div>
-            <h2>Mug Human Cue</h2>
-            <div class="mark-stage" aria-hidden="true">
-              <div class="mark-size-stack">
-                <span class="signal-mug-mark"><span class="mug-mark"></span></span>
-                <span class="signal-mug-mark small"><span class="mug-mark"></span></span>
-              </div>
-              <span class="brand-name">Curyo</span>
-            </div>
-            <p>
-              Warm and friendly, but less specific to AI. Strong as a landing-page accent or campaign icon; weaker as
-              the long-term favicon if the brand should feel more infrastructure-like.
-            </p>
-          </article>
-        </div>
-      </section>
-
-      <h2 class="section-title">Loop C Mark Variants</h2>
-      <section class="loop-variants-card" aria-label="Loop C mark variants">
-        <div class="loop-variant-grid">
-          <article class="loop-variant">
-            <div class="kicker">Softer favicon</div>
-            <h2>Round C</h2>
-            <div class="loop-mark-row" aria-hidden="true">
-              <span class="loop-mark round">
-                <span class="c-outer"></span>
-                <span class="c-inner"></span>
-              </span>
-              <span class="loop-mark round small">
-                <span class="c-outer"></span>
-                <span class="c-inner"></span>
-              </span>
-            </div>
-            <p>
-              More circular and less angular than the current C option. This is friendlier, reads cleaner at favicon
-              size, and still hints at the orbit system.
-            </p>
-          </article>
-
-          <article class="loop-variant">
-            <div class="kicker">Your direction</div>
-            <h2>White Outside, Orange Inside</h2>
-            <div class="loop-mark-row" aria-hidden="true">
-              <span class="loop-mark white-outside">
-                <span class="c-outer"></span>
-                <span class="c-fill"></span>
-              </span>
-              <span class="loop-mark white-outside small">
-                <span class="c-outer"></span>
-                <span class="c-fill"></span>
-              </span>
-            </div>
-            <p>
-              Strongest bridge to the hero image: white structural C on the outside, orange intelligence/signal in the
-              center, with clear black space between both shapes.
-            </p>
-          </article>
-
-          <article class="loop-variant">
-            <div class="kicker">More dynamic</div>
-            <h2>Orbit C</h2>
-            <div class="loop-mark-row" aria-hidden="true">
-              <span class="loop-mark orbit-c">
-                <span class="c-outer"></span>
-                <span class="c-inner"></span>
-              </span>
-              <span class="loop-mark orbit-c small">
-                <span class="c-outer"></span>
-                <span class="c-inner"></span>
-              </span>
-            </div>
-            <p>
-              The C becomes two crossing orbital paths. It feels closest to the orange rings around the AI, but it is a
-              little busier for tiny favicons.
-            </p>
-          </article>
-
-          <article class="loop-variant">
-            <div class="kicker">AI face candidate</div>
-            <h2>Round C Face</h2>
-            <div class="loop-mark-row" aria-hidden="true">
-              <span class="loop-mark face-c">
-                <span class="orbit-line"></span>
-                <span class="orbit-line secondary"></span>
-                <span class="face-window"></span>
-                <span class="c-window"></span>
-              </span>
-              <span class="loop-mark face-c small">
-                <span class="orbit-line"></span>
-                <span class="face-window"></span>
-                <span class="c-window"></span>
-              </span>
-            </div>
-            <p>
-              Treat the round C plus orange core as the AI face instead of a capsule or literal facial features. This
-              keeps the AI abstract and lets the product mark show up inside the character.
-            </p>
-          </article>
-        </div>
-
-        <div class="ai-face-application">
-          <div class="ai-face-stage">
-            <div class="ai-face-sample">
-              <span class="ai-head" aria-hidden="true">
-                <span class="face-shell"><span class="face-c"></span></span>
-              </span>
-              <span>Round C face</span>
-            </div>
-            <div class="ai-face-sample">
-              <span class="ai-head white-fill" aria-hidden="true">
-                <span class="face-shell"><span class="face-c"></span></span>
-              </span>
-              <span>Larger hero face</span>
-            </div>
-            <div class="ai-face-sample">
-              <span class="ai-head minimal" aria-hidden="true">
-                <span class="face-shell"><span class="face-c"></span></span>
-              </span>
-              <span>Minimal avatar face</span>
+            <div>
+              <div class="kicker">Final logo / favicon direction</div>
+              <p>Black field, round white C line, separated orange center. No orbit lines or extra background marks.</p>
             </div>
           </div>
-          <aside class="ai-face-notes">
-            <div class="kicker">Recommendation</div>
-            <h2>Use the C as the Neutral AI Face</h2>
-            <p>
-              The white round C with a separated orange center is the strongest candidate. It keeps the AI from
-              becoming cute, gives the neutral variant a recognizable center, and lets the favicon, AI avatar, and hero
-              art share one visual grammar.
-            </p>
-          </aside>
         </div>
+        <aside class="identity-notes">
+          <div class="kicker">Identity lock</div>
+          <h2>Round C Core</h2>
+          <p>
+            Use this same mark for the favicon, nav logo, browser tab, and the AI face in the hero art. The white C
+            keeps the line-art language; the orange dot carries the brand signal.
+          </p>
+        </aside>
       </section>
 
       <h2 class="section-title">Avatar Orb System</h2>
@@ -1615,12 +1535,12 @@
               <span class="dot"></span>
               <span class="dot"></span>
               <span class="dot"></span>
-              <span class="tab-label"><span class="mug-mark small" aria-hidden="true"></span>Curyo</span>
+              <span class="tab-label"><span class="round-c-logo small" aria-hidden="true"></span>Curyo</span>
             </div>
             <div class="landing">
               <nav class="landing-nav" aria-label="Mock navigation">
                 <div class="brand-lockup">
-                  <span class="mug-mark" aria-hidden="true"></span>
+                  <span class="round-c-logo" aria-hidden="true"></span>
                   <span class="brand-name">Curyo</span>
                 </div>
                 <div class="nav-links">
@@ -1662,7 +1582,7 @@
           <aside class="mockup-notes">
             <p>
               Safest layout: keep the current copy structure, replace the abstract orb with the new collaborative hero,
-              and use the orange mug as a small, friendly identity cue.
+              and use the round C core as the consistent logo and AI face.
             </p>
           </aside>
         </article>
