@@ -116,6 +116,21 @@ describe("assertFreshTargetDeployment", () => {
     );
   });
 
+  test("rejects preserved non-local contracts without a complete deployment export", () => {
+    delete process.env.DEPLOY_TARGET_NETWORK;
+
+    assert.throws(
+      () =>
+        assertFreshTargetDeployment(
+          {},
+          { 42220: { ContentRegistry: { address: "0xstale" } } },
+          {},
+          {}
+        ),
+      /chainId 42220 is not marked complete/
+    );
+  });
+
   test("accepts direct non-local broadcast data with a complete deployment export", () => {
     delete process.env.DEPLOY_TARGET_NETWORK;
 

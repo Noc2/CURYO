@@ -376,12 +376,16 @@ export function assertFreshTargetDeployment(
 ) {
   const deployTarget = process.env.DEPLOY_TARGET_NETWORK;
   if (!deployTarget) {
-    for (const [chainId, generatedContracts] of Object.entries(
-      allGeneratedContracts
-    )) {
+    const nonLocalChainIds = new Set([
+      ...Object.keys(allGeneratedContracts),
+      ...Object.keys(existingContracts),
+    ]);
+
+    for (const chainId of nonLocalChainIds) {
       if (
         !isNonLocalDeploymentChain(chainId) ||
-        !hasGeneratedContracts(generatedContracts)
+        (!hasGeneratedContracts(allGeneratedContracts[chainId]) &&
+          !hasGeneratedContracts(existingContracts[chainId]))
       ) {
         continue;
       }
