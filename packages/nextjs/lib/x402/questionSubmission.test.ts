@@ -1,11 +1,14 @@
 import assert from "node:assert/strict";
 import { after, before, beforeEach, test } from "node:test";
+import { ContentRegistryAbi } from "@curyo/contracts/abis";
+import { encodeAbiParameters, encodeEventTopics, type Address, type Hex, type TransactionReceipt } from "viem";
 import { __setDatabaseResourcesForTests, dbClient } from "~~/lib/db";
 import { createMemoryDatabaseResources } from "~~/lib/db/testMemory";
 import type { X402QuestionPayload } from "~~/lib/x402/questionPayload";
 import {
   __setX402QuestionSubmissionTestOverridesForTests,
   buildPermissionlessWalletClientRequestId,
+  confirmAgentWalletQuestionSubmissionRequest,
   getX402QuestionSubmissionByClientRequest,
   prepareAgentWalletQuestionSubmissionRequest,
   prepareNativeX402QuestionSubmissionRequest,
@@ -66,12 +69,9 @@ const TEST_CONFIG = {
   x402QuestionSubmitterAddress: "0x0000000000000000000000000000000000000015" as const,
 };
 
-before(() => {
-  env.DATABASE_URL = "memory:";
-  __setDatabaseResourcesForTests(createMemoryDatabaseResources());
-});
-
-beforeEach(async () => {
+function setDefaultTestOverrides(
+  overrides: NonNullable<Parameters<typeof __setX402QuestionSubmissionTestOverridesForTests>[0]> = {},
+) {
   __setX402QuestionSubmissionTestOverridesForTests({
     buildAgentWalletQuestionSubmissionPlan: async ({ payload, walletAddress }) => ({
       calls: [
@@ -109,7 +109,50 @@ beforeEach(async () => {
       walletAddress,
     }),
     resolveX402QuestionConfig: () => TEST_CONFIG,
+    ...overrides,
   });
+}
+
+function buildContentSubmittedLog(params: { address: Address; contentId: bigint; submitter: Address }) {
+  return {
+    address: params.address,
+    data: encodeAbiParameters(
+      [
+        { name: "contentHash", type: "bytes32" },
+        { name: "url", type: "string" },
+        { name: "title", type: "string" },
+        { name: "description", type: "string" },
+        { name: "tags", type: "string" },
+      ],
+      [`0x${"1".repeat(64)}`, "https://example.com/context", "Question", "Description", "agents"],
+    ),
+    topics: encodeEventTopics({
+      abi: ContentRegistryAbi,
+      eventName: "ContentSubmitted",
+      args: {
+        categoryId: 5n,
+        contentId: params.contentId,
+        submitter: params.submitter,
+      },
+    }).filter((topic): topic is Hex => !!topic),
+  };
+}
+
+function buildReceipt(hash: Hex, logs: ReturnType<typeof buildContentSubmittedLog>[]): TransactionReceipt {
+  return {
+    logs,
+    status: "success",
+    transactionHash: hash,
+  } as TransactionReceipt;
+}
+
+before(() => {
+  env.DATABASE_URL = "memory:";
+  __setDatabaseResourcesForTests(createMemoryDatabaseResources());
+});
+
+beforeEach(async () => {
+  setDefaultTestOverrides();
   await dbClient.execute("DELETE FROM x402_question_submissions");
 });
 
@@ -153,6 +196,87 @@ test("prepareAgentWalletQuestionSubmissionRequest stores a direct wallet plan wi
   assert.equal(record?.status, "awaiting_wallet_signature");
   assert.equal(record?.payerAddress, walletAddress);
   assert.equal(record?.paymentAmount, payload.bounty.amount.toString());
+});
+
+test("confirmAgentWalletQuestionSubmissionRequest ignores spoofed submission logs", async () => {
+  const payload = buildPayload("wallet-confirm-spoof");
+  const walletAddress = "0x00000000000000000000000000000000000000aa" as const;
+  const transactionHash = `0x${"a".repeat(64)}` as const;
+  await prepareAgentWalletQuestionSubmissionRequest({
+    agentId: "agent-wallet",
+    payload,
+    walletAddress,
+  });
+  const record = await getX402QuestionSubmissionByClientRequest({
+    chainId: payload.chainId,
+    clientRequestId: payload.clientRequestId,
+  });
+  assert.ok(record);
+  const operationKey = record.operationKey;
+
+  setDefaultTestOverrides({
+    waitForSuccessfulReceipt: async (_publicClient, hash) =>
+      buildReceipt(hash, [
+        buildContentSubmittedLog({
+          address: "0x0000000000000000000000000000000000000999",
+          contentId: 999n,
+          submitter: walletAddress,
+        }),
+        buildContentSubmittedLog({
+          address: TEST_CONFIG.contentRegistryAddress,
+          contentId: 123n,
+          submitter: walletAddress,
+        }),
+      ]),
+  });
+
+  const confirmed = await confirmAgentWalletQuestionSubmissionRequest({
+    operationKey,
+    transactionHashes: [transactionHash],
+  });
+  const body = confirmed.body as { contentId: string; contentIds: string[]; status: string };
+
+  assert.equal(confirmed.status, 200);
+  assert.equal(body.status, "submitted");
+  assert.equal(body.contentId, "123");
+  assert.deepEqual(body.contentIds, ["123"]);
+});
+
+test("confirmAgentWalletQuestionSubmissionRequest rejects only spoofed submission logs", async () => {
+  const payload = buildPayload("wallet-confirm-only-spoof");
+  const walletAddress = "0x00000000000000000000000000000000000000aa" as const;
+  const transactionHash = `0x${"b".repeat(64)}` as const;
+  await prepareAgentWalletQuestionSubmissionRequest({
+    agentId: "agent-wallet",
+    payload,
+    walletAddress,
+  });
+  const record = await getX402QuestionSubmissionByClientRequest({
+    chainId: payload.chainId,
+    clientRequestId: payload.clientRequestId,
+  });
+  assert.ok(record);
+  const operationKey = record.operationKey;
+
+  setDefaultTestOverrides({
+    waitForSuccessfulReceipt: async (_publicClient, hash) =>
+      buildReceipt(hash, [
+        buildContentSubmittedLog({
+          address: "0x0000000000000000000000000000000000000999",
+          contentId: 999n,
+          submitter: walletAddress,
+        }),
+      ]),
+  });
+
+  await assert.rejects(
+    () =>
+      confirmAgentWalletQuestionSubmissionRequest({
+        operationKey,
+        transactionHashes: [transactionHash],
+      }),
+    /Confirmed transactions did not include a Curyo question submission/,
+  );
 });
 
 test("preparePermissionlessWalletQuestionSubmissionRequest namespaces idempotency by wallet", async () => {

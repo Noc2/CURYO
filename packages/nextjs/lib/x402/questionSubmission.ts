@@ -164,6 +164,7 @@ type X402QuestionSubmissionTestOverrides = {
   buildNativeX402QuestionSubmissionPlan?: typeof buildNativeX402QuestionSubmissionPlan;
   preflightX402QuestionSubmission?: typeof preflightX402QuestionSubmission;
   resolveX402QuestionConfig?: typeof resolveX402QuestionConfig;
+  waitForSuccessfulReceipt?: typeof waitForSuccessfulReceipt;
 };
 
 type X402QuestionSubmissionConfig = {
@@ -487,6 +488,8 @@ function getQuestionSubmissionDependencies() {
       x402QuestionSubmissionTestOverrides?.preflightX402QuestionSubmission ?? preflightX402QuestionSubmission,
     resolveX402QuestionConfig:
       x402QuestionSubmissionTestOverrides?.resolveX402QuestionConfig ?? resolveX402QuestionConfig,
+    waitForSuccessfulReceipt:
+      x402QuestionSubmissionTestOverrides?.waitForSuccessfulReceipt ?? waitForSuccessfulReceipt,
   };
 }
 
@@ -1095,18 +1098,23 @@ export async function buildNativeX402QuestionSubmissionPlan(params: {
   };
 }
 
-function readSubmissionResult(receipt: TransactionReceipt): {
+function readSubmissionResult(receipt: TransactionReceipt, contentRegistryAddress: Address): {
   bundleId: bigint | null;
   contentIds: bigint[];
   rewardPoolId: bigint | null;
   submitters: Address[];
 } {
+  const expectedEmitter = normalizedAddress(contentRegistryAddress);
   let bundleId: bigint | null = null;
   const contentIds: bigint[] = [];
   let rewardPoolId: bigint | null = null;
   const submitters = new Set<Address>();
 
   for (const log of receipt.logs) {
+    if (log.address.toLowerCase() !== expectedEmitter) {
+      continue;
+    }
+
     try {
       const decoded = decodeEventLog({
         abi: ContentRegistryAbi,
@@ -1651,6 +1659,7 @@ export async function confirmAgentWalletQuestionSubmissionRequest(params: {
   transactionHashes: Hex[];
 }): Promise<{ body: unknown; status: number }> {
   assertTransactionHashes(params.transactionHashes);
+  const dependencies = getQuestionSubmissionDependencies();
   const record = await getX402QuestionSubmissionByOperationKey(params.operationKey);
   if (!record) {
     throw new X402QuestionConflictError("Agent wallet submission plan was not found.");
@@ -1665,7 +1674,7 @@ export async function confirmAgentWalletQuestionSubmissionRequest(params: {
     throw new X402QuestionConflictError("Agent wallet submission plan is missing a wallet address.");
   }
 
-  const config = resolveX402QuestionConfig(record.chainId);
+  const config = dependencies.resolveX402QuestionConfig(record.chainId);
   const publicClient = createPublicQuestionClient(config);
   const walletAddress = record.payerAddress.toLowerCase();
   let bundleId: bigint | null = null;
@@ -1674,8 +1683,8 @@ export async function confirmAgentWalletQuestionSubmissionRequest(params: {
   let sawExpectedSubmitter = false;
 
   for (const hash of params.transactionHashes) {
-    const receipt = await waitForSuccessfulReceipt(publicClient, hash);
-    const result = readSubmissionResult(receipt);
+    const receipt = await dependencies.waitForSuccessfulReceipt(publicClient, hash);
+    const result = readSubmissionResult(receipt, config.contentRegistryAddress);
     if (result.contentIds.length > 0) {
       contentIds.push(...result.contentIds);
       bundleId = result.bundleId ?? bundleId;
