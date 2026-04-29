@@ -8,10 +8,12 @@ import {
   type TransactionReceipt,
   createPublicClient,
   decodeEventLog,
+  encodeAbiParameters,
   encodeFunctionData,
   erc20Abi,
   http,
   isAddress,
+  keccak256,
 } from "viem";
 import { dbClient } from "~~/lib/db";
 import {
@@ -44,6 +46,40 @@ type WalletSubmissionReceiptMode =
   | "native-x402-authorization"
   | "permissionless-wallet-plan"
   | "permissionless-x402-authorization";
+
+type StoredWalletSubmissionPlanReceipt = {
+  expectedContentHashes?: Hex[];
+  expectedRewardTerms?: StoredQuestionRewardTerms;
+  expectedRoundConfig?: ReturnType<typeof serializeQuestionRoundConfig>;
+  operationKey?: string;
+  revealCommitment?: Hex;
+  walletAddress?: Address;
+};
+
+type StoredQuestionRewardTerms = {
+  amount: string;
+  asset: string;
+  bountyClosesAt: string;
+  feedbackClosesAt: string;
+  requiredSettledRounds: string;
+  requiredVoters: string;
+};
+
+type SubmittedQuestionContent = {
+  contentHash: Hex;
+  contentId: bigint;
+  submitter: Address;
+};
+
+type SubmittedRoundConfig = ReturnType<typeof serializeQuestionRoundConfig>;
+
+type SubmittedRewardAttachment = StoredQuestionRewardTerms & {
+  bundleId: bigint | null;
+  contentId: bigint | null;
+  questionCount: string | null;
+  rewardPoolId: bigint | null;
+  submitter: Address;
+};
 
 export type AgentWalletTransactionPhase =
   | "approve_usdc"
@@ -131,6 +167,119 @@ export type X402QuestionSubmissionRecord = {
 
 function normalizedAddress(value: Address): Lowercase<Address> {
   return value.toLowerCase() as Lowercase<Address>;
+}
+
+function isBytes32Hex(value: unknown): value is Hex {
+  return typeof value === "string" && /^0x[a-fA-F0-9]{64}$/.test(value);
+}
+
+function toDecimalString(value: unknown): string {
+  return typeof value === "bigint" || typeof value === "number" || typeof value === "string"
+    ? BigInt(value).toString()
+    : "";
+}
+
+function buildQuestionContentHash(question: X402QuestionPayload["questions"][number]): Hex {
+  return keccak256(
+    encodeAbiParameters(
+      [
+        { type: "string" },
+        { type: "string" },
+        { type: "string[]" },
+        { type: "string" },
+        { type: "string" },
+        { type: "string" },
+        { type: "string" },
+        { type: "uint256" },
+        { type: "bytes32" },
+        { type: "bytes32" },
+      ],
+      [
+        "curyo-question-context-v2",
+        question.contextUrl,
+        question.imageUrls,
+        question.videoUrl,
+        question.title,
+        question.description,
+        question.tags,
+        question.categoryId,
+        question.questionMetadataHash,
+        question.resultSpecHash,
+      ],
+    ),
+  );
+}
+
+function buildExpectedQuestionContentHashes(payload: X402QuestionPayload): Hex[] {
+  return payload.questions.map(question => buildQuestionContentHash(question));
+}
+
+function serializeExpectedRewardTerms(payload: X402QuestionPayload): StoredQuestionRewardTerms {
+  return {
+    amount: payload.bounty.amount.toString(),
+    asset: X402_SUBMISSION_REWARD_ASSET_USDC.toString(),
+    bountyClosesAt: payload.bounty.rewardPoolExpiresAt.toString(),
+    feedbackClosesAt: payload.bounty.feedbackClosesAt.toString(),
+    requiredSettledRounds: payload.bounty.requiredSettledRounds.toString(),
+    requiredVoters: payload.bounty.requiredVoters.toString(),
+  };
+}
+
+function parseStoredSubmissionPlanReceipt(value: string | null): StoredWalletSubmissionPlanReceipt | null {
+  if (!value) return null;
+
+  try {
+    const parsed = JSON.parse(value) as Record<string, unknown>;
+    const expectedContentHashes = Array.isArray(parsed.expectedContentHashes)
+      ? parsed.expectedContentHashes.filter(isBytes32Hex).map(hash => hash.toLowerCase() as Hex)
+      : undefined;
+    const expectedRewardTerms =
+      parsed.expectedRewardTerms && typeof parsed.expectedRewardTerms === "object"
+        ? (parsed.expectedRewardTerms as StoredQuestionRewardTerms)
+        : undefined;
+    const expectedRoundConfig =
+      parsed.expectedRoundConfig && typeof parsed.expectedRoundConfig === "object"
+        ? (parsed.expectedRoundConfig as ReturnType<typeof serializeQuestionRoundConfig>)
+        : undefined;
+
+    return {
+      expectedContentHashes,
+      expectedRewardTerms,
+      expectedRoundConfig,
+      operationKey: typeof parsed.operationKey === "string" ? parsed.operationKey : undefined,
+      revealCommitment: isBytes32Hex(parsed.revealCommitment) ? parsed.revealCommitment : undefined,
+      walletAddress:
+        typeof parsed.walletAddress === "string" && isAddress(parsed.walletAddress)
+          ? (parsed.walletAddress as Address)
+          : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function sameRewardTerms(left: StoredQuestionRewardTerms | undefined, right: StoredQuestionRewardTerms | undefined) {
+  return (
+    !!left &&
+    !!right &&
+    left.asset === right.asset &&
+    left.amount === right.amount &&
+    left.requiredVoters === right.requiredVoters &&
+    left.requiredSettledRounds === right.requiredSettledRounds &&
+    left.bountyClosesAt === right.bountyClosesAt &&
+    left.feedbackClosesAt === right.feedbackClosesAt
+  );
+}
+
+function sameRoundConfig(left: SubmittedRoundConfig | undefined, right: SubmittedRoundConfig | undefined) {
+  return (
+    !!left &&
+    !!right &&
+    left.epochDuration === right.epochDuration &&
+    left.maxDuration === right.maxDuration &&
+    left.minVoters === right.minVoters &&
+    left.maxVoters === right.maxVoters
+  );
 }
 
 export function buildPermissionlessWalletClientRequestId(params: {
@@ -1104,12 +1253,18 @@ function readSubmissionResult(
   bundleId: bigint | null;
   contentIds: bigint[];
   rewardPoolId: bigint | null;
+  rewardAttachments: SubmittedRewardAttachment[];
+  roundConfigsByContentId: Map<string, SubmittedRoundConfig>;
+  submittedContents: SubmittedQuestionContent[];
   submitters: Address[];
 } {
   const expectedEmitter = normalizedAddress(contentRegistryAddress);
   let bundleId: bigint | null = null;
   const contentIds: bigint[] = [];
   let rewardPoolId: bigint | null = null;
+  const rewardAttachments: SubmittedRewardAttachment[] = [];
+  const roundConfigsByContentId = new Map<string, SubmittedRoundConfig>();
+  const submittedContents: SubmittedQuestionContent[] = [];
   const submitters = new Set<Address>();
 
   for (const log of receipt.logs) {
@@ -1126,6 +1281,17 @@ function readSubmissionResult(
 
       if (decoded.eventName === "ContentSubmitted" && typeof decoded.args.contentId === "bigint") {
         contentIds.push(decoded.args.contentId);
+        if (
+          isBytes32Hex(decoded.args.contentHash) &&
+          typeof decoded.args.submitter === "string" &&
+          isAddress(decoded.args.submitter)
+        ) {
+          submittedContents.push({
+            contentHash: decoded.args.contentHash.toLowerCase() as Hex,
+            contentId: decoded.args.contentId,
+            submitter: decoded.args.submitter,
+          });
+        }
       }
       if (typeof decoded.args.submitter === "string" && isAddress(decoded.args.submitter)) {
         submitters.add(decoded.args.submitter);
@@ -1137,18 +1303,152 @@ function readSubmissionResult(
         if (typeof decoded.args.rewardPoolId === "bigint") {
           rewardPoolId = decoded.args.rewardPoolId;
         }
+        if (typeof decoded.args.submitter === "string" && isAddress(decoded.args.submitter)) {
+          rewardAttachments.push({
+            amount: toDecimalString(decoded.args.amount),
+            asset: toDecimalString(decoded.args.rewardAsset),
+            bundleId: typeof decoded.args.bundleId === "bigint" ? decoded.args.bundleId : null,
+            bountyClosesAt: toDecimalString(decoded.args.bountyClosesAt),
+            contentId: null,
+            feedbackClosesAt: toDecimalString(decoded.args.feedbackClosesAt),
+            questionCount: toDecimalString(decoded.args.questionCount),
+            rewardPoolId: typeof decoded.args.rewardPoolId === "bigint" ? decoded.args.rewardPoolId : null,
+            requiredSettledRounds: "1",
+            requiredVoters: toDecimalString(decoded.args.requiredCompleters),
+            submitter: decoded.args.submitter,
+          });
+        }
       } else if (
         decoded.eventName === "SubmissionRewardPoolAttached" &&
         typeof decoded.args.rewardPoolId === "bigint"
       ) {
         rewardPoolId = decoded.args.rewardPoolId;
+        if (
+          typeof decoded.args.contentId === "bigint" &&
+          typeof decoded.args.submitter === "string" &&
+          isAddress(decoded.args.submitter)
+        ) {
+          rewardAttachments.push({
+            amount: toDecimalString(decoded.args.amount),
+            asset: toDecimalString(decoded.args.rewardAsset),
+            bundleId: null,
+            bountyClosesAt: toDecimalString(decoded.args.bountyClosesAt),
+            contentId: decoded.args.contentId,
+            feedbackClosesAt: toDecimalString(decoded.args.feedbackClosesAt),
+            questionCount: null,
+            rewardPoolId: decoded.args.rewardPoolId,
+            requiredSettledRounds: toDecimalString(decoded.args.requiredSettledRounds),
+            requiredVoters: toDecimalString(decoded.args.requiredVoters),
+            submitter: decoded.args.submitter,
+          });
+        }
+      } else if (decoded.eventName === "ContentRoundConfigSet" && typeof decoded.args.contentId === "bigint") {
+        roundConfigsByContentId.set(decoded.args.contentId.toString(), {
+          epochDuration: toDecimalString(decoded.args.epochDuration),
+          maxDuration: toDecimalString(decoded.args.maxDuration),
+          maxVoters: toDecimalString(decoded.args.maxVoters),
+          minVoters: toDecimalString(decoded.args.minVoters),
+        });
       }
     } catch {
       // Ignore logs from token transfers and other contracts in the same receipt.
     }
   }
 
-  return { bundleId, contentIds, rewardPoolId, submitters: Array.from(submitters) };
+  return {
+    bundleId,
+    contentIds,
+    rewardAttachments,
+    rewardPoolId,
+    roundConfigsByContentId,
+    submittedContents,
+    submitters: Array.from(submitters),
+  };
+}
+
+function bundleCompleterCount(expectedRewardTerms: StoredQuestionRewardTerms): string {
+  return (BigInt(expectedRewardTerms.requiredVoters) * BigInt(expectedRewardTerms.requiredSettledRounds)).toString();
+}
+
+function sameBundleRewardTerms(
+  submitted: SubmittedRewardAttachment,
+  expected: StoredQuestionRewardTerms,
+  expectedQuestionCount: number,
+) {
+  return (
+    submitted.contentId === null &&
+    submitted.asset === expected.asset &&
+    submitted.amount === expected.amount &&
+    submitted.bountyClosesAt === expected.bountyClosesAt &&
+    submitted.feedbackClosesAt === expected.feedbackClosesAt &&
+    submitted.questionCount === expectedQuestionCount.toString() &&
+    submitted.requiredVoters === bundleCompleterCount(expected)
+  );
+}
+
+function matchConfirmedSubmissionPlan(params: {
+  record: X402QuestionSubmissionRecord;
+  rewardAttachments: SubmittedRewardAttachment[];
+  roundConfigsByContentId: Map<string, SubmittedRoundConfig>;
+  submittedContents: SubmittedQuestionContent[];
+  walletAddress: Lowercase<Address>;
+}): { bundleId: bigint | null; contentIds: bigint[]; rewardPoolId: bigint | null } {
+  const planReceipt = parseStoredSubmissionPlanReceipt(params.record.paymentReceipt);
+  const expectedContentHashes = planReceipt?.expectedContentHashes?.map(hash => hash.toLowerCase() as Hex) ?? [];
+  if (expectedContentHashes.length === 0 || !planReceipt?.expectedRewardTerms || !planReceipt.expectedRoundConfig) {
+    throw new X402QuestionConflictError("Agent wallet submission plan is missing payload confirmation data.");
+  }
+
+  const remainingWalletContents = params.submittedContents.filter(
+    content => normalizedAddress(content.submitter) === params.walletAddress,
+  );
+  const matchedContentIds: bigint[] = [];
+
+  for (const expectedHash of expectedContentHashes) {
+    const matchIndex = remainingWalletContents.findIndex(content => content.contentHash.toLowerCase() === expectedHash);
+    if (matchIndex < 0) {
+      throw new X402QuestionConflictError("Confirmed submission did not match the planned question payload.");
+    }
+
+    const matchedContent = remainingWalletContents.splice(matchIndex, 1)[0];
+    if (!matchedContent) {
+      throw new X402QuestionConflictError("Confirmed submission did not match the planned question payload.");
+    }
+    matchedContentIds.push(matchedContent.contentId);
+    const submittedRoundConfig = params.roundConfigsByContentId.get(matchedContent.contentId.toString());
+    if (!sameRoundConfig(submittedRoundConfig, planReceipt.expectedRoundConfig)) {
+      throw new X402QuestionConflictError("Confirmed submission did not use the planned round config.");
+    }
+  }
+
+  if (matchedContentIds.length === 1) {
+    const contentId = matchedContentIds[0];
+    const rewardAttachment = params.rewardAttachments.find(
+      attachment =>
+        attachment.contentId === contentId &&
+        normalizedAddress(attachment.submitter) === params.walletAddress &&
+        sameRewardTerms(attachment, planReceipt.expectedRewardTerms),
+    );
+    if (!rewardAttachment) {
+      throw new X402QuestionConflictError("Confirmed submission did not attach the planned bounty terms.");
+    }
+    return { bundleId: null, contentIds: matchedContentIds, rewardPoolId: rewardAttachment.rewardPoolId };
+  }
+
+  const bundleAttachment = params.rewardAttachments.find(
+    attachment =>
+      normalizedAddress(attachment.submitter) === params.walletAddress &&
+      sameBundleRewardTerms(attachment, planReceipt.expectedRewardTerms!, matchedContentIds.length),
+  );
+  if (!bundleAttachment) {
+    throw new X402QuestionConflictError("Confirmed bundle submission did not attach the planned bounty terms.");
+  }
+
+  return {
+    bundleId: bundleAttachment.bundleId,
+    contentIds: matchedContentIds,
+    rewardPoolId: bundleAttachment.rewardPoolId,
+  };
 }
 
 export function x402QuestionSubmissionStatusBody(params: {
@@ -1197,6 +1497,9 @@ async function recordAgentWalletSubmissionPlan(params: {
   const now = new Date();
   const receipt = JSON.stringify({
     ...(params.agentId ? { agentId: params.agentId } : {}),
+    expectedContentHashes: buildExpectedQuestionContentHashes(params.payload),
+    expectedRewardTerms: serializeExpectedRewardTerms(params.payload),
+    expectedRoundConfig: serializeQuestionRoundConfig(params.payload.roundConfig),
     mode: params.mode ?? "agent-wallet-plan",
     operationKey: params.operation.operationKey,
     ...(params.originalClientRequestId ? { originalClientRequestId: params.originalClientRequestId } : {}),
@@ -1289,6 +1592,9 @@ async function recordNativeX402SubmissionPlan(params: {
   const receipt = JSON.stringify({
     ...(params.agentId ? { agentId: params.agentId } : {}),
     authorization: params.plan.authorization,
+    expectedContentHashes: buildExpectedQuestionContentHashes(params.payload),
+    expectedRewardTerms: serializeExpectedRewardTerms(params.payload),
+    expectedRoundConfig: serializeQuestionRoundConfig(params.payload.roundConfig),
     mode: params.mode ?? "native-x402-authorization",
     operationKey: params.operation.operationKey,
     ...(params.originalClientRequestId ? { originalClientRequestId: params.originalClientRequestId } : {}),
@@ -1679,30 +1985,33 @@ export async function confirmAgentWalletQuestionSubmissionRequest(params: {
   const config = dependencies.resolveX402QuestionConfig(record.chainId);
   const publicClient = createPublicQuestionClient(config);
   const walletAddress = record.payerAddress.toLowerCase();
-  let bundleId: bigint | null = null;
-  const contentIds: bigint[] = [];
-  let rewardPoolId: bigint | null = null;
-  let sawExpectedSubmitter = false;
+  const rewardAttachments: SubmittedRewardAttachment[] = [];
+  const roundConfigsByContentId = new Map<string, SubmittedRoundConfig>();
+  const submittedContents: SubmittedQuestionContent[] = [];
 
   for (const hash of params.transactionHashes) {
     const receipt = await dependencies.waitForSuccessfulReceipt(publicClient, hash);
     const result = readSubmissionResult(receipt, config.contentRegistryAddress);
-    if (result.contentIds.length > 0) {
-      contentIds.push(...result.contentIds);
-      bundleId = result.bundleId ?? bundleId;
-      rewardPoolId = result.rewardPoolId ?? rewardPoolId;
-    }
-    if (result.submitters.some(submitter => submitter.toLowerCase() === walletAddress)) {
-      sawExpectedSubmitter = true;
+    submittedContents.push(...result.submittedContents);
+    rewardAttachments.push(...result.rewardAttachments);
+    for (const [contentId, roundConfig] of result.roundConfigsByContentId.entries()) {
+      roundConfigsByContentId.set(contentId, roundConfig);
     }
   }
 
-  if (contentIds.length === 0) {
+  if (submittedContents.length === 0) {
     throw new X402QuestionConflictError("Confirmed transactions did not include a Curyo question submission.");
   }
-  if (!sawExpectedSubmitter) {
+  if (!submittedContents.some(content => normalizedAddress(content.submitter) === walletAddress)) {
     throw new X402QuestionConflictError("Confirmed submission was not emitted for the planned wallet address.");
   }
+  const { bundleId, contentIds, rewardPoolId } = matchConfirmedSubmissionPlan({
+    record,
+    rewardAttachments,
+    roundConfigsByContentId,
+    submittedContents,
+    walletAddress: walletAddress as Lowercase<Address>,
+  });
 
   await updateSubmissionStatus({
     bundleId,

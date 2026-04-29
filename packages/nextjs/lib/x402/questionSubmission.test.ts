@@ -113,7 +113,19 @@ function setDefaultTestOverrides(
   });
 }
 
-function buildContentSubmittedLog(params: { address: Address; contentId: bigint; submitter: Address }) {
+function getExpectedContentHash(record: { paymentReceipt: string | null }): Hex {
+  const receipt = JSON.parse(record.paymentReceipt ?? "{}") as { expectedContentHashes?: string[] };
+  const [contentHash] = receipt.expectedContentHashes ?? [];
+  assert.match(contentHash ?? "", /^0x[a-fA-F0-9]{64}$/);
+  return contentHash as Hex;
+}
+
+function buildContentSubmittedLog(params: {
+  address: Address;
+  contentHash?: Hex;
+  contentId: bigint;
+  submitter: Address;
+}) {
   return {
     address: params.address,
     data: encodeAbiParameters(
@@ -124,7 +136,7 @@ function buildContentSubmittedLog(params: { address: Address; contentId: bigint;
         { name: "description", type: "string" },
         { name: "tags", type: "string" },
       ],
-      [`0x${"1".repeat(64)}`, "https://example.com/context", "Question", "Description", "agents"],
+      [params.contentHash ?? `0x${"1".repeat(64)}`, "https://example.com/context", "Question", "Description", "agents"],
     ),
     topics: encodeEventTopics({
       abi: ContentRegistryAbi,
@@ -138,9 +150,89 @@ function buildContentSubmittedLog(params: { address: Address; contentId: bigint;
   };
 }
 
-function buildReceipt(hash: Hex, logs: ReturnType<typeof buildContentSubmittedLog>[]): TransactionReceipt {
+function buildContentRoundConfigSetLog(params: { address: Address; contentId: bigint; payload: X402QuestionPayload }) {
   return {
-    logs,
+    address: params.address,
+    data: encodeAbiParameters(
+      [
+        { name: "epochDuration", type: "uint32" },
+        { name: "maxDuration", type: "uint32" },
+        { name: "minVoters", type: "uint16" },
+        { name: "maxVoters", type: "uint16" },
+      ],
+      [
+        Number(params.payload.roundConfig.epochDuration),
+        Number(params.payload.roundConfig.maxDuration),
+        Number(params.payload.roundConfig.minVoters),
+        Number(params.payload.roundConfig.maxVoters),
+      ],
+    ),
+    topics: encodeEventTopics({
+      abi: ContentRegistryAbi,
+      eventName: "ContentRoundConfigSet",
+      args: {
+        contentId: params.contentId,
+      },
+    }).filter((topic): topic is Hex => !!topic),
+  };
+}
+
+function buildSubmissionRewardPoolAttachedLog(params: {
+  address: Address;
+  contentId: bigint;
+  payload: X402QuestionPayload;
+  rewardPoolId?: bigint;
+  submitter: Address;
+}) {
+  return {
+    address: params.address,
+    data: encodeAbiParameters(
+      [
+        { name: "amount", type: "uint256" },
+        { name: "requiredVoters", type: "uint256" },
+        { name: "requiredSettledRounds", type: "uint256" },
+        { name: "bountyClosesAt", type: "uint256" },
+        { name: "feedbackClosesAt", type: "uint256" },
+        { name: "rewardPoolId", type: "uint256" },
+      ],
+      [
+        params.payload.bounty.amount,
+        params.payload.bounty.requiredVoters,
+        params.payload.bounty.requiredSettledRounds,
+        params.payload.bounty.rewardPoolExpiresAt,
+        params.payload.bounty.feedbackClosesAt,
+        params.rewardPoolId ?? 77n,
+      ],
+    ),
+    topics: encodeEventTopics({
+      abi: ContentRegistryAbi,
+      eventName: "SubmissionRewardPoolAttached",
+      args: {
+        contentId: params.contentId,
+        rewardAsset: 1,
+        submitter: params.submitter,
+      },
+    }).filter((topic): topic is Hex => !!topic),
+  };
+}
+
+function buildSubmittedQuestionLogs(params: {
+  address: Address;
+  contentHash: Hex;
+  contentId: bigint;
+  payload: X402QuestionPayload;
+  submitter: Address;
+}) {
+  return [
+    buildContentSubmittedLog(params),
+    buildContentRoundConfigSetLog(params),
+    buildSubmissionRewardPoolAttachedLog(params),
+  ];
+}
+
+function buildReceipt(hash: Hex, logs: unknown[]): TransactionReceipt {
+  return {
+    logs: logs as TransactionReceipt["logs"],
     status: "success",
     transactionHash: hash,
   } as TransactionReceipt;
@@ -213,6 +305,7 @@ test("confirmAgentWalletQuestionSubmissionRequest ignores spoofed submission log
   });
   assert.ok(record);
   const operationKey = record.operationKey;
+  const expectedContentHash = getExpectedContentHash(record);
 
   setDefaultTestOverrides({
     waitForSuccessfulReceipt: async (_publicClient, hash) =>
@@ -222,9 +315,11 @@ test("confirmAgentWalletQuestionSubmissionRequest ignores spoofed submission log
           contentId: 999n,
           submitter: walletAddress,
         }),
-        buildContentSubmittedLog({
+        ...buildSubmittedQuestionLogs({
           address: TEST_CONFIG.contentRegistryAddress,
+          contentHash: expectedContentHash,
           contentId: 123n,
+          payload,
           submitter: walletAddress,
         }),
       ]),
@@ -240,6 +335,45 @@ test("confirmAgentWalletQuestionSubmissionRequest ignores spoofed submission log
   assert.equal(body.status, "submitted");
   assert.equal(body.contentId, "123");
   assert.deepEqual(body.contentIds, ["123"]);
+});
+
+test("confirmAgentWalletQuestionSubmissionRequest rejects unrelated same-wallet submission logs", async () => {
+  const payload = buildPayload("wallet-confirm-unrelated-same-wallet");
+  const walletAddress = "0x00000000000000000000000000000000000000aa" as const;
+  const transactionHash = `0x${"c".repeat(64)}` as const;
+  await prepareAgentWalletQuestionSubmissionRequest({
+    agentId: "agent-wallet",
+    payload,
+    walletAddress,
+  });
+  const record = await getX402QuestionSubmissionByClientRequest({
+    chainId: payload.chainId,
+    clientRequestId: payload.clientRequestId,
+  });
+  assert.ok(record);
+
+  setDefaultTestOverrides({
+    waitForSuccessfulReceipt: async (_publicClient, hash) =>
+      buildReceipt(
+        hash,
+        buildSubmittedQuestionLogs({
+          address: TEST_CONFIG.contentRegistryAddress,
+          contentHash: `0x${"4".repeat(64)}`,
+          contentId: 456n,
+          payload,
+          submitter: walletAddress,
+        }),
+      ),
+  });
+
+  await assert.rejects(
+    () =>
+      confirmAgentWalletQuestionSubmissionRequest({
+        operationKey: record.operationKey,
+        transactionHashes: [transactionHash],
+      }),
+    /Confirmed submission did not match the planned question payload/,
+  );
 });
 
 test("confirmAgentWalletQuestionSubmissionRequest rejects only spoofed submission logs", async () => {
