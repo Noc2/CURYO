@@ -306,6 +306,313 @@
         border-color: rgb(242 100 38 / 0.44);
       }
 
+      .identity-direction {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .identity-options {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .identity-option {
+        display: grid;
+        gap: 16px;
+        align-content: start;
+        min-height: 280px;
+        border-right: 1px solid var(--line);
+        padding: 22px;
+        background: #070707;
+      }
+
+      .identity-option:last-child {
+        border-right: 0;
+      }
+
+      .identity-option p,
+      .avatar-notes p {
+        color: var(--muted);
+        font-size: 0.95rem;
+        line-height: 1.45;
+      }
+
+      .mark-stage {
+        display: flex;
+        min-height: 116px;
+        align-items: center;
+        gap: 18px;
+      }
+
+      .mark-size-stack {
+        display: flex;
+        align-items: end;
+        gap: 12px;
+      }
+
+      .neutral-mark,
+      .loop-c-mark,
+      .signal-mug-mark,
+      .avatar-orb {
+        position: relative;
+        display: inline-grid;
+        flex: 0 0 auto;
+        place-items: center;
+        background: #000000;
+      }
+
+      .neutral-mark,
+      .loop-c-mark,
+      .signal-mug-mark {
+        width: 86px;
+        height: 86px;
+        border: 1px solid rgb(255 255 255 / 0.22);
+        border-radius: 18px;
+      }
+
+      .neutral-mark.small,
+      .loop-c-mark.small,
+      .signal-mug-mark.small {
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+      }
+
+      .ai-capsule {
+        position: relative;
+        z-index: 2;
+        display: block;
+        width: 46px;
+        height: 28px;
+        border: 3px solid #ffffff;
+        border-radius: 999px;
+      }
+
+      .small .ai-capsule {
+        width: 19px;
+        height: 12px;
+        border-width: 2px;
+      }
+
+      .orbit-line {
+        position: absolute;
+        inset: 18px 12px;
+        border: 3px solid var(--orange);
+        border-radius: 50%;
+        transform: rotate(-24deg);
+      }
+
+      .orbit-line.secondary {
+        inset: 23px 8px;
+        border-color: var(--orange-2);
+        transform: rotate(28deg);
+      }
+
+      .small .orbit-line {
+        inset: 8px 5px;
+        border-width: 2px;
+      }
+
+      .small .orbit-line.secondary {
+        inset: 10px 4px;
+      }
+
+      .orbit-node {
+        position: absolute;
+        top: 13px;
+        right: 18px;
+        width: 13px;
+        height: 13px;
+        border-radius: 50%;
+        background: var(--orange);
+      }
+
+      .small .orbit-node {
+        top: 6px;
+        right: 7px;
+        width: 6px;
+        height: 6px;
+      }
+
+      .loop-c-mark {
+        overflow: hidden;
+      }
+
+      .loop-c-mark::before {
+        content: "";
+        position: absolute;
+        inset: 16px 13px;
+        border: 7px solid var(--orange);
+        border-right-color: transparent;
+        border-radius: 50%;
+        transform: rotate(-16deg);
+      }
+
+      .loop-c-mark.small::before {
+        inset: 8px 6px;
+        border-width: 3px;
+      }
+
+      .loop-c-mark .ai-capsule {
+        width: 38px;
+        height: 23px;
+        border-width: 3px;
+      }
+
+      .loop-c-mark.small .ai-capsule {
+        width: 16px;
+        height: 10px;
+        border-width: 2px;
+      }
+
+      .signal-mug-mark .mug-mark {
+        width: 42px;
+        height: 37px;
+        border-width: 3px;
+      }
+
+      .signal-mug-mark .mug-mark::before {
+        top: 8px;
+        left: -16px;
+        width: 17px;
+        height: 19px;
+      }
+
+      .signal-mug-mark.small .mug-mark {
+        width: 18px;
+        height: 16px;
+        border-width: 2px;
+      }
+
+      .signal-mug-mark.small .mug-mark::before {
+        top: 4px;
+        left: -8px;
+        width: 8px;
+        height: 9px;
+        border-width: 2px;
+      }
+
+      .avatar-system-card {
+        display: grid;
+        grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: 0 28px 80px rgb(0 0 0 / 0.42);
+      }
+
+      .avatar-stage {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+        padding: 22px;
+        background: #070707;
+      }
+
+      .avatar-sample {
+        display: grid;
+        min-height: 184px;
+        place-items: center;
+        gap: 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 18px 12px;
+        background: #000000;
+        text-align: center;
+      }
+
+      .avatar-sample span {
+        color: var(--muted);
+        font-size: 0.82rem;
+        font-weight: 800;
+      }
+
+      .avatar-orb {
+        width: 96px;
+        height: 96px;
+        border: 2px solid rgb(255 255 255 / 0.72);
+        border-radius: 50%;
+      }
+
+      .avatar-orb::before,
+      .avatar-orb::after {
+        content: "";
+        position: absolute;
+        border: 3px solid var(--orange);
+        border-radius: 50%;
+      }
+
+      .avatar-orb::before {
+        inset: 19px 8px;
+        transform: rotate(-26deg);
+      }
+
+      .avatar-orb::after {
+        inset: 26px 5px;
+        border-color: var(--orange-2);
+        transform: rotate(31deg);
+      }
+
+      .avatar-orb .ai-capsule {
+        width: 44px;
+        height: 27px;
+        border-width: 3px;
+      }
+
+      .avatar-orb.human .mug-mark {
+        z-index: 2;
+        width: 38px;
+        height: 34px;
+      }
+
+      .avatar-orb.human::after {
+        border-color: var(--orange-3);
+      }
+
+      .avatar-orb.pool::before {
+        inset: 11px;
+        border-color: var(--orange-2);
+        transform: rotate(0deg);
+      }
+
+      .avatar-orb.pool::after {
+        inset: 24px;
+        border-color: var(--orange-3);
+        transform: rotate(0deg);
+      }
+
+      .avatar-orb.pool .ai-capsule {
+        width: 36px;
+        height: 22px;
+      }
+
+      .avatar-orb.pending {
+        border-color: rgb(255 255 255 / 0.32);
+      }
+
+      .avatar-orb.pending::before {
+        border-color: rgb(242 100 38 / 0.42);
+      }
+
+      .avatar-orb.pending::after {
+        border-style: dotted;
+        border-color: rgb(255 176 138 / 0.6);
+      }
+
+      .avatar-notes {
+        border-left: 1px solid var(--line);
+        padding: 22px;
+      }
+
+      .avatar-notes ul {
+        margin: 16px 0 0;
+        padding-left: 18px;
+        color: var(--muted);
+        font-size: 0.95rem;
+        line-height: 1.45;
+      }
+
       .current-orb-mark {
         display: block;
         width: 36px;
@@ -607,6 +914,7 @@
         .intro,
         .hero-art-card,
         .identity-card,
+        .avatar-system-card,
         .identity-grid,
         .notes-grid,
         .landing-hero,
@@ -614,9 +922,28 @@
           grid-template-columns: 1fr;
         }
 
+        .identity-options,
+        .avatar-stage {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .identity-option {
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+
+        .identity-option:last-child {
+          border-bottom: 0;
+        }
+
         .identity-samples {
           border-right: 0;
           border-bottom: 1px solid var(--line);
+        }
+
+        .avatar-notes {
+          border-left: 0;
+          border-top: 1px solid var(--line);
         }
 
         .mockup-head {
@@ -655,6 +982,11 @@
 
         .nav-links {
           display: none;
+        }
+
+        .identity-options,
+        .avatar-stage {
+          grid-template-columns: 1fr;
         }
       }
     </style>
@@ -719,34 +1051,102 @@
         </aside>
       </section>
 
-      <h2 class="section-title">Mug Favicon Mockup</h2>
-      <section class="identity-card" aria-label="Mug identity samples">
-        <div class="identity-samples">
-          <div class="brand-lockup">
-            <span class="mug-mark" aria-hidden="true"></span>
-            <span class="brand-name">Curyo</span>
-          </div>
-          <div class="browser-tab">
-            <span class="mug-mark small" aria-hidden="true"></span>
-            <span>Curyo - AI Asks, Humans Earn</span>
-          </div>
-          <div class="app-icon-preview">
-            <div class="app-icon-box mug">
-              <span class="mug-mark large" aria-hidden="true"></span>
+      <h2 class="section-title">Logo / Favicon Directions</h2>
+      <section class="identity-card identity-direction" aria-label="Logo and favicon direction samples">
+        <div class="identity-options">
+          <article class="identity-option">
+            <div class="kicker">Recommended</div>
+            <h2>Neutral Orbit Capsule</h2>
+            <div class="mark-stage" aria-hidden="true">
+              <div class="mark-size-stack">
+                <span class="neutral-mark">
+                  <span class="orbit-line"></span>
+                  <span class="orbit-line secondary"></span>
+                  <span class="orbit-node"></span>
+                  <span class="ai-capsule"></span>
+                </span>
+                <span class="neutral-mark small">
+                  <span class="orbit-line"></span>
+                  <span class="orbit-line secondary"></span>
+                  <span class="orbit-node"></span>
+                  <span class="ai-capsule"></span>
+                </span>
+              </div>
+              <span class="brand-name">Curyo</span>
             </div>
-            <div>
-              <div class="kicker">App icon / favicon idea</div>
-              <p>Black square, orange mug, white rim and handle.</p>
+            <p>
+              Best fit if the new hero uses the faceless AI: it keeps the AI presence, removes the mascot feel, and
+              scales down better than the full scene.
+            </p>
+          </article>
+
+          <article class="identity-option">
+            <div class="kicker">Brandable</div>
+            <h2>Loop C Mark</h2>
+            <div class="mark-stage" aria-hidden="true">
+              <div class="mark-size-stack">
+                <span class="loop-c-mark"><span class="ai-capsule"></span></span>
+                <span class="loop-c-mark small"><span class="ai-capsule"></span></span>
+              </div>
+              <span class="brand-name">Curyo</span>
             </div>
+            <p>
+              More logo-like: the orange loop can read as a C while still borrowing the orbit language from the hero
+              art and avatar system.
+            </p>
+          </article>
+
+          <article class="identity-option">
+            <div class="kicker">Secondary signal</div>
+            <h2>Mug Human Cue</h2>
+            <div class="mark-stage" aria-hidden="true">
+              <div class="mark-size-stack">
+                <span class="signal-mug-mark"><span class="mug-mark"></span></span>
+                <span class="signal-mug-mark small"><span class="mug-mark"></span></span>
+              </div>
+              <span class="brand-name">Curyo</span>
+            </div>
+            <p>
+              Warm and friendly, but less specific to AI. Strong as a landing-page accent or campaign icon; weaker as
+              the long-term favicon if the brand should feel more infrastructure-like.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <h2 class="section-title">Avatar Orb System</h2>
+      <section class="avatar-system-card" aria-label="Avatar orb design suggestions">
+        <div class="avatar-stage">
+          <div class="avatar-sample">
+            <span class="avatar-orb ai" aria-hidden="true"><span class="ai-capsule"></span></span>
+            <span>AI agent</span>
+          </div>
+          <div class="avatar-sample">
+            <span class="avatar-orb human" aria-hidden="true"><span class="mug-mark"></span></span>
+            <span>Human reviewer</span>
+          </div>
+          <div class="avatar-sample">
+            <span class="avatar-orb pool" aria-hidden="true"><span class="ai-capsule"></span></span>
+            <span>Consensus pool</span>
+          </div>
+          <div class="avatar-sample">
+            <span class="avatar-orb pending" aria-hidden="true"><span class="ai-capsule"></span></span>
+            <span>Pending signal</span>
           </div>
         </div>
-        <aside class="identity-notes">
-          <div class="kicker">Identity note</div>
-          <h2>Mug as Friendly Human Signal</h2>
+        <aside class="avatar-notes">
+          <div class="kicker">Reusable system</div>
+          <h2>Faceless Orbs With State</h2>
           <p>
-            The mug is simple at favicon size and ties back to the human working scene. It keeps the brand warm without
-            asking the main hero art to become the logo.
+            Use the same black core, white structure, and orange orbit language everywhere avatars appear. The orbit
+            density and shade can communicate role or status without adding cute facial features.
           </p>
+          <ul>
+            <li>AI agents: white capsule plus two active orange orbits.</li>
+            <li>Humans: human signal mark inside the same orb container.</li>
+            <li>Pools: concentric orange rings for aggregated judgment.</li>
+            <li>Pending or low-confidence states: dimmer orange and dotted orbit treatment.</li>
+          </ul>
         </aside>
       </section>
 
