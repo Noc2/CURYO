@@ -564,22 +564,32 @@
         position: relative;
         z-index: 3;
         display: grid;
-        width: 48px;
-        height: 30px;
+        width: 58px;
+        height: 58px;
         place-items: center;
-        border: 3px solid #ffffff;
-        border-radius: 999px;
         background: #000000;
       }
 
       .c-avatar-face {
+        position: relative;
         display: block;
-        width: 23px;
-        height: 19px;
-        border: 5px solid var(--orange);
+        width: 43px;
+        height: 43px;
+        border: 5px solid #ffffff;
         border-right-color: transparent;
         border-radius: 50%;
-        transform: rotate(-10deg);
+      }
+
+      .c-avatar-face::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 17px;
+        height: 17px;
+        border-radius: 50%;
+        background: var(--orange);
+        transform: translate(-50%, -50%);
       }
 
       .avatar-orb.human .mug-mark {
@@ -749,13 +759,18 @@
       }
 
       .loop-mark.white-outside .c-fill {
-        inset: 30px 25px 30px 21px;
-        border-radius: 999px;
-        background: linear-gradient(90deg, var(--orange), var(--orange-2));
+        top: 50%;
+        left: 50%;
+        width: 35px;
+        height: 35px;
+        border-radius: 50%;
+        background: var(--orange);
+        transform: translate(-50%, -50%);
       }
 
       .loop-mark.white-outside.small .c-fill {
-        inset: 13px 10px 13px 9px;
+        width: 13px;
+        height: 13px;
       }
 
       .loop-mark.orbit-c .c-outer {
@@ -774,32 +789,46 @@
 
       .loop-mark.face-c .face-window {
         z-index: 2;
-        width: 56px;
-        height: 34px;
-        border: 4px solid #ffffff;
-        border-radius: 999px;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
       }
 
       .loop-mark.face-c .c-window {
         z-index: 3;
-        width: 28px;
-        height: 22px;
-        border: 5px solid var(--orange);
+        width: 49px;
+        height: 49px;
+        border: 6px solid #ffffff;
         border-right-color: transparent;
         border-radius: 50%;
-        transform: rotate(-10deg);
+      }
+
+      .loop-mark.face-c .c-window::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 19px;
+        height: 19px;
+        border-radius: 50%;
+        background: var(--orange);
+        transform: translate(-50%, -50%);
       }
 
       .loop-mark.face-c.small .face-window {
         width: 24px;
-        height: 15px;
-        border-width: 2px;
+        height: 24px;
       }
 
       .loop-mark.face-c.small .c-window {
-        width: 12px;
-        height: 10px;
-        border-width: 2px;
+        width: 22px;
+        height: 22px;
+        border-width: 3px;
+      }
+
+      .loop-mark.face-c.small .c-window::after {
+        width: 8px;
+        height: 8px;
       }
 
       .loop-mark.face-c .orbit-line {
@@ -872,33 +901,36 @@
         position: relative;
         z-index: 2;
         display: grid;
-        width: 66px;
-        height: 42px;
+        width: 80px;
+        height: 80px;
         place-items: center;
-        border: 4px solid #ffffff;
-        border-radius: 999px;
         background: #000000;
       }
 
       .ai-head .face-c {
-        width: 26px;
-        height: 22px;
-        border: 5px solid var(--orange);
+        position: relative;
+        width: 61px;
+        height: 61px;
+        border: 7px solid #ffffff;
         border-right-color: transparent;
         border-radius: 50%;
-        transform: rotate(-10deg);
       }
 
-      .ai-head.white-fill .face-shell {
-        border-color: #ffffff;
+      .ai-head .face-c::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: var(--orange);
+        transform: translate(-50%, -50%);
       }
 
       .ai-head.white-fill .face-c {
-        width: 34px;
-        height: 24px;
-        border-width: 0;
-        border-radius: 999px;
-        background: linear-gradient(90deg, var(--orange), var(--orange-2));
+        width: 68px;
+        height: 68px;
       }
 
       .ai-head.minimal::before {
@@ -1336,41 +1368,21 @@
       </section>
 
       <h2 class="section-title">Hero Art Direction</h2>
-      <section class="hero-art-card" aria-label="Refined hero art">
-        <figure>
-          <img
-            src="assets/curyo-human-loop-orange-orbits.png"
-            alt="Human working at a desktop computer beside an abstract AI collaborator with orange orbit lines"
-          />
-        </figure>
-        <aside class="hero-art-notes">
-          <div class="kicker">Locked base direction</div>
-          <h2>White Lines + Friendly Human Loop</h2>
-          <ul>
-            <li>Use the preferred raster image rather than the simplified redraw.</li>
-            <li>Keep the human, desktop computer, mug, and AI in the original positions.</li>
-            <li>Replace the multicolor orbit accents with orange-family shades.</li>
-            <li>Make the first read: AI working together with a human.</li>
-          </ul>
-        </aside>
-      </section>
-
-      <h2 class="section-title">Neutral AI Variant</h2>
       <section class="hero-art-card" aria-label="Neutral AI hero art variant">
         <figure>
           <img
             src="assets/curyo-human-loop-orange-orbits-neutral-ai.png"
-            alt="Human working at a desktop computer beside a faceless abstract AI collaborator with orange orbit lines"
+            alt="Human working at a desktop computer beside an abstract AI collaborator with a round C face and orange orbit lines"
           />
         </figure>
         <aside class="hero-art-notes">
-          <div class="kicker">Alternate AI tone</div>
-          <h2>Less Cute, More System-Like</h2>
+          <div class="kicker">Locked base direction</div>
+          <h2>White Lines + Round C Face</h2>
           <ul>
             <li>Same human, mug, monitor, black background, and orange orbit palette.</li>
-            <li>AI face details are removed so the character reads less mascot-like.</li>
-            <li>Still preserves the friendly human-in-the-loop composition.</li>
-            <li>Useful if the main hero should feel more serious or infrastructure-oriented.</li>
+            <li>AI face becomes a round C mark: white outside stroke, orange filled circle inside.</li>
+            <li>The orange center stays separated from the white C so the mark has breathing room.</li>
+            <li>Removes literal facial features while preserving the human-in-the-loop composition.</li>
           </ul>
         </aside>
       </section>
@@ -1380,27 +1392,23 @@
         <div class="identity-options">
           <article class="identity-option">
             <div class="kicker">Recommended</div>
-            <h2>Neutral Orbit Capsule</h2>
+            <h2>Round C Core</h2>
             <div class="mark-stage" aria-hidden="true">
               <div class="mark-size-stack">
-                <span class="neutral-mark">
-                  <span class="orbit-line"></span>
-                  <span class="orbit-line secondary"></span>
-                  <span class="orbit-node"></span>
-                  <span class="ai-capsule"></span>
+                <span class="loop-mark white-outside">
+                  <span class="c-outer"></span>
+                  <span class="c-fill"></span>
                 </span>
-                <span class="neutral-mark small">
-                  <span class="orbit-line"></span>
-                  <span class="orbit-line secondary"></span>
-                  <span class="orbit-node"></span>
-                  <span class="ai-capsule"></span>
+                <span class="loop-mark white-outside small">
+                  <span class="c-outer"></span>
+                  <span class="c-fill"></span>
                 </span>
               </div>
               <span class="brand-name">Curyo</span>
             </div>
             <p>
-              Best fit if the new hero uses the faceless AI: it keeps the AI presence, removes the mascot feel, and
-              scales down better than the full scene.
+              Best fit with the new hero: a round white C outside, a separated orange core inside, and no mascot face
+              details. It scales down cleanly for favicon use.
             </p>
           </article>
 
@@ -1474,8 +1482,8 @@
               </span>
             </div>
             <p>
-              Strongest bridge to the hero image: white structural line on the outside, orange intelligence/signal on
-              the inside. This could become both favicon and AI face language.
+              Strongest bridge to the hero image: white structural C on the outside, orange intelligence/signal in the
+              center, with clear black space between both shapes.
             </p>
           </article>
 
@@ -1500,7 +1508,7 @@
 
           <article class="loop-variant">
             <div class="kicker">AI face candidate</div>
-            <h2>C Window</h2>
+            <h2>Round C Face</h2>
             <div class="loop-mark-row" aria-hidden="true">
               <span class="loop-mark face-c">
                 <span class="orbit-line"></span>
@@ -1515,8 +1523,8 @@
               </span>
             </div>
             <p>
-              Treat the C as the AI face/window instead of eyes or a smile. This keeps the AI abstract and makes the
-              product mark show up inside the character.
+              Treat the round C plus orange core as the AI face instead of a capsule or literal facial features. This
+              keeps the AI abstract and lets the product mark show up inside the character.
             </p>
           </article>
         </div>
@@ -1527,13 +1535,13 @@
               <span class="ai-head" aria-hidden="true">
                 <span class="face-shell"><span class="face-c"></span></span>
               </span>
-              <span>C as AI window</span>
+              <span>Round C face</span>
             </div>
             <div class="ai-face-sample">
               <span class="ai-head white-fill" aria-hidden="true">
                 <span class="face-shell"><span class="face-c"></span></span>
               </span>
-              <span>Orange inner signal</span>
+              <span>Larger hero face</span>
             </div>
             <div class="ai-face-sample">
               <span class="ai-head minimal" aria-hidden="true">
@@ -1546,9 +1554,9 @@
             <div class="kicker">Recommendation</div>
             <h2>Use the C as the Neutral AI Face</h2>
             <p>
-              The white-outside/orange-inside version is the strongest candidate. It keeps the AI from becoming cute,
-              gives the neutral variant a recognizable center, and lets the favicon, AI avatar, and hero art share one
-              visual grammar.
+              The white round C with a separated orange center is the strongest candidate. It keeps the AI from
+              becoming cute, gives the neutral variant a recognizable center, and lets the favicon, AI avatar, and hero
+              art share one visual grammar.
             </p>
           </aside>
         </div>
@@ -1584,7 +1592,7 @@
             density and shade can communicate role or status without adding cute facial features.
           </p>
           <ul>
-            <li>AI agents: white capsule face with the orange C signal inside.</li>
+            <li>AI agents: round white C face with the separated orange core inside.</li>
             <li>Humans: human signal mark inside the same orb container.</li>
             <li>Pools: concentric orange rings for aggregated judgment.</li>
             <li>Pending or low-confidence states: dimmer orange and dotted orbit treatment.</li>
@@ -1637,8 +1645,8 @@
                 </div>
                 <figure class="landing-art">
                   <img
-                    src="assets/curyo-human-loop-orange-orbits.png"
-                    alt="Hero mockup showing a human working with an abstract AI collaborator"
+                    src="assets/curyo-human-loop-orange-orbits-neutral-ai.png"
+                    alt="Hero mockup showing a human working with an abstract AI collaborator with a round C face"
                   />
                 </figure>
               </section>
