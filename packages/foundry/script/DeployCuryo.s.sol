@@ -529,8 +529,8 @@ contract DeployCuryo is ScaffoldETHDeploy {
             );
             console.log("Verified governance ownership, deployer role renunciation, and paused faucet pre-launch");
 
-            exportDeployments(true);
-            console.log("Exported deployment addresses before opening HumanFaucet claims");
+            exportDeployments(false);
+            console.log("Exported incomplete deployment addresses before opening HumanFaucet claims");
 
             humanFaucet.openClaimsAndTransferOwnership();
             console.log("Opened HumanFaucet public claims and transferred ownership to governance");
