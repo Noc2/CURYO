@@ -116,8 +116,6 @@ library RoundCleanupLib {
         mapping(uint256 => uint256) storage epochUnrevealedCount,
         mapping(uint256 => uint256) storage lastCommitRevealableAfter,
         mapping(address => bytes32) storage roundVoterCommitHash,
-        mapping(uint256 => bool) storage contentHasCommits,
-        uint256 contentId,
         uint256 roundId,
         bytes32 commitKey,
         uint256 epochEnd,
@@ -132,7 +130,6 @@ library RoundCleanupLib {
         }
 
         roundVoterCommitHash[voter] = commitHash;
-        contentHasCommits[contentId] = true;
     }
 
     function recordTokenIdentityCommitIndex(

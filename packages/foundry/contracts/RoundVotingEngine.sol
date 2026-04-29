@@ -572,13 +572,12 @@ contract RoundVotingEngine is
     ) internal {
         uint256 effectiveRevealableAfter = _targetRoundRevealableAt(contentId, roundId, targetRound);
         if (effectiveRevealableAfter < epochEnd) effectiveRevealableAfter = epochEnd;
+        contentHasCommits[contentId] = true;
         RoundCleanupLib.recordCommitIndexes(
             roundCommitHashes[contentId][roundId],
             epochUnrevealedCount[contentId][roundId],
             lastCommitRevealableAfter[contentId],
             voterCommitHash[contentId][roundId],
-            contentHasCommits,
-            contentId,
             roundId,
             commitKey,
             epochEnd,
