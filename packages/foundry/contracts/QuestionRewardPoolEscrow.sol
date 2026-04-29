@@ -1114,8 +1114,10 @@ contract QuestionRewardPoolEscrow is
         }
 
         uint256 allocation = _previewBundleRoundSetAllocation(bundle);
-        require(allocation > 0 && allocation <= bundle.unallocatedAmount, "No allocation");
-        require(allocation >= completerCount, "Small allocation");
+        if (allocation == 0 || allocation < completerCount) {
+            _resetBundleRoundSet(bundleId, roundSetIndex);
+            return;
+        }
         uint256 frontendFeeAllocation = (allocation * bundle.frontendFeeBps) / BPS_SCALE;
 
         unchecked {

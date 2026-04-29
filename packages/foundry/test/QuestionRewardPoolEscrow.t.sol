@@ -989,6 +989,37 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(reward, claimable);
     }
 
+    function testBundleRoundSetRetriesWhenAllocationCannotPayAllCompleters() public {
+        uint256[] memory contentIds = _submitBundleQuestions();
+        uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, 3, 3);
+
+        address[] memory overfullVoters = _fourVoters();
+        bool[] memory overfullDirections = _directions(true, true, false, true);
+
+        _settleRoundWith(overfullVoters, contentIds[0], overfullDirections);
+        _settleRoundWith(overfullVoters, contentIds[1], overfullDirections);
+        assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter1), 0);
+
+        vm.prank(voter1);
+        vm.expectRevert("Bundle not claimable");
+        rewardPoolEscrow.claimQuestionBundleReward(bundleId, 0);
+
+        vm.warp(block.timestamp + 25 hours);
+        address[] memory retryVoters = new address[](3);
+        retryVoters[0] = voter2;
+        retryVoters[1] = voter3;
+        retryVoters[2] = voter4;
+        bool[] memory retryDirections = _directions(true, true, false);
+
+        _settleRoundWith(retryVoters, contentIds[0], retryDirections);
+        _settleRoundWith(retryVoters, contentIds[1], retryDirections);
+
+        uint256 claimable = rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter2);
+        assertEq(claimable, 1);
+        vm.prank(voter2);
+        assertEq(rewardPoolEscrow.claimQuestionBundleReward(bundleId, 0), claimable);
+    }
+
     function testBundleRoundSetRetryIgnoresFutureRoundsRecordedBeforeReset() public {
         uint256[] memory contentIds = _submitBundleQuestions();
         uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, 120e6, 3, 2);
