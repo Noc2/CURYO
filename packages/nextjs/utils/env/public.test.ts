@@ -40,25 +40,21 @@ test("required deployment helper reports missing contract definitions per target
   assert.deepEqual(missingContracts, ["42220:HumanReputation"]);
 });
 
-test("default required deployment list fails closed for enabled production contracts", () => {
+test("default required deployment list fails closed for core app contracts", () => {
   const missingContracts = listMissingRequiredTargetContracts([42220], {
     42220: {
       CategoryRegistry: {},
       ContentRegistry: {},
-      CuryoGovernor: {},
-      FeedbackBonusEscrow: {},
       FrontendRegistry: {},
       HumanFaucet: {},
-      HumanReputation: {},
       ParticipationPool: {},
       ProfileRegistry: {},
       ProtocolConfig: {},
       RoundRewardDistributor: {},
       RoundVotingEngine: {},
-      TimelockController: {},
       VoterIdNFT: {},
     },
   });
 
-  assert.deepEqual(missingContracts, ["42220:QuestionRewardPoolEscrow", "42220:X402QuestionSubmitter"]);
+  assert.deepEqual(missingContracts, ["42220:HumanReputation"]);
 });

@@ -33,6 +33,12 @@ test("getConfiguredQuestionRewardPoolEscrowAddress rejects mismatched production
     env.NEXT_PUBLIC_QUESTION_REWARD_POOL_ESCROW_ADDRESS = deployedAddress.toLowerCase();
     assert.equal(getConfiguredQuestionRewardPoolEscrowAddress(31337)?.toLowerCase(), deployedAddress.toLowerCase());
 
+    env.NEXT_PUBLIC_QUESTION_REWARD_POOL_ESCROW_ADDRESS = "0x000000000000000000000000000000000000bEEF";
+    assert.equal(
+      getConfiguredQuestionRewardPoolEscrowAddress(999999)?.toLowerCase(),
+      "0x000000000000000000000000000000000000beef",
+    );
+
     env.NEXT_PUBLIC_QUESTION_REWARD_POOL_ESCROW_ADDRESS = "0x000000000000000000000000000000000000dEaD";
     assert.throws(
       () => getConfiguredQuestionRewardPoolEscrowAddress(31337),

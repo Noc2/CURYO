@@ -1,8 +1,6 @@
 export type DeploymentDefinitions = Record<number, Record<string, unknown> | undefined>;
 
 export const REQUIRED_TARGET_CONTRACTS = [
-  "TimelockController",
-  "CuryoGovernor",
   "HumanReputation",
   "FrontendRegistry",
   "ProfileRegistry",
@@ -10,9 +8,6 @@ export const REQUIRED_TARGET_CONTRACTS = [
   "RoundVotingEngine",
   "ProtocolConfig",
   "RoundRewardDistributor",
-  "QuestionRewardPoolEscrow",
-  "X402QuestionSubmitter",
-  "FeedbackBonusEscrow",
   "CategoryRegistry",
   "VoterIdNFT",
   "ParticipationPool",
