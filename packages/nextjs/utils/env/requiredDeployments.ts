@@ -1,6 +1,23 @@
 export type DeploymentDefinitions = Record<number, Record<string, unknown> | undefined>;
 
-export const REQUIRED_TARGET_CONTRACTS = ["ContentRegistry", "HumanReputation", "ProtocolConfig"] as const;
+export const REQUIRED_TARGET_CONTRACTS = [
+  "TimelockController",
+  "CuryoGovernor",
+  "HumanReputation",
+  "FrontendRegistry",
+  "ProfileRegistry",
+  "ContentRegistry",
+  "RoundVotingEngine",
+  "ProtocolConfig",
+  "RoundRewardDistributor",
+  "QuestionRewardPoolEscrow",
+  "X402QuestionSubmitter",
+  "FeedbackBonusEscrow",
+  "CategoryRegistry",
+  "VoterIdNFT",
+  "ParticipationPool",
+  "HumanFaucet",
+] as const;
 
 export function listMissingRequiredTargetContracts(
   chainIds: readonly number[],
