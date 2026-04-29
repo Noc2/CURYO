@@ -1204,59 +1204,37 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         RoundLib.RoundConfig memory roundConfig,
         QuestionSpecCommitment memory spec
     ) internal pure returns (bytes32) {
-        uint256 titleTailLength = _encodedStringTailLength(title);
-        uint256 descriptionTailLength = _encodedStringTailLength(description);
-        uint256 titleOffset = 20 * 32;
-        uint256 descriptionOffset = titleOffset + titleTailLength;
-        uint256 tagsOffset = descriptionOffset + descriptionTailLength;
-        bytes memory encoded = new bytes(tagsOffset + _encodedStringTailLength(tags));
-
-        _writeUint(encoded, 0, uint256(submissionKey));
-        _writeUint(encoded, 32, uint256(mediaHash));
-        _writeUint(encoded, 2 * 32, titleOffset);
-        _writeUint(encoded, 3 * 32, descriptionOffset);
-        _writeUint(encoded, 4 * 32, tagsOffset);
-        _writeUint(encoded, 5 * 32, categoryId);
-        _writeUint(encoded, 6 * 32, uint256(salt));
-        _writeUint(encoded, 7 * 32, uint256(uint160(submitter)));
-        _writeUint(encoded, 8 * 32, uint256(rewardTerms.asset));
-        _writeUint(encoded, 9 * 32, rewardTerms.amount);
-        _writeUint(encoded, 10 * 32, rewardTerms.requiredVoters);
-        _writeUint(encoded, 11 * 32, rewardTerms.requiredSettledRounds);
-        _writeUint(encoded, 12 * 32, rewardTerms.bountyClosesAt);
-        _writeUint(encoded, 13 * 32, rewardTerms.feedbackClosesAt);
-        _writeUint(encoded, 14 * 32, uint256(roundConfig.epochDuration));
-        _writeUint(encoded, 15 * 32, uint256(roundConfig.maxDuration));
-        _writeUint(encoded, 16 * 32, uint256(roundConfig.minVoters));
-        _writeUint(encoded, 17 * 32, uint256(roundConfig.maxVoters));
-        _writeUint(encoded, 18 * 32, uint256(spec.questionMetadataHash));
-        _writeUint(encoded, 19 * 32, uint256(spec.resultSpecHash));
-        _writeStringTail(encoded, titleOffset, title);
-        _writeStringTail(encoded, descriptionOffset, description);
-        _writeStringTail(encoded, tagsOffset, tags);
-        return keccak256(encoded);
-    }
-
-    function _encodedStringTailLength(string memory value) internal pure returns (uint256) {
-        return 32 + ((bytes(value).length + 31) / 32) * 32;
-    }
-
-    function _writeUint(bytes memory encoded, uint256 offset, uint256 value) internal pure {
-        assembly ("memory-safe") {
-            mstore(add(add(encoded, 32), offset), value)
-        }
-    }
-
-    function _writeStringTail(bytes memory encoded, uint256 offset, string memory value) internal pure {
-        bytes memory raw = bytes(value);
-        uint256 rawLength = raw.length;
-        _writeUint(encoded, offset, rawLength);
-        for (uint256 i = 0; i < rawLength;) {
-            encoded[offset + 32 + i] = raw[i];
-            unchecked {
-                ++i;
-            }
-        }
+        return keccak256(
+            abi.encode(
+                "curyo-question-reveal-v3",
+                submissionKey,
+                mediaHash,
+                keccak256(abi.encode(title, description, tags)),
+                categoryId,
+                salt,
+                submitter,
+                keccak256(
+                    abi.encode(
+                        rewardTerms.asset,
+                        rewardTerms.amount,
+                        rewardTerms.requiredVoters,
+                        rewardTerms.requiredSettledRounds,
+                        rewardTerms.bountyClosesAt,
+                        rewardTerms.feedbackClosesAt
+                    )
+                ),
+                keccak256(
+                    abi.encode(
+                        roundConfig.epochDuration,
+                        roundConfig.maxDuration,
+                        roundConfig.minVoters,
+                        roundConfig.maxVoters
+                    )
+                ),
+                spec.questionMetadataHash,
+                spec.resultSpecHash
+            )
+        );
     }
 
     function _computeQuestionBundleHash(

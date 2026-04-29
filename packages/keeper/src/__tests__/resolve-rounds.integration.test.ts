@@ -84,6 +84,8 @@ const ACCOUNTS = {
 
 const STAKE = 1n * 10n ** 6n;
 const DEFAULT_SUBMISSION_REWARD_AMOUNT = 1_000_000n;
+const DEFAULT_QUESTION_METADATA_HASH = keccak256(stringToHex("curyo.generic.question.metadata.v1"));
+const DEFAULT_RESULT_SPEC_HASH = keccak256(stringToHex("curyo.generic.result.spec.v1"));
 
 function makeLogger() {
   return {
@@ -312,45 +314,58 @@ describe("resolveRounds integration", () => {
     const submissionMediaHash = keccak256(
       encodeAbiParameters([{ type: "string[]" }, { type: "string" }], [[submissionImageUrl], ""]),
     );
-    const revealCommitment = keccak256(
+    const submissionTextHash = keccak256(
+      encodeAbiParameters(
+        [{ type: "string" }, { type: "string" }, { type: "string" }],
+        [submissionTitle, submissionDescription, submissionTags],
+      ),
+    );
+    const rewardTermsHash = keccak256(
       encodeAbiParameters(
         [
-          { type: "bytes32" },
-          { type: "bytes32" },
-          { type: "string" },
-          { type: "string" },
-          { type: "string" },
-          { type: "uint256" },
-          { type: "bytes32" },
-          { type: "address" },
           { type: "uint8" },
           { type: "uint256" },
           { type: "uint256" },
           { type: "uint256" },
           { type: "uint256" },
-          { type: "uint32" },
-          { type: "uint32" },
-          { type: "uint16" },
-          { type: "uint16" },
+          { type: "uint256" },
+        ],
+        [0, DEFAULT_SUBMISSION_REWARD_AMOUNT, 3n, 1n, 0n, 0n],
+      ),
+    );
+    const roundConfigHash = keccak256(
+      encodeAbiParameters(
+        [{ type: "uint32" }, { type: "uint32" }, { type: "uint16" }, { type: "uint16" }],
+        [1_200, 604_800, 3, 1_000],
+      ),
+    );
+    const revealCommitment = keccak256(
+      encodeAbiParameters(
+        [
+          { type: "string" },
+          { type: "bytes32" },
+          { type: "bytes32" },
+          { type: "bytes32" },
+          { type: "uint256" },
+          { type: "bytes32" },
+          { type: "address" },
+          { type: "bytes32" },
+          { type: "bytes32" },
+          { type: "bytes32" },
+          { type: "bytes32" },
         ],
         [
+          "curyo-question-reveal-v3",
           submissionKey,
           submissionMediaHash,
-          submissionTitle,
-          submissionDescription,
-          submissionTags,
+          submissionTextHash,
           submissionCategoryId,
           submissionSalt,
           ACCOUNTS.submitter.address,
-          0,
-          DEFAULT_SUBMISSION_REWARD_AMOUNT,
-          3n,
-          1n,
-          0n,
-          1_200,
-          604_800,
-          3,
-          1_000,
+          rewardTermsHash,
+          roundConfigHash,
+          DEFAULT_QUESTION_METADATA_HASH,
+          DEFAULT_RESULT_SPEC_HASH,
         ],
       ),
     );
@@ -386,6 +401,10 @@ describe("resolveRounds integration", () => {
             submissionTags,
             submissionCategoryId,
             submissionSalt,
+            {
+              questionMetadataHash: DEFAULT_QUESTION_METADATA_HASH,
+              resultSpecHash: DEFAULT_RESULT_SPEC_HASH,
+            },
           ],
         }),
       );

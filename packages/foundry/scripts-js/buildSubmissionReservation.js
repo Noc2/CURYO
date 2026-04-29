@@ -263,49 +263,60 @@ const [, submissionKey] = await publicClient.readContract({
 const mediaHash = keccak256(
   encodeAbiParameters([{ type: "string[]" }, { type: "string" }], [media.imageUrls, media.videoUrl]),
 );
-const revealCommitment = keccak256(
+const textHash = keccak256(
+  encodeAbiParameters([{ type: "string" }, { type: "string" }, { type: "string" }], [title, description, tags]),
+);
+const rewardTermsHash = keccak256(
   encodeAbiParameters(
     [
-      { type: "bytes32" },
-      { type: "bytes32" },
-      { type: "string" },
-      { type: "string" },
-      { type: "string" },
-      { type: "uint256" },
-      { type: "bytes32" },
-      { type: "address" },
       { type: "uint8" },
       { type: "uint256" },
       { type: "uint256" },
       { type: "uint256" },
       { type: "uint256" },
       { type: "uint256" },
-      { type: "uint32" },
-      { type: "uint32" },
-      { type: "uint16" },
-      { type: "uint16" },
-      { type: "bytes32" },
-      { type: "bytes32" },
     ],
     [
-      submissionKey,
-      mediaHash,
-      title,
-      description,
-      tags,
-      BigInt(categoryId),
-      salt,
-      submitter,
       Number(rewardAsset),
       rewardAmount,
       requiredVoters,
       requiredSettledRounds,
       rewardPoolExpiresAt,
       rewardPoolExpiresAt,
-      roundConfig.epochDuration,
-      roundConfig.maxDuration,
-      roundConfig.minVoters,
-      roundConfig.maxVoters,
+    ],
+  ),
+);
+const roundConfigHash = keccak256(
+  encodeAbiParameters(
+    [{ type: "uint32" }, { type: "uint32" }, { type: "uint16" }, { type: "uint16" }],
+    [roundConfig.epochDuration, roundConfig.maxDuration, roundConfig.minVoters, roundConfig.maxVoters],
+  ),
+);
+const revealCommitment = keccak256(
+  encodeAbiParameters(
+    [
+      { type: "string" },
+      { type: "bytes32" },
+      { type: "bytes32" },
+      { type: "bytes32" },
+      { type: "uint256" },
+      { type: "bytes32" },
+      { type: "address" },
+      { type: "bytes32" },
+      { type: "bytes32" },
+      { type: "bytes32" },
+      { type: "bytes32" },
+    ],
+    [
+      "curyo-question-reveal-v3",
+      submissionKey,
+      mediaHash,
+      textHash,
+      BigInt(categoryId),
+      salt,
+      submitter,
+      rewardTermsHash,
+      roundConfigHash,
       DEFAULT_QUESTION_METADATA_HASH,
       DEFAULT_RESULT_SPEC_HASH,
     ],
