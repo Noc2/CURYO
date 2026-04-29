@@ -12,7 +12,7 @@ extra_output = ['abi', 'evm.bytecode', 'evm.deployedBytecode']
 ignored_warnings_from = ['lib/self']
 
 [profile.deploy]
-optimizer_runs = 1
+optimizer_runs = 0
 revert_strings = "strip"
 bytecode_hash = "none"
 cbor_metadata = false
