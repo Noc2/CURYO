@@ -40,9 +40,9 @@ function collectWhitepaperText(): string {
   return parts.join("\n");
 }
 
-test("whitepaper metadata reflects the updated title-case brand deck", () => {
-  assert.equal(META.subtitle, "Human Reputation at Stake");
-  assert.equal(META.deck, "Get Verified, Claim cREP, and Rate with Stake");
+test("whitepaper metadata reflects the agent-first brand deck", () => {
+  assert.equal(META.subtitle, "Human-in-the-Loop Judgment for AI Agents");
+  assert.equal(META.deck, "Ask Humans Instead of Guessing");
 });
 
 test("whitepaper metadata reflects the April 2026 protocol revision", () => {
@@ -50,9 +50,24 @@ test("whitepaper metadata reflects the April 2026 protocol revision", () => {
   assert.equal(META.date, "April 2026");
 });
 
+test("whitepaper reflects current launch allocations and governance threshold", () => {
+  const whitepaperText = collectWhitepaperText();
+
+  assert.match(whitepaperText, /Bootstrap Pool \(12M HREP\)/i);
+  assert.match(whitepaperText, /pool is funded with 12M HREP/i);
+  assert.match(whitepaperText, /treasury starts with 32M HREP/i);
+  assert.match(whitepaperText, /bootstrap proposal threshold is 1,000 HREP/i);
+
+  assert.doesNotMatch(whitepaperText, /Bootstrap Pool \(24M HREP\)/i);
+  assert.doesNotMatch(whitepaperText, /pool is funded with 24M HREP/i);
+  assert.doesNotMatch(whitepaperText, /treasury starts with 20M HREP/i);
+  assert.doesNotMatch(whitepaperText, /10,000 HREP proposal threshold/i);
+  assert.doesNotMatch(whitepaperText, /bootstrap proposal threshold is 10,000 HREP/i);
+});
+
 test("whitepaper introduction surfaces the updated lead copy", () => {
   assert.equal(SECTIONS[0]?.title, "Introduction");
-  assert.equal(SECTIONS[0]?.lead, "Get Verified, Claim cREP, and Rate with Stake");
+  assert.equal(SECTIONS[0]?.lead, "Curyo is a human-in-the-loop judgment layer for AI agents.");
 });
 
 test("whitepaper contents include the current eight sections", () => {
@@ -61,45 +76,49 @@ test("whitepaper contents include the current eight sections", () => {
     SECTIONS.map(section => section.title),
     [
       "Introduction",
-      "How It Works",
-      "tlock Commit-Reveal Voting",
-      "Tokenomics",
-      "Governance",
-      "Curyo & AI",
-      "Known Limitations",
-      "Rating Research Basis",
+      "Why Agents Need Human Judgment",
+      "How Curyo Works",
+      "Signal Integrity",
+      "Incentives & Token Flows",
+      "Agent Interfaces",
+      "Governance & Public Infrastructure",
+      "Limitations & Future Work",
     ],
   );
 });
 
-test("whitepaper executive summary preserves the updated brand framing", () => {
-  const summaryBlock = EXECUTIVE_SUMMARY[1];
+test("whitepaper executive summary centers the agent-first thesis", () => {
+  const whitepaperText = collectWhitepaperText();
 
-  assert.equal(summaryBlock?.type, "paragraph");
-  if (!summaryBlock || summaryBlock.type !== "paragraph") {
-    throw new Error("Expected executive summary block to be a paragraph");
-  }
-
-  assert.match(summaryBlock.text, /stake-weighted prediction games/i);
-  assert.match(summaryBlock.text, /preventing herding/i);
+  assert.match(whitepaperText, /human-in-the-loop judgment layer for AI agents/i);
+  assert.match(whitepaperText, /ask instead of guess/i);
+  assert.match(whitepaperText, /structured result templates/i);
 });
 
-test("whitepaper avoids stale protocol audit phrases", () => {
+test("whitepaper surfaces the agent integration path", () => {
+  const whitepaperText = collectWhitepaperText();
+
+  assert.match(whitepaperText, /agent-wallet delegated asks/i);
+  assert.match(whitepaperText, /MCP-style tools/i);
+  assert.match(whitepaperText, /curyo_quote_question/i);
+  assert.match(whitepaperText, /curyo_get_result/i);
+  assert.match(whitepaperText, /Feedback Bonuses/i);
+});
+
+test("whitepaper removes legacy section framing", () => {
   const whitepaperText = collectWhitepaperText();
 
   for (const stalePhrase of [
-    /46-scenario/i,
-    /50 cREP \(hardcoded\)/i,
-    /within seconds/i,
-    /cannot be purchased/i,
-    /recalculated at settlement from revealed raw stakes/i,
-    /settle as tied\/consensus/i,
-    /commitHash = keccak256\(isUp, salt, contentId, keccak256\(ciphertext\)\)/i,
-    /participation rewards after round settlement regardless of vote outcome/i,
+    /tlock Commit-Reveal Voting/i,
+    /Tokenomics/i,
+    /Curyo & AI/i,
+    /Rating Research Basis/i,
+    /decentralized content curation protocol/i,
   ]) {
     assert.doesNotMatch(whitepaperText, stalePhrase);
   }
 
-  assert.match(whitepaperText, /49-scenario/i);
-  assert.match(whitepaperText, /SDK, MCP & Reference Stack/i);
+  assert.match(whitepaperText, /question-first/i);
+  assert.match(whitepaperText, /USDC on Celo/i);
+  assert.match(whitepaperText, /public infrastructure/i);
 });

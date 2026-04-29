@@ -5,6 +5,7 @@ import { useAccount } from "wagmi";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import { CuryoConnectButton } from "~~/components/scaffold-eth";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
+import { RATE_ROUTE, buildRateContentHref } from "~~/constants/routes";
 import { formatTimeRemaining } from "~~/hooks/useActiveVotesWithDeadlines";
 import { ManualRevealVote, useManualRevealVotes } from "~~/hooks/useManualRevealVotes";
 
@@ -20,11 +21,11 @@ function RevealVoteCard({
   const stake = (Number(vote.stake) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 });
 
   return (
-    <div className="surface-card rounded-2xl p-5 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <div className="surface-card rounded-lg p-5 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
       <div className="space-y-1">
         <div className="flex items-center gap-2 flex-wrap">
           <Link
-            href={`/vote?content=${vote.contentId.toString()}`}
+            href={buildRateContentHref(vote.contentId)}
             className="text-lg font-semibold hover:text-primary transition-colors"
           >
             Content #{vote.contentId.toString()}
@@ -32,8 +33,8 @@ function RevealVoteCard({
           <span className="text-sm text-base-content/60">Round #{vote.roundId.toString()}</span>
         </div>
         <div className="text-sm text-base-content/75">
-          {stake} cREP
-          <span className="mx-2 text-base-content/45">·</span>
+          {stake} HREP
+          <span className="mx-2 text-base-content/60">·</span>
           Epoch {vote.epochIndex + 1}
         </div>
       </div>
@@ -57,7 +58,7 @@ export function ManualRevealPage() {
   if (!isConnected || !address) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
-        <div className="surface-card rounded-3xl p-8 max-w-md text-center space-y-4">
+        <div className="surface-card rounded-lg p-8 max-w-md text-center space-y-4">
           <h1 className="text-3xl font-semibold">Reveal My Vote</h1>
           <p className="text-base-content/75">
             Hidden fallback for manual reveals. Auto-reveal stays the default path.
@@ -74,11 +75,11 @@ export function ManualRevealPage() {
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="space-y-2">
             <Link
-              href="/vote"
+              href={RATE_ROUTE}
               className="inline-flex items-center gap-2 text-sm text-base-content/70 hover:text-base-content transition-colors"
             >
               <ArrowLeftIcon className="w-4 h-4" />
-              Back to vote
+              Back to rate
             </Link>
             <div className="flex items-center gap-2">
               <h1 className="text-3xl font-semibold">Reveal My Vote</h1>
@@ -93,18 +94,18 @@ export function ManualRevealPage() {
               off-chain check.
             </p>
           </div>
-          <div className="surface-card rounded-2xl px-4 py-3 min-w-44">
+          <div className="surface-card rounded-lg px-4 py-3 min-w-44">
             <div className="text-xs uppercase tracking-[0.2em] text-base-content/60">Ready now</div>
             <div className="text-3xl font-semibold tabular-nums">{readyVotes.length}</div>
           </div>
         </div>
 
         {isLoading ? (
-          <div className="surface-card rounded-3xl p-12 flex justify-center">
+          <div className="surface-card rounded-lg p-12 flex justify-center">
             <span className="loading loading-spinner loading-lg text-primary"></span>
           </div>
         ) : votes.length === 0 ? (
-          <div className="surface-card rounded-3xl p-8 space-y-2">
+          <div className="surface-card rounded-lg p-8 space-y-2">
             <h2 className="text-xl font-semibold">No unrevealed votes</h2>
             <p className="text-base-content/75">Nothing needs manual help right now.</p>
           </div>
@@ -130,7 +131,7 @@ export function ManualRevealPage() {
                   ))}
                 </div>
               ) : (
-                <div className="surface-card rounded-2xl p-5 text-base-content/75">Nothing is revealable yet.</div>
+                <div className="surface-card rounded-lg p-5 text-base-content/75">Nothing is revealable yet.</div>
               )}
             </section>
 

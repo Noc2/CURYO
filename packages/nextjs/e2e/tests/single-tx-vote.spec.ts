@@ -1,5 +1,4 @@
 import {
-  approveCREP,
   commitVoteWithTransferAndCallDirect,
   getActiveRoundId,
   submitContentDirect,
@@ -12,7 +11,7 @@ import { expect, test } from "@playwright/test";
 
 test.describe("Single-transaction vote flow", () => {
   const CONTENT_REGISTRY = CONTRACT_ADDRESSES.ContentRegistry;
-  const CREP_TOKEN = CONTRACT_ADDRESSES.CuryoReputation;
+  const HREP_TOKEN = CONTRACT_ADDRESSES.HumanReputation;
   const VOTING_ENGINE = CONTRACT_ADDRESSES.RoundVotingEngine;
   const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
   const STAKE = BigInt(5e6);
@@ -22,8 +21,6 @@ test.describe("Single-transaction vote flow", () => {
 
     const submitter = ANVIL_ACCOUNTS.account10;
     const voter = ANVIL_ACCOUNTS.account4;
-    const submitStakeApproved = await approveCREP(CONTENT_REGISTRY, BigInt(10e6), submitter.address, CREP_TOKEN);
-    expect(submitStakeApproved, "Submission stake approval failed").toBe(true);
 
     const uniqueId = Date.now();
     const submitted = await submitContentDirect(
@@ -56,7 +53,7 @@ test.describe("Single-transaction vote flow", () => {
       STAKE,
       ZERO_ADDRESS,
       voter.address,
-      CREP_TOKEN,
+      HREP_TOKEN,
       VOTING_ENGINE,
     );
     expect(commit.success, "Single-transaction transferAndCall vote should succeed").toBe(true);

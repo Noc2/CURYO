@@ -59,10 +59,6 @@ const GovernanceActionComposer = dynamic(
 const ProposalList = dynamic(() => import("~~/components/governance/ProposalList").then(mod => mod.ProposalList), {
   loading: GovernanceSectionLoading,
 });
-const PlatformProposals = dynamic(
-  () => import("~~/components/governance/PlatformProposals").then(mod => mod.PlatformProposals),
-  { loading: GovernanceSectionLoading },
-);
 
 function getGovernanceHash(tab: GovernanceTab) {
   return tab === "profile" ? "" : `#${tab}`;
@@ -115,17 +111,17 @@ function GovernancePageInner() {
     setReferrer(capturedAttribution?.referrer ?? getStoredReferralAddress());
   }, [searchParams]);
 
-  // Check cREP balance
-  const { data: crepBalance, isLoading: crepBalanceLoading } = useScaffoldReadContract({
-    contractName: "CuryoReputation",
+  // Check HREP balance
+  const { data: hrepBalance, isLoading: hrepBalanceLoading } = useScaffoldReadContract({
+    contractName: "HumanReputation",
     functionName: "balanceOf",
     args: [address],
     query: { enabled: !!address },
   });
   const { hasVoterId, isResolved: voterIdResolved } = useVoterIdNFT(address);
 
-  const hasResolvedBalance = !!address && !crepBalanceLoading && crepBalance !== undefined;
-  const hasZeroBalance = hasResolvedBalance && crepBalance === 0n;
+  const hasResolvedBalance = !!address && !hrepBalanceLoading && hrepBalance !== undefined;
+  const hasZeroBalance = hasResolvedBalance && hrepBalance === 0n;
   const addressKey = address?.toLowerCase() ?? null;
   const shouldWaitForEntryRouting = Boolean(address) && (!hashInitialized || !voterIdResolved);
   const faucetOnly = Boolean(address) && hashInitialized && voterIdResolved && !hasVoterId;
@@ -188,7 +184,7 @@ function GovernancePageInner() {
 
   // Show connect wallet prompt if not connected
   if (!isConnected) {
-    return <ConnectWalletCard title="cREP" message="Sign in to participate." />;
+    return <ConnectWalletCard title="HREP" message="Sign in to participate." />;
   }
 
   if (shouldWaitForEntryRouting) {
@@ -217,7 +213,7 @@ function GovernancePageInner() {
           <>
             <button
               onClick={() => selectTab("profile")}
-              className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
+              className={`tab-control px-4 py-1.5 text-base font-medium transition-colors ${
                 activeTab === "profile" ? "pill-active" : "pill-inactive"
               }`}
             >
@@ -225,7 +221,7 @@ function GovernancePageInner() {
             </button>
             <button
               onClick={() => selectTab("faucet")}
-              className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
+              className={`tab-control px-4 py-1.5 text-base font-medium transition-colors ${
                 activeTab === "faucet" ? "pill-active" : "pill-inactive"
               }`}
             >
@@ -236,7 +232,7 @@ function GovernancePageInner() {
           <>
             <button
               onClick={() => selectTab("profile")}
-              className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
+              className={`tab-control px-4 py-1.5 text-base font-medium transition-colors ${
                 activeTab === "profile" ? "pill-active" : "pill-inactive"
               }`}
             >
@@ -244,7 +240,7 @@ function GovernancePageInner() {
             </button>
             <button
               onClick={() => selectTab("leaderboard")}
-              className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
+              className={`tab-control px-4 py-1.5 text-base font-medium transition-colors ${
                 activeTab === "leaderboard" ? "pill-active" : "pill-inactive"
               }`}
             >
@@ -252,7 +248,7 @@ function GovernancePageInner() {
             </button>
             <button
               onClick={() => selectTab("governance")}
-              className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
+              className={`tab-control px-4 py-1.5 text-base font-medium transition-colors ${
                 activeTab === "governance" ? "pill-active" : "pill-inactive"
               }`}
             >
@@ -281,7 +277,6 @@ function GovernancePageInner() {
           </div>
           <GovernanceActionComposer />
           <ProposalList />
-          <PlatformProposals />
         </div>
       )}
     </AppPageShell>

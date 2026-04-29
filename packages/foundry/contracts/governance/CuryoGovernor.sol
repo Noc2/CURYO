@@ -11,17 +11,15 @@ import { GovernorTimelockControl } from "@openzeppelin/contracts/governance/exte
 import { GovernorSettings } from "@openzeppelin/contracts/governance/extensions/GovernorSettings.sol";
 import { TimelockController } from "@openzeppelin/contracts/governance/TimelockController.sol";
 import { IVotes } from "@openzeppelin/contracts/governance/utils/IVotes.sol";
-import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
-import { CuryoReputation } from "../CuryoReputation.sol";
-import { ICategoryRegistry } from "../interfaces/ICategoryRegistry.sol";
+import { HumanReputation } from "../HumanReputation.sol";
 
 /// @title CuryoGovernor
-/// @notice On-chain governance for the Curyo protocol using cREP voting power.
+/// @notice On-chain governance for the Curyo protocol using HREP voting power.
 /// @dev Implements OpenZeppelin Governor with:
 ///      - Simple counting (For/Against/Abstain)
-///      - Votes from cREP token (which implements ERC20Votes)
-///      - Dynamic quorum: 4% of circulating supply (total minus protocol-controlled balances)
-///      - Bootstrap quorum floor of 100K cREP to prevent early capture while circulation is thin
+///      - Votes from HREP token (which implements ERC20Votes)
+    ///      - Dynamic quorum: 4% of circulating supply (total minus protocol-controlled balances)
+    ///      - Bootstrap quorum floor of 1M HREP to prevent early capture while circulation is thin
 ///      - Timelock execution for security
 ///      - 7-day token lock when voting or proposing
 contract CuryoGovernor is
@@ -32,54 +30,65 @@ contract CuryoGovernor is
     GovernorVotesQuorumFraction,
     GovernorTimelockControl
 {
-    /// @notice cREP token used for historical locked-balance checks
-    IVotes public immutable crepToken;
+    /// @notice HREP token used for historical locked-balance checks
+    IVotes public immutable hrepToken;
     /// @notice Address authorized to perform one-time quorum exclusion initialization
     address public immutable poolsInitializer;
     /// @notice Protocol-controlled holders whose balances are excluded from quorum calculation.
     address[] private _excludedHolders;
     mapping(address => bool) public isExcludedHolder;
-    /// @notice Whether excluded holders have been set (one-time initialization)
+    mapping(address => uint48) public excludedHolderEffectiveBlock;
+    /// @notice Whether excluded holders have been set.
     bool public poolsInitialized;
-    /// @notice Bootstrap proposal threshold regardless of early faucet claim sizes (10K cREP with 6 decimals)
-    uint256 public constant BOOTSTRAP_PROPOSAL_THRESHOLD = 10_000 * 1e6;
-    /// @notice Lower proposal threshold reserved for category approval proposals (500 cREP with 6 decimals)
-    uint256 public constant CATEGORY_PROPOSAL_THRESHOLD = 500 * 1e6;
-    /// @notice Minimum quorum regardless of circulating supply (100K cREP with 6 decimals)
-    uint256 public constant MINIMUM_QUORUM = 100_000 * 1e6;
+    /// @notice Bootstrap proposal threshold regardless of early faucet claim sizes (1K HREP with 6 decimals)
+    uint256 public constant BOOTSTRAP_PROPOSAL_THRESHOLD = 1_000 * 1e6;
+    /// @notice Minimum quorum regardless of circulating supply (1M HREP with 6 decimals)
+    uint256 public constant MINIMUM_QUORUM = 1_000_000 * 1e6;
+    /// @notice Highest threshold governance may set, preventing self-bricked proposal creation.
+    uint256 public constant MAX_PROPOSAL_THRESHOLD = MINIMUM_QUORUM;
+    /// @notice Highest voting delay governance may set (~1 week on 1s Celo blocks).
+    uint48 public constant MAX_VOTING_DELAY_BLOCKS = 604_800;
+    /// @notice Voting period bounds governance may set (~1 day to ~30 days on 1s Celo blocks).
+    uint32 public constant MIN_VOTING_PERIOD_BLOCKS = 86_400;
+    uint32 public constant MAX_VOTING_PERIOD_BLOCKS = 2_592_000;
     /// @notice Hard cap to keep quorum evaluation bounded and proposals cheap to evaluate.
     uint256 public constant MAX_EXCLUDED_HOLDERS = 16;
-    /// @notice CategoryRegistry address allowed for lower-threshold category approval proposals.
-    address public categoryRegistry;
+    /// @notice Minimum blocks a proposer must wait between successful proposals (~1 day on 1s Celo blocks).
+    uint256 public constant PROPOSAL_COOLDOWN_BLOCKS = 86_400;
     /// @notice Block number where each proposal was created.
     mapping(uint256 => uint256) public proposalCreatedBlock;
+    /// @notice Earliest block where each proposer may submit another proposal.
+    mapping(address => uint256) public nextProposalBlock;
 
-    event CategoryRegistryUpdated(address indexed categoryRegistry);
+    error ExcludedHolderCannotGovern(address holder);
+    error InvalidExcludedHolder();
+    error ProposalCooldownActive(address proposer, uint256 nextProposalBlock);
+    error InvalidProposalThreshold();
+    error InvalidGovernanceTiming();
 
-    /// @notice Deploy the governor with cREP token and timelock
-    /// @param _crepToken The cREP voting token address
+    event ExcludedHolderReplaced(address indexed oldHolder, address indexed newHolder);
+
+    /// @notice Deploy the governor with HREP token and timelock
+    /// @param _hrepToken The HREP voting token address
     /// @param _timelock The timelock controller address
-    constructor(IVotes _crepToken, TimelockController _timelock)
+    constructor(IVotes _hrepToken, TimelockController _timelock)
         Governor("CuryoGovernor")
         GovernorSettings(
-            7200, // Voting delay: ~1 day (assuming 12s blocks)
-            50400, // Voting period: ~1 week
+            86_400, // Voting delay: ~1 day on 1s Celo blocks
+            604_800, // Voting period: ~1 week on 1s Celo blocks
             BOOTSTRAP_PROPOSAL_THRESHOLD
         )
-        GovernorVotes(_crepToken)
+        GovernorVotes(_hrepToken)
         GovernorVotesQuorumFraction(4) // 4% of circulating supply
         GovernorTimelockControl(_timelock)
     {
-        crepToken = _crepToken;
+        hrepToken = _hrepToken;
         poolsInitializer = msg.sender;
     }
 
     /// @notice One-time initialization of protocol-controlled holders excluded from dynamic quorum.
     /// @dev Can only be called once by the deployment initializer.
-    ///      After initialization, the excluded-holder set cannot be changed — the quorum formula is fixed.
-    // AUDIT NOTE (L-1): Excluded holders are immutable after initialization. If wrong
-    // addresses are passed, dynamic quorum is permanently broken. This is intentional
-    // to prevent governance manipulation of the quorum formula.
+    ///      Initial holders are effective for all historical quorum lookups.
     function initializePools(address[] calldata excludedHolders) external {
         require(!poolsInitialized, "Pools already initialized");
         require(msg.sender == poolsInitializer || msg.sender == timelock(), "Only pools initializer");
@@ -91,29 +100,31 @@ contract CuryoGovernor is
             require(holder != address(0), "Invalid address");
             require(!isExcludedHolder[holder], "Duplicate holder");
             isExcludedHolder[holder] = true;
+            excludedHolderEffectiveBlock[holder] = 0;
             _excludedHolders.push(holder);
         }
         poolsInitialized = true;
     }
 
-    /// @notice Return the full fixed set of holders excluded from quorum calculations.
-    function getExcludedHolders() external view returns (address[] memory) {
-        return _excludedHolders;
+    /// @notice Add a migrated protocol holder to future quorum exclusions.
+    /// @dev Timelock-only via Governor.onlyGovernance. The old holder remains excluded so
+    ///      past quorum snapshots keep their original exclusion set and dust cannot block migration.
+    function replaceExcludedHolder(address oldHolder, address newHolder) external onlyGovernance {
+        if (!poolsInitialized || !isExcludedHolder[oldHolder] || newHolder == address(0) || isExcludedHolder[newHolder])
+        {
+            revert InvalidExcludedHolder();
+        }
+        require(_excludedHolders.length < MAX_EXCLUDED_HOLDERS, "Too many excluded holders");
+
+        isExcludedHolder[newHolder] = true;
+        excludedHolderEffectiveBlock[newHolder] = uint48(block.number);
+        _excludedHolders.push(newHolder);
+        emit ExcludedHolderReplaced(oldHolder, newHolder);
     }
 
-    /// @notice Configure the CategoryRegistry used by the lower-threshold approval flow.
-    /// @dev The deployment initializer can set this once during bootstrap. Any later update must go through governance.
-    function setCategoryRegistry(address _categoryRegistry) external {
-        require(_categoryRegistry != address(0), "Invalid category registry");
-
-        if (categoryRegistry == address(0)) {
-            require(msg.sender == poolsInitializer || msg.sender == timelock(), "Only pools initializer");
-        } else {
-            _checkGovernance();
-        }
-
-        categoryRegistry = _categoryRegistry;
-        emit CategoryRegistryUpdated(_categoryRegistry);
+    /// @notice Return the full set of holders excluded from quorum calculations.
+    function getExcludedHolders() external view returns (address[] memory) {
+        return _excludedHolders;
     }
 
     // --- Required Overrides ---
@@ -130,9 +141,23 @@ contract CuryoGovernor is
         return super.proposalThreshold();
     }
 
-    /// @notice Lower proposal threshold used only for category approval proposals.
-    function categoryProposalThreshold() public pure returns (uint256) {
-        return CATEGORY_PROPOSAL_THRESHOLD;
+    function _setVotingDelay(uint48 newVotingDelay) internal override {
+        if (newVotingDelay > MAX_VOTING_DELAY_BLOCKS) revert InvalidGovernanceTiming();
+        super._setVotingDelay(newVotingDelay);
+    }
+
+    function _setVotingPeriod(uint32 newVotingPeriod) internal override {
+        if (newVotingPeriod < MIN_VOTING_PERIOD_BLOCKS || newVotingPeriod > MAX_VOTING_PERIOD_BLOCKS) {
+            revert InvalidGovernanceTiming();
+        }
+        super._setVotingPeriod(newVotingPeriod);
+    }
+
+    function _setProposalThreshold(uint256 newProposalThreshold) internal override {
+        if (newProposalThreshold == 0 || newProposalThreshold > MAX_PROPOSAL_THRESHOLD) {
+            revert InvalidProposalThreshold();
+        }
+        super._setProposalThreshold(newProposalThreshold);
     }
 
     /// @notice Dynamic quorum: 4% of circulating supply (total minus excluded protocol-controlled balances)
@@ -143,7 +168,10 @@ contract CuryoGovernor is
         uint256 locked = 0;
         uint256 excludedHoldersLength = _excludedHolders.length;
         for (uint256 i = 0; i < excludedHoldersLength; i++) {
-            locked += crepToken.getPastVotes(_excludedHolders[i], blockNumber);
+            address holder = _excludedHolders[i];
+            if (excludedHolderEffectiveBlock[holder] <= blockNumber) {
+                locked += hrepToken.getPastVotes(holder, blockNumber);
+            }
         }
         uint256 circulating = totalSupply > locked ? totalSupply - locked : 0;
         uint256 dynamicQuorum = (circulating * quorumNumerator(blockNumber)) / quorumDenominator();
@@ -198,6 +226,12 @@ contract CuryoGovernor is
 
     // --- Governance Lock Integration ---
 
+    function _requireNonExcludedGovernor(address account) internal view {
+        if (isExcludedHolder[account]) {
+            revert ExcludedHolderCannotGovern(account);
+        }
+    }
+
     /// @dev Override _castVote to lock the voting power used for 7 days
     function _castVote(uint256 proposalId, address account, uint8 support, string memory reason, bytes memory params)
         internal
@@ -205,11 +239,13 @@ contract CuryoGovernor is
         override
         returns (uint256 weight)
     {
+        _requireNonExcludedGovernor(account);
+
         weight = super._castVote(proposalId, account, support, reason, params);
 
         // Lock the voting power that was used
         if (weight > 0) {
-            CuryoReputation(address(token())).lockForGovernance(account, weight);
+            HumanReputation(address(token())).lockForGovernance(account, weight);
         }
 
         return weight;
@@ -222,54 +258,19 @@ contract CuryoGovernor is
         bytes[] memory calldatas,
         string memory description
     ) public virtual override(Governor) returns (uint256) {
+        _requireNonExcludedGovernor(msg.sender);
+        uint256 nextBlock = nextProposalBlock[msg.sender];
+        if (block.number < nextBlock) {
+            revert ProposalCooldownActive(msg.sender, nextBlock);
+        }
+
         uint256 proposalId = super.propose(targets, values, calldatas, description);
         proposalCreatedBlock[proposalId] = block.number;
+        nextProposalBlock[msg.sender] = block.number + PROPOSAL_COOLDOWN_BLOCKS;
 
         // Lock proposal threshold amount for the proposer
-        CuryoReputation(address(token())).lockForGovernance(msg.sender, proposalThreshold());
+        HumanReputation(address(token())).lockForGovernance(msg.sender, proposalThreshold());
 
         return proposalId;
-    }
-
-    /// @notice Create a category-approval proposal using the lower category-specific threshold.
-    /// @dev Only proposals targeting the configured CategoryRegistry.approveCategory path can use this function.
-    ///      The approval calldata is bound to the current pending submission digest, and proposals must be created
-    ///      in a later block than the category submission.
-    function proposeCategoryApproval(uint256 categoryId) public returns (uint256 proposalId) {
-        require(categoryRegistry != address(0), "Category registry not set");
-
-        ICategoryRegistry registry = ICategoryRegistry(categoryRegistry);
-        require(registry.getCategoryStatus(categoryId) == ICategoryRegistry.CategoryStatus.Pending, "Category not pending");
-        require(block.number > registry.getCategoryCreatedBlock(categoryId), "Category proposal too early");
-
-        address proposer = _msgSender();
-        uint256 threshold = categoryProposalThreshold();
-        uint256 proposerVotes = getVotes(proposer, clock() - 1);
-        if (proposerVotes < threshold) {
-            revert GovernorInsufficientProposerVotes(proposer, proposerVotes, threshold);
-        }
-
-        string memory description = string(abi.encodePacked("Approve category #", Strings.toString(categoryId)));
-        if (!_isValidDescriptionForProposer(proposer, description)) {
-            revert GovernorRestrictedProposer(proposer);
-        }
-
-        bytes32 descriptionHash = keccak256(bytes(description));
-        bytes32 approvalDigest = registry.getCategoryApprovalDigest(categoryId);
-        address[] memory targets = new address[](1);
-        targets[0] = categoryRegistry;
-
-        uint256[] memory values = new uint256[](1);
-        values[0] = 0;
-
-        bytes[] memory calldatas = new bytes[](1);
-        calldatas[0] =
-            abi.encodeWithSignature("approveCategory(uint256,bytes32,bytes32)", categoryId, descriptionHash, approvalDigest);
-
-        proposalId = _propose(targets, values, calldatas, description, proposer);
-        proposalCreatedBlock[proposalId] = block.number;
-
-        // Lock only the lower category threshold amount for the proposer.
-        CuryoReputation(address(token())).lockForGovernance(proposer, threshold);
     }
 }

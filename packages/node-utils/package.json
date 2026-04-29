@@ -6,7 +6,7 @@
   "exports": {
     "./contentModeration": "./src/contentModeration.ts",
     "./keystore": "./src/keystore.ts",
-    "./mcpSessionToken": "./src/mcpSessionToken.ts"
+    "./profileSelfReport": "./src/profileSelfReport.ts"
   },
   "scripts": {
     "check-types": "tsc --noEmit"

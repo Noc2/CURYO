@@ -68,6 +68,12 @@ function resolveRpcUrl(networkName) {
   return { rpcUrl: overrideValue, overrideEnvKey };
 }
 
+function clearKeystoreEnvForLocalDeploy() {
+  delete process.env.ETH_KEYSTORE_ACCOUNT;
+  delete process.env.ETH_KEYSTORE;
+  delete process.env.ETH_PASSWORD;
+}
+
 // Check if the network exists in rpc_endpoints
 try {
   const foundryTomlPath = join(__dirname, "..", "foundry.toml");
@@ -86,22 +92,7 @@ try {
   process.exit(1);
 }
 
-if (
-  process.env.LOCALHOST_KEYSTORE_ACCOUNT !== "scaffold-eth-default" &&
-  network === "localhost"
-) {
-  console.log(`
-⚠️ Warning: Using ${process.env.LOCALHOST_KEYSTORE_ACCOUNT} keystore account on localhost.
-
-You can either:
-1. Enter the password for ${process.env.LOCALHOST_KEYSTORE_ACCOUNT} account
-   OR
-2. Set the localhost keystore account in your .env and re-run the command to skip password prompt:
-   LOCALHOST_KEYSTORE_ACCOUNT='scaffold-eth-default'
-`);
-}
-
-let selectedKeystore = process.env.LOCALHOST_KEYSTORE_ACCOUNT;
+let selectedKeystore;
 if (network !== "localhost") {
   if (keystoreArg) {
     // Use the keystore provided via command line argument
@@ -123,17 +114,8 @@ if (network !== "localhost") {
     }
   }
 } else if (keystoreArg) {
-  // Allow overriding the localhost keystore with --keystore flag
-  if (!validateKeystore(keystoreArg)) {
-    console.log(`\n❌ Error: Keystore '${keystoreArg}' not found!`);
-    console.log(
-      `Please check that the keystore exists in ~/.foundry/keystores/`
-    );
-    process.exit(1);
-  }
-  selectedKeystore = keystoreArg;
   console.log(
-    `\n🔑 Using keystore: ${selectedKeystore} for localhost deployment`
+    "\nℹ️  Ignoring --keystore for localhost; local deploys use the standard Anvil private key directly."
   );
 }
 
@@ -155,10 +137,13 @@ The default account (scaffold-eth-default) can only be used for localhost deploy
 }
 
 // Set environment variables for the make command
-process.env.DEPLOY_SCRIPT = "script/Deploy.s.sol";
 const { rpcUrl, overrideEnvKey } = resolveRpcUrl(network);
 process.env.RPC_URL = rpcUrl;
-process.env.ETH_KEYSTORE_ACCOUNT = selectedKeystore;
+if (network === "localhost") {
+  clearKeystoreEnvForLocalDeploy();
+} else {
+  process.env.ETH_KEYSTORE_ACCOUNT = selectedKeystore;
+}
 process.env.RESUME_FLAG = resume ? "--resume" : "";
 
 // Blockscout networks — forge's built-in Celoscan URL returns 403 and the

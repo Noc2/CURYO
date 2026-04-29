@@ -1,87 +1,12 @@
-<svg width="512" height="512" viewBox="0 0 1400 1400" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <radialGradient id="favicon-orb-base" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(856 450) rotate(136) scale(720 702)">
-      <stop stop-color="#FFF8F2" />
-      <stop offset="0.18" stop-color="#F8E1D0" />
-      <stop offset="0.34" stop-color="#F7B070" />
-      <stop offset="0.56" stop-color="#F26426" />
-      <stop offset="0.78" stop-color="#B23C3B" />
-      <stop offset="1" stop-color="#6A345F" />
-    </radialGradient>
-    <radialGradient id="favicon-orb-rim" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(438 516) rotate(30) scale(240 540)">
-      <stop stop-color="#AFC5D7" stop-opacity="0.82" />
-      <stop offset="0.22" stop-color="#7E8996" stop-opacity="0.34" />
-      <stop offset="1" stop-color="#7E8996" stop-opacity="0" />
-    </radialGradient>
-    <radialGradient id="favicon-soft-white" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(710 520) rotate(128) scale(330 260)">
-      <stop stop-color="#FFF8F3" stop-opacity="0.74" />
-      <stop offset="0.52" stop-color="#FFF8F3" stop-opacity="0.2" />
-      <stop offset="1" stop-color="#FFF8F3" stop-opacity="0" />
-    </radialGradient>
-    <radialGradient id="favicon-coral-bloom" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(930 612) rotate(166) scale(270 220)">
-      <stop stop-color="#FFD77E" stop-opacity="0.82" />
-      <stop offset="1" stop-color="#FFD77E" stop-opacity="0" />
-    </radialGradient>
-    <radialGradient id="favicon-violet-pocket" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(500 866) rotate(-26) scale(334 244)">
-      <stop stop-color="#6B37A5" stop-opacity="0.54" />
-      <stop offset="1" stop-color="#6B37A5" stop-opacity="0" />
-    </radialGradient>
-    <radialGradient id="favicon-blue-pocket" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(620 760) rotate(8) scale(320 180)">
-      <stop stop-color="#8C4A53" stop-opacity="0.36" />
-      <stop offset="0.58" stop-color="#C46A4A" stop-opacity="0.22" />
-      <stop offset="1" stop-color="#C46A4A" stop-opacity="0" />
-    </radialGradient>
-    <linearGradient id="favicon-fold-sheen" x1="290" y1="820" x2="1036" y2="650" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FFF7F0" stop-opacity="0" />
-      <stop offset="0.3" stop-color="#FFF7F0" stop-opacity="0.08" />
-      <stop offset="0.56" stop-color="#FFF7F0" stop-opacity="0.34" />
-      <stop offset="0.82" stop-color="#FFD7B2" stop-opacity="0.18" />
-      <stop offset="1" stop-color="#FFD7B2" stop-opacity="0" />
-    </linearGradient>
-    <linearGradient id="favicon-flare-gradient" x1="860" y1="260" x2="1050" y2="736" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#F45C4D" />
-      <stop offset="0.24" stop-color="#FF8A5D" />
-      <stop offset="0.56" stop-color="#FFC37A" />
-      <stop offset="0.82" stop-color="#FFE1A7" />
-      <stop offset="1" stop-color="#FFF4DB" />
-    </linearGradient>
-    <linearGradient id="favicon-flare-core" x1="870" y1="280" x2="1036" y2="716" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FF9E78" />
-      <stop offset="0.48" stop-color="#FFF0CF" />
-      <stop offset="1" stop-color="#FFF8ED" />
-    </linearGradient>
-    <filter id="favicon-band-blur" x="0" y="0" width="1400" height="1400" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-      <feGaussianBlur stdDeviation="40" />
-    </filter>
-    <clipPath id="favicon-orb-clip">
-      <circle cx="700" cy="700" r="360" />
-    </clipPath>
-  </defs>
-
-  <circle cx="700" cy="700" r="652" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="2.2" />
-
-  <path d="M 654.52 49.59 A 652.00 652.00 0 0 1 1275.68 1006.10" fill="none" stroke="#6D352A" stroke-opacity="0.42" stroke-width="34" stroke-linecap="round" stroke-linejoin="round" shape-rendering="geometricPrecision" />
-  <path d="M 654.52 49.59 A 652.00 652.00 0 0 1 1275.68 1006.10" fill="none" stroke="url(#favicon-flare-gradient)" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" shape-rendering="geometricPrecision" />
-  <path d="M 654.52 49.59 A 652.00 652.00 0 0 1 1275.68 1006.10" fill="none" stroke="url(#favicon-flare-core)" stroke-opacity="0.96" stroke-width="10.5" stroke-linecap="round" stroke-linejoin="round" shape-rendering="geometricPrecision" />
-
-  <g transform="translate(700 700) scale(1.24) translate(-700 -700)">
-    <circle cx="700" cy="700" r="360" fill="url(#favicon-orb-base)" />
-    <circle cx="700" cy="700" r="360" fill="url(#favicon-orb-rim)" />
-    <g clip-path="url(#favicon-orb-clip)">
-      <g filter="url(#favicon-band-blur)">
-        <ellipse cx="672" cy="538" rx="280" ry="184" fill="url(#favicon-soft-white)" />
-        <ellipse cx="930" cy="640" rx="246" ry="214" fill="url(#favicon-coral-bloom)" />
-        <ellipse cx="508" cy="904" rx="286" ry="218" fill="url(#favicon-violet-pocket)" />
-        <ellipse cx="662" cy="774" rx="316" ry="176" fill="url(#favicon-blue-pocket)" />
-      </g>
-      <path d="M330 822C464 734 582 684 704 670C810 658 902 686 1018 760C944 812 868 844 788 858C680 876 560 868 442 840C404 832 368 826 330 822Z" fill="url(#favicon-fold-sheen)" />
-      <path d="M350 838C466 760 574 724 694 714C808 704 906 726 1012 776C932 814 852 838 766 848C642 864 520 858 402 840C384 838 366 838 350 838Z" fill="#F5E3D2" fill-opacity="0.11" />
-      <path d="M404 542C518 494 634 492 752 530C842 560 938 626 1038 724" stroke="#FFF7F1" stroke-opacity="0.16" stroke-width="22" stroke-linecap="round" />
-      <path d="M344 930C456 908 574 916 706 956C820 990 910 1040 988 1110" stroke="#E2B2A0" stroke-opacity="0.1" stroke-width="24" stroke-linecap="round" />
-      <circle cx="1118" cy="490" r="50" fill="#FFF9F2" fill-opacity="0.9" />
-      <circle cx="664" cy="556" r="190" fill="url(#favicon-soft-white)" />
-    </g>
-
-    <circle cx="700" cy="700" r="360" fill="none" stroke="#FFF8F2" stroke-opacity="0.14" stroke-width="2" />
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Curyo">
+  <rect width="512" height="512" fill="#000000" />
+  <path
+    d="M 330.9 172.8 C 285 131.4 214.2 135.1 172.8 181.1 C 131.4 227 135.1 297.8 181.1 339.2 C 223.7 377.6 288.3 377.6 330.9 339.2"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="20"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <circle cx="256" cy="256" r="56" fill="#F26426" />
 </svg>

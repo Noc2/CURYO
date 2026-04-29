@@ -2,7 +2,7 @@ import { expect, test } from "../fixtures/wallet";
 import { waitForFeedLoaded } from "../helpers/wait-helpers";
 
 test.describe("Category filter", () => {
-  async function loadVoteFeed(page: any, path = "/vote") {
+  async function loadVoteFeed(page: any, path = "/rate") {
     await expect(async () => {
       await page.goto(path, { waitUntil: "domcontentloaded" });
       await waitForFeedLoaded(page, 20_000);
@@ -22,16 +22,15 @@ test.describe("Category filter", () => {
     // Prefer categories that the local deploy helper seeds with content so the
     // filter assertions don't pick an empty category and stall on a blank feed.
     const knownCategories = [
-      "YouTube",
-      "Magic: The Gathering",
-      "Movies",
-      "People",
-      "Games",
-      "Books",
-      "Crypto Tokens",
-      "AI",
-      "Music",
-      "Twitch",
+      "Products",
+      "Places & Travel",
+      "Software",
+      "Media",
+      "Design",
+      "AI Answers",
+      "Text",
+      "Trust",
+      "General",
     ];
 
     const deadline = Date.now() + 10_000;
@@ -86,7 +85,7 @@ test.describe("Category filter", () => {
 
   test("clicking All clears URL hash", async ({ connectedPage: page }) => {
     // Start with a category hash
-    await loadVoteFeed(page, "/vote#youtube");
+    await loadVoteFeed(page, "/rate#media");
 
     // Click "All" pill
     const allPill = page.getByRole("button", { name: /^All$/i }).first();
@@ -109,7 +108,7 @@ test.describe("Category filter", () => {
     const hash = pill!.name.toLowerCase().replace(/\s+/g, "-");
 
     // Navigate with that hash
-    await loadVoteFeed(page, `/vote#${hash}`);
+    await loadVoteFeed(page, `/rate#${hash}`);
 
     // The pill should have the active class
     const activePill = page.getByRole("button", { name: new RegExp(`^${pill!.name}$`, "i") }).first();

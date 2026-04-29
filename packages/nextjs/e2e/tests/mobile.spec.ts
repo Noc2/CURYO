@@ -12,7 +12,7 @@ test.describe("Mobile viewport (phone)", () => {
   });
 
   test("sidebar hidden and hamburger visible", async ({ connectedPage: page }) => {
-    await page.goto("/vote");
+    await page.goto("/rate");
     await waitForFeedLoaded(page);
 
     const sidebar = page.locator("aside");
@@ -23,7 +23,7 @@ test.describe("Mobile viewport (phone)", () => {
   });
 
   test("hamburger opens mobile menu with nav links", async ({ connectedPage: page }) => {
-    await page.goto("/vote");
+    await page.goto("/rate");
     await waitForFeedLoaded(page);
 
     await page.getByLabel("Open menu").click();
@@ -31,14 +31,14 @@ test.describe("Mobile viewport (phone)", () => {
     const dropdown = page.locator(".dropdown-content");
     await expect(dropdown.getByRole("link", { name: /Discover/i })).toBeVisible({ timeout: 5_000 });
     await expect(dropdown.getByRole("link", { name: /Submit/i })).toBeVisible({ timeout: 3_000 });
-    await expect(dropdown.getByRole("link", { name: /cREP/i })).toBeVisible({ timeout: 3_000 });
+    await expect(dropdown.getByRole("link", { name: /Reputation/i })).toBeVisible({ timeout: 3_000 });
     const voteTopChrome = page.locator('[data-vote-mobile-top-chrome="true"]');
     await expect(voteTopChrome).toHaveAttribute("data-visible", "false");
     await expect(voteTopChrome).toHaveAttribute("inert", "");
   });
 
   test("vote page mobile chrome collapses with feed scroll and reclaims space", async ({ connectedPage: page }) => {
-    await gotoWithRetry(page, "/vote", { ensureWalletConnected: true });
+    await gotoWithRetry(page, "/rate", { ensureWalletConnected: true });
     await waitForFeedLoaded(page);
 
     const mobileHeader = page.locator('[data-mobile-header="true"]');
@@ -411,18 +411,18 @@ test.describe("Mobile viewport (phone)", () => {
     expect(restoredLayout.activeTitleBottom).toBeLessThanOrEqual(restoredLayout.scrollerBottom + 1);
   });
 
-  test("last category card snaps above the mobile dock and opens More", async ({ connectedPage: page }) => {
-    await gotoWithRetry(page, "/vote#crypto-tokens", { ensureWalletConnected: true });
+  test("last category card snaps above the mobile dock and shows context", async ({ connectedPage: page }) => {
+    await gotoWithRetry(page, "/rate#media", { ensureWalletConnected: true });
     await waitForFeedLoaded(page);
 
-    await expect(page.getByRole("button", { name: /^Category: Crypto Tokens$/ }).first()).toBeVisible({
+    await expect(page.getByRole("button", { name: /^Category: Media$/ }).first()).toBeVisible({
       timeout: 10_000,
     });
 
     const lastIndex = await page.evaluate(() => {
       const articles = Array.from(document.querySelectorAll<HTMLElement>("article[data-feed-card-index]"));
       if (articles.length < 2) {
-        throw new Error("Expected multiple Crypto Tokens cards in the mobile feed");
+        throw new Error("Expected multiple Media cards in the mobile feed");
       }
 
       return Number(articles.at(-1)?.getAttribute("data-feed-card-index") ?? -1);
@@ -452,10 +452,10 @@ test.describe("Mobile viewport (phone)", () => {
       )
       .toBe(lastIndex);
 
-    const activeMoreButton = page.locator('article[aria-current="true"] button[aria-label="Expand details"]').first();
-    await expect(activeMoreButton).toBeVisible({ timeout: 5_000 });
+    const activeContextLink = page.locator('article[aria-current="true"] [data-testid="content-source-link"]').first();
+    await expect(activeContextLink).toBeVisible({ timeout: 5_000 });
 
-    const layout = await activeMoreButton.evaluate(button => {
+    const layout = await activeContextLink.evaluate(link => {
       const scroller = document.querySelector<HTMLElement>('[data-mobile-header-scroll-source="true"]');
       const activeArticle = document.querySelector<HTMLElement>('article[aria-current="true"]');
       const mobileDock = document.querySelector<HTMLElement>('[data-testid="vote-mobile-dock"]');
@@ -466,16 +466,16 @@ test.describe("Mobile viewport (phone)", () => {
 
       const scrollerRect = scroller.getBoundingClientRect();
       const activeArticleRect = activeArticle.getBoundingClientRect();
-      const buttonRect = button.getBoundingClientRect();
+      const linkRect = link.getBoundingClientRect();
       const dockRect = mobileDock.getBoundingClientRect();
       const topElement = document.elementFromPoint(
-        buttonRect.left + buttonRect.width / 2,
-        buttonRect.top + buttonRect.height / 2,
+        linkRect.left + linkRect.width / 2,
+        linkRect.top + linkRect.height / 2,
       );
 
       return {
-        activeMoreBottom: buttonRect.bottom,
-        activeMoreCenterTopmost: topElement === button || button.contains(topElement),
+        activeContextBottom: linkRect.bottom,
+        activeContextCenterTopmost: topElement === link || link.contains(topElement),
         activeTop: activeArticleRect.top,
         dockTop: dockRect.top,
         scrollerTop: scrollerRect.top,
@@ -483,15 +483,81 @@ test.describe("Mobile viewport (phone)", () => {
     });
 
     expect(Math.abs(layout.activeTop - layout.scrollerTop - 12)).toBeLessThanOrEqual(24);
-    expect(layout.activeMoreBottom).toBeLessThanOrEqual(layout.dockTop - 1);
-    expect(layout.activeMoreCenterTopmost).toBe(true);
+    expect(layout.activeContextBottom).toBeLessThanOrEqual(layout.dockTop - 1);
+    expect(layout.activeContextCenterTopmost).toBe(true);
+  });
 
-    await activeMoreButton.click();
-    await expect(activeMoreButton).toHaveAttribute("aria-expanded", "true");
+  test("mobile voting dock keeps rating orb raised above equal action circles", async ({ connectedPage: page }) => {
+    await gotoWithRetry(page, "/rate", { ensureWalletConnected: true });
+    await waitForFeedLoaded(page);
+
+    const canVote = await findVoteableContent(page);
+    expect(canVote, "Should find at least one voteable content with dock vote controls").toBeTruthy();
+
+    const dock = page.locator('[data-testid="vote-mobile-dock"]');
+    await expect(dock).toBeVisible({ timeout: 5_000 });
+
+    const layout = await dock.evaluate(node => {
+      const dockElement = node as HTMLElement;
+      const ratingOrb = dockElement.querySelector<HTMLElement>(
+        '[data-mobile-dock-rating-orb="true"] [role="img"][aria-label^="Community rating"]',
+      );
+      const shell = dockElement.querySelector<HTMLElement>('[data-mobile-dock-shell="true"]');
+      const actionControls = [
+        dockElement.querySelector<HTMLElement>('[aria-label^="Bounty:"]'),
+        dockElement.querySelector<HTMLElement>('button[aria-label="Vote up and raise the score"]'),
+        dockElement.querySelector<HTMLElement>('button[aria-label="Vote down and lower the score"]'),
+        dockElement.querySelector<HTMLElement>(
+          'button[aria-label="Expand details"], button[aria-label="Collapse details"]',
+        ),
+      ];
+
+      if (!ratingOrb || !shell || actionControls.some(control => !control)) {
+        throw new Error("Missing mobile dock rating orb, shell, or action controls");
+      }
+
+      const toRect = (element: HTMLElement) => {
+        const rect = element.getBoundingClientRect();
+        return {
+          bottom: rect.bottom,
+          height: rect.height,
+          left: rect.left,
+          right: rect.right,
+          top: rect.top,
+          width: rect.width,
+        };
+      };
+      const dockRect = toRect(dockElement);
+      const ratingRect = toRect(ratingOrb);
+      const controlRects = actionControls.map(control => toRect(control as HTMLElement));
+      const shellStyle = getComputedStyle(shell);
+
+      return {
+        controlRects,
+        dockCenterX: dockRect.left + dockRect.width / 2,
+        maskImage: shellStyle.maskImage,
+        ratingRect,
+        webkitMaskImage: shellStyle.getPropertyValue("-webkit-mask-image"),
+      };
+    });
+
+    const firstControl = layout.controlRects[0];
+    for (const control of layout.controlRects.slice(1)) {
+      expect(Math.abs(control.width - firstControl.width)).toBeLessThanOrEqual(1);
+      expect(Math.abs(control.height - firstControl.height)).toBeLessThanOrEqual(1);
+      expect(Math.abs(control.top - firstControl.top)).toBeLessThanOrEqual(1);
+    }
+
+    const highestControlTop = Math.min(...layout.controlRects.map(rect => rect.top));
+    expect(layout.ratingRect.width).toBeGreaterThan(firstControl.width + 30);
+    expect(layout.ratingRect.height).toBeGreaterThan(firstControl.height + 30);
+    expect(layout.ratingRect.top).toBeLessThan(highestControlTop - 8);
+    expect(Math.abs(layout.ratingRect.left + layout.ratingRect.width / 2 - layout.dockCenterX)).toBeLessThanOrEqual(2);
+    expect(`${layout.maskImage} ${layout.webkitMaskImage}`).toContain("radial-gradient");
   });
 
   test("category switches keep the mobile feed controls visible", async ({ connectedPage: page }) => {
-    await gotoWithRetry(page, "/vote#games", { ensureWalletConnected: true });
+    await gotoWithRetry(page, "/rate#products", { ensureWalletConnected: true });
     await waitForFeedLoaded(page);
 
     const voteTopChrome = page.locator('[data-vote-mobile-top-chrome="true"]');
@@ -534,18 +600,18 @@ test.describe("Mobile viewport (phone)", () => {
 
     await expect(voteTopChrome).toHaveAttribute("data-visible", "true");
 
-    const categoryButton = voteTopChrome.getByRole("button", { name: /^Category: Games$/ }).first();
+    const categoryButton = voteTopChrome.getByRole("button", { name: /^Category: Products$/ }).first();
     await expect(categoryButton).toBeVisible({ timeout: 10_000 });
     await expectHeaderTabsStable();
 
     await categoryButton.click();
     const categoryDialog = page.getByRole("dialog", { name: "Category options" });
     await expect(categoryDialog).toBeVisible({ timeout: 5_000 });
-    await categoryDialog.getByRole("button", { name: "Crypto Tokens" }).click();
+    await categoryDialog.getByRole("button", { name: "Media" }).click();
 
-    await expect(page).toHaveURL(/#crypto-tokens$/, { timeout: 5_000 });
+    await expect(page).toHaveURL(/#media$/, { timeout: 5_000 });
     await expectHeaderTabsStable();
-    await expect(voteTopChrome.getByRole("button", { name: /^Category: Crypto Tokens$/ }).first()).toBeVisible({
+    await expect(voteTopChrome.getByRole("button", { name: /^Category: Media$/ }).first()).toBeVisible({
       timeout: 5_000,
     });
     const viewButton = voteTopChrome.getByRole("button", { name: /^View(?:$|:)/ }).first();
@@ -566,7 +632,7 @@ test.describe("Mobile viewport (phone)", () => {
     connectedPage: page,
   }) => {
     await page.goto("/?landing=1");
-    await expect(page.getByText(/Human Reputation at Stake/i)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/AI Asks,\s*Humans Earn/i)).toBeVisible({ timeout: 10_000 });
 
     const mobileHeader = page.locator('[data-mobile-header="true"]');
     await expect(mobileHeader).toHaveAttribute("data-visible", "true");
@@ -582,7 +648,7 @@ test.describe("Mobile viewport (phone)", () => {
   });
 
   test("hamburger menu navigation works", async ({ connectedPage: page }) => {
-    await page.goto("/vote");
+    await page.goto("/rate");
     await waitForFeedLoaded(page);
 
     await page.getByLabel("Open menu").click();
@@ -590,16 +656,13 @@ test.describe("Mobile viewport (phone)", () => {
       .locator(".dropdown-content")
       .getByRole("link", { name: /Submit/i })
       .waitFor({ state: "visible", timeout: 3_000 });
-    await page
-      .locator(".dropdown-content")
-      .getByRole("link", { name: /Submit/i })
-      .click();
+    await page.locator(".dropdown-content").getByRole("link", { name: /Submit/i }).click();
 
-    await expect(page).toHaveURL(/\/submit/, { timeout: 15_000 });
+    await expect(page).toHaveURL(/\/ask/, { timeout: 15_000 });
   });
 
   test("vote page loads and content visible without overflow", async ({ connectedPage: page }) => {
-    await page.goto("/vote");
+    await page.goto("/rate");
     await waitForFeedLoaded(page);
 
     const main = page.locator("main");
@@ -612,7 +675,7 @@ test.describe("Mobile viewport (phone)", () => {
   });
 
   test("view filter sheet opens above the vote feed", async ({ connectedPage: page }) => {
-    await page.goto("/vote");
+    await page.goto("/rate");
     await waitForFeedLoaded(page);
 
     const viewButton = page.getByRole("button", { name: /^View$/i }).first();
@@ -638,7 +701,7 @@ test.describe("Mobile viewport (phone)", () => {
   });
 
   test("StakeSelector dialog opens on mobile", async ({ connectedPage: page }) => {
-    await page.goto("/vote");
+    await page.goto("/rate");
     await waitForFeedLoaded(page);
 
     const canVote = await findVoteableContent(page);
@@ -659,27 +722,23 @@ test.describe("Mobile viewport (phone)", () => {
     await page.keyboard.press("Escape");
   });
 
-  test("preview clicks keep the user on /vote and emphasize the mobile dock", async ({ connectedPage: page }) => {
-    await gotoWithRetry(page, "/vote?q=go-ethereum", { ensureWalletConnected: true, timeout: 45_000 });
+  test("image preview clicks open the context link externally", async ({ connectedPage: page }) => {
+    await gotoWithRetry(page, "/rate?q=workspace", { ensureWalletConnected: true, timeout: 45_000 });
     await waitForFeedLoaded(page, 30_000);
 
     const activeSurface = page.locator('[aria-current="true"] [data-testid="vote-content-surface"]').first();
     await expect(activeSurface).toBeVisible({ timeout: 10_000 });
 
-    const popupPromise = page
-      .context()
-      .waitForEvent("page", { timeout: 1_000 })
-      .catch(() => null);
+    const popupPromise = page.context().waitForEvent("page");
     await activeSurface.click();
 
     const popup = await popupPromise;
-    expect(popup).toBeNull();
-    await expect(page).toHaveURL(/\/vote\?.*q=go-ethereum.*content=/, { timeout: 10_000 });
-    await expect(page.locator('[data-vote-attention="true"]').first()).toBeVisible({ timeout: 5_000 });
+    await popup.waitForLoadState("domcontentloaded");
+    await expect(popup).toHaveURL(/(?:picsum|fastly\.picsum)\.photos/i);
   });
 
-  test("submit page form is usable", async ({ connectedPage: page }) => {
-    await page.goto("/submit");
+  test("ask page form is usable", async ({ connectedPage: page }) => {
+    await page.goto("/ask");
 
     const main = page.locator("main");
     await expect(main).toBeVisible({ timeout: 10_000 });
@@ -703,7 +762,7 @@ test.describe("Mobile viewport (phone)", () => {
 
     const governanceContent = main
       .getByRole("button", { name: /Profile|Leaderboard|Governance|Voter ID/ })
-      .or(main.getByText(/Voting performance|Staked cREP|Checking Voter ID/i));
+      .or(main.getByText(/Voting performance|Staked HREP|Checking Voter ID/i));
     await expect(governanceContent.first()).toBeVisible({ timeout: 15_000 });
   });
 
@@ -726,7 +785,7 @@ test.describe("Tablet viewport", () => {
   });
 
   test("sidebar hidden on tablet width (xl breakpoint)", async ({ connectedPage: page }) => {
-    await page.goto("/vote");
+    await page.goto("/rate");
     await waitForFeedLoaded(page);
 
     // Sidebar uses xl:flex (1280px+). iPad Mini (768px) is below xl, so sidebar is hidden
@@ -739,7 +798,7 @@ test.describe("Tablet viewport", () => {
   });
 
   test("vote page layout on tablet", async ({ connectedPage: page }) => {
-    await page.goto("/vote");
+    await page.goto("/rate");
     await waitForFeedLoaded(page);
 
     const main = page.locator("main");
@@ -759,7 +818,7 @@ test.describe("Tablet viewport", () => {
       }
     });
 
-    await page.goto("/vote");
+    await page.goto("/rate");
     await waitForFeedLoaded(page);
 
     const voteTopChrome = page.locator('[data-vote-mobile-top-chrome="true"]');
@@ -816,7 +875,7 @@ test.describe("Tablet viewport", () => {
   });
 
   test("no horizontal overflow on key pages", async ({ connectedPage: page }) => {
-    const pages = ["/vote", "/submit", "/governance", "/docs"];
+    const pages = ["/rate", "/ask", "/governance", "/docs"];
 
     for (const path of pages) {
       await page.goto(path, { waitUntil: "domcontentloaded" });

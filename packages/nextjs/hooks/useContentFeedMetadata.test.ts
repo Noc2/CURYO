@@ -4,16 +4,16 @@ import { type ContentItem, mapContentItem, mergeContentFeedMetadata } from "~~/h
 import {
   getContentFeedMetadataCacheKey,
   getContentFeedMetadataUrls,
-  getContentFeedValidationUrls,
   getGenericValidationMap,
   isContentFeedMetadataPrefetchPending,
-  normalizeValidationBatchResults,
 } from "~~/hooks/useContentFeedMetadata";
+import { buildFallbackMediaItems } from "~~/lib/contentMedia";
 
 function makeContentItem(overrides: Partial<ContentItem> & Pick<ContentItem, "id" | "url">): ContentItem {
   return {
     id: overrides.id,
     url: overrides.url,
+    media: overrides.media ?? buildFallbackMediaItems(overrides.url),
     title: overrides.title ?? "Example title",
     description: overrides.description ?? "Example description",
     tags: overrides.tags ?? [],
@@ -35,99 +35,67 @@ function makeContentItem(overrides: Partial<ContentItem> & Pick<ContentItem, "id
 
 test("getContentFeedMetadataCacheKey stays stable when the feed order changes", () => {
   const firstFeed = [
-    makeContentItem({ id: 1n, url: "https://example.com/b" }),
-    makeContentItem({ id: 2n, url: "https://example.com/a" }),
-    makeContentItem({ id: 3n, url: "https://example.com/b" }),
+    makeContentItem({ id: 1n, url: "https://example.com/b.jpg" }),
+    makeContentItem({ id: 2n, url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" }),
+    makeContentItem({ id: 3n, url: "https://example.com/b.jpg" }),
+    makeContentItem({ id: 6n, url: "" }),
   ];
   const secondFeed = [
-    makeContentItem({ id: 4n, url: "https://example.com/a" }),
-    makeContentItem({ id: 5n, url: "https://example.com/b" }),
+    makeContentItem({ id: 4n, url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" }),
+    makeContentItem({ id: 5n, url: "https://example.com/b.jpg" }),
   ];
 
-  assert.deepEqual(getContentFeedMetadataUrls(firstFeed), ["https://example.com/a", "https://example.com/b"]);
+  assert.deepEqual(getContentFeedMetadataUrls(firstFeed), [
+    "https://example.com/b.jpg",
+    "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+  ]);
   assert.equal(
     getContentFeedMetadataCacheKey(getContentFeedMetadataUrls(firstFeed)),
     getContentFeedMetadataCacheKey(getContentFeedMetadataUrls(secondFeed)),
   );
 });
 
-test("getContentFeedValidationUrls skips generic URLs before live validation", () => {
-  const genericUrl = "https://example.com/articles/security";
-  const youtubeUrl = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
-  const wikipediaUrl = "https://en.wikipedia.org/wiki/Bitcoin";
-
-  assert.deepEqual(getContentFeedValidationUrls([genericUrl, youtubeUrl, wikipediaUrl]), [youtubeUrl, wikipediaUrl]);
-});
-
-test("getGenericValidationMap keeps generic URLs broken without an API round-trip", () => {
+test("getGenericValidationMap leaves generic context links validatable by metadata", () => {
   const genericUrl = "https://example.com/articles/security";
   const platformUrl = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
 
-  assert.deepEqual(getGenericValidationMap([genericUrl, platformUrl]), {
-    [genericUrl]: false,
-  });
+  assert.deepEqual(getGenericValidationMap([genericUrl, platformUrl]), {});
 });
 
 test("mergeContentFeedMetadata adds rich metadata without dropping the existing thumbnail fallback", () => {
-  const url = "https://en.wikipedia.org/wiki/Bitcoin";
+  const url = "https://example.com/bitcoin.jpg";
   const [merged] = mergeContentFeedMetadata(
     [makeContentItem({ id: 1n, url, thumbnailUrl: "https://img.youtube.com/fallback.jpg" })],
     {
       [url]: {
         thumbnailUrl: null,
-        title: "Bitcoin",
-        description: "Peer-to-peer electronic cash",
       },
     },
     { [url]: false },
   );
 
   assert.equal(merged.thumbnailUrl, "https://img.youtube.com/fallback.jpg");
-  assert.equal(merged.contentMetadata?.title, "Bitcoin");
   assert.equal(merged.isValidUrl, false);
 });
 
 test("mergeContentFeedMetadata preserves prior metadata when a later refresh omits the url", () => {
-  const url = "https://github.com/openai/openai-node";
+  const url = "https://example.com/openai-node.jpg";
   const [enriched] = mergeContentFeedMetadata(
     [makeContentItem({ id: 1n, url })],
     {
       [url]: {
-        thumbnailUrl: "https://avatars.githubusercontent.com/u/14957082?v=4",
-        title: "openai/openai-node",
+        thumbnailUrl: "https://example.com/openai-node.jpg",
       },
     },
     {},
   );
 
   const [preserved] = mergeContentFeedMetadata([enriched], {}, {});
-  assert.equal(preserved.contentMetadata?.title, "openai/openai-node");
-  assert.equal(preserved.thumbnailUrl, "https://avatars.githubusercontent.com/u/14957082?v=4");
-});
-
-test("normalizeValidationBatchResults marks generic urls as broken when the API leaves them unvalidated", () => {
-  const genericUrl = "https://example.com/articles/security";
-  const platformUrl = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
-
-  assert.deepEqual(
-    normalizeValidationBatchResults([genericUrl, platformUrl], {
-      [platformUrl]: { isValid: true },
-    }),
-    {
-      [genericUrl]: false,
-      [platformUrl]: true,
-    },
-  );
-});
-
-test("normalizeValidationBatchResults leaves omitted supported platforms unresolved", () => {
-  const platformUrl = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
-
-  assert.deepEqual(normalizeValidationBatchResults([platformUrl], {}), {});
+  assert.equal(preserved.thumbnailUrl, "https://example.com/openai-node.jpg");
 });
 
 test("isContentFeedMetadataPrefetchPending only defers embeds while thumbnail batches are unresolved", () => {
-  const urls = ["https://github.com/openai/openai-node"];
+  const urls = ["https://www.youtube.com/watch?v=dQw4w9WgXcQ"];
 
   assert.equal(isContentFeedMetadataPrefetchPending(urls, undefined), true);
   assert.equal(isContentFeedMetadataPrefetchPending(urls, {}), true);
@@ -135,13 +103,12 @@ test("isContentFeedMetadataPrefetchPending only defers embeds while thumbnail ba
 });
 
 test("isContentFeedMetadataPrefetchPending stays pending when only part of the next feed is enriched", () => {
-  const urls = ["https://github.com/openai/openai-node", "https://rawg.io/games/portal-2"];
+  const urls = ["https://example.com/openai-node.jpg", "https://www.youtube.com/watch?v=dQw4w9WgXcQ"];
 
   assert.equal(
     isContentFeedMetadataPrefetchPending(urls, {
       [urls[0]]: {
-        thumbnailUrl: "https://avatars.githubusercontent.com/u/14957082?v=4",
-        title: "openai/openai-node",
+        thumbnailUrl: "https://example.com/openai-node.jpg",
       },
     }),
     true,

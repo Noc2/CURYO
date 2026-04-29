@@ -137,19 +137,7 @@ export function getServerRpcOverrides(): Partial<Record<number, string>> {
 
 export function getDatabaseConfig() {
   const rawDatabaseUrl = readEnv("DATABASE_URL");
-  const usesLegacyLocalDatabaseUrl =
-    rawDatabaseUrl === "file:local.db" ||
-    rawDatabaseUrl?.startsWith("file:") === true ||
-    rawDatabaseUrl?.startsWith("sqlite:") === true;
-  const url = rawDatabaseUrl
-    ? usesLegacyLocalDatabaseUrl
-      ? !isProduction
-        ? "memory:"
-        : undefined
-      : normalizeDatabaseUrl(rawDatabaseUrl)
-    : !isProduction
-      ? defaultDevDatabaseUrl
-      : undefined;
+  const url = rawDatabaseUrl ? normalizeDatabaseUrl(rawDatabaseUrl) : !isProduction ? defaultDevDatabaseUrl : undefined;
 
   if (!url) {
     throw new Error("DATABASE_URL is required in production.");
@@ -158,10 +146,6 @@ export function getDatabaseConfig() {
   return {
     url,
   };
-}
-
-export function getTmdbApiKey(): string | undefined {
-  return readEnv("TMDB_API_KEY");
 }
 
 export function getOptionalAppUrl(): string | undefined {
@@ -189,6 +173,11 @@ export function getThirdwebClientId(): string | undefined {
 
 export function getThirdwebServerVerifierSecret(): string | undefined {
   return readEnv("THIRDWEB_SERVER_VERIFIER_SECRET");
+}
+
+export function getX402UsdcAddressOverride(): `0x${string}` | undefined {
+  const value = readEnv("CURYO_X402_USDC_ADDRESS");
+  return value?.startsWith("0x") ? (value as `0x${string}`) : undefined;
 }
 
 export function getFreeTransactionLimit(): number {

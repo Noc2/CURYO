@@ -12,7 +12,7 @@ type FollowedActivityNotification =
   | { kind: "submission"; item: PonderDiscoverSignalsSubmissionItem }
   | { kind: "resolution"; item: PonderDiscoverSignalsResolutionItem };
 
-export interface SeenFollowedActivityNotificationKeys {
+interface SeenFollowedActivityNotificationKeys {
   submissionKeys: Set<string>;
   resolutionKeys: Set<string>;
 }

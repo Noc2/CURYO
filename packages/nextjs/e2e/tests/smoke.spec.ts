@@ -16,17 +16,17 @@ test.describe("Smoke tests", () => {
 
   test("wallet auto-connects via the localhost thirdweb test wallet", async ({ page }) => {
     await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey);
-    await gotoWithRetry(page, "/vote", { ensureWalletConnected: true });
+    await gotoWithRetry(page, "/rate", { ensureWalletConnected: true });
     await waitForWalletConnected(page);
     await waitForFeedLoaded(page, 30_000);
 
     // After feed loads, check for wallet connection indicators.
-    // If the feed is empty ("No content submitted yet"), the sort dropdown still renders,
+    // If the feed is empty ("No questions have been asked yet"), the sort dropdown still renders,
     // proving the wallet connected and the page loaded (just no content in Ponder yet).
     const voteUp = page.getByRole("button", { name: "Vote up" });
     const votedStatus = page.getByText(/Voted(?: hidden| Up| Down)?/i);
-    const ownContent = page.getByText("Your submission");
-    const emptyFeed = page.getByText("No content submitted yet");
+    const ownContent = page.getByText("Your question");
+    const emptyFeed = page.getByText("No questions have been asked yet");
     const sortDropdown = page.locator("select").first();
 
     const connectedIndicator = voteUp.or(votedStatus).or(ownContent).or(emptyFeed).or(sortDropdown);
@@ -36,27 +36,27 @@ test.describe("Smoke tests", () => {
     await expect(getVisibleAuthConnectButton(page)).toHaveCount(0);
   });
 
-  test("brand link can reopen landing page without redirecting connected users back to discover", async ({ page }) => {
+  test("brand link can reopen landing page without redirecting connected users back to rate", async ({ page }) => {
     await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey);
-    await gotoWithRetry(page, "/vote", { ensureWalletConnected: true });
+    await gotoWithRetry(page, "/rate", { ensureWalletConnected: true });
     await waitForWalletConnected(page);
     await waitForFeedLoaded(page, 30_000);
 
     await page.getByRole("link", { name: /CURYO \(BETA\)/i }).click();
 
-    await expect(page.getByRole("heading", { name: /Human Reputation at Stake/i }).first()).toBeVisible({
+    await expect(page.getByRole("heading", { name: /AI Asks,\s*Humans Earn/i }).first()).toBeVisible({
       timeout: 15_000,
     });
     await expect(page).toHaveURL(/\/$/);
   });
 
-  test("navigation to submit page works", async ({ page }) => {
+  test("navigation to ask page works", async ({ page }) => {
     await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey);
-    await gotoWithRetry(page, "/submit", { ensureWalletConnected: true });
+    await gotoWithRetry(page, "/ask", { ensureWalletConnected: true });
 
-    await expect(page).toHaveURL(/\/submit/);
-    // Verify the submit page rendered (form, VoterID prompt, or connect wallet prompt)
-    const heading = page.getByRole("heading", { name: /^Submit$|Submit Content|Voter ID Required/i });
+    await expect(page).toHaveURL(/\/ask/);
+    // Verify the ask page rendered (form, VoterID prompt, or connect wallet prompt)
+    const heading = page.getByRole("heading", { name: /^Submit$|Submit Question|Voter ID Required/i });
     await expect(heading).toBeVisible({ timeout: 15_000 });
   });
 });

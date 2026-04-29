@@ -15,12 +15,12 @@ export function deriveCommitVoteTargetTimeSeconds(params: {
   roundStartTimeSeconds?: number | null;
   newRoundTargetBufferSeconds?: number;
 }) {
-  const latestBlockTimestampSeconds = Math.max(0, Math.floor(params.latestBlockTimestampSeconds));
+  const commitTimestampSeconds = Math.max(0, Math.floor(params.latestBlockTimestampSeconds)) + 1;
   const epochDurationSeconds = Math.max(1, Math.floor(params.epochDurationSeconds));
   const roundStartTimeSeconds = params.roundStartTimeSeconds != null ? Math.floor(params.roundStartTimeSeconds) : null;
 
   if (roundStartTimeSeconds != null && roundStartTimeSeconds > 0) {
-    const elapsedSeconds = Math.max(0, latestBlockTimestampSeconds - roundStartTimeSeconds);
+    const elapsedSeconds = Math.max(0, commitTimestampSeconds - roundStartTimeSeconds);
     const currentEpochIndex = Math.floor(elapsedSeconds / epochDurationSeconds);
     const nextEpochBoundarySeconds = roundStartTimeSeconds + (currentEpochIndex + 1) * epochDurationSeconds;
 
@@ -32,7 +32,7 @@ export function deriveCommitVoteTargetTimeSeconds(params: {
     params.newRoundTargetBufferSeconds ?? DEFAULT_NEW_ROUND_TARGET_BUFFER_SECONDS,
   );
 
-  return latestBlockTimestampSeconds + epochDurationSeconds + newRoundTargetBufferSeconds;
+  return commitTimestampSeconds + epochDurationSeconds + newRoundTargetBufferSeconds;
 }
 
 export function deriveCommitVoteRuntimeNowMs(params: {

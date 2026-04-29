@@ -173,10 +173,8 @@ export function FeedScopeFilter({ value, groups, onChange, label = "View" }: Fee
                       setIsOpen(false);
                     }}
                     title={option.description}
-                    className={`flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left text-base font-medium transition-colors sm:rounded-xl sm:px-3 sm:py-2 ${
-                      isActive
-                        ? "bg-primary/10 text-primary"
-                        : "text-base-content/80 hover:bg-base-200 hover:text-base-content sm:hover:bg-base-300"
+                    className={`flex w-full items-center justify-between rounded-lg px-4 py-3 text-left text-base font-medium transition-colors sm:px-3 sm:py-2 ${
+                      isActive ? "choice-row-active" : "choice-row-inactive"
                     }`}
                   >
                     <span>{option.label}</span>
@@ -215,7 +213,7 @@ export function FeedScopeFilter({ value, groups, onChange, label = "View" }: Fee
         ref={buttonRef}
         type="button"
         onClick={() => setIsOpen(prev => !prev)}
-        className={`inline-flex items-center rounded-full px-3 py-1.5 text-base font-medium whitespace-nowrap transition-colors ${
+        className={`tab-control inline-flex items-center px-3 py-1.5 text-base font-medium whitespace-nowrap transition-colors ${
           isFiltered ? "pill-filter-active" : "pill-filter"
         }`}
         aria-haspopup="dialog"
@@ -232,7 +230,7 @@ export function FeedScopeFilter({ value, groups, onChange, label = "View" }: Fee
             ? createPortal(
                 <div
                   ref={desktopPanelRef}
-                  className="hidden rounded-2xl bg-base-200 p-2 shadow-2xl sm:fixed sm:z-40 sm:block"
+                  className="hidden rounded-lg bg-base-200 p-2 shadow-2xl sm:fixed sm:z-40 sm:block"
                   style={{
                     left: desktopLayout?.left ?? 0,
                     top: desktopLayout?.top ?? 0,

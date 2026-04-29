@@ -1,4 +1,4 @@
-import { CuryoReputationAbi, decodeVoteTransferPayload } from "@curyo/contracts";
+import { HumanReputationAbi, decodeVoteTransferPayload } from "@curyo/contracts";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { decodeFunctionData } from "viem";
@@ -29,6 +29,7 @@ test("buildVoteTransferPayload round-trips through the contracts codec", () => {
   const drandChainHash = ("0x" + "22".repeat(32)) as `0x${string}`;
   const payload = buildVoteTransferPayload({
     contentId: 42n,
+    roundId: 4n,
     roundReferenceRatingBps: 5_000,
     commitHash: "0x1111111111111111111111111111111111111111111111111111111111111111",
     ciphertext: "0x1234",
@@ -39,6 +40,7 @@ test("buildVoteTransferPayload round-trips through the contracts codec", () => {
 
   assert.deepEqual(decodeVoteTransferPayload(payload), {
     contentId: 42n,
+    roundId: 4n,
     roundReferenceRatingBps: 5_000,
     commitHash: "0x1111111111111111111111111111111111111111111111111111111111111111",
     ciphertext: "0x1234",
@@ -64,15 +66,18 @@ test("buildCommitVoteParams returns the tlock metadata needed for commitVote", a
   };
 
   const result = await buildCommitVoteParams({
+    voter: "0x1111111111111111111111111111111111111111",
     contentId: 42n,
     isUp: true,
     stakeAmount: 2.5,
     epochDuration: 1200,
+    roundId: 1n,
     roundReferenceRatingBps: 5_000,
     runtime,
   });
 
   assert.equal(result.targetRound > 0n, true);
+  assert.equal(result.roundId, 1n);
   assert.equal(result.drandChainHash, `0x${"ab".repeat(32)}`);
   assert.equal(result.frontend, "0x0000000000000000000000000000000000000000");
 });
@@ -81,6 +86,7 @@ test("buildVoteTransferAndCallData encodes the token transfer call", () => {
   const drandChainHash = ("0x" + "22".repeat(32)) as `0x${string}`;
   const payload = buildVoteTransferPayload({
     contentId: 42n,
+    roundId: 4n,
     roundReferenceRatingBps: 5_000,
     commitHash: "0x1111111111111111111111111111111111111111111111111111111111111111",
     ciphertext: "0x1234",
@@ -95,7 +101,7 @@ test("buildVoteTransferAndCallData encodes the token transfer call", () => {
   });
 
   const decoded = decodeFunctionData({
-    abi: CuryoReputationAbi,
+    abi: HumanReputationAbi,
     data,
   });
 

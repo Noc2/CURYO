@@ -1,6 +1,9 @@
 import { CURYO_E2E_TEST_WALLET_PRIVATE_KEY_STORAGE_KEY } from "../../services/thirdweb/testWalletStorage";
 import type { Locator, Page } from "@playwright/test";
 
+const VOTE_UP_BUTTON_NAME = /^Vote up\b/i;
+const VOTE_DOWN_BUTTON_NAME = /^Vote down\b/i;
+
 const RETRIABLE_GOTO_ERROR_PATTERNS = [
   /ERR_ABORTED/i,
   /ERR_CONNECTION_RESET/i,
@@ -153,18 +156,19 @@ export async function gotoWithRetry(
 
 /**
  * Wait until the content feed has loaded — either content cards appear
- * or the "No content submitted yet" empty state shows.
+ * or the "No questions have been asked yet" empty state shows.
  */
 export async function waitForFeedLoaded(page: Page, timeout = 15_000): Promise<void> {
+  const effectiveTimeout = getEffectiveE2ETimeout(timeout);
   const feedContent = () =>
     page
-      .getByRole("button", { name: "Vote up" })
-      .or(page.getByRole("button", { name: "Vote down" }))
+      .getByRole("button", { name: VOTE_UP_BUTTON_NAME })
+      .or(page.getByRole("button", { name: VOTE_DOWN_BUTTON_NAME }))
       .or(page.getByText(/Voted(?: hidden| Up| Down)?/i))
-      .or(page.getByText("Your submission"))
+      .or(page.getByText("Your question"))
       .or(page.getByText(/Cooldown/))
       .or(page.getByText("Round full"))
-      .or(page.getByText("No content submitted yet"))
+      .or(page.getByText("No questions have been asked yet"))
       .or(page.getByText(/No content found/i));
   const connectButton = getVisibleAuthConnectButton(page);
 
@@ -180,11 +184,11 @@ export async function waitForFeedLoaded(page: Page, timeout = 15_000): Promise<v
       ) {
         await connectButton
           .first()
-          .waitFor({ state: "hidden", timeout: Math.min(timeout, 10_000) })
+          .waitFor({ state: "hidden", timeout: Math.min(effectiveTimeout, 10_000) })
           .catch(() => undefined);
       }
 
-      await feedContent().first().waitFor({ state: "visible", timeout });
+      await feedContent().first().waitFor({ state: "visible", timeout: effectiveTimeout });
       return;
     } catch (error) {
       lastError = error;
@@ -207,8 +211,8 @@ export async function waitForFeedLoaded(page: Page, timeout = 15_000): Promise<v
         throw error;
       }
 
-      await page.reload({ waitUntil: "domcontentloaded" });
-      await page.waitForLoadState("networkidle").catch(() => undefined);
+      await page.reload({ waitUntil: "domcontentloaded", timeout: effectiveTimeout });
+      await page.waitForLoadState("networkidle", { timeout: Math.min(effectiveTimeout, 10_000) }).catch(() => undefined);
     }
   }
 
@@ -266,7 +270,7 @@ export async function waitForVisibleWithReload(
  * Returns true if voteable content was found.
  */
 export async function findVoteableContent(page: Page): Promise<boolean> {
-  const voteBtn = page.getByRole("button", { name: "Vote up" });
+  const voteBtn = page.getByRole("button", { name: VOTE_UP_BUTTON_NAME });
   let canVote = await voteBtn
     .waitFor({ state: "visible", timeout: 5_000 })
     .then(() => true)

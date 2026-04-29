@@ -1,4 +1,4 @@
-import { approveCREP, submitContentDirect, waitForPonderIndexed } from "../helpers/admin-helpers";
+import { submitContentDirect, waitForPonderIndexed } from "../helpers/admin-helpers";
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
 import { getContentList } from "../helpers/ponder-api";
@@ -14,7 +14,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ARTIFACTS_DIR = path.resolve(__dirname, "../artifacts/demo");
 const VIEWPORT = { width: 1280, height: 800 };
 const CAPTION_ID = "curyo-demo-caption";
-const SUBMIT_STAKE = BigInt(10e6);
 const VERIFIED_DEMO_WALLETS = [
   ANVIL_ACCOUNTS.account3,
   ANVIL_ACCOUNTS.account4,
@@ -128,16 +127,6 @@ async function prepareDemoContent(): Promise<{ searchQuery: string }> {
   const title = `Curyo Demo ${uniqueId}`;
   const demoUrl = `https://www.youtube.com/watch?v=curyo_demo_${uniqueId}`;
 
-  const submissionApproved = await approveCREP(
-    CONTRACT_ADDRESSES.ContentRegistry,
-    SUBMIT_STAKE,
-    submitter.address,
-    CONTRACT_ADDRESSES.CuryoReputation,
-  );
-  if (!submissionApproved) {
-    throw new Error("Failed to approve submission stake for deterministic demo content");
-  }
-
   const submitted = await submitContentDirect(
     demoUrl,
     title,
@@ -173,10 +162,10 @@ async function waitForVoteFeedScene(page: Page, timeout = 30_000): Promise<void>
     .getByRole("button", { name: "Vote up" })
     .or(page.getByRole("button", { name: "Vote down" }))
     .or(page.getByText(/Voted(?: hidden| Up| Down)?/i))
-    .or(page.getByText("Your submission"))
+    .or(page.getByText("Your question"))
     .or(page.getByText(/Cooldown/i))
     .or(page.getByText("Round full"))
-    .or(page.getByText("No content submitted yet"))
+    .or(page.getByText("No questions have been asked yet"))
     .or(page.getByText(/No content found/i));
 
   await indicators.first().waitFor({ state: "visible", timeout });
@@ -189,7 +178,9 @@ async function recordFaucetIntro(page: Page): Promise<void> {
   await gotoWithRetry(page, "/governance#faucet", { ensureWalletConnected: true, timeout: 60_000 });
   await ensureWalletVisible(page, ANVIL_ACCOUNTS.account1.address);
 
-  await page.getByRole("heading", { name: "cREP Faucet" }).waitFor({ state: "visible", timeout: 30_000 });
+  await page
+    .getByRole("heading", { name: "Human Reputation (HREP) Faucet" })
+    .waitFor({ state: "visible", timeout: 30_000 });
   await page.getByRole("heading", { name: "How it works" }).waitFor({ state: "visible", timeout: 30_000 });
   await page.waitForLoadState("networkidle").catch(() => undefined);
 
@@ -211,7 +202,7 @@ async function recordVoteScene(page: Page, searchQuery?: string): Promise<void> 
 
   for (const wallet of VERIFIED_DEMO_WALLETS) {
     await swapWalletSession(page, wallet.privateKey);
-    const voteUrl = searchQuery ? `/vote?q=${encodeURIComponent(searchQuery)}` : "/vote";
+    const voteUrl = searchQuery ? `/rate?q=${encodeURIComponent(searchQuery)}` : "/rate";
     await gotoWithRetry(page, voteUrl, {
       ensureWalletConnected: true,
       timeout: 60_000,
@@ -239,7 +230,7 @@ async function recordVoteScene(page: Page, searchQuery?: string): Promise<void> 
   await showCaption(
     page,
     "Blind vote with stake",
-    "This wallet already has a Voter ID and cREP, so the demo can go straight into a live vote.",
+    "This wallet already has a Voter ID and HREP, so the demo can go straight into a live vote.",
   );
   await pause(page, 1_600);
   await hideCaption(page);
@@ -249,9 +240,9 @@ async function recordVoteScene(page: Page, searchQuery?: string): Promise<void> 
   const stakeModal = page.locator("[role='dialog']").first();
   await stakeModal.waitFor({ state: "visible", timeout: 15_000 });
 
-  const oneCrepButton = stakeModal.getByRole("button", { name: /^1$/ });
-  if (await oneCrepButton.isVisible().catch(() => false)) {
-    await clickTarget(page, oneCrepButton, 250);
+  const oneHrepButton = stakeModal.getByRole("button", { name: /^1$/ });
+  if (await oneHrepButton.isVisible().catch(() => false)) {
+    await clickTarget(page, oneHrepButton, 250);
   }
 
   const confirmButton = stakeModal.getByRole("button", { name: /Stake \d+/i });

@@ -63,6 +63,7 @@ const TermsPage: NextPage = () => {
         <ul>
           <li>Persons under the age of 18 (or the age of majority in your jurisdiction)</li>
           <li>Persons in any jurisdiction where blockchain or decentralized application services are prohibited</li>
+          <li>Persons subject to sanctions or unable to pass configured sanctioned-country eligibility checks</li>
         </ul>
         <p>
           By using the Service, you represent and warrant that you meet all eligibility requirements and are legally
@@ -75,8 +76,8 @@ const TermsPage: NextPage = () => {
           <strong>You acknowledge and agree that:</strong>
         </p>
         <ul>
-          <li>cREP tokens are reputation tokens used for content curation and governance within the Protocol</li>
-          <li>cREP tokens have no monetary value and are not intended as an investment</li>
+          <li>HREP tokens are reputation tokens used for content curation and governance within the Protocol</li>
+          <li>HREP tokens have no monetary value and are not intended as an investment</li>
           <li>You may lose tokens through normal Protocol operation (e.g., incorrect curation predictions)</li>
           <li>There is no guarantee of any particular outcomes from your participation</li>
           <li>Historical outcomes do not indicate or guarantee future results</li>
@@ -159,9 +160,16 @@ const TermsPage: NextPage = () => {
           </li>
           <li>
             <strong>Identity Verification:</strong> The faucet uses Self.xyz for zero-knowledge identity verification
-            using supported documents such as passports or biometric ID cards. While no personal data is shared with
+            using supported documents such as passports or biometric ID cards. Faucet eligibility also requires proof
+            that you are 18 or older, sanctions clearance, and configured sanctioned-country checks; sanctioned-country
+            jurisdictions such as Cuba, Iran, North Korea, and Syria cannot claim. While no personal data is shared with
             this Interface, the on-chain nullifier permanently links one verification per supported document. If
             Self.xyz&apos;s service becomes unavailable, alternative faucet mechanisms may not be available
+          </li>
+          <li>
+            <strong>Agent Automation:</strong> If you authorize an automated agent, smart-wallet session key, or scoped
+            agent wallet, you are responsible for the spend caps, permissions, credentials, and transactions that agent
+            signs or causes to be signed
           </li>
         </ul>
 
@@ -172,11 +180,12 @@ const TermsPage: NextPage = () => {
         </p>
         <ul>
           <li>Submission of content URLs for community curation</li>
-          <li>Staking cREP tokens to vote on content quality (upvote/downvote)</li>
+          <li>Staking HREP tokens to vote on content quality (upvote/downvote)</li>
           <li>Distribution of token rewards based on curation outcomes</li>
           <li>Governance participation through token holding</li>
           <li>
-            Identity verification through third-party services (e.g., Self.xyz) for Sybil-resistant token distribution
+            Identity verification through third-party services (e.g., Self.xyz) for age-gated, sanctions-screened,
+            Sybil-resistant token distribution
           </li>
         </ul>
         <p>
@@ -186,12 +195,27 @@ const TermsPage: NextPage = () => {
           <li>A gambling or betting platform</li>
           <li>A financial product or investment vehicle</li>
         </ul>
+        <p>
+          Submission and bounty features are question-first: a submission may be text-only or include one image or one
+          YouTube link, and the submission must attach a non-refundable bounty funded in HREP or USDC on Celo. A default
+          frontend-operator share may be reserved from qualified claims when the vote was attributed to an eligible
+          frontend. Bounty funds are sent from your connected wallet, smart wallet, or user-authorized agent wallet
+          directly to protocol smart contracts; the Interface operator does not custody those bounty funds. The
+          Interface does not impose a hard bounty cap, but it may apply moderation, duplicate-detection, media-type, and
+          eligibility checks before a submission is accepted or a claim is processed.
+        </p>
+        <p>
+          Bounty payouts are equal within each qualified bounty round for eligible revealed voters, and claims remain
+          gated by the relevant protocol checks. These guardrails are intended to reduce spam, preserve Sybil
+          resistance, and keep the submission surface narrow.
+        </p>
 
         <h2>7. User Responsibilities</h2>
         <p>You are solely responsible for:</p>
         <ul>
           <li>Maintaining the security of your wallet, private keys, and seed phrases</li>
           <li>All activities that occur under your wallet address</li>
+          <li>All activities authorized through your agent credentials, scoped smart wallets, or session keys</li>
           <li>Ensuring your use of the Service complies with all applicable laws in your jurisdiction</li>
           <li>Understanding the risks involved in using blockchain technology and smart contracts</li>
           <li>Any taxes, reporting obligations, or regulatory compliance arising from your use of the Service</li>
@@ -204,8 +228,8 @@ const TermsPage: NextPage = () => {
         <ul>
           <li>Provide false information regarding your identity or eligibility</li>
           <li>Attempt to manipulate content ratings through coordinated or automated activity</li>
-          <li>Submit content that violates intellectual property rights</li>
-          <li>Submit content that is illegal, harmful, or violates platform guidelines</li>
+          <li>Ask questions with content that violates intellectual property rights</li>
+          <li>Ask questions with content that is illegal, harmful, or violates platform guidelines</li>
           <li>Interfere with or disrupt the Service or its infrastructure</li>
           <li>Use the Service for money laundering, terrorist financing, or other illicit activities</li>
           <li>Exploit bugs, vulnerabilities, or errors in the Protocol or Interface</li>
@@ -236,8 +260,8 @@ const TermsPage: NextPage = () => {
           The Curyo Protocol smart contracts may be open source under their respective licenses.
         </p>
         <p>
-          Content submitted by users remains the property of the original creators. By submitting content URLs, you
-          represent that you have the right to share such content and that doing so does not violate any third-party
+          User-provided content remains the property of the original creators. By asking questions with content URLs,
+          you represent that you have the right to share such content and that doing so does not violate any third-party
           rights.
         </p>
 
@@ -325,7 +349,7 @@ const TermsPage: NextPage = () => {
         <ul>
           <li>You have read and understood all risks described in these Terms</li>
           <li>You are using the Protocol and this Interface entirely at your own risk</li>
-          <li>You may lose cREP tokens through normal Protocol operation</li>
+          <li>You may lose HREP tokens through normal Protocol operation</li>
           <li>You are legally permitted to use the Service in your jurisdiction</li>
           <li>You have the legal capacity and authority to accept these terms</li>
           <li>You are solely responsible for your own due diligence and decisions</li>

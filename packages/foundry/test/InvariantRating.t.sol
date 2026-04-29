@@ -7,7 +7,7 @@ import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
 import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { HumanReputation } from "../contracts/HumanReputation.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { VotingHandler } from "./handlers/VotingHandler.sol";
@@ -18,7 +18,7 @@ import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
 /// @notice Invariant: after settlement, content rating is always in [0,100].
 ///         UP-majority rounds produce rating >= 50.
 contract InvariantRating is VotingTestBase {
-    CuryoReputation public crepToken;
+    HumanReputation public hrepToken;
     ContentRegistry public registry;
     RoundVotingEngine public engine;
     RoundRewardDistributor public distributor;
@@ -41,8 +41,8 @@ contract InvariantRating is VotingTestBase {
 
         vm.startPrank(owner);
 
-        crepToken = new CuryoReputation(owner, owner);
-        crepToken.grantRole(crepToken.MINTER_ROLE(), owner);
+        hrepToken = new HumanReputation(owner, owner);
+        hrepToken.grantRole(hrepToken.MINTER_ROLE(), owner);
 
         ContentRegistry registryImpl = new ContentRegistry();
         RoundVotingEngine engineImpl = new RoundVotingEngine();
@@ -52,7 +52,7 @@ contract InvariantRating is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(registryImpl),
-                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(crepToken)))
+                    abi.encodeCall(ContentRegistry.initializeWithTreasury, (owner, owner, owner, address(hrepToken)))
                 )
             )
         );
@@ -63,7 +63,7 @@ contract InvariantRating is VotingTestBase {
                     address(engineImpl),
                     abi.encodeCall(
                         RoundVotingEngine.initialize,
-                        (owner, address(crepToken), address(registry), address(_deployProtocolConfig(owner)))
+                        (owner, address(hrepToken), address(registry), address(_deployProtocolConfig(owner)))
                     )
                 )
             )
@@ -75,7 +75,7 @@ contract InvariantRating is VotingTestBase {
                     address(distImpl),
                     abi.encodeCall(
                         RoundRewardDistributor.initialize,
-                        (owner, address(crepToken), address(engine), address(registry))
+                        (owner, address(hrepToken), address(engine), address(registry))
                     )
                 )
             )
@@ -92,23 +92,23 @@ contract InvariantRating is VotingTestBase {
 
         // Fund consensus reserve
         uint256 reserveAmount = 1_000_000e6;
-        crepToken.mint(owner, reserveAmount);
-        crepToken.approve(address(engine), reserveAmount);
+        hrepToken.mint(owner, reserveAmount);
+        hrepToken.approve(address(engine), reserveAmount);
         engine.addToConsensusReserve(reserveAmount);
 
         // Create voters
         for (uint256 i = 0; i < NUM_VOTERS; i++) {
             address voter = address(uint160(10 + i));
             voters.push(voter);
-            crepToken.mint(voter, VOTER_FUND);
+            hrepToken.mint(voter, VOTER_FUND);
         }
 
         // Fund submitter and submit content
-        crepToken.mint(submitter, 100e6);
+        hrepToken.mint(submitter, 100e6);
         vm.stopPrank();
 
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 20e6);
+        hrepToken.approve(address(registry), 20e6);
         _submitContentWithReservation(registry, "https://example.com/rating1", "test", "test", "test", 0);
         _submitContentWithReservation(registry, "https://example.com/rating2", "test", "test", "test", 0);
         vm.stopPrank();
@@ -118,7 +118,7 @@ contract InvariantRating is VotingTestBase {
 
         // Create handler
         handler = new VotingHandler(
-            address(engine), address(distributor), address(registry), address(crepToken), voters, contentIds
+            address(engine), address(distributor), address(registry), address(hrepToken), voters, contentIds
         );
 
         targetContract(address(handler));
@@ -131,7 +131,7 @@ contract InvariantRating is VotingTestBase {
             VotingHandler.RoundRecord memory rec = handler.getRoundRecord(i);
             if (!rec.settled) continue;
 
-            (,,,,,,,,,, uint256 rating,) = registry.contents(rec.contentId);
+            (,,,,,,,, uint256 rating,) = registry.contents(rec.contentId);
             assertLe(rating, 100, "rating exceeds 100");
         }
     }
@@ -147,7 +147,7 @@ contract InvariantRating is VotingTestBase {
             // Only check rounds where UP side had strictly more raw stake
             if (round.upPool <= round.downPool) continue;
 
-            (,,,,,,,,,, uint256 rating,) = registry.contents(rec.contentId);
+            (,,,,,,,, uint256 rating,) = registry.contents(rec.contentId);
             assertGe(rating, 50, "UP-majority round produced rating < 50");
         }
     }

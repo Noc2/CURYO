@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "curyo": {
+      "url": "https://curyo.example/api/mcp/public",
+      "transport": "streamable-http",
+      "headers": {
+        "MCP-Protocol-Version": "2025-11-25"
+      }
+    }
+  }
+}

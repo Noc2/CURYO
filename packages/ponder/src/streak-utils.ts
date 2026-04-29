@@ -15,7 +15,7 @@ export function normalizeUtcDateKey(value: string | null | undefined): string | 
     return null;
   }
 
-  const normalized = value.trim().replaceAll("-", "");
+  const normalized = value.trim();
   return /^\d{8}$/.test(normalized) ? normalized : null;
 }
 

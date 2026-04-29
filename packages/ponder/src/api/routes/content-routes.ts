@@ -1,11 +1,34 @@
 import { ROUND_STATE } from "@curyo/contracts/protocol";
+import { aggregateProfileSelfReports } from "@curyo/node-utils/profileSelfReport";
 import { and, asc, desc, eq, inArray, or, sql } from "ponder";
 import { db } from "ponder:api";
-import { category, content, profile, ratingChange, rewardClaim, round, vote } from "ponder:schema";
-import { buildAllowedCategoryCondition, buildAllowedContentCondition } from "../moderation.js";
+import {
+  category,
+  content,
+  contentMedia,
+  feedbackBonusPool,
+  profile,
+  questionBundleReward,
+  questionRewardPool,
+  ratingChange,
+  rewardClaim,
+  round,
+  vote,
+} from "ponder:schema";
+import {
+  buildAllowedCategoryCondition,
+  buildAllowedContentCondition,
+} from "../moderation.js";
 import type { ApiApp } from "../shared.js";
 import { attachOpenRoundSummary, jsonBig, parseBigIntList } from "../shared.js";
-import { getUrlLookupCandidates, isValidAddress, normalizeContentSearchQuery, safeBigInt, safeLimit, safeOffset } from "../utils.js";
+import {
+  getUrlLookupCandidates,
+  isValidAddress,
+  normalizeContentSearchQuery,
+  safeBigInt,
+  safeLimit,
+  safeOffset,
+} from "../utils.js";
 
 function createContentSearchVector() {
   return sql`(
@@ -26,16 +49,82 @@ function buildContentSearchExpressions(search: string) {
   };
 }
 
+function getRewardAvailableAmount() {
+  const nowSeconds = BigInt(Math.floor(Date.now() / 1000));
+  return sql<bigint>`coalesce((
+    select sum(
+      case
+        when ${questionRewardPool.allocatedAmount} > ${questionRewardPool.claimedAmount}
+          then ${questionRewardPool.allocatedAmount} - ${questionRewardPool.claimedAmount}
+        else 0
+      end
+      + case
+        when ${questionRewardPool.refunded} = false
+          and ${questionRewardPool.qualifiedRounds} < ${questionRewardPool.requiredSettledRounds}
+          and (${questionRewardPool.bountyClosesAt} = 0 or ${questionRewardPool.bountyClosesAt} > ${nowSeconds})
+          then ${questionRewardPool.unallocatedAmount}
+        else 0
+      end
+    )
+    from ${questionRewardPool}
+    where ${questionRewardPool.contentId} = ${content.id}
+  ), 0) + coalesce((
+    select sum(
+      case
+        when ${questionBundleReward.allocatedAmount} > ${questionBundleReward.claimedAmount}
+          then ${questionBundleReward.allocatedAmount} - ${questionBundleReward.claimedAmount}
+        else 0
+      end
+      + case
+        when ${questionBundleReward.completedRoundSetCount} < ${questionBundleReward.requiredSettledRounds}
+          and (${questionBundleReward.bountyClosesAt} = 0 or ${questionBundleReward.bountyClosesAt} > ${nowSeconds})
+          then ${questionBundleReward.unallocatedAmount}
+        else 0
+      end
+    )
+    from ${questionBundleReward}
+    where ${questionBundleReward.id} = ${content.bundleId}
+      and ${questionBundleReward.failed} = false
+      and ${questionBundleReward.refunded} = false
+  ), 0) + coalesce((
+    select sum(${feedbackBonusPool.remainingAmount})
+    from ${feedbackBonusPool}
+    where ${feedbackBonusPool.contentId} = ${content.id}
+      and ${feedbackBonusPool.forfeited} = false
+      and ${feedbackBonusPool.feedbackClosesAt} > ${nowSeconds}
+  ), 0)`;
+}
+
 function getContentOrderBy(sortBy: string) {
   switch (sortBy) {
     case "oldest":
       return [asc(content.createdAt), asc(content.id)];
+    case "highest_rewards":
+      return [
+        desc(getRewardAvailableAmount()),
+        desc(content.createdAt),
+        desc(content.id),
+      ];
     case "highest_rated":
-      return [desc(content.ratingBps), desc(content.rating), desc(content.createdAt), desc(content.id)];
+      return [
+        desc(content.ratingBps),
+        desc(content.rating),
+        desc(content.createdAt),
+        desc(content.id),
+      ];
     case "lowest_rated":
-      return [asc(content.ratingBps), asc(content.rating), desc(content.createdAt), desc(content.id)];
+      return [
+        asc(content.ratingBps),
+        asc(content.rating),
+        desc(content.createdAt),
+        desc(content.id),
+      ];
     case "most_votes":
-      return [desc(content.totalVotes), desc(content.createdAt), desc(content.id)];
+      return [
+        desc(content.totalVotes),
+        desc(content.createdAt),
+        desc(content.id),
+      ];
     case "newest":
     case "relevance":
     default:
@@ -43,21 +132,210 @@ function getContentOrderBy(sortBy: string) {
   }
 }
 
-function getSearchOrderBy(searchRank: ReturnType<typeof sql<number>>, sortBy: string) {
+function getSearchOrderBy(
+  searchRank: ReturnType<typeof sql<number>>,
+  sortBy: string,
+) {
   switch (sortBy) {
     case "oldest":
       return [desc(searchRank), asc(content.createdAt), asc(content.id)];
+    case "highest_rewards":
+      return [
+        desc(searchRank),
+        desc(getRewardAvailableAmount()),
+        desc(content.createdAt),
+        desc(content.id),
+      ];
     case "highest_rated":
-      return [desc(searchRank), desc(content.ratingBps), desc(content.rating), desc(content.createdAt), desc(content.id)];
+      return [
+        desc(searchRank),
+        desc(content.ratingBps),
+        desc(content.rating),
+        desc(content.createdAt),
+        desc(content.id),
+      ];
     case "lowest_rated":
-      return [desc(searchRank), asc(content.ratingBps), asc(content.rating), desc(content.createdAt), desc(content.id)];
+      return [
+        desc(searchRank),
+        asc(content.ratingBps),
+        asc(content.rating),
+        desc(content.createdAt),
+        desc(content.id),
+      ];
     case "most_votes":
-      return [desc(searchRank), desc(content.totalVotes), desc(content.createdAt), desc(content.id)];
+      return [
+        desc(searchRank),
+        desc(content.totalVotes),
+        desc(content.createdAt),
+        desc(content.id),
+      ];
     case "newest":
     case "relevance":
     default:
       return [desc(searchRank), desc(content.createdAt), desc(content.id)];
   }
+}
+
+function inferMediaTypeFromHost(urlHost: string): "image" | "video" {
+  return urlHost === "youtube.com" ||
+    urlHost === "www.youtube.com" ||
+    urlHost === "m.youtube.com" ||
+    urlHost === "youtu.be"
+    ? "video"
+    : "image";
+}
+
+const DIRECT_IMAGE_URL_PATTERN =
+  /^https:\/\/.+\.(?:avif|gif|jpe?g|png|webp)(?:[?#].*)?$/i;
+
+function isFallbackMediaUrl(item: { url?: string; urlHost?: string }) {
+  if (!item.url) return false;
+  if (DIRECT_IMAGE_URL_PATTERN.test(item.url)) return true;
+  return inferMediaTypeFromHost(item.urlHost ?? "") === "video";
+}
+
+function fallbackMediaForItem<
+  T extends { url?: string; canonicalUrl?: string; urlHost?: string },
+>(item: T) {
+  if (!isFallbackMediaUrl(item)) return [];
+  return [
+    {
+      index: 0,
+      mediaIndex: 0,
+      mediaType: inferMediaTypeFromHost(item.urlHost ?? ""),
+      url: item.url,
+      canonicalUrl: item.canonicalUrl ?? item.url,
+      urlHost: item.urlHost ?? "",
+    },
+  ];
+}
+
+async function attachContentMedia<
+  T extends {
+    id: bigint;
+    url?: string;
+    canonicalUrl?: string;
+    urlHost?: string;
+  },
+>(items: T[]) {
+  if (items.length === 0) {
+    return items.map((item) => ({
+      ...item,
+      media: fallbackMediaForItem(item),
+    }));
+  }
+
+  const rows = await db
+    .select()
+    .from(contentMedia)
+    .where(
+      inArray(
+        contentMedia.contentId,
+        items.map((item) => item.id),
+      ),
+    )
+    .orderBy(asc(contentMedia.contentId), asc(contentMedia.mediaIndex));
+  const rowsByContentId = new Map<bigint, typeof rows>();
+
+  for (const row of rows) {
+    const existing = rowsByContentId.get(row.contentId) ?? [];
+    existing.push(row);
+    rowsByContentId.set(row.contentId, existing);
+  }
+
+  return items.map((item) => {
+    const mediaRows = rowsByContentId.get(item.id);
+    return {
+      ...item,
+      media: mediaRows?.length
+        ? mediaRows.map((row) => ({
+            index: row.mediaIndex,
+            mediaIndex: row.mediaIndex,
+            mediaType: row.mediaType,
+            url: row.url,
+            canonicalUrl: row.canonicalUrl,
+            urlHost: row.urlHost,
+          }))
+        : fallbackMediaForItem(item),
+    };
+  });
+}
+
+async function attachQuestionBundleSummaries<
+  T extends { bundleId?: bigint | null },
+>(items: T[]) {
+  const bundleIds = [
+    ...new Set(
+      items
+        .map((item) => item.bundleId)
+        .filter(
+          (bundleId): bundleId is bigint =>
+            typeof bundleId === "bigint" && bundleId > 0n,
+        ),
+    ),
+  ];
+  if (bundleIds.length === 0) {
+    return items.map((item) => ({ ...item, bundle: null }));
+  }
+
+  const rows = await db
+    .select()
+    .from(questionBundleReward)
+    .where(inArray(questionBundleReward.id, bundleIds));
+  const bundlesById = new Map(rows.map((row) => [row.id, row]));
+
+  return items.map((item) => {
+    const bundle =
+      typeof item.bundleId === "bigint" ? bundlesById.get(item.bundleId) : null;
+    return {
+      ...item,
+      bundle: bundle
+        ? {
+            id: bundle.id,
+            asset: bundle.asset,
+            fundedAmount: bundle.fundedAmount,
+            claimedAmount: bundle.claimedAmount,
+            refundedAmount: bundle.refundedAmount,
+            unallocatedAmount: bundle.unallocatedAmount,
+            allocatedAmount: bundle.allocatedAmount,
+            requiredCompleters: bundle.requiredCompleters,
+            requiredSettledRounds: bundle.requiredSettledRounds,
+            questionCount: bundle.questionCount,
+            completedRoundSetCount: bundle.completedRoundSetCount,
+            totalRecordedQuestionRounds: bundle.totalRecordedQuestionRounds,
+            claimedCount: bundle.claimedCount,
+            bountyClosesAt: bundle.bountyClosesAt,
+            feedbackClosesAt: bundle.feedbackClosesAt,
+            expiresAt: bundle.expiresAt,
+            failed: bundle.failed,
+            refunded: bundle.refunded,
+          }
+        : null,
+    };
+  });
+}
+
+async function getAudienceContextForContent(contentId: bigint) {
+  const rows = await db
+    .select({
+      isUp: vote.isUp,
+      selfReport: profile.selfReport,
+    })
+    .from(vote)
+    .innerJoin(
+      round,
+      and(eq(vote.contentId, round.contentId), eq(vote.roundId, round.roundId)),
+    )
+    .leftJoin(profile, eq(vote.voter, profile.address))
+    .where(
+      and(
+        eq(vote.contentId, contentId),
+        eq(round.state, ROUND_STATE.Settled),
+        eq(vote.revealed, true),
+      ),
+    );
+
+  return aggregateProfileSelfReports(rows);
 }
 
 export function registerContentRoutes(app: ApiApp) {
@@ -99,6 +377,9 @@ export function registerContentRoutes(app: ApiApp) {
       if (isNaN(parsed)) return c.json({ error: "Invalid status filter" }, 400);
       conditions.push(eq(content.status, parsed));
     }
+    if (sortBy === "highest_rewards") {
+      conditions.push(sql<boolean>`${getRewardAvailableAmount()} > 0`);
+    }
     if (categoryId) {
       const parsed = safeBigInt(categoryId);
       if (parsed === null) return c.json({ error: "Invalid categoryId" }, 400);
@@ -109,18 +390,24 @@ export function registerContentRoutes(app: ApiApp) {
     }
     const submitterFilters = new Set<`0x${string}`>();
     if (submitterQuery) {
-      if (!isValidAddress(submitterQuery)) return c.json({ error: "Invalid submitter address" }, 400);
+      if (!isValidAddress(submitterQuery))
+        return c.json({ error: "Invalid submitter address" }, 400);
       submitterFilters.add(submitterQuery.toLowerCase() as `0x${string}`);
     }
     if (submittersQuery) {
       const parsedSubmitters = submittersQuery
         .split(",")
-        .map(value => value.trim())
+        .map((value) => value.trim())
         .filter(Boolean);
-      if (parsedSubmitters.length === 0 || parsedSubmitters.some(value => !isValidAddress(value))) {
+      if (
+        parsedSubmitters.length === 0 ||
+        parsedSubmitters.some((value) => !isValidAddress(value))
+      ) {
         return c.json({ error: "Invalid submitters filter" }, 400);
       }
-      parsedSubmitters.forEach(value => submitterFilters.add(value.toLowerCase() as `0x${string}`));
+      parsedSubmitters.forEach((value) =>
+        submitterFilters.add(value.toLowerCase() as `0x${string}`),
+      );
     }
     if (submitterFilters.size === 1) {
       conditions.push(eq(content.submitter, Array.from(submitterFilters)[0]));
@@ -128,16 +415,26 @@ export function registerContentRoutes(app: ApiApp) {
       conditions.push(inArray(content.submitter, Array.from(submitterFilters)));
     }
     const urlSearchCandidates = search ? getUrlLookupCandidates(search) : null;
-    const searchExpressions = search && urlSearchCandidates === null ? buildContentSearchExpressions(search) : null;
+    const searchExpressions =
+      search && urlSearchCandidates === null
+        ? buildContentSearchExpressions(search)
+        : null;
     if (urlSearchCandidates) {
-      conditions.push(or(inArray(content.canonicalUrl, urlSearchCandidates), inArray(content.url, urlSearchCandidates)));
+      conditions.push(
+        or(
+          inArray(content.canonicalUrl, urlSearchCandidates),
+          inArray(content.url, urlSearchCandidates),
+        ),
+      );
     } else if (search) {
       conditions.push(searchExpressions!.condition);
     }
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
     const queryLimit = search ? limit + 1 : limit;
-    const orderByExprs = searchExpressions ? getSearchOrderBy(searchExpressions.rank, sortBy) : getContentOrderBy(sortBy);
+    const orderByExprs = searchExpressions
+      ? getSearchOrderBy(searchExpressions.rank, sortBy)
+      : getContentOrderBy(sortBy);
 
     const items = await db
       .select()
@@ -150,18 +447,21 @@ export function registerContentRoutes(app: ApiApp) {
     const hasMore = items.length > limit;
     const pageItems = hasMore ? items.slice(0, limit) : items;
     const itemsWithOpenRound = await attachOpenRoundSummary(pageItems);
+    const itemsWithMedia = await attachContentMedia(itemsWithOpenRound);
+    const itemsWithBundles =
+      await attachQuestionBundleSummaries(itemsWithMedia);
     const total =
       search === null
-        ? (
+        ? ((
             await db
               .select({ count: sql<number>`count(*)` })
               .from(content)
               .where(where)
-          )[0]?.count ?? 0
+          )[0]?.count ?? 0)
         : null;
 
     return jsonBig(c, {
-      items: itemsWithOpenRound,
+      items: itemsWithBundles,
       total,
       limit,
       offset,
@@ -180,12 +480,35 @@ export function registerContentRoutes(app: ApiApp) {
       return c.json({ error: "Invalid URL" }, 400);
     }
 
+    const mediaMatches = await db
+      .select({ contentId: contentMedia.contentId })
+      .from(contentMedia)
+      .where(
+        or(
+          inArray(contentMedia.canonicalUrl, candidates),
+          inArray(contentMedia.url, candidates),
+        ),
+      )
+      .limit(20);
+    const matchedMediaContentIds = [
+      ...new Set(mediaMatches.map((item) => item.contentId)),
+    ];
+
     const matches = await db
       .select()
       .from(content)
       .where(
         and(
-          or(inArray(content.canonicalUrl, candidates), inArray(content.url, candidates)),
+          matchedMediaContentIds.length > 0
+            ? or(
+                inArray(content.canonicalUrl, candidates),
+                inArray(content.url, candidates),
+                inArray(content.id, matchedMediaContentIds),
+              )
+            : or(
+                inArray(content.canonicalUrl, candidates),
+                inArray(content.url, candidates),
+              ),
           buildAllowedContentCondition({
             canonicalUrl: content.canonicalUrl,
             description: content.description,
@@ -205,6 +528,10 @@ export function registerContentRoutes(app: ApiApp) {
     }
 
     const [contentWithOpenRound] = await attachOpenRoundSummary([item]);
+    const [contentWithMedia] = await attachContentMedia([contentWithOpenRound]);
+    const [contentWithBundle] = await attachQuestionBundleSummaries([
+      contentWithMedia,
+    ]);
 
     const rounds = await db
       .select()
@@ -219,11 +546,13 @@ export function registerContentRoutes(app: ApiApp) {
       .where(eq(ratingChange.contentId, item.id))
       .orderBy(desc(ratingChange.timestamp))
       .limit(50);
+    const audienceContext = await getAudienceContextForContent(item.id);
 
     return jsonBig(c, {
-      content: contentWithOpenRound,
+      content: contentWithBundle,
       rounds,
       ratings,
+      audienceContext,
       matchCount: matches.length,
     });
   });
@@ -255,6 +584,10 @@ export function registerContentRoutes(app: ApiApp) {
     }
 
     const [contentWithOpenRound] = await attachOpenRoundSummary([item]);
+    const [contentWithMedia] = await attachContentMedia([contentWithOpenRound]);
+    const [contentWithBundle] = await attachQuestionBundleSummaries([
+      contentWithMedia,
+    ]);
 
     const rounds = await db
       .select()
@@ -269,8 +602,14 @@ export function registerContentRoutes(app: ApiApp) {
       .where(eq(ratingChange.contentId, id))
       .orderBy(desc(ratingChange.timestamp))
       .limit(50);
+    const audienceContext = await getAudienceContextForContent(id);
 
-    return jsonBig(c, { content: contentWithOpenRound, rounds, ratings });
+    return jsonBig(c, {
+      content: contentWithBundle,
+      rounds,
+      ratings,
+      audienceContext,
+    });
   });
 
   app.get("/rounds", async (c) => {
@@ -293,12 +632,17 @@ export function registerContentRoutes(app: ApiApp) {
       conditions.push(eq(round.state, parsed));
     }
     if (submitter) {
-      if (!isValidAddress(submitter)) return c.json({ error: "Invalid submitter address" }, 400);
-      conditions.push(eq(content.submitter, submitter.toLowerCase() as `0x${string}`));
+      if (!isValidAddress(submitter))
+        return c.json({ error: "Invalid submitter address" }, 400);
+      conditions.push(
+        eq(content.submitter, submitter.toLowerCase() as `0x${string}`),
+      );
     }
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
-    const settledOnly = stateFilter !== undefined && parseInt(stateFilter) === ROUND_STATE.Settled;
+    const settledOnly =
+      stateFilter !== undefined &&
+      parseInt(stateFilter) === ROUND_STATE.Settled;
 
     const items = await db
       .select({
@@ -324,6 +668,10 @@ export function registerContentRoutes(app: ApiApp) {
         losingPool: round.losingPool,
         startTime: round.startTime,
         settledAt: round.settledAt,
+        epochDuration: round.epochDuration,
+        maxDuration: round.maxDuration,
+        minVoters: round.minVoters,
+        maxVoters: round.maxVoters,
         title: content.title,
         description: content.description,
         url: content.url,
@@ -369,7 +717,10 @@ export function registerContentRoutes(app: ApiApp) {
     }
 
     const submitterAddress = submitter.toLowerCase() as `0x${string}`;
-    const where = and(eq(content.submitter, submitterAddress), eq(round.state, ROUND_STATE.Settled));
+    const where = and(
+      eq(content.submitter, submitterAddress),
+      eq(round.state, ROUND_STATE.Settled),
+    );
 
     const items = await db
       .select({
@@ -379,7 +730,11 @@ export function registerContentRoutes(app: ApiApp) {
       .from(round)
       .innerJoin(content, eq(round.contentId, content.id))
       .where(where)
-      .orderBy(desc(round.settledAt), desc(round.contentId), desc(round.roundId))
+      .orderBy(
+        desc(round.settledAt),
+        desc(round.contentId),
+        desc(round.roundId),
+      )
       .limit(limit)
       .offset(offset);
 
@@ -406,18 +761,8 @@ export function registerContentRoutes(app: ApiApp) {
       return c.json({ error: "Invalid submitter address" }, 400);
     }
 
-    const [result] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(content)
-      .where(
-        and(
-          eq(content.submitter, submitter.toLowerCase() as `0x${string}`),
-          eq(content.submitterStakeReturned, false),
-        ),
-      );
-
     return jsonBig(c, {
-      activeCount: result?.count ?? 0,
+      activeCount: 0,
       submitter: submitter.toLowerCase(),
     });
   });
@@ -441,11 +786,12 @@ export function registerContentRoutes(app: ApiApp) {
       .from(vote)
       .innerJoin(
         round,
-        and(eq(vote.contentId, round.contentId), eq(vote.roundId, round.roundId)),
+        and(
+          eq(vote.contentId, round.contentId),
+          eq(vote.roundId, round.roundId),
+        ),
       )
-      .where(
-        and(eq(vote.voter, voterAddr), eq(round.state, ROUND_STATE.Open)),
-      );
+      .where(and(eq(vote.voter, voterAddr), eq(round.state, ROUND_STATE.Open)));
 
     return jsonBig(c, {
       activeStake: activeResult?.total ?? "0",
@@ -455,25 +801,10 @@ export function registerContentRoutes(app: ApiApp) {
   });
 
   app.get("/categories", async (c) => {
-    const statusFilter = c.req.query("status") ?? "1";
-
-    let where;
-    if (statusFilter !== "all") {
-      const parsed = parseInt(statusFilter);
-      if (isNaN(parsed)) return c.json({ error: "Invalid status filter" }, 400);
-      where = and(
-        eq(category.status, parsed),
-        buildAllowedCategoryCondition({
-          domain: category.domain,
-          name: category.name,
-        }),
-      );
-    } else {
-      where = buildAllowedCategoryCondition({
-        domain: category.domain,
-        name: category.name,
-      });
-    }
+    const where = buildAllowedCategoryCondition({
+      slug: category.slug,
+      name: category.name,
+    });
     const offset = safeOffset(c.req.query("offset"));
     if (Number.isNaN(offset)) return c.json({ error: "Invalid offset" }, 400);
 
@@ -494,8 +825,7 @@ export function registerContentRoutes(app: ApiApp) {
         id: category.id,
         totalVotes: category.totalVotes,
       })
-      .from(category)
-      .where(eq(category.status, 1));
+      .from(category);
 
     const popularity: Record<string, number> = {};
     for (const item of items) {
@@ -553,7 +883,9 @@ export function registerContentRoutes(app: ApiApp) {
       .where(eq(content.submitter, address));
 
     const [rewardSummary] = await db
-      .select({ total: sql<bigint>`coalesce(sum(${rewardClaim.crepReward}), 0)` })
+      .select({
+        total: sql<bigint>`coalesce(sum(${rewardClaim.hrepReward}), 0)`,
+      })
       .from(rewardClaim)
       .where(eq(rewardClaim.voter, address));
 
@@ -573,13 +905,20 @@ export function registerContentRoutes(app: ApiApp) {
         committedAt: vote.committedAt,
         revealedAt: vote.revealedAt,
         roundStartTime: round.startTime,
+        roundEpochDuration: round.epochDuration,
+        roundMaxDuration: round.maxDuration,
+        roundMinVoters: round.minVoters,
+        roundMaxVoters: round.maxVoters,
         roundState: round.state,
         roundUpWins: round.upWins,
       })
       .from(vote)
       .leftJoin(
         round,
-        and(eq(vote.contentId, round.contentId), eq(vote.roundId, round.roundId)),
+        and(
+          eq(vote.contentId, round.contentId),
+          eq(vote.roundId, round.roundId),
+        ),
       )
       .where(eq(vote.voter, address))
       .orderBy(desc(vote.committedAt))
@@ -624,7 +963,8 @@ export function registerContentRoutes(app: ApiApp) {
       summary: {
         totalVotes: item?.totalVotes ?? voteSummary?.count ?? 0,
         totalContent: item?.totalContent ?? contentSummary?.count ?? 0,
-        totalRewardsClaimed: item?.totalRewardsClaimed ?? rewardSummary?.total ?? 0n,
+        totalRewardsClaimed:
+          item?.totalRewardsClaimed ?? rewardSummary?.total ?? 0n,
       },
       recentVotes,
       recentRewards,

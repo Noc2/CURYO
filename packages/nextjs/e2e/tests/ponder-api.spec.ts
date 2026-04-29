@@ -1,7 +1,7 @@
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
 import "../helpers/fetch-shim";
-import { PONDER_URL } from "../helpers/ponder-url";
 import { getContentById, getContentList, getStats, ponderGet } from "../helpers/ponder-api";
+import { PONDER_URL } from "../helpers/ponder-url";
 import { expect, test } from "@playwright/test";
 
 /**
@@ -38,7 +38,7 @@ test.describe("Ponder API endpoints", () => {
 
   test("GET /content with categoryId filter", async () => {
     // First, get categories to find a valid ID
-    const categories = await ponderGet("/categories?status=all");
+    const categories = await ponderGet("/categories");
     expect(categories).toHaveProperty("items");
     expect(categories.items.length).toBeGreaterThan(0);
 
@@ -54,13 +54,13 @@ test.describe("Ponder API endpoints", () => {
   test("GET /content search returns relevance-ranked matches", async () => {
     const data = await getContentList({
       status: "all",
-      search: "radioactivity research",
+      search: "synthetic insights",
       sortBy: "relevance",
       limit: 5,
     });
 
     expect(data.items.length).toBeGreaterThan(0);
-    expect(data.items[0]?.title).toContain("Marie Curie");
+    expect(data.items[0]?.title).toContain("synthetic insights");
     expect(data).toHaveProperty("hasMore");
   });
 
@@ -112,6 +112,7 @@ test.describe("Ponder API endpoints", () => {
     expect(data).toHaveProperty("totalContent");
     expect(data).toHaveProperty("totalVotes");
     expect(data).toHaveProperty("totalRoundsSettled");
+    expect(data).toHaveProperty("totalQuestionRewardsPaid");
   });
 
   test("GET /profile/:address returns profile activity payload", async () => {
@@ -145,13 +146,6 @@ test.describe("Ponder API endpoints", () => {
 
   test("GET /votes returns vote list", async () => {
     const data = await ponderGet("/votes?limit=5");
-    expect(data).toHaveProperty("items");
-    expect(Array.isArray(data.items)).toBe(true);
-  });
-
-  test("GET /submitter-rewards returns reward data for submitter", async () => {
-    const submitter = ANVIL_ACCOUNTS.account2.address.toLowerCase();
-    const data = await ponderGet(`/submitter-rewards?submitter=${submitter}`);
     expect(data).toHaveProperty("items");
     expect(Array.isArray(data.items)).toBe(true);
   });

@@ -52,8 +52,8 @@ export async function createSignedReadResponse<TBody>(
   scope: SignedReadSessionScope,
   body: TBody,
 ) {
-  const session = await issueSignedReadSession(walletAddress, scope);
   const response = NextResponse.json(body);
+  const session = await issueSignedReadSession(walletAddress, scope);
   response.cookies.set(getSignedReadSessionCookie(scope, session));
   return response;
 }

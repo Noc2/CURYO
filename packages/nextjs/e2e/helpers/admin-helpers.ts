@@ -9,14 +9,15 @@
  * the call with viem and send via eth_sendTransaction.
  */
 import { parseRound } from "../../lib/contracts/roundVotingEngine";
-import { createTlockVoteCommit, encodeVoteTransferPayload } from "@curyo/contracts/voting";
+import { buildQuestionSubmissionRevealCommitment } from "../../lib/questionSubmissionCommitment";
 import { ANVIL_ACCOUNTS } from "./anvil-accounts";
 import { runCommitAttempts } from "./commit-attempts";
 import { type RpcSendResult, isRetryableDirectCommitSendResult } from "./direct-commit-retry";
 import "./fetch-shim";
 import { PONDER_URL } from "./ponder-url";
 import { E2E_RPC_URL } from "./service-urls";
-import { deriveAnchoredTlockRuntimeNowMs } from "./tlockRuntime";
+import { deriveAcceptedTlockTargetRound, deriveDrandRoundRevealableAtSeconds } from "./tlockRuntime";
+import { createTlockVoteCommit, encodeVoteTransferPayload, packVoteRoundContext } from "@curyo/contracts/voting";
 
 const ANVIL_RPC = E2E_RPC_URL;
 // Contract gas costs shift as local protocol code evolves, so E2E helpers estimate
@@ -27,6 +28,73 @@ const DIRECT_VOTE_COMMIT_ATTEMPTS = 3;
 const ANVIL_PRIVATE_KEYS_BY_ADDRESS = new Map(
   Object.values(ANVIL_ACCOUNTS).map(account => [account.address.toLowerCase(), account.privateKey as `0x${string}`]),
 );
+
+type SubmissionMedia = { imageUrls: string[]; videoUrl: string };
+type SubmissionMediaInput = { imageUrls?: readonly string[]; videoUrl?: string };
+type SubmissionRoundConfig = { epochDuration: number; maxDuration: number; minVoters: number; maxVoters: number };
+const MAX_SUBMISSION_IMAGE_URLS = 4;
+const DEFAULT_SUBMISSION_REWARD_ASSET_HREP = 0;
+const DEFAULT_SUBMISSION_REWARD_AMOUNT = 1_000_000n;
+const DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS = 3n;
+const DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS = 1n;
+const DEFAULT_SUBMISSION_REWARD_EXPIRES_AT = 0n;
+const DEFAULT_QUESTION_METADATA_HASH = "0xed39b36e9ce5c1bfc657909c2f687347be2de998bc871eb8d33df17fdfa0d8cd" as const;
+const DEFAULT_RESULT_SPEC_HASH = "0x8e5f27bc3269c62c92754f76279bd83838462060fc6cd77411b7407027cfa11f" as const;
+const DEFAULT_SUBMISSION_ROUND_CONFIG: SubmissionRoundConfig = {
+  epochDuration: 20 * 60,
+  maxDuration: 7 * 24 * 60 * 60,
+  minVoters: 3,
+  maxVoters: 1000,
+};
+const DIRECT_IMAGE_URL_PATTERN = /^https:\/\/\S+\.(?:avif|gif|jpe?g|png|webp)(?:[?#]\S*)?$/i;
+
+function isSupportedImageUrl(url: string): boolean {
+  return DIRECT_IMAGE_URL_PATTERN.test(url);
+}
+
+function isSupportedYouTubeUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:") return false;
+
+    if (parsed.hostname === "youtu.be") {
+      return parsed.pathname.length > 1;
+    }
+
+    if (parsed.hostname === "www.youtube.com" && parsed.pathname.startsWith("/embed/")) {
+      return parsed.pathname.length > "/embed/".length;
+    }
+
+    const isWatchHost =
+      parsed.hostname === "youtube.com" || parsed.hostname === "www.youtube.com" || parsed.hostname === "m.youtube.com";
+    return isWatchHost && parsed.pathname === "/watch" && parsed.searchParams.has("v");
+  } catch {
+    return false;
+  }
+}
+
+function assertSupportedSubmissionMedia(media: SubmissionMedia): SubmissionMedia {
+  const hasVideo = media.videoUrl.trim().length > 0;
+  if (hasVideo) {
+    if (media.imageUrls.length > 0) {
+      throw new Error("E2E submissions must choose images or video, not both.");
+    }
+    if (!isSupportedYouTubeUrl(media.videoUrl)) {
+      throw new Error(`Unsupported E2E submission video URL: ${media.videoUrl}`);
+    }
+    return media;
+  }
+
+  if (media.imageUrls.length > MAX_SUBMISSION_IMAGE_URLS) {
+    throw new Error(`E2E submissions support at most ${MAX_SUBMISSION_IMAGE_URLS} images.`);
+  }
+  const unsupportedImageUrl = media.imageUrls.find(url => !isSupportedImageUrl(url));
+  if (unsupportedImageUrl) {
+    throw new Error(`Unsupported E2E submission image URL: ${unsupportedImageUrl}`);
+  }
+
+  return media;
+}
 
 async function rpcRequest<T = any>(method: string, params: unknown[]): Promise<T | null> {
   const res = await fetch(ANVIL_RPC, {
@@ -80,6 +148,36 @@ async function resolveProtocolConfigAddress(contractAddress: string): Promise<st
   }
 }
 
+async function resolveRegistryAddressGetter(
+  contractAddress: string,
+  functionName: "hrepToken" | "questionRewardPoolEscrow",
+) {
+  const { decodeFunctionResult, encodeFunctionData } = await import("viem");
+  const abi = [
+    {
+      name: functionName,
+      type: "function",
+      inputs: [],
+      outputs: [{ name: "", type: "address" }],
+      stateMutability: "view",
+    },
+  ] as const;
+
+  const data = encodeFunctionData({ abi, functionName });
+  const result = await rpcRequest<`0x${string}`>("eth_call", [{ to: contractAddress, data }, "latest"]);
+  if (!result) return null;
+
+  try {
+    return decodeFunctionResult({
+      abi,
+      functionName,
+      data: result,
+    }) as string;
+  } catch {
+    return null;
+  }
+}
+
 async function buildSubmissionReservation(
   url: string,
   title: string,
@@ -88,17 +186,23 @@ async function buildSubmissionReservation(
   categoryId: bigint,
   fromAddress: string,
   contractAddress: string,
+  media: SubmissionMedia,
+  rewardAmount: bigint = DEFAULT_SUBMISSION_REWARD_AMOUNT,
+  roundConfig: SubmissionRoundConfig = DEFAULT_SUBMISSION_ROUND_CONFIG,
 ): Promise<{ revealCommitment: `0x${string}`; salt: `0x${string}` } | null> {
-  const { decodeFunctionResult, encodeAbiParameters, encodeFunctionData, keccak256, stringToHex } = await import(
-    "viem"
-  );
+  const { decodeFunctionResult, encodeFunctionData, keccak256, stringToHex } = await import("viem");
 
   const previewAbi = [
     {
-      name: "previewSubmissionKey",
+      name: "previewQuestionSubmissionKey",
       type: "function",
       inputs: [
-        { name: "url", type: "string" },
+        { name: "contextUrl", type: "string" },
+        { name: "imageUrls", type: "string[]" },
+        { name: "videoUrl", type: "string" },
+        { name: "title", type: "string" },
+        { name: "description", type: "string" },
+        { name: "tags", type: "string" },
         { name: "categoryId", type: "uint256" },
       ],
       outputs: [
@@ -108,11 +212,10 @@ async function buildSubmissionReservation(
       stateMutability: "view",
     },
   ] as const;
-
   const previewData = encodeFunctionData({
     abi: previewAbi,
-    functionName: "previewSubmissionKey",
-    args: [url, categoryId],
+    functionName: "previewQuestionSubmissionKey",
+    args: [url, media.imageUrls, media.videoUrl, title, description, tags, categoryId],
   });
 
   const previewResult = await rpcRequest<`0x${string}`>("eth_call", [
@@ -123,27 +226,65 @@ async function buildSubmissionReservation(
 
   const [, submissionKey] = decodeFunctionResult({
     abi: previewAbi,
-    functionName: "previewSubmissionKey",
+    functionName: "previewQuestionSubmissionKey",
     data: previewResult,
   }) as readonly [bigint, `0x${string}`];
 
-  const salt = keccak256(stringToHex(`${fromAddress}:${categoryId}:${url}:${title}:${Date.now()}`));
-  const revealCommitment = keccak256(
-    encodeAbiParameters(
-      [
-        { type: "bytes32" },
-        { type: "string" },
-        { type: "string" },
-        { type: "string" },
-        { type: "uint256" },
-        { type: "bytes32" },
-        { type: "address" },
-      ],
-      [submissionKey, title, description, tags, categoryId, salt, fromAddress as `0x${string}`],
-    ),
-  );
+  const salt = keccak256(stringToHex(`${fromAddress}:${categoryId}:${JSON.stringify(media)}:${title}:${Date.now()}`));
+  const revealCommitment = buildQuestionSubmissionRevealCommitment({
+    categoryId,
+    description,
+    imageUrls: media.imageUrls,
+    questionMetadataHash: DEFAULT_QUESTION_METADATA_HASH,
+    rewardAmount,
+    rewardAsset: DEFAULT_SUBMISSION_REWARD_ASSET_HREP,
+    requiredSettledRounds: DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+    requiredVoters: DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+    resultSpecHash: DEFAULT_RESULT_SPEC_HASH,
+    rewardPoolExpiresAt: DEFAULT_SUBMISSION_REWARD_EXPIRES_AT,
+    feedbackClosesAt: DEFAULT_SUBMISSION_REWARD_EXPIRES_AT,
+    roundConfig,
+    salt,
+    submissionKey,
+    submitter: fromAddress as `0x${string}`,
+    tags,
+    title,
+    videoUrl: media.videoUrl,
+  });
 
   return { revealCommitment, salt };
+}
+
+async function resolveSubmissionRoundConfig(
+  contractAddress: string,
+  roundConfig?: SubmissionRoundConfig,
+): Promise<SubmissionRoundConfig> {
+  if (roundConfig) {
+    return roundConfig;
+  }
+
+  try {
+    const currentConfig = await readRoundConfig(contractAddress);
+    return {
+      epochDuration: Number(currentConfig.epochDuration),
+      maxDuration: Number(currentConfig.maxDuration),
+      minVoters: Number(currentConfig.minVoters),
+      maxVoters: Number(currentConfig.maxVoters),
+    };
+  } catch {
+    return DEFAULT_SUBMISSION_ROUND_CONFIG;
+  }
+}
+
+function toSubmissionMedia(_url: string, media?: SubmissionMediaInput): SubmissionMedia {
+  if (media) {
+    return assertSupportedSubmissionMedia({
+      imageUrls: media.imageUrls ? [...media.imageUrls] : [],
+      videoUrl: media.videoUrl ?? "",
+    });
+  }
+
+  return { imageUrls: [], videoUrl: "" };
 }
 
 /** Send a raw transaction to the Anvil RPC and report whether its outcome is known. */
@@ -250,17 +391,18 @@ async function readLatestBlockSnapshot(): Promise<{ blockTag: `0x${string}`; tim
   };
 }
 
-async function resolveTlockRuntimeNowMs(
+async function resolveTlockCommitRuntime(
   votingEngineAddress: string,
   contentId: bigint,
-  tlockEpochDurationSeconds: number,
-): Promise<() => number> {
+  commitRoundId: bigint,
+): Promise<{ targetRound: bigint }> {
   const latestBlock = await readLatestBlockSnapshot();
   const currentRoundId = await readCurrentRoundId(votingEngineAddress, contentId, latestBlock.blockTag);
   const { epochDuration } = await readRoundConfig(votingEngineAddress);
+  const drandConfig = await readRoundDrandConfig(votingEngineAddress, contentId, commitRoundId, latestBlock.blockTag);
 
   let roundStartTimeSeconds: number | null = null;
-  if (currentRoundId > 0n) {
+  if (currentRoundId > 0n && currentRoundId === commitRoundId) {
     const round = await readRoundAtBlock(votingEngineAddress, contentId, currentRoundId, latestBlock.blockTag);
     const parsedRound = parseRound(round);
     if (parsedRound?.state === 0 && parsedRound.startTime > 0n) {
@@ -268,14 +410,15 @@ async function resolveTlockRuntimeNowMs(
     }
   }
 
-  const runtimeNowMs = deriveAnchoredTlockRuntimeNowMs({
+  const targetRound = deriveAcceptedTlockTargetRound({
     latestBlockTimestampSeconds: latestBlock.timestampSeconds,
     roundEpochDurationSeconds: Number(epochDuration),
-    tlockEpochDurationSeconds,
+    drandGenesisTimeSeconds: drandConfig.genesisTime,
+    drandPeriodSeconds: drandConfig.period,
     roundStartTimeSeconds,
   });
 
-  return () => runtimeNowMs;
+  return { targetRound };
 }
 
 async function readRoundReferenceRatingBps(
@@ -309,6 +452,39 @@ async function readRoundReferenceRatingBps(
     functionName: "previewCommitReferenceRatingBps",
     data: result,
   }) as number;
+}
+
+async function readPreviewCommitRoundId(
+  contractAddress: string,
+  contentId: bigint,
+  blockTag: `0x${string}`,
+): Promise<bigint> {
+  const { decodeFunctionResult, encodeFunctionData } = await import("viem");
+  const abi = [
+    {
+      name: "previewCommitRoundId",
+      type: "function",
+      inputs: [{ name: "contentId", type: "uint256" }],
+      outputs: [{ name: "", type: "uint256" }],
+      stateMutability: "view",
+    },
+  ] as const;
+
+  const data = encodeFunctionData({
+    abi,
+    functionName: "previewCommitRoundId",
+    args: [contentId],
+  });
+  const result = await rpcRequest<`0x${string}`>("eth_call", [{ to: contractAddress, data }, blockTag]);
+  if (!result) {
+    throw new Error("Failed to read previewCommitRoundId from Anvil");
+  }
+
+  return decodeFunctionResult({
+    abi,
+    functionName: "previewCommitRoundId",
+    data: result,
+  }) as bigint;
 }
 
 async function readCurrentRoundId(
@@ -399,78 +575,206 @@ async function readRoundAtBlock(
   });
 }
 
-/**
- * Approve a pending category via the timelock.
- * Calls CategoryRegistry.approveCategory(uint256 categoryId, bytes32 descriptionHash, bytes32 approvalDigest).
- * In local dev, deployer == timelock so account #0 can call directly.
- */
-export async function approveCategory(
-  categoryId: number | bigint,
-  descriptionHash: `0x${string}`,
-  fromAddress: string,
+async function readRoundDrandConfig(
   contractAddress: string,
-): Promise<boolean> {
-  const { decodeFunctionResult, encodeFunctionData } = await import("viem");
-  const digestData = encodeFunctionData({
-    abi: [
-      {
-        name: "getCategoryApprovalDigest",
-        type: "function",
-        inputs: [{ name: "categoryId", type: "uint256" }],
-        outputs: [{ name: "", type: "bytes32" }],
-        stateMutability: "view",
-      },
-    ],
-    functionName: "getCategoryApprovalDigest",
-    args: [BigInt(categoryId)],
-  });
-  const digestResult = await rpcRequest<`0x${string}`>("eth_call", [
-    { to: contractAddress, data: digestData },
-    "latest",
+  contentId: bigint,
+  roundId: bigint,
+  blockTag: `0x${string}`,
+): Promise<{ chainHash: `0x${string}`; genesisTime: bigint; period: bigint }> {
+  const protocolConfigAddress = await resolveProtocolConfigAddress(contractAddress);
+  if (roundId > 0n) {
+    const snapshot = await readRoundDrandConfigSnapshot(contractAddress, contentId, roundId, blockTag);
+    if (snapshot) {
+      return snapshot;
+    }
+  }
+
+  const [chainHash, genesisTime, period] = await Promise.all([
+    readUintOrBytes32Getter(protocolConfigAddress, "drandChainHash", [], blockTag),
+    readUintOrBytes32Getter(protocolConfigAddress, "drandGenesisTime", [], blockTag),
+    readUintOrBytes32Getter(protocolConfigAddress, "drandPeriod", [], blockTag),
   ]);
-  if (!digestResult) return false;
 
-  const approvalDigest = decodeFunctionResult({
-    abi: [
-      {
-        name: "getCategoryApprovalDigest",
-        type: "function",
-        inputs: [{ name: "categoryId", type: "uint256" }],
-        outputs: [{ name: "", type: "bytes32" }],
-        stateMutability: "view",
-      },
-    ],
-    functionName: "getCategoryApprovalDigest",
-    data: digestResult,
-  }) as `0x${string}`;
+  if (typeof chainHash !== "string" || typeof genesisTime !== "bigint" || typeof period !== "bigint") {
+    throw new Error("Failed to read drand config");
+  }
 
+  return { chainHash, genesisTime, period };
+}
+
+async function readRoundDrandConfigSnapshot(
+  contractAddress: string,
+  contentId: bigint,
+  roundId: bigint,
+  blockTag: `0x${string}`,
+): Promise<{ chainHash: `0x${string}`; genesisTime: bigint; period: bigint } | null> {
+  try {
+    const [chainHash, genesisTime, period] = await Promise.all([
+      readUintOrBytes32Getter(contractAddress, "roundDrandChainHashSnapshot", [contentId, roundId], blockTag),
+      readUintOrBytes32Getter(contractAddress, "roundDrandGenesisTimeSnapshot", [contentId, roundId], blockTag),
+      readUintOrBytes32Getter(contractAddress, "roundDrandPeriodSnapshot", [contentId, roundId], blockTag),
+    ]);
+
+    if (
+      typeof chainHash === "string" &&
+      chainHash !== "0x0000000000000000000000000000000000000000000000000000000000000000" &&
+      typeof genesisTime === "bigint" &&
+      genesisTime > 0n &&
+      typeof period === "bigint" &&
+      period > 0n
+    ) {
+      return { chainHash, genesisTime, period };
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+async function readUintOrBytes32Getter(
+  contractAddress: string,
+  functionName: string,
+  args: readonly bigint[],
+  blockTag: `0x${string}` | "latest",
+): Promise<bigint | `0x${string}`> {
+  const { decodeFunctionResult, encodeFunctionData } = await import("viem");
+  const outputType = functionName.toLowerCase().includes("hash") ? "bytes32" : "uint64";
+  const abi = [
+    {
+      name: functionName,
+      type: "function",
+      inputs: args.map((_, index) => ({ name: `arg${index}`, type: "uint256" })),
+      outputs: [{ name: "", type: outputType }],
+      stateMutability: "view",
+    },
+  ] as const;
   const data = encodeFunctionData({
-    abi: [
-      {
-        name: "approveCategory",
-        type: "function",
-        inputs: [
-          { name: "categoryId", type: "uint256" },
-          { name: "descriptionHash", type: "bytes32" },
-          { name: "approvalDigest", type: "bytes32" },
-        ],
-        outputs: [],
-        stateMutability: "nonpayable",
-      },
-    ],
-    functionName: "approveCategory",
-    args: [BigInt(categoryId), descriptionHash, approvalDigest],
+    abi,
+    functionName,
+    args: [...args],
   });
-  return sendTx(fromAddress, contractAddress, data);
+  const result = await rpcRequest<`0x${string}`>("eth_call", [{ to: contractAddress, data }, blockTag]);
+  if (!result) {
+    throw new Error(`Failed to read ${functionName} from Anvil`);
+  }
+
+  return decodeFunctionResult({
+    abi,
+    functionName,
+    data: result,
+  }) as bigint | `0x${string}`;
+}
+
+async function readCommitTiming(
+  contractAddress: string,
+  contentId: bigint,
+  roundId: bigint,
+  commitKey: `0x${string}`,
+  blockTag: `0x${string}`,
+): Promise<{ revealableAfter: bigint; targetRound: bigint } | null> {
+  const { decodeFunctionResult, encodeFunctionData } = await import("viem");
+  const abi = [
+    {
+      name: "commits",
+      type: "function",
+      inputs: [
+        { name: "contentId", type: "uint256" },
+        { name: "roundId", type: "uint256" },
+        { name: "commitKey", type: "bytes32" },
+      ],
+      outputs: [
+        { name: "voter", type: "address" },
+        { name: "stakeAmount", type: "uint64" },
+        { name: "ciphertext", type: "bytes" },
+        { name: "targetRound", type: "uint64" },
+        { name: "drandChainHash", type: "bytes32" },
+        { name: "frontend", type: "address" },
+        { name: "revealableAfter", type: "uint48" },
+        { name: "revealed", type: "bool" },
+        { name: "isUp", type: "bool" },
+        { name: "epochIndex", type: "uint8" },
+      ],
+      stateMutability: "view",
+    },
+  ] as const;
+  const data = encodeFunctionData({
+    abi,
+    functionName: "commits",
+    args: [contentId, roundId, commitKey],
+  });
+  const result = await rpcRequest<`0x${string}`>("eth_call", [{ to: contractAddress, data }, blockTag]);
+  if (!result) {
+    return null;
+  }
+
+  const commit = decodeFunctionResult({
+    abi,
+    functionName: "commits",
+    data: result,
+  }) as readonly [
+    `0x${string}`,
+    bigint,
+    `0x${string}`,
+    bigint,
+    `0x${string}`,
+    string,
+    number,
+    boolean,
+    boolean,
+    number,
+  ];
+
+  if (commit[0] === "0x0000000000000000000000000000000000000000") {
+    return null;
+  }
+
+  return {
+    targetRound: commit[3],
+    revealableAfter: BigInt(commit[6]),
+  };
+}
+
+async function ensureCommitRevealable(
+  contractAddress: string,
+  contentId: bigint,
+  roundId: bigint,
+  commitKey: `0x${string}`,
+): Promise<void> {
+  const latestBlock = await readLatestBlockSnapshot();
+  const commit = await readCommitTiming(contractAddress, contentId, roundId, commitKey, latestBlock.blockTag);
+  if (!commit) {
+    return;
+  }
+
+  const drandConfig = await readRoundDrandConfig(contractAddress, contentId, roundId, latestBlock.blockTag);
+  const targetRoundRevealableAt = deriveDrandRoundRevealableAtSeconds({
+    targetRound: commit.targetRound,
+    drandGenesisTimeSeconds: drandConfig.genesisTime,
+    drandPeriodSeconds: drandConfig.period,
+  });
+  const revealNotBefore =
+    targetRoundRevealableAt > commit.revealableAfter ? targetRoundRevealableAt : commit.revealableAfter;
+  const latestTimestamp = BigInt(latestBlock.timestampSeconds);
+  if (latestTimestamp >= revealNotBefore) {
+    return;
+  }
+
+  const secondsToIncrease = Number(revealNotBefore - latestTimestamp);
+  if (!Number.isSafeInteger(secondsToIncrease) || secondsToIncrease <= 0) {
+    return;
+  }
+
+  await evmIncreaseTime(secondsToIncrease);
 }
 
 /**
- * Add an approved category directly (admin fast-path, no stake required).
- * Calls CategoryRegistry.addApprovedCategory(string, string, string[]).
+ * Add seeded category metadata directly.
+ * Calls CategoryRegistry.addCategory(string, string, string[]).
  */
-export async function addApprovedCategory(
+export async function addCategory(
   name: string,
-  domain: string,
+  slug: string,
   subcategories: string[],
   fromAddress: string,
   contractAddress: string,
@@ -479,19 +783,19 @@ export async function addApprovedCategory(
   const data = encodeFunctionData({
     abi: [
       {
-        name: "addApprovedCategory",
+        name: "addCategory",
         type: "function",
         inputs: [
           { name: "name", type: "string" },
-          { name: "domain", type: "string" },
+          { name: "slug", type: "string" },
           { name: "subcategories", type: "string[]" },
         ],
         outputs: [{ name: "categoryId", type: "uint256" }],
         stateMutability: "nonpayable",
       },
     ],
-    functionName: "addApprovedCategory",
-    args: [name, domain, subcategories],
+    functionName: "addCategory",
+    args: [name, slug, subcategories],
   });
   return sendTx(fromAddress, contractAddress, data);
 }
@@ -499,7 +803,7 @@ export async function addApprovedCategory(
 /**
  * Register the caller as a frontend operator.
  * Calls FrontendRegistry.register().
- * Caller must have approved 1000 cREP to the FrontendRegistry.
+ * Caller must have approved 1000 HREP to the FrontendRegistry.
  */
 export async function registerFrontend(fromAddress: string, contractAddress: string): Promise<boolean> {
   const { encodeFunctionData } = await import("viem");
@@ -520,9 +824,9 @@ export async function registerFrontend(fromAddress: string, contractAddress: str
 }
 
 /**
- * Submit content directly via contract call.
- * Caller must have approved MIN_SUBMITTER_STAKE (10 cREP = 10e6) to ContentRegistry.
- * Returns the transaction hash on success, or null on failure.
+ * Ask a question directly via contract call.
+ * Caller funds the mandatory non-refundable HREP bounty during submission.
+ * Returns true when the submission transaction succeeds.
  */
 export async function submitContentDirect(
   url: string,
@@ -532,9 +836,14 @@ export async function submitContentDirect(
   categoryId: number | bigint,
   fromAddress: string,
   contractAddress: string,
+  mediaInput?: SubmissionMediaInput,
+  rewardAmount: bigint = DEFAULT_SUBMISSION_REWARD_AMOUNT,
+  roundConfig?: SubmissionRoundConfig,
 ): Promise<boolean> {
   const { encodeFunctionData } = await import("viem");
   const resolvedCategoryId = BigInt(categoryId);
+  const media = toSubmissionMedia(url, mediaInput);
+  const resolvedRoundConfig = await resolveSubmissionRoundConfig(contractAddress, roundConfig);
   const reservation = await buildSubmissionReservation(
     url,
     title,
@@ -543,8 +852,20 @@ export async function submitContentDirect(
     resolvedCategoryId,
     fromAddress,
     contractAddress,
+    media,
+    rewardAmount,
+    resolvedRoundConfig,
   );
   if (!reservation) return false;
+
+  const [hrepTokenAddress, rewardEscrowAddress] = await Promise.all([
+    resolveRegistryAddressGetter(contractAddress, "hrepToken"),
+    resolveRegistryAddressGetter(contractAddress, "questionRewardPoolEscrow"),
+  ]);
+  if (!hrepTokenAddress || !rewardEscrowAddress) return false;
+
+  const rewardApproved = await approveHREP(rewardEscrowAddress, rewardAmount, fromAddress, hrepTokenAddress);
+  if (!rewardApproved) return false;
 
   const reserveData = encodeFunctionData({
     abi: [
@@ -567,22 +888,76 @@ export async function submitContentDirect(
   const data = encodeFunctionData({
     abi: [
       {
-        name: "submitContent",
+        name: "submitQuestionWithRewardAndRoundConfig",
         type: "function",
         inputs: [
-          { name: "url", type: "string" },
+          { name: "contextUrl", type: "string" },
+          { name: "imageUrls", type: "string[]" },
+          { name: "videoUrl", type: "string" },
           { name: "title", type: "string" },
           { name: "description", type: "string" },
           { name: "tags", type: "string" },
           { name: "categoryId", type: "uint256" },
           { name: "salt", type: "bytes32" },
+          {
+            name: "rewardTerms",
+            type: "tuple",
+            components: [
+              { name: "asset", type: "uint8" },
+              { name: "amount", type: "uint256" },
+              { name: "requiredVoters", type: "uint256" },
+              { name: "requiredSettledRounds", type: "uint256" },
+              { name: "bountyClosesAt", type: "uint256" },
+              { name: "feedbackClosesAt", type: "uint256" },
+            ],
+          },
+          {
+            name: "roundConfig",
+            type: "tuple",
+            components: [
+              { name: "epochDuration", type: "uint32" },
+              { name: "maxDuration", type: "uint32" },
+              { name: "minVoters", type: "uint16" },
+              { name: "maxVoters", type: "uint16" },
+            ],
+          },
+          {
+            name: "spec",
+            type: "tuple",
+            components: [
+              { name: "questionMetadataHash", type: "bytes32" },
+              { name: "resultSpecHash", type: "bytes32" },
+            ],
+          },
         ],
         outputs: [{ name: "", type: "uint256" }],
         stateMutability: "nonpayable",
       },
     ],
-    functionName: "submitContent",
-    args: [url, title, description, tags, resolvedCategoryId, reservation.salt],
+    functionName: "submitQuestionWithRewardAndRoundConfig",
+    args: [
+      url,
+      media.imageUrls,
+      media.videoUrl,
+      title,
+      description,
+      tags,
+      resolvedCategoryId,
+      reservation.salt,
+      {
+        asset: DEFAULT_SUBMISSION_REWARD_ASSET_HREP,
+        amount: rewardAmount,
+        requiredVoters: DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+        requiredSettledRounds: DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+        bountyClosesAt: DEFAULT_SUBMISSION_REWARD_EXPIRES_AT,
+        feedbackClosesAt: DEFAULT_SUBMISSION_REWARD_EXPIRES_AT,
+      },
+      resolvedRoundConfig,
+      {
+        questionMetadataHash: DEFAULT_QUESTION_METADATA_HASH,
+        resultSpecHash: DEFAULT_RESULT_SPEC_HASH,
+      },
+    ],
   });
   return sendTx(fromAddress, contractAddress, data);
 }
@@ -843,9 +1218,9 @@ export async function markDormant(
 }
 
 /**
- * Revive dormant content by staking 5 cREP.
+ * Revive dormant content by staking 5 HREP.
  * Calls ContentRegistry.reviveContent(uint256 contentId).
- * Requires caller to have approved 5 cREP (5e6) to the ContentRegistry.
+ * Requires caller to have approved 5 HREP (5e6) to the ContentRegistry.
  */
 export async function reviveContent(
   contentId: number | bigint,
@@ -870,10 +1245,10 @@ export async function reviveContent(
 }
 
 /**
- * Transfer cREP tokens from one address to another.
- * Calls CuryoReputation.transfer(address to, uint256 amount).
+ * Transfer HREP tokens from one address to another.
+ * Calls HumanReputation.transfer(address to, uint256 amount).
  */
-export async function transferCREP(
+export async function transferHREP(
   toAddress: string,
   amount: bigint,
   fromAddress: string,
@@ -901,9 +1276,9 @@ export async function transferCREP(
 
 /**
  * Approve ERC20 token spending.
- * Calls CuryoReputation.approve(address spender, uint256 amount).
+ * Calls HumanReputation.approve(address spender, uint256 amount).
  */
-export async function approveCREP(
+export async function approveHREP(
   spender: string,
   amount: bigint,
   fromAddress: string,
@@ -927,37 +1302,6 @@ export async function approveCREP(
     args: [spender as `0x${string}`, amount],
   });
   return sendTx(fromAddress, tokenAddress, data);
-}
-
-/**
- * Claim submitter reward after round settlement.
- * Calls RoundRewardDistributor.claimSubmitterReward(uint256 contentId, uint256 roundId).
- * Permissionless but only the submitter gets the reward.
- */
-export async function claimSubmitterReward(
-  contentId: number | bigint,
-  roundId: number | bigint,
-  fromAddress: string,
-  contractAddress: string,
-): Promise<boolean> {
-  const { encodeFunctionData } = await import("viem");
-  const data = encodeFunctionData({
-    abi: [
-      {
-        name: "claimSubmitterReward",
-        type: "function",
-        inputs: [
-          { name: "contentId", type: "uint256" },
-          { name: "roundId", type: "uint256" },
-        ],
-        outputs: [],
-        stateMutability: "nonpayable",
-      },
-    ],
-    functionName: "claimSubmitterReward",
-    args: [BigInt(contentId), BigInt(roundId)],
-  });
-  return sendTx(fromAddress, contractAddress, data);
 }
 
 /**
@@ -1213,7 +1557,7 @@ async function buildVoteCommitSalt(
 /**
  * Commit a vote directly via contract call (tlock commit-reveal).
  * Encrypts vote direction with drand tlock and computes commitHash/commitKey.
- * Caller must have approved stakeAmount of cREP to the RoundVotingEngine.
+ * Caller must have approved stakeAmount of HREP to the RoundVotingEngine.
  *
  * Returns { success, commitKey, isUp, salt } for later reveal.
  */
@@ -1238,11 +1582,14 @@ export async function commitVoteDirect(
     attempt: async attemptIndex => {
       const salt = await buildVoteCommitSalt(fromAddress, contentIdBigInt, attemptIndex);
       const latestBlock = await readLatestBlockSnapshot();
+      const roundId = await readPreviewCommitRoundId(contractAddress, contentIdBigInt, latestBlock.blockTag);
       const roundReferenceRatingBps = await readRoundReferenceRatingBps(
         contractAddress,
         contentIdBigInt,
         latestBlock.blockTag,
       );
+      const roundContext = packVoteRoundContext(roundId, roundReferenceRatingBps);
+      const tlockRuntime = await resolveTlockCommitRuntime(contractAddress, contentIdBigInt, roundId);
       const {
         ciphertext,
         commitHash: chash,
@@ -1255,11 +1602,12 @@ export async function commitVoteDirect(
           isUp,
           salt,
           contentId: contentIdBigInt,
+          roundId,
           roundReferenceRatingBps,
           epochDurationSeconds: resolvedEpochDurationSeconds,
         },
         {
-          now: await resolveTlockRuntimeNowMs(contractAddress, contentIdBigInt, resolvedEpochDurationSeconds),
+          targetRound: tlockRuntime.targetRound,
         },
       );
 
@@ -1270,7 +1618,7 @@ export async function commitVoteDirect(
             type: "function",
             inputs: [
               { name: "contentId", type: "uint256" },
-              { name: "roundReferenceRatingBps", type: "uint16" },
+              { name: "roundContext", type: "uint256" },
               { name: "targetRound", type: "uint64" },
               { name: "drandChainHash", type: "bytes32" },
               { name: "commitHash", type: "bytes32" },
@@ -1285,7 +1633,7 @@ export async function commitVoteDirect(
         functionName: "commitVote",
         args: [
           contentIdBigInt,
-          roundReferenceRatingBps,
+          roundContext,
           targetRound,
           drandChainHash,
           chash,
@@ -1316,7 +1664,7 @@ export async function commitVoteDirect(
 
 /**
  * Commit a vote via the single-transaction ERC-1363 transferAndCall path.
- * Transfers cREP to the voting engine and commits the encrypted vote atomically.
+ * Transfers HREP to the voting engine and commits the encrypted vote atomically.
  */
 export async function commitVoteWithTransferAndCallDirect(
   contentId: number | bigint,
@@ -1340,11 +1688,13 @@ export async function commitVoteWithTransferAndCallDirect(
     attempt: async attemptIndex => {
       const salt = await buildVoteCommitSalt(fromAddress, contentIdBigInt, attemptIndex);
       const latestBlock = await readLatestBlockSnapshot();
+      const roundId = await readPreviewCommitRoundId(votingEngineAddress, contentIdBigInt, latestBlock.blockTag);
       const roundReferenceRatingBps = await readRoundReferenceRatingBps(
         votingEngineAddress,
         contentIdBigInt,
         latestBlock.blockTag,
       );
+      const tlockRuntime = await resolveTlockCommitRuntime(votingEngineAddress, contentIdBigInt, roundId);
       const {
         ciphertext,
         commitHash: chash,
@@ -1357,16 +1707,18 @@ export async function commitVoteWithTransferAndCallDirect(
           isUp,
           salt,
           contentId: contentIdBigInt,
+          roundId,
           roundReferenceRatingBps,
           epochDurationSeconds: resolvedEpochDurationSeconds,
         },
         {
-          now: await resolveTlockRuntimeNowMs(votingEngineAddress, contentIdBigInt, resolvedEpochDurationSeconds),
+          targetRound: tlockRuntime.targetRound,
         },
       );
 
       const payload = encodeVoteTransferPayload({
         contentId: contentIdBigInt,
+        roundId,
         roundReferenceRatingBps,
         commitHash: chash,
         ciphertext,
@@ -1427,6 +1779,7 @@ export async function revealVoteDirect(
   contractAddress: string,
 ): Promise<boolean> {
   const { encodeFunctionData } = await import("viem");
+  await ensureCommitRevealable(contractAddress, BigInt(contentId), BigInt(roundId), commitKey);
   const data = encodeFunctionData({
     abi: [
       {
@@ -1567,7 +1920,8 @@ export async function finalizeRevealFailedRound(
 /**
  * Process unrevealed votes after settlement.
  * Calls processUnrevealedVotes(contentId, roundId, startIndex, count).
- * Forfeits past-epoch stakes to treasury, refunds current-epoch stakes.
+ * Routes settled past-epoch stakes to the consensus reserve, forfeits
+ * tied/reveal-failed stakes to treasury, and refunds current/future-epoch stakes.
  */
 export async function processUnrevealedVotes(
   contentId: number | bigint,
@@ -1867,8 +2221,7 @@ export async function waitForPonderIndexed(
 
 /**
  * Read the current round config tuple.
- * Accepts either a RoundVotingEngine address (resolves its ProtocolConfig)
- * or a ProtocolConfig address directly.
+ * Accepts a ProtocolConfig address directly or a contract that exposes protocolConfig().
  */
 export async function readRoundConfig(contractAddress: string): Promise<{
   epochDuration: bigint;
@@ -1994,7 +2347,7 @@ export async function waitForPonderSync(
 
 /**
  * Withdraw accumulated frontend fees via FrontendRegistry.claimFees().
- * Must be called by the frontend operator address. Transfers cREP from
+ * Must be called by the frontend operator address. Transfers HREP from
  * the registry to the operator's wallet.
  */
 export async function claimFrontendFees(fromAddress: string, contractAddress: string): Promise<boolean> {

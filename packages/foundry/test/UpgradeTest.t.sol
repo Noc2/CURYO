@@ -15,10 +15,11 @@ import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol"
 import { ProfileRegistry } from "../contracts/ProfileRegistry.sol";
 import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
 import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { HumanReputation } from "../contracts/HumanReputation.sol";
 import { IProfileRegistry } from "../contracts/interfaces/IProfileRegistry.sol";
 import { IRoundVotingEngine } from "../contracts/interfaces/IRoundVotingEngine.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
+import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
 
 /// @title Minimal mock for RoundVotingEngine interface (used by FrontendRegistry)
 contract MockVotingEngineForUpgrade is IRoundVotingEngine {
@@ -75,7 +76,7 @@ contract UpgradeTest is Test {
     ProxyAdmin public frontendRegistryAdmin;
     ProxyAdmin public protocolConfigAdmin;
 
-    CuryoReputation public crepToken;
+    HumanReputation public hrepToken;
     MockVotingEngineForUpgrade public mockVotingEngine;
 
     // Roles
@@ -88,7 +89,7 @@ contract UpgradeTest is Test {
         vm.startPrank(admin);
 
         // Deploy token
-        crepToken = new CuryoReputation(admin, governance);
+        hrepToken = new HumanReputation(admin, governance);
         mockVotingEngine = new MockVotingEngineForUpgrade();
 
         // --- ContentRegistry ---
@@ -96,7 +97,7 @@ contract UpgradeTest is Test {
         TransparentUpgradeableProxy crProxy = new TransparentUpgradeableProxy(
             address(crImpl),
             governance,
-            abi.encodeCall(ContentRegistry.initialize, (admin, governance, address(crepToken)))
+            abi.encodeCall(ContentRegistry.initializeWithTreasury, (admin, governance, governance, address(hrepToken)))
         );
         contentRegistry = ContentRegistry(address(crProxy));
         contentRegistryAdmin = _proxyAdmin(address(crProxy));
@@ -116,7 +117,7 @@ contract UpgradeTest is Test {
             governance,
             abi.encodeCall(
                 RoundVotingEngine.initialize,
-                (governance, address(crepToken), address(contentRegistry), address(protocolConfig))
+                (governance, address(hrepToken), address(contentRegistry), address(protocolConfig))
             )
         );
         votingEngine = RoundVotingEngine(address(veProxy));
@@ -129,7 +130,7 @@ contract UpgradeTest is Test {
             governance,
             abi.encodeCall(
                 RoundRewardDistributor.initialize,
-                (governance, address(crepToken), address(votingEngine), address(contentRegistry))
+                (governance, address(hrepToken), address(votingEngine), address(contentRegistry))
             )
         );
         rewardDistributor = RoundRewardDistributor(address(rdProxy));
@@ -148,10 +149,15 @@ contract UpgradeTest is Test {
         TransparentUpgradeableProxy frProxy = new TransparentUpgradeableProxy(
             address(frImpl),
             governance,
-            abi.encodeCall(FrontendRegistry.initialize, (admin, governance, address(crepToken)))
+            abi.encodeCall(FrontendRegistry.initialize, (admin, governance, address(hrepToken)))
         );
         frontendRegistry = FrontendRegistry(address(frProxy));
         frontendRegistryAdmin = _proxyAdmin(address(frProxy));
+
+        MockVoterIdNFT voterIdNFT = new MockVoterIdNFT();
+        profileRegistry.setVoterIdNFT(address(voterIdNFT));
+        frontendRegistry.setVoterIdNFT(address(voterIdNFT));
+        voterIdNFT.setHolder(address(10));
 
         vm.stopPrank();
     }
@@ -176,7 +182,7 @@ contract UpgradeTest is Test {
     function test_ContentRegistry_CannotReinitialize() public {
         vm.prank(admin);
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        contentRegistry.initialize(admin, governance, address(crepToken));
+        contentRegistry.initializeWithTreasury(admin, governance, governance, address(hrepToken));
     }
 
     function test_ContentRegistry_StatePreservedAfterUpgrade() public {
@@ -189,7 +195,7 @@ contract UpgradeTest is Test {
 
         // Verify state preserved
         assertEq(contentRegistryAdmin.owner(), governance);
-        assertEq(address(contentRegistry.crepToken()), address(crepToken));
+        assertEq(address(contentRegistry.hrepToken()), address(hrepToken));
     }
 
     // =========================================================================
@@ -221,6 +227,12 @@ contract UpgradeTest is Test {
 
         assertEq(protocolConfigAdmin.owner(), governance);
         assertEq(protocolConfig.treasury(), address(1234));
+        assertTrue(protocolConfig.hasRole(protocolConfig.DEFAULT_ADMIN_ROLE(), governance));
+        assertTrue(protocolConfig.hasRole(protocolConfig.CONFIG_ROLE(), governance));
+        assertTrue(protocolConfig.hasRole(protocolConfig.CONFIG_ROLE(), admin));
+        assertTrue(protocolConfig.hasRole(protocolConfig.TREASURY_ADMIN_ROLE(), governance));
+        assertTrue(protocolConfig.hasRole(protocolConfig.TREASURY_ROLE(), governance));
+        assertEq(protocolConfig.getRoleAdmin(protocolConfig.TREASURY_ROLE()), protocolConfig.TREASURY_ADMIN_ROLE());
 
         ProtocolConfig newImpl = new ProtocolConfig();
         vm.prank(governance);
@@ -228,6 +240,12 @@ contract UpgradeTest is Test {
 
         assertEq(protocolConfigAdmin.owner(), governance);
         assertEq(protocolConfig.treasury(), address(1234));
+        assertTrue(protocolConfig.hasRole(protocolConfig.DEFAULT_ADMIN_ROLE(), governance));
+        assertTrue(protocolConfig.hasRole(protocolConfig.CONFIG_ROLE(), governance));
+        assertTrue(protocolConfig.hasRole(protocolConfig.CONFIG_ROLE(), admin));
+        assertTrue(protocolConfig.hasRole(protocolConfig.TREASURY_ADMIN_ROLE(), governance));
+        assertTrue(protocolConfig.hasRole(protocolConfig.TREASURY_ROLE(), governance));
+        assertEq(protocolConfig.getRoleAdmin(protocolConfig.TREASURY_ROLE()), protocolConfig.TREASURY_ADMIN_ROLE());
     }
 
     // =========================================================================
@@ -251,7 +269,7 @@ contract UpgradeTest is Test {
         address protocolConfigAddress = address(votingEngine.protocolConfig());
         vm.prank(admin);
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        votingEngine.initialize(governance, address(crepToken), address(contentRegistry), protocolConfigAddress);
+        votingEngine.initialize(governance, address(hrepToken), address(contentRegistry), protocolConfigAddress);
     }
 
     function test_VotingEngine_StatePreservedAfterUpgrade() public {
@@ -284,19 +302,19 @@ contract UpgradeTest is Test {
     function test_RewardDistributor_CannotReinitialize() public {
         vm.prank(admin);
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        rewardDistributor.initialize(governance, address(crepToken), address(votingEngine), address(contentRegistry));
+        rewardDistributor.initialize(governance, address(hrepToken), address(votingEngine), address(contentRegistry));
     }
 
     function test_RewardDistributor_StatePreservedAfterUpgrade() public {
         assertEq(rewardDistributorAdmin.owner(), governance);
-        assertEq(address(rewardDistributor.crepToken()), address(crepToken));
+        assertEq(address(rewardDistributor.hrepToken()), address(hrepToken));
 
         RoundRewardDistributor newImpl = new RoundRewardDistributor();
         vm.prank(governance);
         rewardDistributorAdmin.upgradeAndCall(_proxy(address(rewardDistributor)), address(newImpl), "");
 
         assertEq(rewardDistributorAdmin.owner(), governance);
-        assertEq(address(rewardDistributor.crepToken()), address(crepToken));
+        assertEq(address(rewardDistributor.hrepToken()), address(hrepToken));
     }
 
     // =========================================================================
@@ -343,7 +361,7 @@ contract UpgradeTest is Test {
 
         IProfileRegistry.Profile memory profile = profileRegistry.getProfile(address(10));
         assertEq(profile.name, "testuser");
-        assertEq(profile.strategy, "");
+        assertEq(profile.selfReport, "");
         assertTrue(profile.createdAt > 0);
         assertTrue(profile.updatedAt > 0);
 
@@ -372,7 +390,7 @@ contract UpgradeTest is Test {
     function test_FrontendRegistry_CannotReinitialize() public {
         vm.prank(admin);
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        frontendRegistry.initialize(admin, governance, address(crepToken));
+        frontendRegistry.initialize(admin, governance, address(hrepToken));
     }
 
     function test_FrontendRegistry_StatePreservedAfterUpgrade() public {
@@ -395,15 +413,15 @@ contract UpgradeTest is Test {
         // Each implementation should have _disableInitializers() in its constructor
         ContentRegistry crImpl = new ContentRegistry();
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        crImpl.initialize(admin, governance, address(crepToken));
+        crImpl.initializeWithTreasury(admin, governance, governance, address(hrepToken));
 
         RoundVotingEngine veImpl = new RoundVotingEngine();
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        veImpl.initialize(admin, governance, address(crepToken), address(contentRegistry));
+        veImpl.initialize(admin, governance, address(hrepToken), address(contentRegistry));
 
         RoundRewardDistributor rdImpl = new RoundRewardDistributor();
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        rdImpl.initialize(governance, address(crepToken), address(votingEngine), address(contentRegistry));
+        rdImpl.initialize(governance, address(hrepToken), address(votingEngine), address(contentRegistry));
 
         ProfileRegistry prImpl = new ProfileRegistry();
         vm.expectRevert(Initializable.InvalidInitialization.selector);
@@ -411,7 +429,7 @@ contract UpgradeTest is Test {
 
         FrontendRegistry frImpl = new FrontendRegistry();
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        frImpl.initialize(admin, governance, address(crepToken));
+        frImpl.initialize(admin, governance, address(hrepToken));
 
         ProtocolConfig pcImpl = new ProtocolConfig();
         vm.expectRevert(Initializable.InvalidInitialization.selector);

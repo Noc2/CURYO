@@ -1,0 +1,32 @@
+{
+  "clientRequestId": "feature-acceptance-test-demo",
+  "chainId": 42220,
+  "templateId": "feature_acceptance_test",
+  "maxPaymentAmount": "1500000",
+  "bounty": {
+    "asset": "USDC",
+    "amount": "1500000",
+    "requiredVoters": "5",
+    "requiredSettledRounds": "1"
+  },
+  "question": {
+    "templateId": "feature_acceptance_test",
+    "templateInputs": {
+      "acceptanceCriteria": "Vote up only if the connect, refresh, and vote flow works without manual recovery.",
+      "buildId": "preview-2026-04-28",
+      "environmentHints": "Test desktop Chrome with MetaMask; include mobile or Ledger notes only if tried.",
+      "expectedBehavior": "A user can connect a wallet, refresh the page, and still submit a vote.",
+      "featureId": "wallet-connect-refresh-v2",
+      "featureName": "Wallet connect refresh",
+      "knownLimitations": "Ledger is not included in this preview.",
+      "outOfScope": "Do not judge visual polish unless it blocks completion.",
+      "releaseStage": "preview",
+      "testSteps": "1. Open the preview. 2. Connect MetaMask. 3. Refresh. 4. Submit a vote on the test question."
+    },
+    "title": "Does this wallet preview work as specified?",
+    "description": "Open the linked preview and follow the listed test steps. Vote down if the feature fails, requires manual recovery, or is too confusing to complete.",
+    "contextUrl": "https://example.com/wallet-preview",
+    "categoryId": "6",
+    "tags": ["agent", "feature-test", "wallet"]
+  }
+}

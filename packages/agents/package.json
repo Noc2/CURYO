@@ -1,0 +1,39 @@
+{
+  "name": "@curyo/agents",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./lint": "./src/questions/lint.ts",
+    "./question-specs": "./src/questionSpecs.ts",
+    "./questions": "./src/questions/index.ts",
+    "./templates": "./src/templates.ts"
+  },
+  "scripts": {
+    "ask": "tsx src/cli.ts ask",
+    "check-types": "tsc --noEmit",
+    "lint:questions": "tsx src/cli.ts lint",
+    "quote": "tsx src/cli.ts quote",
+    "result": "tsx src/cli.ts result",
+    "status": "tsx src/cli.ts status",
+    "templates": "tsx src/cli.ts templates",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@curyo/sdk": "workspace:*",
+    "dotenv": "^16.4.5",
+    "viem": "2.39.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.7",
+    "tsx": "^4.19.0",
+    "typescript": "~5.8.2",
+    "vitest": "^4.0.18"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=24 <25"
+  }
+}

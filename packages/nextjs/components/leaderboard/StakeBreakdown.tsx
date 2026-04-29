@@ -9,7 +9,7 @@ import { useSubmissionStakes } from "~~/hooks/useSubmissionStakes";
 import { useVotingStakes } from "~~/hooks/useVotingStakes";
 
 /**
- * Shows a breakdown of the connected user's actively staked cREP.
+ * Shows a breakdown of the connected user's actively staked HREP.
  * Uses the same hooks as the navbar for consistent data.
  */
 export function StakeBreakdown({
@@ -51,8 +51,8 @@ export function StakeBreakdown({
   return (
     <div className="surface-card rounded-2xl p-6 space-y-1.5">
       <div className="flex items-start justify-between gap-3">
-        <h2 className={surfaceSectionHeadingClassName}>Staked cREP</h2>
-        <span className="text-base tabular-nums text-base-content/60">{format(totalStaked)} cREP</span>
+        <h2 className={surfaceSectionHeadingClassName}>Staked HREP</h2>
+        <span className="text-base tabular-nums text-base-content/60">{format(totalStaked)} HREP</span>
       </div>
       {entries.length > 0 ? (
         <div className="flex flex-wrap gap-2">
@@ -65,7 +65,7 @@ export function StakeBreakdown({
               >
                 <span className="text-base-content/50">{e.label}</span>
                 <span className="font-mono tabular-nums">{format(e.amount)}</span>
-                <span className="text-base-content/40 font-mono tabular-nums">· next {e.deadline}</span>
+                <span className="text-base-content/60 font-mono tabular-nums">· next {e.deadline}</span>
               </div>
             ) : (
               <div
@@ -79,7 +79,7 @@ export function StakeBreakdown({
           )}
         </div>
       ) : (
-        <div className="rounded-2xl bg-base-content/[0.04] px-4 py-8 text-center text-base text-base-content/45">
+        <div className="rounded-2xl bg-base-content/[0.04] px-4 py-8 text-center text-base text-base-content/60">
           No active stakes
         </div>
       )}

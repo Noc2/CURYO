@@ -7,7 +7,7 @@ test("getVoteViewGroups hides wallet-only entries when disconnected", () => {
 
   assert.deepEqual(
     groups.map(group => group.label),
-    ["Discover"],
+    ["Rate"],
   );
   assert.equal(
     groups[0]?.options.some(option => option.value === "watched"),
@@ -24,7 +24,7 @@ test("getVoteViewGroups includes activity entries when connected", () => {
 
   assert.deepEqual(
     groups.map(group => group.label),
-    ["Discover", "Your Activity"],
+    ["Rate", "Your Activity"],
   );
   assert.equal(
     groups[1]?.options.some(option => option.value === "my_votes"),

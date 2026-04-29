@@ -53,6 +53,7 @@ describe("validateKeeperContracts", () => {
         .fn()
         .mockResolvedValueOnce("0x3333333333333333333333333333333333333333")
         .mockResolvedValueOnce([1200n, 604800n, 3n, 1000n])
+        .mockResolvedValueOnce(ENGINE)
         .mockResolvedValueOnce(7n),
     };
 
@@ -69,7 +70,28 @@ describe("validateKeeperContracts", () => {
     );
     expect(publicClient.readContract).toHaveBeenNthCalledWith(
       3,
+      expect.objectContaining({ address: REGISTRY, functionName: "votingEngine" }),
+    );
+    expect(publicClient.readContract).toHaveBeenNthCalledWith(
+      4,
       expect.objectContaining({ address: REGISTRY, functionName: "nextContentId" }),
     );
+  });
+
+  it("rejects stale deployment config when the registry points at another voting engine", async () => {
+    const otherEngine = "0x4444444444444444444444444444444444444444";
+    const publicClient = {
+      getCode: vi.fn().mockResolvedValue("0x1234"),
+      readContract: vi
+        .fn()
+        .mockResolvedValueOnce("0x3333333333333333333333333333333333333333")
+        .mockResolvedValueOnce([1200n, 604800n, 3n, 1000n])
+        .mockResolvedValueOnce(otherEngine),
+    };
+
+    await expect(validateKeeperContracts(publicClient as any, ENGINE, REGISTRY)).rejects.toThrow(
+      `ContentRegistry at ${REGISTRY} is wired to RoundVotingEngine ${otherEngine}, but keeper is configured for ${ENGINE}`,
+    );
+    expect(publicClient.readContract).toHaveBeenCalledTimes(3);
   });
 });

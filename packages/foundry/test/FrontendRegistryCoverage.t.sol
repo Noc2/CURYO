@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import { Test } from "forge-std/Test.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { HumanReputation } from "../contracts/HumanReputation.sol";
 import { IFrontendRegistry } from "../contracts/interfaces/IFrontendRegistry.sol";
 import { IRoundVotingEngine } from "../contracts/interfaces/IRoundVotingEngine.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
@@ -65,7 +65,7 @@ contract MockVotingEngine_FR is IRoundVotingEngine {
 ///         VoterIdNFT gating, creditFees boundaries, slash edge cases, access control negatives.
 contract FrontendRegistryCoverageTest is Test {
     FrontendRegistry public registry;
-    CuryoReputation public crepToken;
+    HumanReputation public hrepToken;
     MockVotingEngine_FR public votingEngine;
     MockVoterIdNFT public mockVoterIdNFT;
 
@@ -78,13 +78,13 @@ contract FrontendRegistryCoverageTest is Test {
     address public nonAdmin = address(7);
 
     uint256 public constant STAKE = 1000e6;
-    uint256 public constant MAX_FEE_CREDIT = 10_000e6;
+    uint256 public constant MAX_FEE_CREDIT = 50_000e6;
 
     function setUp() public {
         vm.startPrank(admin);
 
-        crepToken = new CuryoReputation(admin, admin);
-        crepToken.grantRole(crepToken.MINTER_ROLE(), admin);
+        hrepToken = new HumanReputation(admin, admin);
+        hrepToken.grantRole(hrepToken.MINTER_ROLE(), admin);
 
         votingEngine = new MockVotingEngine_FR();
         mockVoterIdNFT = new MockVoterIdNFT();
@@ -93,18 +93,20 @@ contract FrontendRegistryCoverageTest is Test {
         registry = FrontendRegistry(
             address(
                 new ERC1967Proxy(
-                    address(impl), abi.encodeCall(FrontendRegistry.initialize, (admin, admin, address(crepToken)))
+                    address(impl), abi.encodeCall(FrontendRegistry.initialize, (admin, admin, address(hrepToken)))
                 )
             )
         );
 
         registry.setVotingEngine(address(votingEngine));
         registry.addFeeCreditor(feeCreditor);
+        registry.setVoterIdNFT(address(mockVoterIdNFT));
 
-        crepToken.mint(frontend1, 50_000e6);
-        crepToken.mint(frontend2, 50_000e6);
-        crepToken.mint(frontend3, 50_000e6);
-        crepToken.mint(address(registry), 1_000_000e6);
+        hrepToken.mint(frontend1, 50_000e6);
+        hrepToken.mint(frontend2, 50_000e6);
+        hrepToken.mint(frontend3, 50_000e6);
+        hrepToken.mint(address(registry), 1_000_000e6);
+        mockVoterIdNFT.setHolder(frontend1);
 
         vm.stopPrank();
 
@@ -121,7 +123,7 @@ contract FrontendRegistryCoverageTest is Test {
         FrontendRegistry reg2 = FrontendRegistry(
             address(
                 new ERC1967Proxy(
-                    address(impl2), abi.encodeCall(FrontendRegistry.initialize, (admin, governance, address(crepToken)))
+                    address(impl2), abi.encodeCall(FrontendRegistry.initialize, (admin, governance, address(hrepToken)))
                 )
             )
         );
@@ -140,7 +142,7 @@ contract FrontendRegistryCoverageTest is Test {
         FrontendRegistry impl2 = new FrontendRegistry();
         vm.expectRevert("Invalid admin");
         new ERC1967Proxy(
-            address(impl2), abi.encodeCall(FrontendRegistry.initialize, (address(0), admin, address(crepToken)))
+            address(impl2), abi.encodeCall(FrontendRegistry.initialize, (address(0), admin, address(hrepToken)))
         );
         vm.stopPrank();
     }
@@ -150,7 +152,7 @@ contract FrontendRegistryCoverageTest is Test {
         FrontendRegistry impl2 = new FrontendRegistry();
         vm.expectRevert("Invalid governance");
         new ERC1967Proxy(
-            address(impl2), abi.encodeCall(FrontendRegistry.initialize, (admin, address(0), address(crepToken)))
+            address(impl2), abi.encodeCall(FrontendRegistry.initialize, (admin, address(0), address(hrepToken)))
         );
         vm.stopPrank();
     }
@@ -168,26 +170,19 @@ contract FrontendRegistryCoverageTest is Test {
     // =========================================================================
 
     function test_Register_WithVoterIdNFT_RequiresVoterId() public {
-        vm.prank(admin);
-        registry.setVoterIdNFT(address(mockVoterIdNFT));
+        mockVoterIdNFT.removeHolder(frontend1);
 
         // frontend1 doesn't have VoterId — should revert
         vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         vm.expectRevert("Voter ID required");
         registry.register();
         vm.stopPrank();
     }
 
     function test_Register_WithVoterIdNFT_SucceedsWithVoterId() public {
-        vm.prank(admin);
-        registry.setVoterIdNFT(address(mockVoterIdNFT));
-
-        // Give frontend1 a VoterId
-        mockVoterIdNFT.setHolder(frontend1);
-
         vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         registry.register();
         vm.stopPrank();
 
@@ -196,31 +191,22 @@ contract FrontendRegistryCoverageTest is Test {
     }
 
     function test_Register_WithDelegatedVoterId_Reverts() public {
-        vm.prank(admin);
-        registry.setVoterIdNFT(address(mockVoterIdNFT));
-
-        mockVoterIdNFT.setHolder(frontend1);
         vm.prank(frontend1);
         mockVoterIdNFT.setDelegate(frontend2);
 
         vm.startPrank(frontend2);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         vm.expectRevert("Frontend operator must hold Voter ID");
         registry.register();
         vm.stopPrank();
     }
 
     function test_Register_DelegateRotation_CannotCreateNewFrontendIdentity() public {
-        vm.prank(admin);
-        registry.setVoterIdNFT(address(mockVoterIdNFT));
-
-        mockVoterIdNFT.setHolder(frontend1);
-
         vm.prank(frontend1);
         mockVoterIdNFT.setDelegate(frontend2);
 
         vm.startPrank(frontend2);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         vm.expectRevert("Frontend operator must hold Voter ID");
         registry.register();
         vm.stopPrank();
@@ -232,26 +218,34 @@ contract FrontendRegistryCoverageTest is Test {
         mockVoterIdNFT.setDelegate(frontend3);
 
         vm.startPrank(frontend3);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         vm.expectRevert("Frontend operator must hold Voter ID");
         registry.register();
         vm.stopPrank();
     }
 
-    function test_Register_WithoutVoterIdNFT_SkipsCheck() public {
-        // voterIdNFT is not set (address(0)) — registration should succeed without check
-        vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
-        registry.register();
+    function test_Register_WithoutVoterIdNFT_Reverts() public {
+        vm.startPrank(admin);
+        FrontendRegistry impl2 = new FrontendRegistry();
+        FrontendRegistry unsetRegistry = FrontendRegistry(
+            address(
+                new ERC1967Proxy(
+                    address(impl2), abi.encodeCall(FrontendRegistry.initialize, (admin, admin, address(hrepToken)))
+                )
+            )
+        );
         vm.stopPrank();
 
-        (address operator,,,) = registry.getFrontendInfo(frontend1);
-        assertEq(operator, frontend1);
+        vm.startPrank(frontend1);
+        hrepToken.approve(address(unsetRegistry), STAKE);
+        vm.expectRevert("VoterIdNFT not set");
+        unsetRegistry.register();
+        vm.stopPrank();
     }
 
     function test_Register_InsufficientApproval_Reverts() public {
         vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE - 1);
+        hrepToken.approve(address(registry), STAKE - 1);
         vm.expectRevert();
         registry.register();
         vm.stopPrank();
@@ -259,9 +253,9 @@ contract FrontendRegistryCoverageTest is Test {
 
     function test_Register_InsufficientBalance_Reverts() public {
         address poorFrontend = address(99);
-        // Has no cREP tokens
+        // Has no HREP tokens
         vm.startPrank(poorFrontend);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         vm.expectRevert();
         registry.register();
         vm.stopPrank();
@@ -303,6 +297,16 @@ contract FrontendRegistryCoverageTest is Test {
         registry.creditFees(frontend1, MAX_FEE_CREDIT);
 
         assertEq(registry.getAccumulatedFees(frontend1), MAX_FEE_CREDIT);
+    }
+
+    function test_CreditFees_MaxLaunchRoundFrontendFee_Succeeds() public {
+        _registerFrontend(frontend1);
+
+        uint256 maxLaunchRoundFrontendFee = 38_000e6;
+        vm.prank(feeCreditor);
+        registry.creditFees(frontend1, maxLaunchRoundFrontendFee);
+
+        assertEq(registry.getAccumulatedFees(frontend1), maxLaunchRoundFrontendFee);
     }
 
     function test_CreditFees_ExceedsMax_Reverts() public {
@@ -415,9 +419,9 @@ contract FrontendRegistryCoverageTest is Test {
 
         vm.prank(frontend1);
         registry.requestDeregister();
-        uint256 balanceBefore = crepToken.balanceOf(frontend1);
+        uint256 balanceBefore = hrepToken.balanceOf(frontend1);
         _completeDeregister(frontend1);
-        uint256 balanceAfter = crepToken.balanceOf(frontend1);
+        uint256 balanceAfter = hrepToken.balanceOf(frontend1);
 
         // No stake to return, no fees
         assertEq(balanceAfter - balanceBefore, 0);
@@ -484,7 +488,7 @@ contract FrontendRegistryCoverageTest is Test {
         assertFalse(registry.isEligible(frontend1));
 
         vm.startPrank(frontend1);
-        crepToken.approve(address(registry), 100e6);
+        hrepToken.approve(address(registry), 100e6);
         registry.topUpStake(100e6);
         vm.stopPrank();
 
@@ -611,16 +615,98 @@ contract FrontendRegistryCoverageTest is Test {
     // 14. ADD/REMOVE FEE CREDITOR ACCESS CONTROL
     // =========================================================================
 
-    function test_AddFeeCreditor_NonAdmin_Reverts() public {
+    function test_AddFeeCreditor_NonGovernance_Reverts() public {
         vm.prank(nonAdmin);
         vm.expectRevert();
         registry.addFeeCreditor(address(99));
     }
 
-    function test_RemoveFeeCreditor_NonAdmin_Reverts() public {
+    function test_RemoveFeeCreditor_NonGovernance_Reverts() public {
         vm.prank(nonAdmin);
         vm.expectRevert();
         registry.removeFeeCreditor(feeCreditor);
+    }
+
+    function test_RemoveFeeCreditor_ClearsSingleton() public {
+        vm.prank(admin);
+        registry.removeFeeCreditor(feeCreditor);
+
+        assertFalse(registry.hasRole(registry.FEE_CREDITOR_ROLE(), feeCreditor));
+        assertEq(registry.feeCreditor(), address(0));
+    }
+
+    function test_GrantRoleExtraFeeCreditor_CannotCreditFees() public {
+        _registerFrontend(frontend1);
+        address extraCreditor = address(99);
+        bytes32 feeCreditorRole = registry.FEE_CREDITOR_ROLE();
+
+        vm.prank(admin);
+        registry.grantRole(feeCreditorRole, extraCreditor);
+        assertTrue(registry.hasRole(feeCreditorRole, extraCreditor));
+        assertEq(registry.feeCreditor(), feeCreditor);
+
+        vm.prank(extraCreditor);
+        vm.expectRevert("Unauthorized fee creditor");
+        registry.creditFees(frontend1, 100e6);
+    }
+
+    function test_AddFeeCreditor_AdminWithoutGovernance_Reverts() public {
+        vm.startPrank(admin);
+        FrontendRegistry impl2 = new FrontendRegistry();
+        FrontendRegistry splitRoleRegistry = FrontendRegistry(
+            address(
+                new ERC1967Proxy(
+                    address(impl2), abi.encodeCall(FrontendRegistry.initialize, (admin, governance, address(hrepToken)))
+                )
+            )
+        );
+
+        vm.expectRevert();
+        splitRoleRegistry.addFeeCreditor(address(99));
+        vm.stopPrank();
+    }
+
+    function test_InitialFeeCreditorSetup_RequiresPreVotingEngine() public {
+        vm.startPrank(admin);
+        FrontendRegistry impl2 = new FrontendRegistry();
+        FrontendRegistry splitRoleRegistry = FrontendRegistry(
+            address(
+                new ERC1967Proxy(
+                    address(impl2), abi.encodeCall(FrontendRegistry.initialize, (admin, governance, address(hrepToken)))
+                )
+            )
+        );
+
+        splitRoleRegistry.initializeFeeCreditor(feeCreditor);
+        assertTrue(splitRoleRegistry.hasRole(splitRoleRegistry.FEE_CREDITOR_ROLE(), feeCreditor));
+        assertEq(splitRoleRegistry.feeCreditor(), feeCreditor);
+
+        vm.expectRevert("Initial fee creditor set");
+        splitRoleRegistry.initializeFeeCreditor(address(99));
+        vm.stopPrank();
+
+        vm.prank(governance);
+        splitRoleRegistry.addFeeCreditor(address(99));
+        assertFalse(splitRoleRegistry.hasRole(splitRoleRegistry.FEE_CREDITOR_ROLE(), feeCreditor));
+        assertTrue(splitRoleRegistry.hasRole(splitRoleRegistry.FEE_CREDITOR_ROLE(), address(99)));
+        assertEq(splitRoleRegistry.feeCreditor(), address(99));
+    }
+
+    function test_InitialFeeCreditorSetup_AfterVotingEngine_Reverts() public {
+        vm.startPrank(admin);
+        FrontendRegistry impl2 = new FrontendRegistry();
+        FrontendRegistry splitRoleRegistry = FrontendRegistry(
+            address(
+                new ERC1967Proxy(
+                    address(impl2), abi.encodeCall(FrontendRegistry.initialize, (admin, governance, address(hrepToken)))
+                )
+            )
+        );
+
+        splitRoleRegistry.setVotingEngine(address(votingEngine));
+        vm.expectRevert("Setup complete");
+        splitRoleRegistry.initializeFeeCreditor(feeCreditor);
+        vm.stopPrank();
     }
 
     // =========================================================================
@@ -629,7 +715,7 @@ contract FrontendRegistryCoverageTest is Test {
 
     function test_Register_EmitsFrontendRegistered() public {
         vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
 
         vm.expectEmit(true, true, false, true);
         emit FrontendRegistry.FrontendRegistered(frontend1, frontend1, STAKE);
@@ -669,6 +755,16 @@ contract FrontendRegistryCoverageTest is Test {
         vm.expectEmit(true, false, false, true);
         emit FrontendRegistry.FrontendSlashed(frontend1, 100e6, "bad behavior");
         registry.slashFrontend(frontend1, 100e6, "bad behavior");
+    }
+
+    function test_Slash_RevertsWhenReasonTooLong() public {
+        _registerFrontend(frontend1);
+
+        string memory reason = new string(registry.MAX_SLASH_REASON_LENGTH() + 1);
+
+        vm.prank(admin);
+        vm.expectRevert("Slash reason too long");
+        registry.slashFrontend(frontend1, 100e6, reason);
     }
 
     function test_CreditFees_EmitsFeesCredited() public {
@@ -759,8 +855,9 @@ contract FrontendRegistryCoverageTest is Test {
     // =========================================================================
 
     function _registerFrontend(address fe) internal {
+        mockVoterIdNFT.setHolder(fe);
         vm.startPrank(fe);
-        crepToken.approve(address(registry), STAKE);
+        hrepToken.approve(address(registry), STAKE);
         registry.register();
         vm.stopPrank();
     }

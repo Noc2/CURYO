@@ -1,0 +1,140 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { Test } from "forge-std/Test.sol";
+
+import { HumanReputation } from "../contracts/HumanReputation.sol";
+import { ContentRegistry } from "../contracts/ContentRegistry.sol";
+import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
+import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
+import { ContentSubmissionTestBase } from "./helpers/VotingTestHelpers.sol";
+
+contract SubmitterIdentityReservationTest is Test, ContentSubmissionTestBase {
+    ContentRegistry public registry;
+    HumanReputation public hrepToken;
+    MockCategoryRegistry public mockCategoryRegistry;
+    MockVoterIdNFT public mockVoterIdNFT;
+
+    address public owner = address(1);
+    address public submitter = address(2);
+    address public delegate = address(3);
+
+    function setUp() public {
+        vm.warp(1000);
+
+        vm.startPrank(owner);
+
+        hrepToken = new HumanReputation(owner, owner);
+        hrepToken.grantRole(hrepToken.MINTER_ROLE(), owner);
+
+        ContentRegistry registryImpl = new ContentRegistry();
+        registry = ContentRegistry(
+            address(
+                new ERC1967Proxy(
+                    address(registryImpl),
+                    abi.encodeCall(ContentRegistry.initializeWithTreasury, (owner, owner, owner, address(hrepToken)))
+                )
+            )
+        );
+
+        mockCategoryRegistry = new MockCategoryRegistry();
+        mockCategoryRegistry.seedDefaultTestCategories();
+        registry.setCategoryRegistry(address(mockCategoryRegistry));
+
+        mockVoterIdNFT = new MockVoterIdNFT();
+        registry.setVoterIdNFT(address(mockVoterIdNFT));
+
+        hrepToken.mint(submitter, 100e6);
+        hrepToken.mint(delegate, 100e6);
+
+        vm.stopPrank();
+    }
+
+    function test_NormalReveal_WithUnchangedIdentity_Succeeds() public {
+        vm.prank(owner);
+        mockVoterIdNFT.setHolder(submitter);
+
+        vm.startPrank(submitter);
+        hrepToken.approve(address(registry), 10e6);
+        uint256 contentId = _submitContentWithReservation(
+            registry, "https://example.com/unchanged-identity", "goal", "goal", "tags", 0
+        );
+        vm.stopPrank();
+
+        assertEq(registry.getSubmitterIdentity(contentId), submitter);
+    }
+
+    function test_SubmitContent_DoesNotRequireStableVoterIdIdentity() public {
+        vm.prank(owner);
+        mockVoterIdNFT.setHolder(submitter);
+
+        vm.prank(submitter);
+        mockVoterIdNFT.setDelegate(delegate);
+
+        string memory url = "https://example.com/delegate-content";
+        string memory title = "goal";
+        string memory description = "goal";
+        string memory tags = "tags";
+        bytes32 salt = keccak256("delegate-content-salt");
+        string memory contextUrl = "https://example.com/context";
+        string memory imageUrl = _submissionImageUrl(url);
+        string[] memory imageUrls = _singleImageUrls(imageUrl);
+
+        vm.startPrank(delegate);
+        _reserveQuestionMediaSubmission(
+            registry, contextUrl, imageUrls, "", title, description, tags, 1, salt, delegate
+        );
+        vm.stopPrank();
+
+        vm.prank(submitter);
+        mockVoterIdNFT.removeDelegate();
+
+        vm.prank(delegate);
+        mockVoterIdNFT.setHolder(delegate);
+
+        vm.warp(block.timestamp + 1);
+
+        vm.startPrank(delegate);
+        uint256 contentId = registry.submitQuestion(
+            contextUrl, imageUrls, "", title, description, tags, 1, salt, _defaultQuestionSpec()
+        );
+        vm.stopPrank();
+
+        assertEq(registry.getSubmitterIdentity(contentId), delegate);
+    }
+
+    function test_SubmitQuestion_DoesNotRequireStableVoterIdIdentity() public {
+        vm.prank(owner);
+        mockVoterIdNFT.setHolder(submitter);
+
+        vm.prank(submitter);
+        mockVoterIdNFT.setDelegate(delegate);
+
+        string memory title = "Is this supported?";
+        string memory description = "Question submission identity should remain stable.";
+        string memory tags = "identity";
+        string memory url = "https://example.com/identity-check.jpg";
+        bytes32 salt = keccak256("delegate-question-salt");
+        string[] memory imageUrls = _singleImageUrls(url);
+
+        vm.startPrank(delegate);
+        _reserveQuestionMediaSubmission(registry, url, imageUrls, "", title, description, tags, 1, salt, delegate);
+        vm.stopPrank();
+
+        vm.prank(submitter);
+        mockVoterIdNFT.removeDelegate();
+
+        vm.prank(delegate);
+        mockVoterIdNFT.setHolder(delegate);
+
+        vm.warp(block.timestamp + 1);
+
+        vm.startPrank(delegate);
+        uint256 contentId =
+            registry.submitQuestion(url, imageUrls, "", title, description, tags, 1, salt, _defaultQuestionSpec());
+        vm.stopPrank();
+
+        assertEq(registry.getSubmitterIdentity(contentId), delegate);
+    }
+}

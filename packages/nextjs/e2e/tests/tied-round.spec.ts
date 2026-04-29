@@ -7,14 +7,20 @@ import {
   waitForPonderSync,
 } from "../helpers/admin-helpers";
 import { ANVIL_ACCOUNTS, DEPLOYER } from "../helpers/anvil-accounts";
+import {
+  continueToBountyStep,
+  selectAskCategory,
+  selectAskSubcategory,
+  selectBountyRewardAsset,
+} from "../helpers/ask-form";
 import { newE2EContext } from "../helpers/browser-context";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
 import { waitForSettlementIndexed } from "../helpers/keeper";
+import { getContentById, getContentList } from "../helpers/ponder-api";
 import { PONDER_URL } from "../helpers/ponder-url";
+import { voteOnSpecificContent } from "../helpers/vote-helpers";
 import { gotoWithRetry } from "../helpers/wait-helpers";
 import { setupWallet } from "../helpers/wallet-session";
-import { getContentById, getContentList } from "../helpers/ponder-api";
-import { voteOnSpecificContent } from "../helpers/vote-helpers";
 import { expect, test } from "@playwright/test";
 
 /**
@@ -23,19 +29,19 @@ import { expect, test } from "@playwright/test";
  * the content rating does NOT change, and rewards are handled correctly.
  *
  * Strategy:
- * 1. Submit fresh content via the UI to get a clean round with 0 votes
- * 2. 4 accounts vote on the SAME content via UI: 2 UP + 2 DOWN, all 1 cREP
+ * 1. Ask a fresh question via the UI to get a clean round with 0 votes
+ * 2. 4 accounts vote on the SAME content via UI: 2 UP + 2 DOWN, all 1 HREP
  *    (UI voting uses commitVote correctly via hooks)
  * 3. Fast-forward past epoch → keeper reveals via keeper API → fast-forward → settle
  * 4. Verify round.state === 3 (Tied) and rating unchanged
  *
  * Account allocation:
  * - Account #2 — submits new content
- * - Accounts #3, #4 — vote UP (1 cREP each)
- * - Accounts #5, #6 — vote DOWN (1 cREP each)
+ * - Accounts #3, #4 — vote UP (1 HREP each)
+ * - Accounts #5, #6 — vote DOWN (1 HREP each)
  *
  * NOTE: Uses accounts that may already have cooldowns from settlement-lifecycle
- * and reward-claim tests. The test submits fresh content to avoid cooldown issues.
+ * and reward-claim tests. The test asks a fresh question to avoid cooldown issues.
  */
 test.describe("Tied round lifecycle", () => {
   test.describe.configure({ mode: "serial" });
@@ -50,39 +56,32 @@ test.describe("Tied round lifecycle", () => {
 
   let newContentId: string | null = null;
 
-  test("submit fresh content for tie test", async ({ browser }) => {
+  test("ask a fresh question for tie test", async ({ browser }) => {
     test.setTimeout(120_000);
 
     const context = await newE2EContext(browser);
     const page = await context.newPage();
     await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey);
 
-    await gotoWithRetry(page, "/submit", { ensureWalletConnected: true });
-    await expect(page.getByRole("heading", { name: "Submit Content" })).toBeVisible({ timeout: 15_000 });
+    await gotoWithRetry(page, "/ask", { ensureWalletConnected: true });
+    await expect(page.getByRole("heading", { name: "Submit Question" })).toBeVisible({ timeout: 15_000 });
 
-    // Select YouTube platform — handle "No platforms available" if categories not loaded
-    const platformBtn = page.getByText("Select a platform...");
-    const noPlatforms = page.getByText("No platforms available");
-    await expect(platformBtn.or(noPlatforms)).toBeVisible({ timeout: 10_000 });
-
-    const hasPlatforms = await platformBtn.isVisible().catch(() => false);
-    if (!hasPlatforms) {
+    // Select Media category — handle "No categories available" if categories are not loaded.
+    const hasCategories = await selectAskCategory(page);
+    if (!hasCategories) {
       await context.close();
-      test.skip(true, "Categories not loaded — cannot submit content for tie test");
+      test.skip(true, "Categories not loaded — cannot ask a question for tie test");
       return;
     }
 
-    await platformBtn.click();
-    await page.getByText("YouTube").first().click();
-
-    // Enter a unique URL
+    // Enter a unique direct image URL
     const uniqueId = Date.now();
     const urlInput = page.locator("input[type='url']").first();
     await expect(urlInput).toBeVisible({ timeout: 5_000 });
-    await urlInput.fill(`https://www.youtube.com/watch?v=tie_test_${uniqueId}`);
+    await urlInput.fill(`https://picsum.photos/seed/tie-test-${uniqueId}/1200/800.jpg`);
 
     // Enter title and description
-    const titleInput = page.getByPlaceholder("Add a short title for this content");
+    const titleInput = page.getByPlaceholder("Write a subjective question voters can rate");
     await expect(titleInput).toBeVisible({ timeout: 3_000 });
     await titleInput.fill(`Tie Test Title ${uniqueId}`);
 
@@ -90,22 +89,22 @@ test.describe("Tied round lifecycle", () => {
     await expect(descInput).toBeVisible({ timeout: 3_000 });
     await descInput.fill(`Tie Test ${uniqueId}`);
 
-    // Select a subcategory
-    const subcatNames = ["Education", "Entertainment", "Music", "Technology", "Science", "Gaming"];
-    for (const name of subcatNames) {
-      const btn = page.locator("form button", { hasText: new RegExp(`^${name}$`) });
-      if (await btn.isVisible().catch(() => false)) {
-        await btn.click();
-        break;
-      }
+    const hasSubcategory = await selectAskSubcategory(page);
+    if (!hasSubcategory) {
+      await context.close();
+      test.skip(true, "No seeded subcategory available for tie test");
+      return;
     }
 
     // Submit
-    const submitBtn = page.getByRole("button", { name: /^Submit Content/i });
+    await continueToBountyStep(page);
+    await selectBountyRewardAsset(page, "hrep");
+    const submitBtn = page.getByRole("button", { name: /^Submit/i });
+    await expect(submitBtn).toBeVisible({ timeout: 5_000 });
     await expect(submitBtn).toBeEnabled({ timeout: 5_000 });
     await submitBtn.click();
 
-    await expect(page.getByRole("heading", { name: /Content Submitted/i })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("heading", { name: /Question Submitted/i })).toBeVisible({ timeout: 30_000 });
 
     await context.close();
 
@@ -116,7 +115,7 @@ test.describe("Tied round lifecycle", () => {
     const indexed = await waitForPonderIndexed(
       async () => {
         const { items } = await getContentList({ status: "all", sortBy: "newest", limit: 5 });
-        const match = items.find(item => item.url.includes(`tie_test_${uniqueId}`));
+        const match = items.find(item => item.url.includes(`tie-test-${uniqueId}`));
         if (match) {
           newContentId = match.id;
           return true;

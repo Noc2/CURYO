@@ -1,6 +1,6 @@
 import { ponder } from "ponder:registry";
 import { eq, and } from "ponder";
-import { ROUND_STATE } from "@curyo/contracts/protocol";
+import { DEFAULT_ROUND_CONFIG, ROUND_STATE } from "@curyo/contracts/protocol";
 import {
   round,
   vote,
@@ -8,7 +8,6 @@ import {
   category,
   profile,
   rewardClaim,
-  submitterRewardClaim,
   globalStats,
   voterStats,
   voterCategoryStats,
@@ -16,6 +15,68 @@ import {
   voterStreak,
 } from "ponder:schema";
 import { formatUtcDateKey, getPreviousUtcDateKey, normalizeUtcDateKey } from "./streak-utils.js";
+
+function defaultRoundConfigFields() {
+  return {
+    epochDuration: DEFAULT_ROUND_CONFIG.epochDurationSeconds,
+    maxDuration: DEFAULT_ROUND_CONFIG.maxDurationSeconds,
+    minVoters: DEFAULT_ROUND_CONFIG.minVoters,
+    maxVoters: DEFAULT_ROUND_CONFIG.maxVoters,
+  };
+}
+
+function computeVoteEpochIndex(committedAt: bigint, roundStartTime: bigint, epochDurationSeconds: number): number {
+  const epochDuration = Math.trunc(epochDurationSeconds);
+  if (!Number.isFinite(epochDuration) || epochDuration <= 0 || committedAt <= roundStartTime) {
+    return 0;
+  }
+
+  return committedAt - roundStartTime < BigInt(epochDuration) ? 0 : 1;
+}
+
+ponder.on("RoundVotingEngine:RoundConfigSnapshotted", async ({ event, context }) => {
+  const { contentId, roundId, epochDuration, maxDuration, minVoters, maxVoters } = event.args;
+  const roundKey = `${contentId}-${roundId}`;
+  const contentRecord = await context.db.find(content, { id: contentId });
+  const referenceRatingBps = contentRecord
+    ? (contentRecord.ratingBps > 0 ? contentRecord.ratingBps : contentRecord.rating * 100)
+    : 5000;
+  const roundConfigFields = {
+    epochDuration: Number(epochDuration),
+    maxDuration: Number(maxDuration),
+    minVoters: Number(minVoters),
+    maxVoters: Number(maxVoters),
+  };
+
+  const existingRound = await context.db.find(round, { id: roundKey });
+  if (existingRound) {
+    await context.db.update(round, { id: roundKey }).set(roundConfigFields);
+    return;
+  }
+
+  await context.db.insert(round).values({
+    id: roundKey,
+    contentId,
+    roundId,
+    state: ROUND_STATE.Open,
+    voteCount: 0,
+    revealedCount: 0,
+    totalStake: 0n,
+    upPool: 0n,
+    downPool: 0n,
+    upCount: 0,
+    downCount: 0,
+    referenceRatingBps,
+    ratingBps: referenceRatingBps,
+    conservativeRatingBps: referenceRatingBps,
+    confidenceMass: 0n,
+    effectiveEvidence: 0n,
+    settledRounds: 0,
+    lowSince: 0n,
+    startTime: event.block.timestamp,
+    ...roundConfigFields,
+  });
+});
 
 ponder.on("RoundVotingEngine:VoteCommitted", async ({ event, context }) => {
   const { contentId, roundId, voter, commitHash, targetRound, drandChainHash, stake } = event.args as {
@@ -34,14 +95,16 @@ ponder.on("RoundVotingEngine:VoteCommitted", async ({ event, context }) => {
     ? (contentRecord.ratingBps > 0 ? contentRecord.ratingBps : contentRecord.rating * 100)
     : 5000;
 
-  // Compute epochIndex from round startTime and event timestamp
-  // We'll store it as 0 or 1 based on whether it's in epoch-1
-  // The exact epochIndex is available from on-chain data; for now we track the commit
-  // epochIndex will be updated properly when VoteRevealed fires (from commit.epochIndex)
-  // For now, use a placeholder — actual epochIndex from the Commit struct is known on-chain
-
   // Upsert round record — VoteCommitted is the first event for a new round
   const existingRound = await context.db.find(round, { id: roundKey });
+  const epochIndex = existingRound
+    ? computeVoteEpochIndex(
+        event.block.timestamp,
+        existingRound.startTime ?? event.block.timestamp,
+        existingRound.epochDuration,
+      )
+    : 0;
+
   if (!existingRound) {
     await context.db.insert(round).values({
       id: roundKey,
@@ -63,6 +126,7 @@ ponder.on("RoundVotingEngine:VoteCommitted", async ({ event, context }) => {
       settledRounds: 0,
       lowSince: 0n,
       startTime: event.block.timestamp,
+      ...defaultRoundConfigFields(),
     });
   } else {
     await context.db.update(round, { id: roundKey }).set((row) => ({
@@ -87,7 +151,7 @@ ponder.on("RoundVotingEngine:VoteCommitted", async ({ event, context }) => {
       drandChainHash,
       isUp: null,
       stake,
-      epochIndex: 0, // placeholder; updated on VoteRevealed with actual epochIndex
+      epochIndex,
       revealed: false,
       committedAt: event.block.timestamp,
       revealedAt: null,
@@ -476,26 +540,7 @@ ponder.on("RoundVotingEngine:CancelledRoundRefundClaimed", async ({ event, conte
       source: "refund",
       voter,
       stakeReturned: amount,
-      crepReward: 0n,
-      claimedAt: event.block.timestamp,
-    })
-    .onConflictDoNothing();
-});
-
-
-ponder.on("RoundVotingEngine:CategorySubmitterRewarded", async ({ event, context }) => {
-  const { contentId, categoryId, submitter, amount } = event.args;
-
-  await context.db
-    .insert(submitterRewardClaim)
-    .values({
-      id: `cat-${contentId}-${categoryId}-${event.block.number}`,
-      contentId,
-      roundId: 0n,
-      epochId: null,
-      source: "category",
-      submitter,
-      crepAmount: amount,
+      hrepReward: 0n,
       claimedAt: event.block.timestamp,
     })
     .onConflictDoNothing();

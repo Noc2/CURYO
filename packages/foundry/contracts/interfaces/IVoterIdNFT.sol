@@ -44,13 +44,26 @@ interface IVoterIdNFT {
     /// @return True if the nullifier has been used
     function isNullifierUsed(uint256 nullifier) external view returns (bool);
 
+    /// @notice Return the Self.xyz nullifier that minted a Voter ID token
+    /// @param tokenId The Voter ID token
+    /// @return The nullifier, or 0 when the token has no nullifier snapshot
+    function getNullifier(uint256 tokenId) external view returns (uint256);
+
+    /// @notice Return the current token ID minted from a nullifier, if any.
+    /// @param nullifier The Self.xyz nullifier
+    /// @return The current token ID, or 0 when no active token exists for the nullifier
+    function getTokenIdForNullifier(uint256 nullifier) external view returns (uint256);
+
     /// @notice Revoke a Voter ID (governance action for collusion enforcement)
     /// @param holder The address whose Voter ID should be revoked
     function revokeVoterId(address holder) external;
 
-    /// @notice Authorize a delegate address to act on behalf of the caller's Voter ID
-    /// @param delegate The address to authorize
+    /// @notice Request a delegate address to act on behalf of the caller's Voter ID
+    /// @param delegate The address to request
     function setDelegate(address delegate) external;
+
+    /// @notice Accept a pending delegate request
+    function acceptDelegate() external;
 
     /// @notice Remove the current delegate authorization
     function removeDelegate() external;
@@ -69,6 +82,16 @@ interface IVoterIdNFT {
     /// @param delegate The delegate address
     /// @return The holder address (address(0) if not a delegate)
     function delegateOf(address delegate) external view returns (address);
+
+    /// @notice Get the pending delegate requested by a holder
+    /// @param holder The holder address
+    /// @return The pending delegate address (address(0) if none)
+    function pendingDelegateTo(address holder) external view returns (address);
+
+    /// @notice Get the pending holder request for a delegate candidate
+    /// @param delegate The delegate candidate address
+    /// @return The pending holder address (address(0) if none)
+    function pendingDelegateOf(address delegate) external view returns (address);
 
     /// @notice Reset a nullifier to allow re-verification after revocation
     /// @param nullifier The nullifier to reset

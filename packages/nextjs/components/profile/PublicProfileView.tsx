@@ -3,6 +3,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ROUND_STATE } from "@curyo/contracts/protocol";
+import {
+  type ExpertiseArea,
+  type LanguageCode,
+  PROFILE_SELF_REPORT_NOTICE,
+  type ProfileRole,
+  type ProfileSelfReport,
+  normalizeProfileSelfReport,
+  parseProfileSelfReport,
+  profileSelfReportHasValues,
+  serializeProfileSelfReport,
+} from "@curyo/node-utils/profileSelfReport";
 import { useAccount } from "wagmi";
 import {
   ArrowLeftIcon,
@@ -19,6 +30,7 @@ import { WinRateRing } from "~~/components/leaderboard/WinRateRing";
 import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
 import { ProfileImageLightbox } from "~~/components/shared/ProfileImageLightbox";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
+import { buildRateContentHref } from "~~/constants/routes";
 import { useCopyToClipboard } from "~~/hooks/scaffold-eth";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { useCuryoConnectModal } from "~~/hooks/useCuryoConnectModal";
@@ -39,7 +51,15 @@ import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import { useVoterStreak } from "~~/hooks/useVoterStreak";
 import { avatarAccentHexToRgb, normalizeAvatarAccentHex } from "~~/lib/avatar/avatarAccent";
 import { FOLLOWED_CURATOR_TOAST_ID } from "~~/lib/notifications/followedActivity";
-import { MAX_PROFILE_STRATEGY_LENGTH } from "~~/lib/profile/profileValidation";
+import {
+  PROFILE_AGE_GROUP_OPTIONS,
+  PROFILE_COUNTRY_OPTIONS,
+  PROFILE_EXPERTISE_OPTIONS,
+  PROFILE_LANGUAGE_OPTIONS,
+  PROFILE_ROLE_OPTIONS,
+  getProfileSelfReportDisplayGroups,
+} from "~~/lib/profile/profileSelfReportDisplay";
+import { MAX_PROFILE_SELF_REPORT_LENGTH } from "~~/lib/profile/profileValidation";
 import { AVATAR_WIN_RATE_TOOLTIP } from "~~/lib/profile/winRateTooltip";
 import { formatRatingScoreOutOfTen } from "~~/lib/ui/ratingDisplay";
 import { type PonderProfileDetailResponse, type PonderVoteItem, ponderApi } from "~~/services/ponder/client";
@@ -52,13 +72,13 @@ interface PublicProfileViewProps {
 }
 
 const NAME_REGEX = /^[a-zA-Z0-9_]{3,20}$/;
-const DEFAULT_AVATAR_ACCENT_HEX = "#f26426";
+const DEFAULT_AVATAR_ACCENT_HEX = "#d56a3e";
 
 function truncateAddress(address: string) {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
 }
 
-function formatCrepString(value: string | null | undefined) {
+function formatHrepString(value: string | null | undefined) {
   if (!value) return "0";
   return (Number(value) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 });
 }
@@ -103,6 +123,38 @@ function getProfileWriteErrorMessage(error: any, fallback: string) {
   return error?.shortMessage || error?.message || fallback;
 }
 
+function emptySelfReport() {
+  return normalizeProfileSelfReport({});
+}
+
+function profileSelfReportFromString(value: string | null | undefined) {
+  return parseProfileSelfReport(value) ?? emptySelfReport();
+}
+
+function getProfileSelfReportLength(value: ProfileSelfReport) {
+  const normalized = normalizeProfileSelfReport(value);
+  return profileSelfReportHasValues(normalized) ? serializeProfileSelfReport(normalized).length : 0;
+}
+
+function updateSelfReportArray<T extends string>(
+  report: ProfileSelfReport,
+  key: "expertise" | "languages" | "nationalities" | "roles",
+  value: T,
+  checked: boolean,
+) {
+  const current = new Set((report[key] ?? []) as string[]);
+  if (checked) {
+    current.add(value);
+  } else {
+    current.delete(value);
+  }
+  return normalizeProfileSelfReport({ ...report, [key]: Array.from(current) });
+}
+
+function optionSelected(values: readonly string[] | undefined, value: string) {
+  return values?.includes(value) ?? false;
+}
+
 export function PublicProfileView({ address, embedded = false }: PublicProfileViewProps) {
   const normalizedAddress = address.toLowerCase() as `0x${string}`;
   const isPageVisible = usePageVisibility();
@@ -114,7 +166,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
     toggleFollow,
     isPending: isFollowPending,
   } = useFollowedProfiles(connectedAddress, {
-    autoRead: false,
+    autoRead: true,
   });
   const { stats, categories } = useVoterAccuracy(normalizedAddress);
   const { hasVoterId, tokenId, isLoading: voterIdLoading } = useVoterIdNFT(normalizedAddress);
@@ -168,12 +220,12 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
   const [isAvatarEditorOpen, setIsAvatarEditorOpen] = useState(false);
   const [isReferralModalOpen, setIsReferralModalOpen] = useState(false);
   const [nameInput, setNameInput] = useState("");
-  const [strategyInput, setStrategyInput] = useState("");
+  const [selfReportInput, setSelfReportInput] = useState<ProfileSelfReport>(() => emptySelfReport());
   const [avatarAccentInput, setAvatarAccentInput] = useState("");
   const [profileError, setProfileError] = useState<string | null>(null);
   const [accentError, setAccentError] = useState<string | null>(null);
   const [committedName, setCommittedName] = useState("");
-  const [committedStrategy, setCommittedStrategy] = useState("");
+  const [committedSelfReport, setCommittedSelfReport] = useState<ProfileSelfReport>(() => emptySelfReport());
   const [committedAvatarAccentHex, setCommittedAvatarAccentHex] = useState<string | null>(null);
   const [profileDraftInitialized, setProfileDraftInitialized] = useState(false);
   const [avatarAccentInitialized, setAvatarAccentInitialized] = useState(false);
@@ -181,19 +233,19 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
   const pending = isFollowPending(normalizedAddress);
   const backHref = ownProfile ? "/governance#profile" : "/governance";
   const totalVotes = profileDetail?.summary.totalVotes ?? 0;
-  const ponderStrategy = summary?.strategy?.trim() ?? "";
+  const ponderSelfReport = profileSelfReportFromString(summary?.selfReport);
 
   useEffect(() => {
     setIsEditing(false);
     setIsAvatarEditorOpen(false);
     setIsReferralModalOpen(false);
     setNameInput("");
-    setStrategyInput("");
+    setSelfReportInput(emptySelfReport());
     setAvatarAccentInput("");
     setProfileError(null);
     setAccentError(null);
     setCommittedName("");
-    setCommittedStrategy("");
+    setCommittedSelfReport(emptySelfReport());
     setCommittedAvatarAccentHex(null);
     setProfileDraftInitialized(false);
     setAvatarAccentInitialized(false);
@@ -205,11 +257,11 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
     }
 
     const nextName = liveProfile?.name ?? "";
-    const nextStrategy = liveProfile?.strategy ?? "";
+    const nextSelfReport = profileSelfReportFromString(liveProfile?.selfReport);
     setCommittedName(nextName);
-    setCommittedStrategy(nextStrategy);
+    setCommittedSelfReport(nextSelfReport);
     setNameInput(nextName);
-    setStrategyInput(nextStrategy);
+    setSelfReportInput(nextSelfReport);
     setProfileDraftInitialized(true);
   }, [liveProfile, liveProfileLoading, profileDraftInitialized]);
 
@@ -219,11 +271,11 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
     }
 
     const nextName = liveProfile?.name ?? "";
-    const nextStrategy = liveProfile?.strategy ?? "";
+    const nextSelfReport = profileSelfReportFromString(liveProfile?.selfReport);
     setCommittedName(nextName);
-    setCommittedStrategy(nextStrategy);
+    setCommittedSelfReport(nextSelfReport);
     setNameInput(nextName);
-    setStrategyInput(nextStrategy);
+    setSelfReportInput(nextSelfReport);
   }, [liveProfile, isEditing, liveProfileLoading, profileDraftInitialized]);
 
   useEffect(() => {
@@ -249,9 +301,10 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
 
   const { isTaken: isNameTaken, isLoading: nameCheckLoading } = useIsNameTaken(nameInput);
   const currentName = ownProfile ? committedName || liveProfile?.name || summary?.name || "" : summary?.name || "";
-  const currentStrategy = ownProfile
-    ? committedStrategy || liveProfile?.strategy || summary?.strategy || ""
-    : ponderStrategy;
+  const currentSelfReport = ownProfile ? committedSelfReport : ponderSelfReport;
+  const currentSelfReportGroups = getProfileSelfReportDisplayGroups(currentSelfReport);
+  const hasCurrentSelfReport = currentSelfReportGroups.length > 0;
+  const selfReportInputLength = getProfileSelfReportLength(selfReportInput);
   const displayName = currentName || truncateAddress(normalizedAddress);
   const displayAvatarAccentHex = ownProfile ? (committedAvatarAccentHex ?? avatarAccent?.hex ?? null) : null;
   const fallbackImageUrl =
@@ -272,7 +325,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
   const avatarAccentBusy = avatarAccentPending || clearAvatarAccentPending;
   const hasAvatarAccentChanges = normalizedAvatarAccentInput !== committedAvatarAccentHex;
   const referralCountLabel = Number(referralCount).toLocaleString();
-  const referralTweetText = `Join Curyo, claim cREP, and get verified. Use my referral link so we both receive a cREP bonus: ${referralLink}`;
+  const referralTweetText = `Join Curyo, claim HREP, and get verified. Use my referral link so we both receive a HREP bonus: ${referralLink}`;
   const winRateLabel = stats && stats.totalSettledVotes > 0 ? `${(stats.winRate * 100).toFixed(1)}%` : "—";
   const dailyStreakLabel = (dailyStreak?.currentDailyStreak ?? 0).toLocaleString();
   const resolvedVotesLabel = (stats?.totalSettledVotes ?? 0).toLocaleString();
@@ -309,17 +362,17 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
 
   const openEditMode = useCallback(() => {
     setNameInput(currentName);
-    setStrategyInput(currentStrategy);
+    setSelfReportInput(currentSelfReport);
     setProfileError(null);
     setIsEditing(true);
-  }, [currentName, currentStrategy]);
+  }, [currentName, currentSelfReport]);
 
   const handleCancelEdit = useCallback(() => {
     setNameInput(currentName);
-    setStrategyInput(currentStrategy);
+    setSelfReportInput(currentSelfReport);
     setProfileError(null);
     setIsEditing(false);
-  }, [currentName, currentStrategy]);
+  }, [currentName, currentSelfReport]);
 
   const handleSaveProfile = useCallback(async () => {
     if (!hasVoterId) {
@@ -328,7 +381,8 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
     }
 
     const trimmedName = nameInput.trim();
-    const trimmedStrategy = strategyInput.trim();
+    let serializedSelfReport: string;
+    let normalizedSelfReport: ProfileSelfReport;
 
     if (!trimmedName) {
       setProfileError("Profile name is required");
@@ -345,19 +399,29 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
       return;
     }
 
-    if (trimmedStrategy.length > MAX_PROFILE_STRATEGY_LENGTH) {
-      setProfileError(`How you rate must be ${MAX_PROFILE_STRATEGY_LENGTH} characters or fewer`);
+    try {
+      normalizedSelfReport = normalizeProfileSelfReport(selfReportInput);
+      serializedSelfReport = profileSelfReportHasValues(normalizedSelfReport)
+        ? serializeProfileSelfReport(normalizedSelfReport)
+        : "";
+    } catch (error: any) {
+      setProfileError(error?.message || "Self-reported context is too large");
+      return;
+    }
+
+    if (serializedSelfReport.length > MAX_PROFILE_SELF_REPORT_LENGTH) {
+      setProfileError(`Self-reported context must be ${MAX_PROFILE_SELF_REPORT_LENGTH} characters or fewer`);
       return;
     }
 
     setProfileError(null);
 
     try {
-      await setProfile(trimmedName, trimmedStrategy);
+      await setProfile(trimmedName, serializedSelfReport);
       setCommittedName(trimmedName);
-      setCommittedStrategy(trimmedStrategy);
+      setCommittedSelfReport(normalizedSelfReport);
       setNameInput(trimmedName);
-      setStrategyInput(trimmedStrategy);
+      setSelfReportInput(normalizedSelfReport);
       setIsEditing(false);
       notification.success(hasLiveProfile ? "Profile updated!" : "Profile created!");
       refetchLiveProfile();
@@ -365,7 +429,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
       console.error("Profile update failed:", error);
       setProfileError(getProfileWriteErrorMessage(error, "Failed to update profile"));
     }
-  }, [hasLiveProfile, hasVoterId, isNameTaken, isOwnName, nameInput, refetchLiveProfile, setProfile, strategyInput]);
+  }, [hasLiveProfile, hasVoterId, isNameTaken, isOwnName, nameInput, refetchLiveProfile, selfReportInput, setProfile]);
 
   const openAvatarEditor = useCallback(() => {
     if (!hasVoterId) {
@@ -405,13 +469,13 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
   const handleSaveAvatarAccent = useCallback(async () => {
     const normalizedAccentHex = normalizeAvatarAccentHex(avatarAccentInput);
     if (!normalizedAccentHex) {
-      setAccentError("Use a valid 6-digit hex color like #f26426.");
+      setAccentError(`Use a valid 6-digit hex color like ${DEFAULT_AVATAR_ACCENT_HEX}.`);
       return;
     }
 
     const rgbValue = avatarAccentHexToRgb(normalizedAccentHex);
     if (rgbValue === null) {
-      setAccentError("Use a valid 6-digit hex color like #f26426.");
+      setAccentError(`Use a valid 6-digit hex color like ${DEFAULT_AVATAR_ACCENT_HEX}.`);
       return;
     }
 
@@ -474,7 +538,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
                   type="button"
                   onClick={openAvatarEditor}
                   aria-label="Edit profile avatar"
-                  className="group relative shrink-0 rounded-3xl transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                  className="group relative shrink-0 rounded-3xl transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/80"
                 >
                   <img
                     src={fallbackImageUrl}
@@ -528,7 +592,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
                         ) : null}
                         {nameIsAvailable && !isOwnName ? <p className="text-success">Name is available</p> : null}
                       </div>
-                      <span className="shrink-0 text-base-content/40">{nameInput.length}/20</span>
+                      <span className="shrink-0 text-base-content/60">{nameInput.length}/20</span>
                     </div>
                   </>
                 ) : (
@@ -566,7 +630,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
                       isSavingProfile ||
                       !nameInput.trim() ||
                       nameIsUnavailable ||
-                      strategyInput.trim().length > MAX_PROFILE_STRATEGY_LENGTH
+                      selfReportInputLength > MAX_PROFILE_SELF_REPORT_LENGTH
                     }
                   >
                     {isSavingProfile ? "Saving..." : hasLiveProfile ? "Save changes" : "Save profile"}
@@ -609,13 +673,13 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
                   </span>
                   <InfoTooltip text={AVATAR_WIN_RATE_TOOLTIP} position="bottom" />
                 </span>
-                <span className="text-base-content/35">&bull;</span>
+                <span className="text-base-content/60">&bull;</span>
                 <span>Daily Streak {dailyStreakLabel}</span>
-                <span className="text-base-content/35">&bull;</span>
+                <span className="text-base-content/60">&bull;</span>
                 <span>{profileLoading ? "..." : `${totalVotes} votes`}</span>
-                <span className="text-base-content/35">&bull;</span>
+                <span className="text-base-content/60">&bull;</span>
                 <span>{resolvedVotesLabel} resolved</span>
-                <span className="text-base-content/35">&bull;</span>
+                <span className="text-base-content/60">&bull;</span>
                 <span>
                   {voterIdLoading
                     ? "Loading Voter ID..."
@@ -636,38 +700,218 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
 
           {ownProfile && isEditing ? (
             <div className="mt-6 rounded-2xl bg-base-content/[0.04] px-5 py-4">
-              <div className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">How you rate</div>
-              <textarea
-                value={strategyInput}
-                onChange={event => {
-                  setStrategyInput(event.target.value);
-                  setProfileError(null);
-                }}
-                maxLength={MAX_PROFILE_STRATEGY_LENGTH}
-                rows={5}
-                aria-label="How you rate"
-                placeholder="What you look for when rating."
-                className="textarea textarea-bordered mt-3 min-h-32 w-full bg-base-100"
-                disabled={isSavingProfile}
-              />
-              <div className="mt-2 flex justify-end">
-                <span className="text-sm text-base-content/40">
-                  {strategyInput.trim().length}/{MAX_PROFILE_STRATEGY_LENGTH}
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <div className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/90">
+                    Audience context
+                  </div>
+                  <p className="mt-2 max-w-3xl text-sm leading-6 text-base-content/55">
+                    {PROFILE_SELF_REPORT_NOTICE} AI tools and public readers may use it as context.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm border border-base-300"
+                  onClick={() => {
+                    setSelfReportInput(emptySelfReport());
+                    setProfileError(null);
+                  }}
+                  disabled={isSavingProfile || !profileSelfReportHasValues(selfReportInput)}
+                >
+                  Clear
+                </button>
+              </div>
+
+              <div className="mt-5 grid gap-4 lg:grid-cols-2">
+                <label className="form-control">
+                  <span className="label-text text-base-content/65">Age group</span>
+                  <select
+                    aria-label="Age group"
+                    className="select select-bordered mt-2 w-full bg-base-100"
+                    value={selfReportInput.ageGroup ?? ""}
+                    onChange={event => {
+                      setSelfReportInput(
+                        normalizeProfileSelfReport({ ...selfReportInput, ageGroup: event.target.value || undefined }),
+                      );
+                      setProfileError(null);
+                    }}
+                    disabled={isSavingProfile}
+                  >
+                    <option value="">Prefer not to say</option>
+                    {PROFILE_AGE_GROUP_OPTIONS.map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="form-control">
+                  <span className="label-text text-base-content/65">Country</span>
+                  <select
+                    aria-label="Country"
+                    className="select select-bordered mt-2 w-full bg-base-100"
+                    value={selfReportInput.residenceCountry ?? ""}
+                    onChange={event => {
+                      setSelfReportInput(
+                        normalizeProfileSelfReport({
+                          ...selfReportInput,
+                          residenceCountry: event.target.value || undefined,
+                        }),
+                      );
+                      setProfileError(null);
+                    }}
+                    disabled={isSavingProfile}
+                  >
+                    <option value="">Prefer not to say</option>
+                    {PROFILE_COUNTRY_OPTIONS.map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="form-control lg:col-span-2">
+                  <span className="label-text text-base-content/65">Nationalities</span>
+                  <select
+                    multiple
+                    size={5}
+                    aria-label="Nationalities"
+                    className="select select-bordered mt-2 h-36 w-full bg-base-100"
+                    value={selfReportInput.nationalities ?? []}
+                    onChange={event => {
+                      const values = Array.from(event.currentTarget.selectedOptions).map(option => option.value);
+                      setSelfReportInput(normalizeProfileSelfReport({ ...selfReportInput, nationalities: values }));
+                      setProfileError(null);
+                    }}
+                    disabled={isSavingProfile}
+                  >
+                    {PROFILE_COUNTRY_OPTIONS.map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <div className="lg:col-span-2">
+                  <div className="label-text text-base-content/65">Languages</div>
+                  <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                    {PROFILE_LANGUAGE_OPTIONS.map(option => (
+                      <label key={option.value} className="flex items-center gap-2 text-sm text-base-content/75">
+                        <input
+                          type="checkbox"
+                          className="checkbox checkbox-sm"
+                          checked={optionSelected(selfReportInput.languages, option.value)}
+                          onChange={event => {
+                            setSelfReportInput(
+                              updateSelfReportArray<LanguageCode>(
+                                selfReportInput,
+                                "languages",
+                                option.value,
+                                event.target.checked,
+                              ),
+                            );
+                            setProfileError(null);
+                          }}
+                          disabled={isSavingProfile}
+                        />
+                        <span>{option.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="lg:col-span-2">
+                  <div className="label-text text-base-content/65">Roles</div>
+                  <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                    {PROFILE_ROLE_OPTIONS.map(option => (
+                      <label key={option.value} className="flex items-center gap-2 text-sm text-base-content/75">
+                        <input
+                          type="checkbox"
+                          className="checkbox checkbox-sm"
+                          checked={optionSelected(selfReportInput.roles, option.value)}
+                          onChange={event => {
+                            setSelfReportInput(
+                              updateSelfReportArray<ProfileRole>(
+                                selfReportInput,
+                                "roles",
+                                option.value,
+                                event.target.checked,
+                              ),
+                            );
+                            setProfileError(null);
+                          }}
+                          disabled={isSavingProfile}
+                        />
+                        <span>{option.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="lg:col-span-2">
+                  <div className="label-text text-base-content/65">Experience</div>
+                  <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                    {PROFILE_EXPERTISE_OPTIONS.map(option => (
+                      <label key={option.value} className="flex items-center gap-2 text-sm text-base-content/75">
+                        <input
+                          type="checkbox"
+                          className="checkbox checkbox-sm"
+                          checked={optionSelected(selfReportInput.expertise, option.value)}
+                          onChange={event => {
+                            setSelfReportInput(
+                              updateSelfReportArray<ExpertiseArea>(
+                                selfReportInput,
+                                "expertise",
+                                option.value,
+                                event.target.checked,
+                              ),
+                            );
+                            setProfileError(null);
+                          }}
+                          disabled={isSavingProfile}
+                        />
+                        <span>{option.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 flex justify-end">
+                <span className="text-sm text-base-content/60">
+                  {selfReportInputLength}/{MAX_PROFILE_SELF_REPORT_LENGTH}
                 </span>
               </div>
             </div>
-          ) : currentStrategy.trim() ? (
+          ) : hasCurrentSelfReport ? (
             <div className="mt-6 rounded-2xl bg-base-content/[0.04] px-5 py-4">
-              <div className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">
-                {ownProfile ? "How you rate" : "How they rate"}
+              <div className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/90">Audience context</div>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-base-content/55">{PROFILE_SELF_REPORT_NOTICE}</p>
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                {currentSelfReportGroups.map(group => (
+                  <div key={group.label} className="rounded-2xl bg-base-content/[0.04] px-4 py-3">
+                    <div className="text-sm font-medium text-base-content/50">{group.label}</div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {group.values.map(value => (
+                        <span
+                          key={value}
+                          className="rounded-full bg-base-content/[0.07] px-3 py-1 text-sm text-base-content/75"
+                        >
+                          {value}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
-              <p className="mt-2 max-w-3xl whitespace-pre-wrap text-base leading-7 text-base-content/75">
-                {currentStrategy.trim()}
-              </p>
             </div>
           ) : ownProfile ? (
             <div className="mt-6 rounded-2xl border border-dashed border-base-content/15 px-5 py-4">
-              <div className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">How you rate</div>
+              <div className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/90">Audience context</div>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-base-content/55">{PROFILE_SELF_REPORT_NOTICE}</p>
               {!hasVoterId ? (
                 <Link
                   href="/governance#faucet"
@@ -719,15 +963,15 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
 
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="rounded-2xl bg-base-content/[0.05] px-4 py-3">
-                      <div className="text-base text-base-content/45">Stake won</div>
+                      <div className="text-base text-base-content/60">Stake won</div>
                       <div className="mt-1 text-xl font-semibold text-success">
-                        {formatCrepString(stats.totalStakeWon)} cREP
+                        {formatHrepString(stats.totalStakeWon)} HREP
                       </div>
                     </div>
                     <div className="rounded-2xl bg-base-content/[0.05] px-4 py-3">
-                      <div className="text-base text-base-content/45">Stake lost</div>
+                      <div className="text-base text-base-content/60">Stake lost</div>
                       <div className="mt-1 text-xl font-semibold text-error">
-                        {formatCrepString(stats.totalStakeLost)} cREP
+                        {formatHrepString(stats.totalStakeLost)} HREP
                       </div>
                     </div>
                   </div>
@@ -746,10 +990,10 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
         <div className="surface-card rounded-3xl p-6">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div className="flex items-center gap-1.5">
-              <span className="text-base font-medium text-base-content/60">Recent submissions</span>
-              <InfoTooltip text="Latest content this curator has submitted. This is the clearest payoff from following them." />
+              <span className="text-base font-medium text-base-content/60">Recent questions</span>
+              <InfoTooltip text="Latest questions this curator has asked. This is the clearest payoff from following them." />
             </div>
-            <span className="text-base tabular-nums text-base-content/45">
+            <span className="text-base tabular-nums text-base-content/60">
               {profileLoading ? "..." : recentSubmissions.length}
             </span>
           </div>
@@ -760,7 +1004,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
             </div>
           ) : recentSubmissions.length === 0 ? (
             <div className="rounded-2xl bg-base-content/[0.04] px-4 py-8 text-center text-base text-base-content/55">
-              No submissions yet.
+              No questions yet.
             </div>
           ) : (
             <div className="grid gap-3 md:grid-cols-2">
@@ -770,16 +1014,18 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
                 return (
                   <Link
                     key={submission.id}
-                    href={`/vote?content=${submission.id}`}
+                    href={buildRateContentHref(submission.id)}
                     className="rounded-2xl border border-base-content/10 bg-base-content/[0.03] p-4 transition-colors hover:bg-base-content/[0.05]"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <div className="text-sm font-semibold uppercase tracking-wide text-primary/80">
+                        <div className="text-sm font-semibold uppercase tracking-wide text-primary/90">
                           {categoryName}
                         </div>
                         <div className="mt-1 line-clamp-2 text-lg font-semibold leading-7">{submission.title}</div>
-                        <p className="mt-1 line-clamp-2 text-sm text-base-content/65">{submission.description}</p>
+                        {submission.description ? (
+                          <p className="mt-1 line-clamp-2 text-sm text-base-content/65">{submission.description}</p>
+                        ) : null}
                       </div>
                       <div className="rounded-full bg-base-content/[0.06] px-2.5 py-1 text-sm font-mono text-base-content/70">
                         <span className="font-semibold tabular-nums text-base-content/85">{ratingScore}</span>
@@ -807,7 +1053,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
               <span className="text-base font-medium text-base-content/60">Recent votes</span>
               <InfoTooltip text="Latest 20 vote commits for this wallet. Outcomes appear once rounds settle." />
             </div>
-            <span className="text-base tabular-nums text-base-content/45">
+            <span className="text-base tabular-nums text-base-content/60">
               {profileLoading ? "..." : recentVotes.length}
             </span>
           </div>
@@ -841,12 +1087,12 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
                       <tr key={vote.id} className="hover:bg-base-200/40">
                         <td>
                           <Link
-                            href={`/vote?content=${vote.contentId}`}
+                            href={buildRateContentHref(vote.contentId)}
                             className="font-medium transition-colors hover:text-primary"
                           >
                             Content #{vote.contentId}
                           </Link>
-                          <div className="text-base text-base-content/45">Round #{vote.roundId}</div>
+                          <div className="text-base text-base-content/60">Round #{vote.roundId}</div>
                         </td>
                         <td>
                           <span className={`font-medium ${direction.className}`}>{direction.label}</span>
@@ -854,7 +1100,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
                         <td>
                           <span className={`font-medium ${outcome.className}`}>{outcome.label}</span>
                         </td>
-                        <td className="text-right font-mono">{formatCrepString(vote.stake)} cREP</td>
+                        <td className="text-right font-mono">{formatHrepString(vote.stake)} HREP</td>
                         <td className="text-right text-base-content/55">{formatTimestamp(vote.committedAt)}</td>
                       </tr>
                     );
@@ -918,7 +1164,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
                 <input
                   type="text"
                   aria-label="Avatar accent hex"
-                  placeholder="#f26426"
+                  placeholder={DEFAULT_AVATAR_ACCENT_HEX}
                   className={`input input-bordered w-full bg-base-100 ${avatarAccentInputError ? "input-error" : ""}`}
                   value={avatarAccentInput}
                   onChange={event => {
@@ -931,7 +1177,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
 
               <div className="mt-3 min-h-6 text-sm">
                 {avatarAccentInputError ? (
-                  <p className="text-error">Use a valid 6-digit hex color like #f26426.</p>
+                  <p className="text-error">Use a valid 6-digit hex color like {DEFAULT_AVATAR_ACCENT_HEX}.</p>
                 ) : accentError ? (
                   <p className="text-error">{accentError}</p>
                 ) : null}
@@ -993,13 +1239,13 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
 
               <div className="mt-6 grid gap-3 sm:grid-cols-2">
                 <div className="rounded-2xl bg-base-content/[0.04] px-5 py-4">
-                  <div className="text-base text-base-content/45">Successful referrals</div>
+                  <div className="text-base text-base-content/60">Successful referrals</div>
                   <div className="mt-1 text-3xl font-semibold tabular-nums">{referralCountLabel}</div>
                 </div>
                 <div className="rounded-2xl bg-base-content/[0.04] px-5 py-4">
-                  <div className="text-base text-base-content/45">Total received</div>
+                  <div className="text-base text-base-content/60">Total received</div>
                   <div className="mt-1 text-3xl font-semibold tabular-nums text-primary">
-                    {formatReferralAmount(totalEarned)} cREP
+                    {formatReferralAmount(totalEarned)} HREP
                   </div>
                 </div>
               </div>
@@ -1008,12 +1254,12 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
                 <div className="text-lg font-semibold">Referral tokens</div>
                 <div className="mt-2 text-base text-base-content/70">
                   You get{" "}
-                  <span className="font-semibold text-primary">{formatReferralAmount(referralReward)} cREP</span> per
+                  <span className="font-semibold text-primary">{formatReferralAmount(referralReward)} HREP</span> per
                   referral
                 </div>
                 <div className="text-base text-base-content/70">
                   Friend gets{" "}
-                  <span className="font-semibold text-primary">{formatReferralAmount(claimantBonus)} cREP</span> bonus
+                  <span className="font-semibold text-primary">{formatReferralAmount(claimantBonus)} HREP</span> bonus
                 </div>
               </div>
 

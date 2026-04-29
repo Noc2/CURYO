@@ -1,218 +1,119 @@
-import { eq, inArray } from "drizzle-orm";
-import {
-  getSafeHuggingFaceDisplayImageUrl,
-  getSafeHuggingFaceImageUrl,
-  isHuggingFaceAvatarUrl,
-} from "~~/lib/content/huggingFaceImage";
-import { db } from "~~/lib/db";
-import { type ContentMetadata, contentMetadata } from "~~/lib/db/schema";
-import { detectPlatform, getThumbnailUrl } from "~~/utils/platforms";
-import { type EmbedResult, resolveEmbed } from "~~/utils/resolveEmbed";
+import type { ContentMetadataResult } from "./types";
+import { isDirectImageUrl } from "~~/lib/contentMedia";
+import { getThumbnailUrl } from "~~/utils/platforms";
 
-const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-const IMAGE_REQUIRED_CACHE_TYPES = new Set(["coingecko", "huggingface"]);
+const MAX_METADATA_BYTES = 256_000;
+const METADATA_TIMEOUT_MS = 3_500;
 
-function sanitizeEmbedResultForUrl(url: string, result: EmbedResult): EmbedResult {
-  if (detectPlatform(url).type !== "huggingface") {
-    return result;
-  }
-
-  const imageUrl = getSafeHuggingFaceImageUrl(result.imageUrl);
-  const thumbnailUrl =
-    getSafeHuggingFaceImageUrl(result.thumbnailUrl) ?? (imageUrl && isHuggingFaceAvatarUrl(imageUrl) ? imageUrl : null);
-  const sanitized: EmbedResult = {
-    ...result,
-    thumbnailUrl,
-  };
-
-  if (imageUrl && !isHuggingFaceAvatarUrl(imageUrl)) {
-    sanitized.imageUrl = imageUrl;
-  } else {
-    delete sanitized.imageUrl;
-  }
-
-  return sanitized;
-}
-
-function toEmbedResult(cached: ContentMetadata): EmbedResult {
-  return sanitizeEmbedResultForUrl(cached.url, {
-    thumbnailUrl: cached.thumbnailUrl,
-    ...(cached.title && { title: cached.title }),
-    ...(cached.description && { description: cached.description }),
-    ...(cached.imageUrl && { imageUrl: cached.imageUrl }),
-    ...(cached.authors && { authors: JSON.parse(cached.authors) }),
-    ...(cached.releaseYear && { releaseYear: cached.releaseYear }),
-    ...(cached.symbol && { symbol: cached.symbol }),
-    ...(cached.stars != null && { stars: cached.stars }),
-    ...(cached.forks != null && { forks: cached.forks }),
-    ...(cached.language && { language: cached.language }),
-  });
-}
-
-function getTimestampMs(value: Date | string): number {
-  return value instanceof Date ? value.getTime() : new Date(value).getTime();
-}
-
-export function shouldReuseCachedContentMetadata(
-  url: string,
-  cached: Pick<ContentMetadata, "thumbnailUrl" | "imageUrl" | "fetchedAt">,
-  nowMs = Date.now(),
-): boolean {
-  if (nowMs - getTimestampMs(cached.fetchedAt) >= CACHE_TTL_MS) {
-    return false;
-  }
-
-  const platform = detectPlatform(url);
-  const hasUsableImage =
-    platform.type === "huggingface"
-      ? Boolean(getSafeHuggingFaceDisplayImageUrl(cached.imageUrl, cached.thumbnailUrl))
-      : Boolean(cached.thumbnailUrl || cached.imageUrl);
-
-  if (IMAGE_REQUIRED_CACHE_TYPES.has(platform.type) && !hasUsableImage) {
-    return false;
-  }
-
-  return true;
-}
-
-function isHttpUrl(url: string): boolean {
+function isHttpsUrl(url: string): boolean {
   try {
-    const parsed = new URL(url);
-    return parsed.protocol === "https:" || parsed.protocol === "http:";
+    return new URL(url).protocol === "https:";
   } catch {
     return false;
   }
 }
 
-async function persistContentMetadata(url: string, result: EmbedResult) {
-  const sanitizedResult = sanitizeEmbedResultForUrl(url, result);
+function decodeHtmlAttribute(value: string): string {
+  return value
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">");
+}
 
-  if (!sanitizedResult.thumbnailUrl && !sanitizedResult.title && !sanitizedResult.description) {
-    return;
+function extractMetaTagContent(html: string, propertyName: string): string | null {
+  const escapedName = propertyName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const metaPattern = new RegExp(`<meta\\s+[^>]*(?:property|name)=["']${escapedName}["'][^>]*>`, "i");
+  const tag = html.match(metaPattern)?.[0];
+  if (!tag) return null;
+
+  const content = tag.match(/\scontent=["']([^"']+)["']/i)?.[1];
+  return content ? decodeHtmlAttribute(content.trim()) : null;
+}
+
+function resolveThumbnailUrl(baseUrl: string, candidate: string | null): string | null {
+  if (!candidate) return null;
+  try {
+    const resolved = new URL(candidate, baseUrl);
+    return resolved.protocol === "https:" ? resolved.toString() : null;
+  } catch {
+    return null;
   }
+}
+
+async function readResponsePrefix(response: Response): Promise<string> {
+  if (!response.body) return response.text();
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
 
   try {
-    await db
-      .insert(contentMetadata)
-      .values({
-        url,
-        thumbnailUrl: sanitizedResult.thumbnailUrl,
-        title: sanitizedResult.title ?? null,
-        description: sanitizedResult.description ?? null,
-        imageUrl: sanitizedResult.imageUrl ?? null,
-        authors: sanitizedResult.authors ? JSON.stringify(sanitizedResult.authors) : null,
-        releaseYear: sanitizedResult.releaseYear ?? null,
-        symbol: sanitizedResult.symbol ?? null,
-        stars: sanitizedResult.stars ?? null,
-        forks: sanitizedResult.forks ?? null,
-        language: sanitizedResult.language ?? null,
-        fetchedAt: new Date(),
-      })
-      .onConflictDoUpdate({
-        target: contentMetadata.url,
-        set: {
-          thumbnailUrl: sanitizedResult.thumbnailUrl,
-          title: sanitizedResult.title ?? null,
-          description: sanitizedResult.description ?? null,
-          imageUrl: sanitizedResult.imageUrl ?? null,
-          authors: sanitizedResult.authors ? JSON.stringify(sanitizedResult.authors) : null,
-          releaseYear: sanitizedResult.releaseYear ?? null,
-          symbol: sanitizedResult.symbol ?? null,
-          stars: sanitizedResult.stars ?? null,
-          forks: sanitizedResult.forks ?? null,
-          language: sanitizedResult.language ?? null,
-          fetchedAt: new Date(),
-        },
-      });
-  } catch (error) {
-    console.warn("[thumbnail] cache write failed:", error);
+    while (totalBytes < MAX_METADATA_BYTES) {
+      const { done, value } = await reader.read();
+      if (done || !value) break;
+
+      const remaining = MAX_METADATA_BYTES - totalBytes;
+      const chunk = value.length > remaining ? value.slice(0, remaining) : value;
+      chunks.push(chunk);
+      totalBytes += chunk.length;
+      if (value.length > remaining) break;
+    }
+  } finally {
+    reader.cancel().catch(() => {});
+  }
+
+  return new TextDecoder().decode(Buffer.concat(chunks));
+}
+
+async function resolveGenericPageThumbnail(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url, {
+      headers: {
+        accept: "text/html,application/xhtml+xml",
+        "user-agent": "CuryoBot/1.0 (+https://curyo.xyz)",
+      },
+      redirect: "manual",
+      signal: AbortSignal.timeout(METADATA_TIMEOUT_MS),
+    });
+    if (!response.ok) return null;
+
+    const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
+    if (contentType && !contentType.includes("text/html") && !contentType.includes("application/xhtml")) {
+      return null;
+    }
+
+    const html = await readResponsePrefix(response);
+    return (
+      resolveThumbnailUrl(url, extractMetaTagContent(html, "og:image:secure_url")) ??
+      resolveThumbnailUrl(url, extractMetaTagContent(html, "og:image")) ??
+      resolveThumbnailUrl(url, extractMetaTagContent(html, "twitter:image"))
+    );
+  } catch {
+    return null;
   }
 }
 
-async function resolveFreshContentMetadata(url: string): Promise<EmbedResult> {
-  const staticThumbnail = getThumbnailUrl(url);
-  if (staticThumbnail) {
-    return { thumbnailUrl: staticThumbnail };
-  }
-
-  const info = detectPlatform(url);
-  const result = await resolveEmbed(info.type, info.id, info.metadata);
-  const sanitizedResult = sanitizeEmbedResultForUrl(url, result);
-  await persistContentMetadata(url, sanitizedResult);
-  return sanitizedResult;
-}
-
-export async function resolveContentMetadata(url: string): Promise<EmbedResult> {
-  if (!isHttpUrl(url)) {
+export async function resolveContentMetadata(url: string): Promise<ContentMetadataResult> {
+  if (!isHttpsUrl(url)) {
     return { thumbnailUrl: null };
   }
 
-  try {
-    const [cached] = await db.select().from(contentMetadata).where(eq(contentMetadata.url, url)).limit(1);
-    if (cached && shouldReuseCachedContentMetadata(url, cached)) {
-      return toEmbedResult(cached);
-    }
-  } catch (error) {
-    console.warn("[thumbnail] cache read failed, falling through to resolver:", error);
+  if (isDirectImageUrl(url)) {
+    return { thumbnailUrl: url };
   }
 
-  return resolveFreshContentMetadata(url);
+  const platformThumbnail = getThumbnailUrl(url);
+  if (platformThumbnail) {
+    return { thumbnailUrl: platformThumbnail };
+  }
+
+  return { thumbnailUrl: await resolveGenericPageThumbnail(url) };
 }
 
-export async function resolveContentMetadataBatch(urls: string[]): Promise<Record<string, EmbedResult>> {
-  const uniqueUrls = [...new Set(urls.filter(isHttpUrl))];
-  const results: Record<string, EmbedResult> = {};
-
-  if (uniqueUrls.length === 0) {
-    return results;
-  }
-
-  const unresolved = new Set<string>();
-
-  for (const url of uniqueUrls) {
-    const staticThumbnail = getThumbnailUrl(url);
-    if (staticThumbnail) {
-      results[url] = { thumbnailUrl: staticThumbnail };
-    } else {
-      unresolved.add(url);
-    }
-  }
-
-  if (unresolved.size === 0) {
-    return results;
-  }
-
-  try {
-    const cachedRows = await db
-      .select()
-      .from(contentMetadata)
-      .where(inArray(contentMetadata.url, [...unresolved]));
-    for (const cached of cachedRows) {
-      if (!shouldReuseCachedContentMetadata(cached.url, cached)) continue;
-      results[cached.url] = toEmbedResult(cached);
-      unresolved.delete(cached.url);
-    }
-  } catch (error) {
-    console.warn("[thumbnail] batch cache read failed, falling through to resolver:", error);
-  }
-
-  if (unresolved.size === 0) {
-    return results;
-  }
-
-  const resolved = await Promise.all(
-    [...unresolved].map(async url => {
-      try {
-        return [url, await resolveFreshContentMetadata(url)] as const;
-      } catch {
-        return [url, { thumbnailUrl: null } satisfies EmbedResult] as const;
-      }
-    }),
-  );
-
-  for (const [url, result] of resolved) {
-    results[url] = result;
-  }
-
-  return results;
+export async function resolveContentMetadataBatch(urls: string[]): Promise<Record<string, ContentMetadataResult>> {
+  const uniqueUrls = [...new Set(urls.filter(isHttpsUrl))];
+  const entries = await Promise.all(uniqueUrls.map(async url => [url, await resolveContentMetadata(url)] as const));
+  return Object.fromEntries(entries);
 }

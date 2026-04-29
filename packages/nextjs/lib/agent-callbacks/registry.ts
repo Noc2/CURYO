@@ -1,0 +1,135 @@
+import { randomUUID } from "node:crypto";
+import { type AgentCallbackEventType, isAgentCallbackEventType } from "~~/lib/agent-callbacks/types";
+import { assertSafeAgentCallbackUrl } from "~~/lib/agent-callbacks/urlSafety";
+import { dbClient } from "~~/lib/db";
+
+export type AgentCallbackSubscriptionStatus = "active" | "disabled";
+
+export type AgentCallbackSubscriptionRecord = {
+  agentId: string;
+  callbackUrl: string;
+  createdAt: Date;
+  eventTypes: AgentCallbackEventType[];
+  id: string;
+  secret: string;
+  status: AgentCallbackSubscriptionStatus;
+  updatedAt: Date;
+};
+
+export type UpsertAgentCallbackSubscriptionInput = {
+  agentId: string;
+  callbackUrl: string;
+  eventTypes: AgentCallbackEventType[];
+  id?: string;
+  now?: Date;
+  secret: string;
+};
+
+function parseDate(value: unknown): Date {
+  return value instanceof Date ? value : new Date(String(value));
+}
+
+function parseEventTypes(value: unknown): AgentCallbackEventType[] {
+  if (typeof value !== "string") return [];
+  const parsed = JSON.parse(value) as unknown;
+  return Array.isArray(parsed)
+    ? parsed.filter(
+        (item): item is AgentCallbackEventType => typeof item === "string" && isAgentCallbackEventType(item),
+      )
+    : [];
+}
+
+export function rowToCallbackSubscription(
+  row: Record<string, unknown> | undefined,
+): AgentCallbackSubscriptionRecord | null {
+  if (!row) return null;
+  return {
+    agentId: String(row.agent_id),
+    callbackUrl: String(row.callback_url),
+    createdAt: parseDate(row.created_at),
+    eventTypes: parseEventTypes(row.event_types),
+    id: String(row.id),
+    secret: String(row.secret),
+    status: String(row.status) as AgentCallbackSubscriptionStatus,
+    updatedAt: parseDate(row.updated_at),
+  };
+}
+
+function normalizeEventTypes(eventTypes: string[]): AgentCallbackEventType[] {
+  return [...new Set(eventTypes.map(type => type.trim()).filter(isAgentCallbackEventType))].sort();
+}
+
+async function prepareSubscriptionInput(input: UpsertAgentCallbackSubscriptionInput) {
+  if (!input.agentId.trim()) throw new Error("Callback agentId is required.");
+  if (!input.secret.trim()) throw new Error("Callback secret is required.");
+  const eventTypes = normalizeEventTypes(input.eventTypes);
+  if (eventTypes.length === 0) throw new Error("At least one callback event type is required.");
+
+  return {
+    callbackUrl: await assertSafeAgentCallbackUrl(input.callbackUrl),
+    eventTypes,
+  };
+}
+
+export async function upsertAgentCallbackSubscription(input: UpsertAgentCallbackSubscriptionInput) {
+  const prepared = await prepareSubscriptionInput(input);
+
+  const now = input.now ?? new Date();
+  const result = await dbClient.execute({
+    args: [
+      input.id ?? randomUUID(),
+      input.agentId,
+      prepared.callbackUrl,
+      input.secret,
+      JSON.stringify(prepared.eventTypes),
+      now,
+      now,
+    ],
+    sql: `
+      INSERT INTO agent_callback_subscriptions (
+        id, agent_id, callback_url, secret, event_types, status, created_at, updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, 'active', ?, ?)
+      ON CONFLICT (agent_id, callback_url)
+      DO UPDATE SET
+        secret = EXCLUDED.secret,
+        event_types = EXCLUDED.event_types,
+        status = 'active',
+        updated_at = EXCLUDED.updated_at
+      RETURNING *
+    `,
+  });
+
+  return rowToCallbackSubscription(result.rows[0]);
+}
+
+export async function disableAgentCallbackSubscription(params: { id: string; now?: Date }) {
+  const now = params.now ?? new Date();
+  const result = await dbClient.execute({
+    args: [now, params.id],
+    sql: `
+      UPDATE agent_callback_subscriptions
+      SET status = 'disabled', updated_at = ?
+      WHERE id = ?
+      RETURNING *
+    `,
+  });
+
+  return rowToCallbackSubscription(result.rows[0]);
+}
+
+export async function listActiveAgentCallbackSubscriptions(agentId: string) {
+  const result = await dbClient.execute({
+    args: [agentId],
+    sql: `
+      SELECT *
+      FROM agent_callback_subscriptions
+      WHERE agent_id = ? AND status = 'active'
+      ORDER BY created_at ASC, id ASC
+    `,
+  });
+
+  return result.rows
+    .map(row => rowToCallbackSubscription(row))
+    .filter((row): row is AgentCallbackSubscriptionRecord => !!row);
+}

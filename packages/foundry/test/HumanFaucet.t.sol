@@ -4,31 +4,53 @@ pragma solidity 0.8.28;
 import { Test, console } from "forge-std/Test.sol";
 import { HumanFaucet } from "../contracts/HumanFaucet.sol";
 import { MockIdentityVerificationHub } from "../contracts/mocks/MockIdentityVerificationHub.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { HumanReputation } from "../contracts/HumanReputation.sol";
+import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import { IERC1271 } from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
 import { SelfVerificationRoot } from "@selfxyz/contracts/contracts/abstract/SelfVerificationRoot.sol";
 import { ISelfVerificationRoot } from "@selfxyz/contracts/contracts/interfaces/ISelfVerificationRoot.sol";
+
+contract MockClaimWallet is IERC1271 {
+    using ECDSA for bytes32;
+
+    address public immutable owner;
+
+    constructor(address owner_) {
+        owner = owner_;
+    }
+
+    function isValidSignature(bytes32 hash, bytes calldata signature) external view returns (bytes4) {
+        return hash.recover(signature) == owner ? IERC1271.isValidSignature.selector : bytes4(0xffffffff);
+    }
+}
 
 /// @title HumanFaucet Test Suite
 contract HumanFaucetTest is Test {
     bytes32 internal constant PASSPORT_ATTESTATION_ID = bytes32(uint256(1));
     bytes32 internal constant BIOMETRIC_ID_CARD_ATTESTATION_ID = bytes32(uint256(2));
+    bytes32 internal constant KYC_ATTESTATION_ID = bytes32(uint256(4));
     bytes32 internal constant UNSUPPORTED_ATTESTATION_ID = bytes32(uint256(99));
+    uint256 internal constant MINIMUM_FAUCET_AGE = 18;
+    bytes32 internal constant EIP712_DOMAIN_TYPEHASH =
+        keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+    bytes32 internal constant FAUCET_CLAIM_AUTHORIZATION_TYPEHASH =
+        keccak256("FaucetClaimAuthorization(address recipient,address referrer,uint256 nonce,uint256 deadline)");
 
     HumanFaucet public faucet;
     MockIdentityVerificationHub public mockHub;
-    CuryoReputation public crepToken;
+    HumanReputation public hrepToken;
 
     address public admin = address(1);
     address public user1 = address(2);
     address public user2 = address(3);
 
     // Tier amounts
-    uint256 public constant TIER_0_AMOUNT = 10_000e6; // 10,000 cREP (Genesis)
-    uint256 public constant TIER_1_AMOUNT = 1_000e6; // 1,000 cREP (Early Adopter)
-    uint256 public constant TIER_2_AMOUNT = 100e6; // 100 cREP (Pioneer)
-    uint256 public constant TIER_3_AMOUNT = 10e6; // 10 cREP (Explorer)
-    uint256 public constant TIER_4_AMOUNT = 1e6; // 1 cREP (Settler)
+    uint256 public constant TIER_0_AMOUNT = 10_000e6; // 10,000 HREP (Genesis)
+    uint256 public constant TIER_1_AMOUNT = 1_000e6; // 1,000 HREP (Early Adopter)
+    uint256 public constant TIER_2_AMOUNT = 100e6; // 100 HREP (Pioneer)
+    uint256 public constant TIER_3_AMOUNT = 10e6; // 10 HREP (Explorer)
+    uint256 public constant TIER_4_AMOUNT = 1e6; // 1 HREP (Settler)
 
     // Tier thresholds
     uint256 public constant TIER_0_THRESHOLD = 10;
@@ -36,27 +58,27 @@ contract HumanFaucetTest is Test {
     uint256 public constant TIER_2_THRESHOLD = 10_000;
     uint256 public constant TIER_3_THRESHOLD = 1_000_000;
 
-    // Tier 0 referral amounts (50% of 10,000 cREP)
+    // Tier 0 referral amounts (50% of 10,000 HREP)
     uint256 public constant TIER_0_REFERRAL_BONUS = 5_000e6;
     uint256 public constant TIER_0_REFERRER_REWARD = 5_000e6;
 
     function setUp() public {
         vm.startPrank(admin);
 
-        // Deploy cREP token
-        crepToken = new CuryoReputation(admin, admin);
+        // Deploy HREP token
+        hrepToken = new HumanReputation(admin, admin);
 
         // Deploy mock identity verification hub
         mockHub = new MockIdentityVerificationHub();
 
         // Deploy HumanFaucet
-        faucet = new HumanFaucet(address(crepToken), address(mockHub), admin);
+        faucet = new HumanFaucet(address(hrepToken), address(mockHub), admin);
 
         // Pre-mint tokens to faucet (52M for production, using same for tests)
-        uint256 faucetBalance = 52_000_000 * 1e6; // 52M cREP
-        crepToken.grantRole(crepToken.MINTER_ROLE(), admin);
-        crepToken.mint(address(faucet), faucetBalance);
-        crepToken.revokeRole(crepToken.MINTER_ROLE(), admin);
+        uint256 faucetBalance = 52_000_000 * 1e6; // 52M HREP
+        hrepToken.grantRole(hrepToken.MINTER_ROLE(), admin);
+        hrepToken.mint(address(faucet), faucetBalance);
+        hrepToken.revokeRole(hrepToken.MINTER_ROLE(), admin);
 
         // Set the mock config ID
         bytes32 mockConfigId = mockHub.MOCK_CONFIG_ID();
@@ -68,7 +90,7 @@ contract HumanFaucetTest is Test {
     // --- Initialization Tests ---
 
     function test_Initialization() public view {
-        assertEq(address(faucet.crepToken()), address(crepToken));
+        assertEq(address(faucet.hrepToken()), address(hrepToken));
         assertEq(faucet.TIER_0_AMOUNT(), TIER_0_AMOUNT);
         assertEq(faucet.totalClaimed(), 0);
         assertEq(faucet.totalClaimants(), 0);
@@ -86,14 +108,14 @@ contract HumanFaucetTest is Test {
     function test_Claim_Success() public {
         mockHub.setVerified(user1);
 
-        assertEq(crepToken.balanceOf(user1), 0);
+        assertEq(hrepToken.balanceOf(user1), 0);
         assertFalse(faucet.hasClaimed(user1));
         assertEq(faucet.totalClaimants(), 0);
 
         mockHub.simulateVerification(address(faucet), user1);
 
-        // Tier 0 (Genesis): 10,000 cREP
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        // Tier 0 (Genesis): 10,000 HREP
+        assertEq(hrepToken.balanceOf(user1), TIER_0_AMOUNT);
         assertTrue(faucet.hasClaimed(user1));
         assertEq(faucet.totalClaimants(), 1);
         assertEq(faucet.totalClaimed(), TIER_0_AMOUNT);
@@ -106,7 +128,7 @@ contract HumanFaucetTest is Test {
         vm.prank(user1);
         faucet.verifySelfProof(_buildProofPayload(PASSPORT_ATTESTATION_ID, userContextData), userContextData);
 
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertEq(hrepToken.balanceOf(user1), TIER_0_AMOUNT);
         assertTrue(faucet.hasClaimed(user1));
     }
 
@@ -124,8 +146,102 @@ contract HumanFaucetTest is Test {
         faucet.verifySelfProof(_buildProofPayload(PASSPORT_ATTESTATION_ID, userContextData), userContextData);
 
         assertEq(faucet.referredBy(user2), user1);
-        assertEq(crepToken.balanceOf(user2), TIER_0_AMOUNT + TIER_0_REFERRAL_BONUS);
+        assertEq(hrepToken.balanceOf(user2), TIER_0_AMOUNT + TIER_0_REFERRAL_BONUS);
         assertEq(faucet.referralEarnings(user1), TIER_0_REFERRER_REWARD);
+    }
+
+    function test_RecipientAuthorizationRequiredRejectsLegacyUserData() public {
+        mockHub.setVerified(user1);
+        vm.prank(admin);
+        faucet.setRecipientAuthorizationRequired(true);
+
+        vm.expectRevert(HumanFaucet.MissingClaimAuthorization.selector);
+        mockHub.simulateVerification(address(faucet), user1);
+    }
+
+    function test_RecipientAuthorizationRequiredAcceptsEoaSignature() public {
+        uint256 privateKey = 0xA11CE;
+        address user = vm.addr(privateKey);
+        uint256 deadline = block.timestamp + 1 hours;
+        mockHub.setVerified(user);
+        vm.prank(admin);
+        faucet.setRecipientAuthorizationRequired(true);
+
+        bytes memory userData = _buildClaimAuthorizationUserData(user, address(0), deadline, privateKey);
+        mockHub.simulateVerificationWithUserData(address(faucet), user, userData);
+
+        assertTrue(faucet.hasClaimed(user));
+        assertEq(faucet.recipientAuthorizationNonces(user), 1);
+        assertEq(hrepToken.balanceOf(user), TIER_0_AMOUNT);
+    }
+
+    function test_RecipientAuthorizationCannotBeDisabledAfterEnabling() public {
+        vm.startPrank(admin);
+        faucet.setRecipientAuthorizationRequired(true);
+
+        vm.expectRevert(HumanFaucet.RecipientAuthorizationCannotBeDisabled.selector);
+        faucet.setRecipientAuthorizationRequired(false);
+        vm.stopPrank();
+    }
+
+    function test_RecipientAuthorizationRejectsDifferentRecipientSignature() public {
+        uint256 privateKey = 0xA11CE;
+        address user = vm.addr(privateKey);
+        uint256 deadline = block.timestamp + 1 hours;
+        mockHub.setVerified(user);
+        vm.prank(admin);
+        faucet.setRecipientAuthorizationRequired(true);
+
+        bytes memory signature = _signClaimAuthorization(privateKey, user2, address(0), 0, deadline);
+        bytes memory userData = abi.encode(bytes4("HFCA"), address(0), deadline, signature);
+
+        vm.expectRevert(HumanFaucet.InvalidClaimAuthorization.selector);
+        mockHub.simulateVerificationWithUserData(address(faucet), user, userData);
+    }
+
+    function test_RecipientAuthorizationRejectsExpiredSignature() public {
+        uint256 privateKey = 0xA11CE;
+        address user = vm.addr(privateKey);
+        uint256 deadline = block.timestamp - 1;
+        mockHub.setVerified(user);
+        vm.prank(admin);
+        faucet.setRecipientAuthorizationRequired(true);
+
+        bytes memory userData = _buildClaimAuthorizationUserData(user, address(0), deadline, privateKey);
+
+        vm.expectRevert(HumanFaucet.ClaimAuthorizationExpired.selector);
+        mockHub.simulateVerificationWithUserData(address(faucet), user, userData);
+    }
+
+    function test_RecipientAuthorizationAcceptsEip1271WalletSignature() public {
+        uint256 ownerKey = 0xB0B;
+        MockClaimWallet wallet = new MockClaimWallet(vm.addr(ownerKey));
+        address user = address(wallet);
+        uint256 deadline = block.timestamp + 1 hours;
+        mockHub.setVerified(user);
+        vm.prank(admin);
+        faucet.setRecipientAuthorizationRequired(true);
+
+        bytes memory userData = _buildClaimAuthorizationUserData(user, address(0), deadline, ownerKey);
+        mockHub.simulateVerificationWithUserData(address(faucet), user, userData);
+
+        assertTrue(faucet.hasClaimed(user));
+        assertEq(faucet.recipientAuthorizationNonces(user), 1);
+        assertEq(hrepToken.balanceOf(user), TIER_0_AMOUNT);
+    }
+
+    function test_BootstrapMigratedClaims_RejectsOversizedBatch() public {
+        uint256 length = 101;
+        address[] memory users = new address[](length);
+        uint256[] memory nullifiers = new uint256[](length);
+        uint256[] memory amounts = new uint256[](length);
+        address[] memory referrers = new address[](length);
+        uint256[] memory claimantBonuses = new uint256[](length);
+        uint256[] memory referrerRewards = new uint256[](length);
+
+        vm.prank(admin);
+        vm.expectRevert(HumanFaucet.MigrationBootstrapBatchTooLarge.selector);
+        faucet.bootstrapMigratedClaims(users, nullifiers, amounts, referrers, claimantBonuses, referrerRewards);
     }
 
     function test_VerifySelfProof_RevertShortProofPayload() public {
@@ -143,13 +259,14 @@ contract HumanFaucetTest is Test {
         bytes memory userContextData = abi.encodePacked(bytes32(uint256(block.chainid)));
 
         vm.prank(user1);
-        (bool success, bytes memory revertData) = address(faucet).call(
-            abi.encodeWithSelector(
-                SelfVerificationRoot.verifySelfProof.selector,
-                _buildProofPayload(PASSPORT_ATTESTATION_ID, _buildUserContextData(user1, "")),
-                userContextData
-            )
-        );
+        (bool success, bytes memory revertData) = address(faucet)
+            .call(
+                abi.encodeWithSelector(
+                    SelfVerificationRoot.verifySelfProof.selector,
+                    _buildProofPayload(PASSPORT_ATTESTATION_ID, _buildUserContextData(user1, "")),
+                    userContextData
+                )
+            );
 
         assertFalse(success);
         _assertRevertSelector(revertData, SelfVerificationRoot.InvalidDataFormat.selector);
@@ -161,13 +278,14 @@ contract HumanFaucetTest is Test {
         bytes memory mismatchedUserContextData = _buildUserContextData(user2, "");
 
         vm.prank(user1);
-        (bool success, bytes memory revertData) = address(faucet).call(
-            abi.encodeWithSelector(
-                SelfVerificationRoot.verifySelfProof.selector,
-                _buildProofPayload(PASSPORT_ATTESTATION_ID, proofContextData),
-                mismatchedUserContextData
-            )
-        );
+        (bool success, bytes memory revertData) = address(faucet)
+            .call(
+                abi.encodeWithSelector(
+                    SelfVerificationRoot.verifySelfProof.selector,
+                    _buildProofPayload(PASSPORT_ATTESTATION_ID, proofContextData),
+                    mismatchedUserContextData
+                )
+            );
 
         assertFalse(success);
         _assertRevertReason(revertData, "Invalid user identifier");
@@ -178,11 +296,11 @@ contract HumanFaucetTest is Test {
         mockHub.setVerified(user2);
 
         mockHub.simulateVerification(address(faucet), user1);
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertEq(hrepToken.balanceOf(user1), TIER_0_AMOUNT);
         assertEq(faucet.totalClaimants(), 1);
 
         mockHub.simulateVerification(address(faucet), user2);
-        assertEq(crepToken.balanceOf(user2), TIER_0_AMOUNT);
+        assertEq(hrepToken.balanceOf(user2), TIER_0_AMOUNT);
         assertEq(faucet.totalClaimants(), 2);
         assertEq(faucet.totalClaimed(), TIER_0_AMOUNT * 2);
     }
@@ -190,7 +308,7 @@ contract HumanFaucetTest is Test {
     // --- Tier Tests ---
 
     function test_TierTransitions() public {
-        // Tier 0 (Genesis): first 10 claims at 10,000 cREP
+        // Tier 0 (Genesis): first 10 claims at 10,000 HREP
         assertEq(faucet.getCurrentTier(), 0);
         assertEq(faucet.getCurrentClaimAmount(), TIER_0_AMOUNT);
 
@@ -213,7 +331,7 @@ contract HumanFaucetTest is Test {
         address boundaryUser = address(uint160(50000));
         mockHub.setVerified(boundaryUser);
         mockHub.simulateVerification(address(faucet), boundaryUser);
-        assertEq(crepToken.balanceOf(boundaryUser), TIER_0_AMOUNT);
+        assertEq(hrepToken.balanceOf(boundaryUser), TIER_0_AMOUNT);
 
         // Now totalClaimants == 10, tier transitions to 1
         assertEq(faucet.getCurrentTier(), 1);
@@ -222,7 +340,7 @@ contract HumanFaucetTest is Test {
         address nextUser = address(uint160(50001));
         mockHub.setVerified(nextUser);
         mockHub.simulateVerification(address(faucet), nextUser);
-        assertEq(crepToken.balanceOf(nextUser), TIER_1_AMOUNT);
+        assertEq(hrepToken.balanceOf(nextUser), TIER_1_AMOUNT);
     }
 
     function test_GetCurrentTier_AllTiers() public {
@@ -303,7 +421,7 @@ contract HumanFaucetTest is Test {
         // Advance to tier 4 (Settler)
         _setTotalClaimants(TIER_3_THRESHOLD);
         (uint256 bonus4, uint256 reward4) = faucet.getCurrentReferralAmounts();
-        assertEq(bonus4, 500000); // 50% of 1 = 0.5 cREP = 500000
+        assertEq(bonus4, 500000); // 50% of 1 = 0.5 HREP = 500000
         assertEq(reward4, 500000);
     }
 
@@ -342,13 +460,14 @@ contract HumanFaucetTest is Test {
         mockHub.setVerifiedWithNullifier(user1, nullifier);
 
         mockHub.simulateVerification(address(faucet), user1);
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertEq(hrepToken.balanceOf(user1), TIER_0_AMOUNT);
 
         ISelfVerificationRoot.GenericDiscloseOutputV2 memory output;
         output.attestationId = PASSPORT_ATTESTATION_ID;
         output.userIdentifier = uint256(uint160(user2));
         output.nullifier = nullifier;
         output.olderThan = 18;
+        output.ofac = [true, true, true];
 
         vm.expectRevert(HumanFaucet.NullifierAlreadyUsed.selector);
         mockHub.simulateVerificationWithOutput(address(faucet), output);
@@ -359,6 +478,7 @@ contract HumanFaucetTest is Test {
         output.attestationId = PASSPORT_ATTESTATION_ID;
         output.userIdentifier = 0;
         output.nullifier = 99999;
+        output.ofac = [true, true, true];
 
         vm.expectRevert(HumanFaucet.InvalidUserIdentifier.selector);
         mockHub.simulateVerificationWithOutput(address(faucet), output);
@@ -369,6 +489,7 @@ contract HumanFaucetTest is Test {
         output.attestationId = PASSPORT_ATTESTATION_ID;
         output.userIdentifier = uint256(uint160(user1));
         output.nullifier = 12345;
+        output.ofac = [true, true, true];
 
         bytes memory encodedOutput = abi.encode(output);
 
@@ -433,6 +554,85 @@ contract HumanFaucetTest is Test {
         faucet.setConfigId(newConfigId);
     }
 
+    function test_AttestationPolicies_Defaults() public view {
+        (bool passportEnabled, bool[3] memory passportOfac) = faucet.getAttestationPolicy(PASSPORT_ATTESTATION_ID);
+        assertTrue(passportEnabled);
+        assertTrue(passportOfac[0]);
+        assertTrue(passportOfac[1]);
+        assertTrue(passportOfac[2]);
+
+        (bool biometricEnabled, bool[3] memory biometricOfac) =
+            faucet.getAttestationPolicy(BIOMETRIC_ID_CARD_ATTESTATION_ID);
+        assertTrue(biometricEnabled);
+        assertFalse(biometricOfac[0]);
+        assertTrue(biometricOfac[1]);
+        assertTrue(biometricOfac[2]);
+
+        (bool kycEnabled, bool[3] memory kycOfac) = faucet.getAttestationPolicy(KYC_ATTESTATION_ID);
+        assertTrue(kycEnabled);
+        assertFalse(kycOfac[0]);
+        assertTrue(kycOfac[1]);
+        assertTrue(kycOfac[2]);
+    }
+
+    function test_SetAttestationPolicy_AllowsOwnerToDisableKyc() public {
+        vm.prank(admin);
+        vm.expectEmit(true, false, false, true);
+        emit HumanFaucet.AttestationPolicyUpdated(KYC_ATTESTATION_ID, false, [false, false, false]);
+        faucet.setAttestationPolicy(KYC_ATTESTATION_ID, false, [false, false, false]);
+
+        (bool enabled, bool[3] memory requiredOfac) = faucet.getAttestationPolicy(KYC_ATTESTATION_ID);
+        assertFalse(enabled);
+        assertFalse(requiredOfac[0]);
+        assertFalse(requiredOfac[1]);
+        assertFalse(requiredOfac[2]);
+
+        ISelfVerificationRoot.GenericDiscloseOutputV2 memory output;
+        output.attestationId = KYC_ATTESTATION_ID;
+        output.userIdentifier = uint256(uint160(user1));
+        output.nullifier = 999780;
+        output.olderThan = 18;
+        output.ofac = [false, true, true];
+
+        vm.expectRevert(HumanFaucet.UnsupportedDocumentType.selector);
+        mockHub.simulateVerificationWithOutput(address(faucet), output);
+    }
+
+    function test_SetAttestationPolicy_AllowsOwnerToEnableNewCredentialKind() public {
+        vm.prank(admin);
+        faucet.setAttestationPolicy(UNSUPPORTED_ATTESTATION_ID, true, [false, true, false]);
+
+        ISelfVerificationRoot.GenericDiscloseOutputV2 memory output;
+        output.attestationId = UNSUPPORTED_ATTESTATION_ID;
+        output.userIdentifier = uint256(uint160(user1));
+        output.nullifier = 999781;
+        output.olderThan = 18;
+        output.ofac = [false, true, false];
+
+        mockHub.simulateVerificationWithOutput(address(faucet), output);
+
+        assertEq(hrepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertTrue(faucet.hasClaimed(user1));
+    }
+
+    function test_SetAttestationPolicy_RevertNotOwner() public {
+        vm.prank(user1);
+        vm.expectRevert();
+        faucet.setAttestationPolicy(KYC_ATTESTATION_ID, false, [false, false, false]);
+    }
+
+    function test_SetAttestationPolicy_RevertZeroAttestationId() public {
+        vm.prank(admin);
+        vm.expectRevert(HumanFaucet.InvalidAttestationPolicy.selector);
+        faucet.setAttestationPolicy(bytes32(0), true, [true, false, false]);
+    }
+
+    function test_SetAttestationPolicy_RevertEnabledWithoutSanctionsRequirement() public {
+        vm.prank(admin);
+        vm.expectRevert(HumanFaucet.InvalidAttestationPolicy.selector);
+        faucet.setAttestationPolicy(KYC_ATTESTATION_ID, true, [false, false, false]);
+    }
+
     // --- Stats Tests ---
 
     function test_TotalClaimed_Increments() public {
@@ -466,12 +666,12 @@ contract HumanFaucetTest is Test {
     function test_FullClaimFlow() public {
         mockHub.setVerified(user1);
 
-        assertEq(crepToken.balanceOf(user1), 0);
+        assertEq(hrepToken.balanceOf(user1), 0);
         assertFalse(faucet.hasClaimed(user1));
 
         mockHub.simulateVerification(address(faucet), user1);
 
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertEq(hrepToken.balanceOf(user1), TIER_0_AMOUNT);
         assertTrue(faucet.hasClaimed(user1));
         assertEq(faucet.totalClaimants(), 1);
         assertEq(faucet.totalClaimed(), TIER_0_AMOUNT);
@@ -479,39 +679,61 @@ contract HumanFaucetTest is Test {
         vm.expectRevert(HumanFaucet.NullifierAlreadyUsed.selector);
         mockHub.simulateVerification(address(faucet), user1);
 
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertEq(hrepToken.balanceOf(user1), TIER_0_AMOUNT);
     }
 
     // --- Age Disclosure Handling Tests ---
 
-    function test_Claim_SuccessWithoutAgeRequirement_Zero() public {
+    function test_Claim_RevertMinimumAgeNotMet_Zero() public {
         mockHub.setVerified(user1);
 
+        vm.expectRevert(HumanFaucet.MinimumAgeNotMet.selector);
         mockHub.simulateVerificationWithAge(address(faucet), user1, 0);
 
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
-        assertTrue(faucet.hasClaimed(user1));
+        assertEq(hrepToken.balanceOf(user1), 0);
+        assertFalse(faucet.hasClaimed(user1));
     }
 
-    function test_Claim_SuccessWithoutAgeRequirement_Seventeen() public {
+    function test_Claim_RevertMinimumAgeNotMet_Seventeen() public {
         mockHub.setVerified(user1);
 
+        vm.expectRevert(HumanFaucet.MinimumAgeNotMet.selector);
         mockHub.simulateVerificationWithAge(address(faucet), user1, 17);
 
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
-        assertTrue(faucet.hasClaimed(user1));
+        assertEq(hrepToken.balanceOf(user1), 0);
+        assertFalse(faucet.hasClaimed(user1));
     }
 
-    function test_Claim_SuccessWithoutAgeRequirement_ViaCustomOutput() public {
+    function test_Claim_RevertMinimumAgeNotMet_ViaCustomOutput() public {
         ISelfVerificationRoot.GenericDiscloseOutputV2 memory output;
         output.attestationId = PASSPORT_ATTESTATION_ID;
         output.userIdentifier = uint256(uint160(user1));
         output.nullifier = 99999;
         output.olderThan = 15;
+        output.ofac = [true, true, true];
 
+        vm.expectRevert(HumanFaucet.MinimumAgeNotMet.selector);
         mockHub.simulateVerificationWithOutput(address(faucet), output);
 
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertEq(hrepToken.balanceOf(user1), 0);
+        assertFalse(faucet.hasClaimed(user1));
+    }
+
+    function test_Claim_SuccessWithMinimumAge() public {
+        mockHub.setVerified(user1);
+
+        mockHub.simulateVerificationWithAge(address(faucet), user1, MINIMUM_FAUCET_AGE);
+
+        assertEq(hrepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertTrue(faucet.hasClaimed(user1));
+    }
+
+    function test_Claim_SuccessAboveMinimumAge() public {
+        mockHub.setVerified(user1);
+
+        mockHub.simulateVerificationWithAge(address(faucet), user1, 21);
+
+        assertEq(hrepToken.balanceOf(user1), TIER_0_AMOUNT);
         assertTrue(faucet.hasClaimed(user1));
     }
 
@@ -521,11 +743,50 @@ contract HumanFaucetTest is Test {
         output.userIdentifier = uint256(uint160(user1));
         output.nullifier = 77777;
         output.olderThan = 18;
+        output.ofac = [false, true, true];
 
         mockHub.simulateVerificationWithOutput(address(faucet), output);
 
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertEq(hrepToken.balanceOf(user1), TIER_0_AMOUNT);
         assertTrue(faucet.hasClaimed(user1));
+    }
+
+    function test_Claim_SuccessWithKyc() public {
+        ISelfVerificationRoot.GenericDiscloseOutputV2 memory output;
+        output.attestationId = KYC_ATTESTATION_ID;
+        output.userIdentifier = uint256(uint160(user1));
+        output.nullifier = 999777;
+        output.olderThan = 18;
+        output.ofac = [false, true, true];
+
+        mockHub.simulateVerificationWithOutput(address(faucet), output);
+
+        assertEq(hrepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertTrue(faucet.hasClaimed(user1));
+    }
+
+    function test_Claim_RevertSanctionsCheckFailed_Passport() public {
+        ISelfVerificationRoot.GenericDiscloseOutputV2 memory output;
+        output.attestationId = PASSPORT_ATTESTATION_ID;
+        output.userIdentifier = uint256(uint160(user1));
+        output.nullifier = 999778;
+        output.olderThan = 18;
+        output.ofac = [true, false, true];
+
+        vm.expectRevert(HumanFaucet.SanctionsCheckFailed.selector);
+        mockHub.simulateVerificationWithOutput(address(faucet), output);
+    }
+
+    function test_Claim_RevertSanctionsCheckFailed_Kyc() public {
+        ISelfVerificationRoot.GenericDiscloseOutputV2 memory output;
+        output.attestationId = KYC_ATTESTATION_ID;
+        output.userIdentifier = uint256(uint160(user1));
+        output.nullifier = 999779;
+        output.olderThan = 18;
+        output.ofac = [false, true, false];
+
+        vm.expectRevert(HumanFaucet.SanctionsCheckFailed.selector);
+        mockHub.simulateVerificationWithOutput(address(faucet), output);
     }
 
     function test_Claim_RevertUnsupportedDocumentType() public {
@@ -546,17 +807,17 @@ contract HumanFaucetTest is Test {
         mockHub.simulateVerification(address(faucet), user1);
 
         assertTrue(faucet.isValidReferrer(user1));
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertEq(hrepToken.balanceOf(user1), TIER_0_AMOUNT);
 
         mockHub.setVerified(user2);
         bytes memory userData = abi.encodePacked(user1);
         mockHub.simulateVerificationWithUserData(address(faucet), user2, userData);
 
-        // User2 gets 10,000 + 5,000 = 15,000 cREP
-        assertEq(crepToken.balanceOf(user2), TIER_0_AMOUNT + TIER_0_REFERRAL_BONUS);
+        // User2 gets 10,000 + 5,000 = 15,000 HREP
+        assertEq(hrepToken.balanceOf(user2), TIER_0_AMOUNT + TIER_0_REFERRAL_BONUS);
 
-        // User1 gets 10,000 + 5,000 = 15,000 cREP
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT + TIER_0_REFERRER_REWARD);
+        // User1 gets 10,000 + 5,000 = 15,000 HREP
+        assertEq(hrepToken.balanceOf(user1), TIER_0_AMOUNT + TIER_0_REFERRER_REWARD);
 
         assertEq(faucet.referralCount(user1), 1);
         assertEq(faucet.referredBy(user2), user1);
@@ -568,7 +829,7 @@ contract HumanFaucetTest is Test {
 
         mockHub.simulateVerificationWithUserData(address(faucet), user1, userData);
 
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertEq(hrepToken.balanceOf(user1), TIER_0_AMOUNT);
         assertEq(faucet.referredBy(user1), address(0));
         assertEq(faucet.referralCount(user2), 0);
     }
@@ -584,7 +845,7 @@ contract HumanFaucetTest is Test {
         mockHub.simulateVerificationWithUserData(address(faucet), user3, userData);
 
         // Self-referral rejected — only base amount
-        assertEq(crepToken.balanceOf(user3), TIER_0_AMOUNT);
+        assertEq(hrepToken.balanceOf(user3), TIER_0_AMOUNT);
         assertEq(faucet.referredBy(user3), address(0));
     }
 
@@ -592,7 +853,7 @@ contract HumanFaucetTest is Test {
         mockHub.setVerified(user1);
         mockHub.simulateVerificationWithUserData(address(faucet), user1, "");
 
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertEq(hrepToken.balanceOf(user1), TIER_0_AMOUNT);
         assertEq(faucet.referredBy(user1), address(0));
     }
 
@@ -601,7 +862,7 @@ contract HumanFaucetTest is Test {
         bytes memory shortData = hex"1234567890";
         mockHub.simulateVerificationWithUserData(address(faucet), user1, shortData);
 
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertEq(hrepToken.balanceOf(user1), TIER_0_AMOUNT);
         assertEq(faucet.referredBy(user1), address(0));
     }
 
@@ -637,11 +898,11 @@ contract HumanFaucetTest is Test {
 
         (uint256 count, uint256 totalEarned) = faucet.getReferralStats(user1);
         assertEq(count, 5);
-        // 5 referrals × 5,000 cREP each = 25,000 cREP
+        // 5 referrals × 5,000 HREP each = 25,000 HREP
         assertEq(totalEarned, TIER_0_REFERRER_REWARD * 5);
 
-        // User1 balance: 10,000 (claim) + 25,000 (referral rewards) = 35,000 cREP
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT + TIER_0_REFERRER_REWARD * 5);
+        // User1 balance: 10,000 (claim) + 25,000 (referral rewards) = 35,000 HREP
+        assertEq(hrepToken.balanceOf(user1), TIER_0_AMOUNT + TIER_0_REFERRER_REWARD * 5);
     }
 
     function test_ReferralAmounts_Tier0() public view {
@@ -669,7 +930,7 @@ contract HumanFaucetTest is Test {
         bytes memory userData = abi.encodePacked(user1);
         mockHub.simulateVerificationWithUserData(address(faucet), user2, userData);
 
-        // Total referral rewards = bonus (5,000) + reward (5,000) = 10,000 cREP
+        // Total referral rewards = bonus (5,000) + reward (5,000) = 10,000 HREP
         assertEq(faucet.totalReferralRewards(), TIER_0_REFERRAL_BONUS + TIER_0_REFERRER_REWARD);
     }
 
@@ -695,12 +956,12 @@ contract HumanFaucetTest is Test {
         vm.prank(admin);
         faucet.withdrawRemaining(admin, 1_000_000e6);
 
-        assertEq(crepToken.balanceOf(admin), 1_000_000e6);
-        assertEq(crepToken.balanceOf(address(faucet)), 51_000_000e6);
+        assertEq(hrepToken.balanceOf(admin), 1_000_000e6);
+        assertEq(hrepToken.balanceOf(address(faucet)), 51_000_000e6);
     }
 
     function test_WithdrawRemainingFullBalance() public {
-        uint256 faucetBalance = crepToken.balanceOf(address(faucet));
+        uint256 faucetBalance = hrepToken.balanceOf(address(faucet));
 
         vm.prank(admin);
         faucet.pause();
@@ -708,8 +969,8 @@ contract HumanFaucetTest is Test {
         vm.prank(admin);
         faucet.withdrawRemaining(admin, type(uint256).max);
 
-        assertEq(crepToken.balanceOf(admin), faucetBalance);
-        assertEq(crepToken.balanceOf(address(faucet)), 0);
+        assertEq(hrepToken.balanceOf(admin), faucetBalance);
+        assertEq(hrepToken.balanceOf(address(faucet)), 0);
     }
 
     function test_WithdrawRemainingRequiresPause() public {
@@ -747,7 +1008,7 @@ contract HumanFaucetTest is Test {
         vm.expectRevert(Pausable.EnforcedPause.selector);
         mockHub.simulateVerification(address(faucet), user1);
 
-        assertEq(crepToken.balanceOf(user1), 0);
+        assertEq(hrepToken.balanceOf(user1), 0);
     }
 
     function test_Unpause_AllowsClaims() public {
@@ -759,17 +1020,17 @@ contract HumanFaucetTest is Test {
 
         mockHub.setVerified(user1);
         mockHub.simulateVerification(address(faucet), user1);
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertEq(hrepToken.balanceOf(user1), TIER_0_AMOUNT);
     }
 
     function test_Pause_AllowsWithdrawRemaining() public {
         vm.prank(admin);
         faucet.pause();
 
-        uint256 faucetBalance = crepToken.balanceOf(address(faucet));
+        uint256 faucetBalance = hrepToken.balanceOf(address(faucet));
         vm.prank(admin);
         faucet.withdrawRemaining(admin, faucetBalance);
-        assertEq(crepToken.balanceOf(address(faucet)), 0);
+        assertEq(hrepToken.balanceOf(address(faucet)), 0);
     }
 
     function test_Pause_OnlyOwner() public {
@@ -799,17 +1060,49 @@ contract HumanFaucetTest is Test {
     }
 
     /// @dev Set totalClaimants directly via vm.store to avoid expensive loops for higher tiers.
-    ///      Storage slot 6 determined via `forge inspect HumanFaucet storage`.
+    ///      Storage slot 8 determined via `forge inspect HumanFaucet storage`.
     function _setTotalClaimants(uint256 value) internal {
-        vm.store(address(faucet), bytes32(uint256(6)), bytes32(value));
+        vm.store(address(faucet), bytes32(uint256(8)), bytes32(value));
     }
 
-    function _buildProofPayload(bytes32 attestationId, bytes memory userContextData) internal pure returns (bytes memory) {
+    function _buildProofPayload(bytes32 attestationId, bytes memory userContextData)
+        internal
+        pure
+        returns (bytes memory)
+    {
         return abi.encodePacked(attestationId, bytes32(_calculateBoundUserIdentifier(userContextData)));
     }
 
     function _buildUserContextData(address user, bytes memory userData) internal view returns (bytes memory) {
         return abi.encodePacked(bytes32(uint256(block.chainid)), bytes32(uint256(uint160(user))), userData);
+    }
+
+    function _buildClaimAuthorizationUserData(address user, address referrer, uint256 deadline, uint256 privateKey)
+        internal
+        view
+        returns (bytes memory)
+    {
+        bytes memory signature =
+            _signClaimAuthorization(privateKey, user, referrer, faucet.recipientAuthorizationNonces(user), deadline);
+        return abi.encode(bytes4("HFCA"), referrer, deadline, signature);
+    }
+
+    function _signClaimAuthorization(
+        uint256 privateKey,
+        address user,
+        address referrer,
+        uint256 nonce,
+        uint256 deadline
+    ) internal view returns (bytes memory) {
+        bytes32 domainSeparator = keccak256(
+            abi.encode(
+                EIP712_DOMAIN_TYPEHASH, keccak256("Curyo Human Faucet"), keccak256("1"), block.chainid, address(faucet)
+            )
+        );
+        bytes32 structHash = keccak256(abi.encode(FAUCET_CLAIM_AUTHORIZATION_TYPEHASH, user, referrer, nonce, deadline));
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
+        return abi.encodePacked(r, s, v);
     }
 
     function _calculateBoundUserIdentifier(bytes memory userContextData) internal pure returns (uint256) {

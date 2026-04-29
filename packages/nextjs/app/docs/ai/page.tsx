@@ -1,344 +1,347 @@
 import Link from "next/link";
-import type { NextPage } from "next";
-import { protocolCopy } from "~~/lib/docs/protocolCopy";
+import type { Metadata, NextPage } from "next";
 
-const mcpServerSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/mcp-server";
-const mcpRoutesSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/nextjs/app/api/mcp";
-const ponderSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/ponder";
+const agentsSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/agents";
+const sdkSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/sdk";
+const agentTemplatesSourceHref = "https://github.com/Noc2/CURYO/blob/main/packages/agents/src/templates.ts";
+const agentFlowTemplateLinks = [
+  { href: agentTemplatesSourceHref, id: "generic_rating" },
+  { href: agentTemplatesSourceHref, id: "go_no_go" },
+  { href: agentTemplatesSourceHref, id: "ranked_option_member" },
+  { href: agentTemplatesSourceHref, id: "llm_answer_quality" },
+  { href: agentTemplatesSourceHref, id: "rag_grounding_check" },
+  { href: agentTemplatesSourceHref, id: "claim_verification" },
+  { href: agentTemplatesSourceHref, id: "source_credibility_check" },
+  { href: agentTemplatesSourceHref, id: "agent_action_go_no_go" },
+  { href: agentTemplatesSourceHref, id: "feature_acceptance_test" },
+  { href: agentTemplatesSourceHref, id: "agent_trace_review" },
+  { href: agentTemplatesSourceHref, id: "proposal_review" },
+  { href: agentTemplatesSourceHref, id: "pairwise_output_preference" },
+] as const;
+
+const genericMcpConfig = `{
+  "mcpServers": {
+    "curyo": {
+      "transport": "streamable-http",
+      "url": "https://curyo.xyz/api/mcp/public",
+      "headers": {
+        "MCP-Protocol-Version": "2025-11-25"
+      }
+    }
+  }
+}`;
+
+const managedMcpConfig = `{
+  "mcpServers": {
+    "curyo": {
+      "transport": "streamable-http",
+      "url": "https://curyo.xyz/api/mcp",
+      "headers": {
+        "Authorization": "Bearer <curyo-agent-token>",
+        "MCP-Protocol-Version": "2025-11-25"
+      }
+    }
+  }
+}`;
+
+const firstMcpSession = `1. curyo_list_result_templates
+2. curyo_quote_question with walletAddress
+3. curyo_ask_humans with walletAddress
+4. Execute transactionPlan.calls in order
+5. curyo_confirm_ask_transactions
+6. curyo_get_question_status
+7. curyo_get_result`;
+
+const firstFundedAskSteps = [
+  "Fund the signer wallet with Celo USDC.",
+  "Quote with curyo_quote_question, include walletAddress, and keep the returned payment amount within the agent's own spend rules.",
+  "Ask with curyo_ask_humans, execute the returned wallet calls in order, then confirm hashes with curyo_confirm_ask_transactions.",
+  "Recover with curyo_get_question_status and curyo_get_result if the callback is missed.",
+] as const;
+
+const operatorControls = [
+  {
+    title: "Optional token lifecycle",
+    description:
+      "Create separate MCP bearer tokens per autonomous agent when you want managed policy controls, then revoke or rotate them without touching contracts.",
+  },
+  {
+    title: "Budget guards",
+    description:
+      "Use per-ask caps, daily caps, scopes, category allowlists, and a fixed wallet address so agents cannot spend outside their assignment.",
+  },
+  {
+    title: "Callback delivery",
+    description:
+      "Attach signed webhooks to asks, protect the delivery worker with CURYO_AGENT_CALLBACK_DELIVERY_SECRET, and inspect callbackDeliveries when an agent waits for humans asynchronously.",
+  },
+  {
+    title: "Audit trail",
+    description:
+      "Track every ask by client request id, payload hash, payment, public result URL, and callback outcome.",
+  },
+] as const;
+
+const runtimeExamples = [
+  {
+    title: "ChatGPT or Claude",
+    description:
+      "Use a remote connector or MCP server entry. Prefer explicit spend confirmation and poll-safe result reads because the chat session may not stay alive for callbacks.",
+  },
+  {
+    title: "Persistent agents",
+    description:
+      "Use the public MCP endpoint when the agent controls a funded wallet. Add managed budgets, signed callback webhooks, and audit exports only when the agent needs that service layer.",
+  },
+  {
+    title: "Gemini CLI or coding agents",
+    description:
+      "Use the same mcpServers shape from the local workspace config. Public MCP needs no bearer token; managed MCP tokens should stay scoped to quote, ask, read, and balance.",
+  },
+  {
+    title: "Backend workers",
+    description:
+      "Use SDK or HTTP helpers when MCP is unnecessary, and reserve callbacks for durable server-side queues.",
+  },
+] as const;
+
+export const metadata = {
+  title: "AI Agent Feedback Guide | Curyo Docs",
+  description:
+    "How AI agents use Curyo as a human-in-the-loop judgment layer for verified answers, scoped-wallet bounties, and readable results.",
+} satisfies Metadata;
 
 const AIPage: NextPage = () => {
   return (
     <article className="prose max-w-none">
-      <h1>AI &amp; MCP</h1>
+      <h1>AI Agent Feedback Guide</h1>
       <p className="lead text-base-content/60 text-lg">
-        Curyo&apos;s hosted MCP service is available at <code>mcp.curyo.xyz</code>. It gives deployment-managed AI
-        clients structured reads, narrow authenticated writes, and a canonical HTTP endpoint without requiring every
-        developer to boot the monorepo locally.
+        Curyo gives agents one narrow human-in-the-loop fallback: submit a bounded public question to verified humans,
+        fund the work, and read a structured result.
       </p>
 
-      <h2>Why This Matters</h2>
-      <p>{protocolCopy.whyNowOverview}</p>
-      <p>
-        {protocolCopy.strongerSignalOverview} That same quality layer is a natural fit for AI agents. Agents need
-        structured, provenance-rich reads, and over time they should be able to participate through a constrained write
-        surface instead of raw contract plumbing.
-      </p>
-
-      <div className="not-prose grid gap-4 sm:grid-cols-2 my-6">
-        <FeatureCard
-          title="Public Quality Layer"
-          description="Curyo ratings are openly accessible, exportable, and useful as an input to search, ranking, recommendation, and training pipelines."
-        />
-        <FeatureCard
-          title="One Person, One Vote"
-          description="Verified human identities and Voter IDs make stake-backed quality signals harder to sybil and easier to trust."
-        />
-        <FeatureCard
-          title="Economic Commitment"
-          description="Votes require cREP stake, so persistent low-quality judgment becomes expensive instead of merely noisy."
-        />
-        <FeatureCard
-          title="Agent-Native Access"
-          description="MCP is the right interface for agents that need structured reads and a small typed write surface instead of raw contract calls."
-        />
-      </div>
-
-      <h2>Hosted MCP Service</h2>
-      <p>
-        The canonical hosted endpoint is <code>mcp.curyo.xyz</code>. AI tools can connect directly to the live service
-        instead of running their own local MCP server, Ponder stack, and supporting infrastructure.
-      </p>
-      <pre>
-        <code>{`Live endpoint
-https://mcp.curyo.xyz/mcp`}</code>
-      </pre>
-      <p>The live service provides:</p>
-      <ul>
-        <li>Hosted read access backed by a managed Ponder deployment.</li>
-        <li>Health, readiness, protected metrics, and structured observability for agent clients.</li>
-        <li>Typed authenticated write tools for a small set of common Curyo actions.</li>
-        <li>Vote attribution to a registered frontend code so hosted vote flow can earn protocol frontend fees.</li>
-      </ul>
-      <p>
-        The Next.js app also publishes a canonical config document at <code>/api/mcp/config</code> so clients can read
-        the endpoint URL, health/readiness URLs, docs URL, and current wallet-session settings from one place.
-      </p>
-      <p>
-        Public auth is still deployment-managed rather than fully self-serve. In practice that means clients use
-        pre-provisioned bearer tokens or the wallet-session exchange when that flow is enabled. The MCP package now
-        advertises protected-resource metadata, but it is not a generic OAuth login product by itself.
-      </p>
-      <p>
-        The open-source implementation lives in the{" "}
-        <a href={mcpServerSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
-          MCP server package
-        </a>
-        , the{" "}
-        <a href={mcpRoutesSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
-          Next.js MCP routes
-        </a>
-        , and the{" "}
-        <a href={ponderSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
-          Ponder indexer
-        </a>{" "}
-        if you want to inspect or self-host the same stack.
-      </p>
-
-      <h2>Service Overview</h2>
-      <div className="overflow-x-auto">
-        <table className="table table-zebra [&_th]:bg-base-300 [&_th]:text-base [&_td]:align-top [&_td]:text-base [&_th:first-child]:w-64 [&_td:first-child]:w-64">
-          <thead>
-            <tr>
-              <th>Area</th>
-              <th>Live service behavior</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>MCP transport</td>
-              <td>
-                Canonical Streamable HTTP endpoint for external AI clients, with the in-repo package still available for
-                local stdio workflows
-              </td>
-            </tr>
-            <tr>
-              <td>Indexer dependency</td>
-              <td>Managed Ponder + Postgres behind the hosted MCP service</td>
-            </tr>
-            <tr>
-              <td>Authentication</td>
-              <td>
-                Scoped bearer tokens plus wallet-signed session issuance endpoints for short-lived write-capable MCP
-                sessions
-              </td>
-            </tr>
-            <tr>
-              <td>Write support</td>
-              <td>
-                Typed write tools in repo: vote, submit_content, claim_reward, claim_frontend_fee, with preflight
-                simulation and policy guards
-              </td>
-            </tr>
-            <tr>
-              <td>Frontend fee attribution</td>
-              <td>Available at protocol level, with configurable frontend attribution in bot and hosted MCP flows</td>
-            </tr>
-            <tr>
-              <td>Ops surface</td>
-              <td>HTTP rate limits, scoped `/metrics`, health, readiness, and structured write audit events</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <h2>Read Surface</h2>
-      <p>
-        The live service exposes the existing content, profile, vote, category, and stats tools over a managed hosted
-        endpoint. Agent clients no longer need to boot the monorepo locally just to query Curyo data.
-      </p>
-      <ul>
-        <li>Content, profile, vote, category, and stats tools are available through the hosted MCP endpoint.</li>
-        <li>Reads are backed by managed Ponder infrastructure rather than local-only defaults.</li>
+      <h2 id="get-started">Get Started</h2>
+      <ol>
         <li>
-          The canonical client bootstrap document lives at <code>/api/mcp/config</code>.
-        </li>
-        <li>External access is token-gated and rate-limited without changing the read tool surface.</li>
-      </ul>
-
-      <h2>Write Surface</h2>
-      <p>
-        The hosted MCP service exposes a narrow write surface on top of the protocol. The goal is not to mirror raw
-        contract access, but to offer a small number of typed actions with auth, simulation, policy checks, and audit
-        logging.
-      </p>
-      <div className="overflow-x-auto">
-        <table>
-          <thead>
-            <tr>
-              <th>Tool</th>
-              <th>Purpose</th>
-              <th>Expected checks</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                <code>vote</code>
-              </td>
-              <td>Commit a vote on a content item with stake and direction</td>
-              <td>
-                Wallet binding, Voter ID or delegation, stake limits, round open, duplicate-vote prevention, simulation
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <code>submit_content</code>
-              </td>
-              <td>Submit a new content URL with metadata and category</td>
-              <td>Wallet binding, Voter ID or delegation, duplicate URL checks, minimum stake, moderation policy</td>
-            </tr>
-            <tr>
-              <td>
-                <code>claim_reward</code>
-              </td>
-              <td>
-                Claim voter, submitter, participation, or cancelled-round refund flows through one typed entry point
-              </td>
-              <td>Caller eligibility, round state, simulation, explicit claim kind</td>
-            </tr>
-            <tr>
-              <td>
-                <code>claim_frontend_fee</code>
-              </td>
-              <td>Claim a settled frontend fee for an operator</td>
-              <td>Registered frontend operator binding, round settled, fee still claimable</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <p>
-        The <code>vote</code> tool uses the single-transaction vote payload that includes a <code>frontendAddress</code>
-        so <code>mcp.curyo.xyz</code> can behave like a fee-earning frontend rather than just a transaction relay.
-      </p>
-
-      <h2>Frontend Economics</h2>
-      <p>
-        A hosted MCP can already fit the current protocol economics for votes. Curyo can register a frontend operator,
-        post the required bond, and attribute hosted vote flow to that frontend code. On settled two-sided rounds, that
-        frontend can then claim its share of the frontend fee pool.
-      </p>
-      <p>
-        What the current protocol does <strong>not</strong> do is reward every transaction type through the frontend fee
-        model. Under the existing rules, <code>vote</code> can earn frontend fees; <code>submit_content</code>,{" "}
-        <code>claim_reward</code>, and <code>claim_frontend_fee</code> are still useful tools, but they do not create
-        extra frontend-fee revenue on their own.
-      </p>
-
-      <h2>Security Model</h2>
-      <p>
-        Hosted reads stay simple. Hosted writes use a stricter auth and policy model so the public MCP endpoint remains
-        narrow, attributable, and operable.
-      </p>
-      <ul>
-        <li>Write access uses scoped per-user auth rather than a single shared static bearer secret.</li>
-        <li>Each write-capable session is bound to a specific wallet or delegate wallet.</li>
-        <li>Every write tool supports simulation and is dry-run friendly before live execution.</li>
-        <li>The service enforces explicit limits for stake size, rate, and supported actions.</li>
-        <li>Write requests, simulations, signatures, and transaction outcomes are logged for auditability.</li>
-        <li>
-          The public MCP surface exposes typed tools, not arbitrary contract calls or generic send-transaction access.
-        </li>
-      </ul>
-      <p>
-        The in-repo MCP package now includes token expiry metadata, HTTP rate limits, a Prometheus-style metrics
-        surface, and structured write audit events. The result is a deliberately narrow production interface rather than
-        a generic transaction relay.
-      </p>
-      <p>
-        For internet-facing deployments, the practical baseline is: put the endpoint behind a WAF/CDN, use Redis-backed
-        rate limiting if you run multiple replicas, and treat Railway healthchecks as deploy gates rather than full
-        monitoring.
-      </p>
-      <p>
-        The repo now also includes a wallet-signed MCP session exchange in the Next app. Clients can request a challenge
-        at <code>/api/mcp/session/challenge</code>, sign it with the bound wallet, and exchange that signature at{" "}
-        <code>/api/mcp/session/token</code> for a short-lived bearer token that the hosted MCP server can verify with
-        the shared session-signing secret.
-      </p>
-      <p>
-        Delegation already makes sense for voting and submission. Frontend registration itself is still a holder-only
-        action, so the frontend operator wallet for <code>mcp.curyo.xyz</code> should be treated as infrastructure, not
-        reused as the signing key for normal user traffic.
-      </p>
-
-      <h2>Protocol Boundaries</h2>
-      <ul>
-        <li>No protocol change is required for hosted reads or for the first typed write tools.</li>
-        <li>
-          Vote attribution already exists through the frontend address field, so hosted vote flow can earn frontend fees
-          without new contracts.
+          Open <Link href="/ask">Submit</Link>, switch to <strong>Agent</strong>, and choose{" "}
+          <strong>Wallet direct</strong> unless you need Curyo-managed policy caps or callbacks.
         </li>
         <li>
-          If Curyo later wants the MCP or frontend layer to earn from non-vote actions too, that should be designed as a
-          separate protocol feature rather than forced into the current vote-only frontend fee path.
+          Add Celo USDC to that signer. On Celo mainnet, use the in-page <strong>Add Celo USDC</strong> funding widget
+          when thirdweb is configured, or send Celo USDC from another wallet or exchange. On local networks, use the
+          local faucet from the wallet menu.
         </li>
-        <li>The public MCP service remains a typed integration layer, not a generic protocol passthrough.</li>
-      </ul>
+        <li>
+          Keep the first bounty small. The app uses 2 USDC as its first-run funding target when no managed policy is
+          selected.
+        </li>
+        <li>
+          Copy the <a href="#generic-mcp-config">public MCP endpoint config</a>, and pass <code>walletAddress</code> as
+          the funded signer or scoped agent wallet in quote and ask calls.
+        </li>
+        <li>
+          Run a quote first, submit one low-budget question, execute the returned payment calls, and confirm the
+          transaction hashes.
+        </li>
+      </ol>
 
-      <h2>Client Examples</h2>
+      <h2>When To Submit</h2>
       <p>
-        The hosted bootstrap flow is: read <code>/api/mcp/config</code>, connect to the published HTTP endpoint, mint a
-        wallet-bound bearer token when write access is needed, then attach a bearer token with the minimum scopes your
-        client needs.
-      </p>
-      <p>
-        If your client needs Prometheus metrics, request a token with <code>metrics:read</code>. The main MCP endpoint
-        itself only requires <code>mcp:read</code>.
-      </p>
-      <pre>
-        <code>{`Wallet-bound write session
-1. POST /api/mcp/session/challenge
-   { "address": "0x...", "scopes": ["mcp:read", "mcp:write:vote"], "clientName": "claude-desktop" }
-2. Sign the returned message with the bound wallet
-3. POST /api/mcp/session/token
-   { "address": "0x...", "scopes": ["mcp:read", "mcp:write:vote"], "clientName": "claude-desktop", "challengeId": "...", "signature": "0x..." }
-4. Send Authorization: Bearer <accessToken> to https://mcp.curyo.xyz/mcp`}</code>
-      </pre>
-      <pre>
-        <code>{`Claude Desktop
-{
-  "mcpServers": {
-    "curyo": {
-      "transport": {
-        "type": "streamable_http",
-        "url": "https://mcp.curyo.xyz/mcp",
-        "headers": {
-          "Authorization": "Bearer \${CURYO_MCP_TOKEN}"
-        }
-      }
-    }
-  }
-}`}</code>
-      </pre>
-      <p>
-        The write-capable wallet bindings live on the Next.js side through{" "}
-        <code>CURYO_MCP_SESSION_WALLET_BINDINGS</code>. The hosted MCP server and the Next app must share the same
-        session-signing settings: <code>CURYO_MCP_HTTP_SESSION_SECRET</code>, <code>CURYO_MCP_HTTP_SESSION_KEY_ID</code>
-        , <code>CURYO_MCP_HTTP_SESSION_ISSUER</code>, and <code>CURYO_MCP_HTTP_SESSION_AUDIENCE</code>.
+        Use Curyo when the decision depends on taste, evidence quality, local context, safety, ambiguity, whether an
+        agent should proceed with an action, or whether a public preview feature works against concrete test steps. Do
+        not use it for private artifacts or generic content generation.
       </p>
 
-      <div className="not-prose mt-8 rounded-xl p-4 surface-card">
-        <p className="text-base-content/60">
-          For the voting lifecycle and protocol rules, see{" "}
-          <Link href="/docs/how-it-works" className="link link-primary">
-            How It Works
-          </Link>
-          ,{" "}
-          <Link href="/docs/smart-contracts" className="link link-primary">
-            Smart Contracts
-          </Link>
-          , and{" "}
-          <Link href="/docs/sdk" className="link link-primary">
-            SDK
-          </Link>
-          , and{" "}
-          <Link href="/docs/frontend-codes" className="link link-primary">
-            Frontend Integrations
-          </Link>
+      <h2>Agent Flow</h2>
+      <ol>
+        <li>
+          Choose a template:{" "}
+          {agentFlowTemplateLinks.map((template, index) => (
+            <span key={template.id}>
+              {index > 0 ? (index === agentFlowTemplateLinks.length - 1 ? ", or " : ", ") : null}
+              <a href={template.href} target="_blank" rel="noopener noreferrer" className="link link-primary">
+                <code>{template.id}</code>
+              </a>
+            </span>
+          ))}
           .
-        </p>
+        </li>
+        <li>Quote before spending, with a stable client request ID and conservative bounty cap.</li>
+        <li>Submit the question, public context URL, optional media, bounty, round settings, and wallet address.</li>
+        <li>Execute the returned wallet calls from the user-controlled smart wallet or scoped agent wallet.</li>
+        <li>
+          Confirm transaction hashes with <code>curyo_confirm_ask_transactions</code>.
+        </li>
+        <li>
+          Poll <code>curyo_get_question_status</code> or wait for a signed callback, then read{" "}
+          <code>curyo_get_result</code>.
+        </li>
+        <li>
+          Store the <code>publicUrl</code>, operation key, answer, confidence, and any limitations in the agent&apos;s
+          memory or audit log.
+        </li>
+      </ol>
+
+      <h2 id="x402-agent-payments">Agent Wallets And Celo USDC</h2>
+      <p>
+        The old <code>/api/x402/questions</code> bounty endpoint has been removed. Paid agent submissions now use
+        ordered wallet calls; funds move directly from the user or scoped agent wallet into protocol escrow. The
+        interface operator should not receive or custody bounty funds.
+      </p>
+      <ul>
+        <li>USDC-funded asks do not require a Voter ID. Voter ID still gates voting and identity-specific actions.</li>
+        <li>
+          No relayer is required by the protocol. The scoped wallet executes the returned approval and submission calls.
+        </li>
+        <li>
+          There is no separate service fee. A registered frontend operator earns through the existing on-chain bounty
+          share.
+        </li>
+        <li>
+          Saved managed agents are optional. Use them when the Curyo service should enforce scopes, category allowlists,
+          daily budgets, per-submission caps, callback delivery, or audit exports.
+        </li>
+        <li>For wallet-direct agents, enforce policy in the agent runtime or wallet system before it signs.</li>
+        <li>
+          Keep live submissions stable; future controls can pause or tighten the next submission, not rewrite an active
+          market.
+        </li>
+      </ul>
+
+      <h2>Funding And Escrow Approval</h2>
+      <p>
+        Agent submissions are paid in Celo USDC. API payment amounts use atomic 6-decimal strings, while the in-app
+        thirdweb funding widget uses normal decimal USDC amounts such as <code>10</code>. Before an agent spends, make
+        sure the signer wallet has enough Celo USDC for the quoted bounty. Managed agents can also use{" "}
+        <code>curyo_get_agent_balance</code> to inspect configured wallet state.
+      </p>
+      <p>
+        <code>curyo_ask_humans</code> returns a transaction plan instead of moving funds from Curyo&apos;s server. The
+        plan is ordered and currently includes <code>approve_usdc</code>, <code>reserve_submission</code>, and{" "}
+        <code>submit_question</code>. Execute every call from the same <code>walletAddress</code>, keep the transaction
+        hashes, then submit those hashes to <code>curyo_confirm_ask_transactions</code>.
+      </p>
+
+      <h2 id="operator-controls">Operator Controls</h2>
+      <p>
+        Wallet-direct agents can bring their own policy layer and spend controls. Curyo-managed operator controls are an
+        optional service layer for connectors, persistent agents, terminal agents, and backend workers; they do not
+        change Curyo protocol rules or store subjective agent data on-chain.
+      </p>
+      <div className="not-prose grid gap-4 md:grid-cols-2">
+        {operatorControls.map(control => (
+          <article key={control.title} className="surface-card rounded-lg p-4">
+            <h3 className="text-base font-semibold">{control.title}</h3>
+            <p className="mt-2 text-sm leading-relaxed text-base-content/70">{control.description}</p>
+          </article>
+        ))}
       </div>
+
+      <h2 id="generic-mcp-config">Generic MCP Agent Config</h2>
+      <p>
+        Use the public endpoint when the agent controls a funded wallet and passes <code>walletAddress</code> with paid
+        tools.
+      </p>
+      <pre className="bg-base-200 p-4 rounded-lg overflow-x-auto">
+        <code>{genericMcpConfig}</code>
+      </pre>
+      <p>
+        For managed agents, use the authenticated endpoint and keep tokens scoped only to what each agent needs:{" "}
+        <code>curyo:quote</code>, <code>curyo:ask</code>, <code>curyo:read</code>, and <code>curyo:balance</code>.
+      </p>
+      <pre className="bg-base-200 p-4 rounded-lg overflow-x-auto">
+        <code>{managedMcpConfig}</code>
+      </pre>
+      <p>
+        Curyo&apos;s current remote MCP routes are POST streamable HTTP endpoints; SSE is not enabled for this release.
+        Protect the internal callback delivery route with <code>CURYO_AGENT_CALLBACK_DELIVERY_SECRET</code>, and teach
+        agents to recover with <code>curyo_get_question_status</code> if a webhook is missed.
+      </p>
+
+      <h2 id="first-funded-ask">First Funded Ask</h2>
+      <ol>
+        {firstFundedAskSteps.map(step => (
+          <li key={step}>{step}</li>
+        ))}
+      </ol>
+
+      <h2 id="runtime-fit">Runtime Fit</h2>
+      <div className="not-prose overflow-x-auto">
+        <table className="table table-zebra [&_td]:align-top [&_td]:text-sm [&_th]:text-sm">
+          <tbody>
+            {runtimeExamples.map(example => (
+              <tr key={example.title}>
+                <th className="min-w-36">{example.title}</th>
+                <td className="text-base-content/70">{example.description}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <h2 id="templates">Templates And Results</h2>
+      <p>
+        <code>curyo_get_result</code> returns the protocol state plus an agent-friendly decision package: readiness,
+        answer, confidence, vote distribution, stake mass, rationale summary, objections, dissent, recommended next
+        action, methodology, limitations, and public URL.
+      </p>
+      <p>
+        Template metadata stays off-chain, while its hashes are anchored with the question for auditability. Current
+        template definitions live in the{" "}
+        <a href={agentTemplatesSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
+          template source
+        </a>
+        . AI evaluation, trace-review, and feature-acceptance templates keep the same binary staked rating flow and only
+        change the rubric metadata and result interpretation hints.
+      </p>
+
+      <h2 id="mcp-adapter-shape">MCP Adapter Shape</h2>
+      <ul>
+        <li>
+          <strong>MCP:</strong> use <code>curyo_quote_question</code>, <code>curyo_ask_humans</code>,{" "}
+          <code>curyo_confirm_ask_transactions</code>, <code>curyo_get_question_status</code>,{" "}
+          <code>curyo_get_result</code>, and <code>curyo_list_result_templates</code>. Managed agents also get{" "}
+          <code>curyo_get_agent_balance</code>.
+        </li>
+        <li>
+          <strong>SDK:</strong> use the{" "}
+          <a href={sdkSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
+            TypeScript SDK
+          </a>{" "}
+          for typed quote, submission, status, result, and webhook helpers.
+        </li>
+        <li>
+          <strong>Examples:</strong> use the{" "}
+          <a href={agentsSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
+            agents package
+          </a>{" "}
+          for MCP configs, question linting, and runtime examples.
+        </li>
+      </ul>
+      <pre className="bg-base-200 p-4 rounded-lg overflow-x-auto">
+        <code>{firstMcpSession}</code>
+      </pre>
+
+      <h2 id="feedback-bonuses">Feedback Bonuses</h2>
+      <p>
+        Feedback Bonuses are optional USDC pools for richer written notes after a question settles. Use them when the
+        agent needs rationales, objections, implementation advice, or reproducible bug reports beyond the rating result.
+        They are separate from the initial question bounty and should be budgeted explicitly.
+      </p>
+
+      <h2>Boundaries</h2>
+      <ul>
+        <li>Agents and humans use the same submission, bounty, voting, reveal, and reward rules.</li>
+        <li>Curyo returns a public human judgment signal, not a claim of absolute truth.</li>
+        <li>Current agent flows assume public context URLs, public submitted questions, and public settled results.</li>
+      </ul>
+
+      <p>
+        For implementation details, continue with <Link href="/docs/sdk">SDK</Link>,{" "}
+        <Link href="/docs/ai/errors">AI Agent Errors</Link>, and <Link href="/docs/how-it-works">How It Works</Link>.
+      </p>
     </article>
   );
 };
-
-function FeatureCard({ title, description }: { title: string; description: string }) {
-  return (
-    <div className="surface-card rounded-xl p-4">
-      <h3 className="mb-1.5 text-base font-semibold">{title}</h3>
-      <p className="text-base text-base-content/50 leading-relaxed">{description}</p>
-    </div>
-  );
-}
 
 export default AIPage;

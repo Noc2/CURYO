@@ -6,8 +6,7 @@ import { useAccount, useReadContracts } from "wagmi";
 import { type ClaimableRewardItem, buildVoterParticipationClaimableRewards } from "~~/hooks/claimableRewards";
 import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
 import { useClaimableFrontendRewards } from "~~/hooks/useClaimableFrontendRewards";
-import { useClaimableSubmitterParticipationRewards } from "~~/hooks/useClaimableSubmitterParticipationRewards";
-import { useClaimableSubmitterRewards } from "~~/hooks/useClaimableSubmitterRewards";
+import { useClaimableQuestionRewards } from "~~/hooks/useClaimableQuestionRewards";
 import { useRecentUserVotes } from "~~/hooks/useRecentUserVotes";
 
 function epochWeightBps(epochIndex: number): number {
@@ -22,20 +21,16 @@ export function useAllClaimableRewards() {
   const { address } = useAccount();
   const { votes, refetch: refetchVotes } = useRecentUserVotes(address);
   const {
-    claimableItems: submitterClaimableItems,
-    isLoading: submitterLoading,
-    refetch: refetchSubmitterClaimables,
-  } = useClaimableSubmitterRewards();
-  const {
-    claimableItems: submitterParticipationClaimableItems,
-    isLoading: submitterParticipationLoading,
-    refetch: refetchSubmitterParticipationClaimables,
-  } = useClaimableSubmitterParticipationRewards();
-  const {
     claimableItems: frontendClaimableItems,
     isLoading: frontendClaimableLoading,
     refetch: refetchFrontendClaimables,
   } = useClaimableFrontendRewards();
+  const {
+    claimableItems: questionRewardPoolClaimableItems,
+    totalClaimable: totalQuestionRewardPoolClaimable,
+    isLoading: questionRewardPoolClaimableLoading,
+    refetch: refetchQuestionRewardPoolClaimables,
+  } = useClaimableQuestionRewards();
 
   // --- Step 2: Filter to terminal rounds only ---
   const terminalVotes = useMemo(() => {
@@ -317,51 +312,47 @@ export function useAllClaimableRewards() {
     () => [
       ...claimableItems,
       ...participationClaimableItems,
-      ...submitterClaimableItems,
-      ...submitterParticipationClaimableItems,
       ...frontendClaimableItems,
+      ...questionRewardPoolClaimableItems,
     ],
-    [
-      claimableItems,
-      participationClaimableItems,
-      submitterClaimableItems,
-      submitterParticipationClaimableItems,
-      frontendClaimableItems,
-    ],
+    [claimableItems, participationClaimableItems, frontendClaimableItems, questionRewardPoolClaimableItems],
   );
 
-  const combinedTotalClaimable = useMemo(
-    () => combinedClaimableItems.reduce((sum, item) => sum + item.reward, 0n),
-    [combinedClaimableItems],
+  const combinedHrepClaimable = useMemo(
+    () =>
+      [...claimableItems, ...participationClaimableItems, ...frontendClaimableItems].reduce(
+        (sum, item) => sum + item.reward,
+        0n,
+      ),
+    [claimableItems, participationClaimableItems, frontendClaimableItems],
   );
 
   const isLoading =
     claimedLoading ||
     rewardsLoading ||
     participationRewardsLoading ||
-    submitterLoading ||
-    submitterParticipationLoading ||
-    frontendClaimableLoading;
+    frontendClaimableLoading ||
+    questionRewardPoolClaimableLoading;
 
   const refetch = useCallback(() => {
     refetchVotes();
     refetchClaimed();
     refetchParticipationRewards();
-    refetchSubmitterClaimables();
-    refetchSubmitterParticipationClaimables();
     refetchFrontendClaimables();
+    refetchQuestionRewardPoolClaimables();
   }, [
     refetchVotes,
     refetchClaimed,
     refetchParticipationRewards,
-    refetchSubmitterClaimables,
-    refetchSubmitterParticipationClaimables,
     refetchFrontendClaimables,
+    refetchQuestionRewardPoolClaimables,
   ]);
 
   return {
     claimableItems: combinedClaimableItems,
-    totalClaimable: combinedTotalClaimable,
+    totalClaimable: combinedHrepClaimable,
+    totalHrepClaimable: combinedHrepClaimable,
+    totalUsdcClaimable: totalQuestionRewardPoolClaimable,
     activeStake,
     isLoading,
     refetch,

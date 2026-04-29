@@ -1,9 +1,9 @@
+import { expect, test } from "../fixtures/wallet";
 import { expectNoBlockingAccessibilityViolations } from "../helpers/a11y";
 import { expectNoNextErrorOverlay } from "../helpers/layout";
-import { expect, test } from "../fixtures/wallet";
 
 const PUBLIC_PAGES = [
-  { path: "/", heading: /Human Reputation at Stake|Discover|Vote/i },
+  { path: "/", heading: /AI Asks,\s*Humans Earn|Rate|Vote/i },
   { path: "/docs", heading: /^Introduction$/i },
   { path: "/legal", heading: /^Legal$/i },
   { path: "/legal/terms", heading: /Terms of Service/i },
@@ -25,8 +25,8 @@ test.describe("Axe accessibility regressions", () => {
     });
   }
 
-  test("/submit connected form has no blocking axe violations", async ({ connectedPage: page }) => {
-    await page.goto("/submit", { waitUntil: "domcontentloaded" });
+  test("/ask connected form has no blocking axe violations", async ({ connectedPage: page }) => {
+    await page.goto("/ask", { waitUntil: "domcontentloaded" });
     await expectNoNextErrorOverlay(page);
 
     const main = page.locator("main");
@@ -35,7 +35,6 @@ test.describe("Axe accessibility regressions", () => {
       timeout: 15_000,
     });
 
-    await expectNoBlockingAccessibilityViolations(page, "/submit");
+    await expectNoBlockingAccessibilityViolations(page, "/ask");
   });
 });
-

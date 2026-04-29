@@ -2,17 +2,19 @@
 pragma solidity ^0.8.24;
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
+import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import { IRoundRewardDistributor } from "./interfaces/IRoundRewardDistributor.sol";
 import { RoundLib } from "./libraries/RoundLib.sol";
 import { RatingLib } from "./libraries/RatingLib.sol";
 
 /// @title ProtocolConfig
 /// @notice Governance-controlled configuration and address book for RoundVotingEngine.
 /// @dev Upgradeable behind a transparent proxy, so storage layout must remain stable across future upgrades.
-contract ProtocolConfig is Initializable, AccessControl {
+contract ProtocolConfig is Initializable, AccessControlUpgradeable {
     bytes32 public constant CONFIG_ROLE = keccak256("CONFIG_ROLE");
     bytes32 public constant TREASURY_ROLE = keccak256("TREASURY_ROLE");
     bytes32 public constant TREASURY_ADMIN_ROLE = keccak256("TREASURY_ADMIN_ROLE");
+    uint256 public constant ABSOLUTE_MAX_ROUND_DURATION = 30 days;
 
     error InvalidAddress();
     error InvalidConfig();
@@ -30,11 +32,29 @@ contract ProtocolConfig is Initializable, AccessControl {
     uint64 public drandPeriod;
     RatingLib.RatingConfig public ratingConfig;
     RatingLib.SlashConfig public slashConfig;
+    uint256 public minSubmissionHrepPool;
+    uint256 public minSubmissionUsdcPool;
+    RoundConfigBounds public roundConfigBounds;
+    mapping(address => bool) private rewardDistributorAuthorized;
+    mapping(address => address) public rewardDistributorVotingEngine;
+    mapping(address => address) public rewardDistributorForVotingEngine;
+
+    struct RoundConfigBounds {
+        uint32 minEpochDuration;
+        uint32 maxEpochDuration;
+        uint32 minRoundDuration;
+        uint32 maxRoundDuration;
+        uint16 minSettlementVoters;
+        uint16 maxSettlementVoters;
+        uint16 minVoterCap;
+        uint16 maxVoterCap;
+    }
 
     /// @dev Reserved storage gap for future proxy-safe upgrades.
-    uint256[35] private __gap;
+    uint256[29] private __gap;
 
     event RewardDistributorUpdated(address rewardDistributor);
+    event RewardDistributorAuthorizationUpdated(address rewardDistributor, bool authorized);
     event FrontendRegistryUpdated(address frontendRegistry);
     event CategoryRegistryUpdated(address categoryRegistry);
     event TreasuryUpdated(address treasury);
@@ -61,6 +81,17 @@ contract ProtocolConfig is Initializable, AccessControl {
     event SlashConfigUpdated(
         uint16 slashThresholdBps, uint16 minSlashSettledRounds, uint48 minSlashLowDuration, uint256 minSlashEvidence
     );
+    event SubmissionRewardMinimumsUpdated(uint256 minHrepPool, uint256 minUsdcPool);
+    event RoundConfigBoundsUpdated(
+        uint256 minEpochDuration,
+        uint256 maxEpochDuration,
+        uint256 minRoundDuration,
+        uint256 maxRoundDuration,
+        uint256 minSettlementVoters,
+        uint256 maxSettlementVoters,
+        uint256 minVoterCap,
+        uint256 maxVoterCap
+    );
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -80,10 +111,13 @@ contract ProtocolConfig is Initializable, AccessControl {
         if (governance == address(0)) revert InvalidAddress();
         if (treasuryAuthority == address(0)) revert InvalidAddress();
 
+        __AccessControl_init();
+
         _grantRole(DEFAULT_ADMIN_ROLE, governance);
         _grantRole(CONFIG_ROLE, governance);
         _setRoleAdmin(TREASURY_ROLE, TREASURY_ADMIN_ROLE);
         _setRoleAdmin(TREASURY_ADMIN_ROLE, TREASURY_ADMIN_ROLE);
+        _grantRole(TREASURY_ADMIN_ROLE, governance);
         _grantRole(TREASURY_ADMIN_ROLE, treasuryAuthority);
         _grantRole(TREASURY_ROLE, treasuryAuthority);
         if (admin != governance) {
@@ -95,6 +129,16 @@ contract ProtocolConfig is Initializable, AccessControl {
             maxDuration: uint32(7 days),
             minVoters: uint16(3),
             maxVoters: uint16(1000)
+        });
+        roundConfigBounds = RoundConfigBounds({
+            minEpochDuration: uint32(5 minutes),
+            maxEpochDuration: uint32(60 minutes),
+            minRoundDuration: uint32(1 hours),
+            maxRoundDuration: uint32(30 days),
+            minSettlementVoters: uint16(2),
+            maxSettlementVoters: uint16(100),
+            minVoterCap: uint16(2),
+            maxVoterCap: uint16(10_000)
         });
         revealGracePeriod = 60 minutes;
         drandChainHash = 0x52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971;
@@ -121,11 +165,19 @@ contract ProtocolConfig is Initializable, AccessControl {
             minSlashLowDuration: uint48(7 days),
             minSlashEvidence: 200e6
         });
+        minSubmissionHrepPool = 1e6;
+        minSubmissionUsdcPool = 1e6;
         _setTreasury(treasuryAuthority);
     }
 
     function setRewardDistributor(address value) external onlyRole(CONFIG_ROLE) {
         _setRewardDistributor(value);
+    }
+
+    function revokeRewardDistributor(address value) external onlyRole(CONFIG_ROLE) {
+        if (value == address(0)) revert InvalidAddress();
+        rewardDistributorAuthorized[value] = false;
+        emit RewardDistributorAuthorizationUpdated(value, false);
     }
 
     function setFrontendRegistry(address value) external onlyRole(CONFIG_ROLE) {
@@ -157,6 +209,28 @@ contract ProtocolConfig is Initializable, AccessControl {
         onlyRole(CONFIG_ROLE)
     {
         _setConfig(epochDuration, maxDuration, minVoters, maxVoters);
+    }
+
+    function setRoundConfigBounds(
+        uint256 minEpochDuration,
+        uint256 maxEpochDuration,
+        uint256 minRoundDuration,
+        uint256 maxRoundDuration,
+        uint256 minSettlementVoters,
+        uint256 maxSettlementVoters,
+        uint256 minVoterCap,
+        uint256 maxVoterCap
+    ) external onlyRole(CONFIG_ROLE) {
+        _setRoundConfigBounds(
+            minEpochDuration,
+            maxEpochDuration,
+            minRoundDuration,
+            maxRoundDuration,
+            minSettlementVoters,
+            maxSettlementVoters,
+            minVoterCap,
+            maxVoterCap
+        );
     }
 
     function setDrandConfig(bytes32 chainHash, uint64 genesisTime, uint64 period) external onlyRole(CONFIG_ROLE) {
@@ -204,6 +278,13 @@ contract ProtocolConfig is Initializable, AccessControl {
         _setSlashConfig(slashThresholdBps, minSlashSettledRounds, minSlashLowDuration, minSlashEvidence);
     }
 
+    function setSubmissionRewardMinimums(uint256 minHrepPool, uint256 minUsdcPool) external onlyRole(CONFIG_ROLE) {
+        if (minHrepPool == 0 || minUsdcPool == 0) revert InvalidConfig();
+        minSubmissionHrepPool = minHrepPool;
+        minSubmissionUsdcPool = minUsdcPool;
+        emit SubmissionRewardMinimumsUpdated(minHrepPool, minUsdcPool);
+    }
+
     function getRatingConfig() external view returns (RatingLib.RatingConfig memory cfg) {
         cfg = ratingConfig;
     }
@@ -216,11 +297,50 @@ contract ProtocolConfig is Initializable, AccessControl {
         cfg = slashConfig;
     }
 
+    function getRoundConfigBounds() external view returns (RoundConfigBounds memory bounds) {
+        bounds = roundConfigBounds;
+    }
+
+    function validateRoundConfig(uint256 epochDuration, uint256 maxDuration, uint256 minVoters, uint256 maxVoters)
+        external
+        view
+        returns (RoundLib.RoundConfig memory cfg)
+    {
+        cfg = _validateRoundConfig(epochDuration, maxDuration, minVoters, maxVoters, roundConfigBounds);
+    }
+
+    function isRewardDistributor(address value) external view returns (bool) {
+        return rewardDistributorAuthorized[value];
+    }
+
+    function isRewardDistributorForEngine(address value, address engine) external view returns (bool) {
+        return engine != address(0) && rewardDistributorAuthorized[value] && rewardDistributorVotingEngine[value] == engine;
+    }
+
     function _setRewardDistributor(address value) internal {
         if (value == address(0)) revert InvalidAddress();
-        if (rewardDistributor != address(0)) revert InvalidConfig();
+        address engine = _readRewardDistributorVotingEngine(value);
+        if (engine != address(0)) {
+            address previousForEngine = rewardDistributorForVotingEngine[engine];
+            if (previousForEngine != address(0) && previousForEngine != value) revert InvalidConfig();
+            rewardDistributorVotingEngine[value] = engine;
+            rewardDistributorForVotingEngine[engine] = value;
+        }
         rewardDistributor = value;
+        if (!rewardDistributorAuthorized[value]) {
+            rewardDistributorAuthorized[value] = true;
+            emit RewardDistributorAuthorizationUpdated(value, true);
+        }
         emit RewardDistributorUpdated(value);
+    }
+
+    function _readRewardDistributorVotingEngine(address value) internal view returns (address engine) {
+        if (value.code.length == 0) return address(0);
+        try IRoundRewardDistributor(value).votingEngine() returns (address distributorEngine) {
+            engine = distributorEngine;
+        } catch {
+            engine = address(0);
+        }
     }
 
     function _setFrontendRegistry(address value) internal {
@@ -242,7 +362,16 @@ contract ProtocolConfig is Initializable, AccessControl {
     }
 
     function _setRevealGracePeriod(uint256 value) internal {
-        if (value < config.epochDuration) revert InvalidConfig();
+        uint256 minRevealGrace = roundConfigBounds.maxEpochDuration == 0
+            ? uint256(config.epochDuration)
+            : uint256(roundConfigBounds.maxEpochDuration);
+        if (value < minRevealGrace) revert InvalidConfig();
+        // Upper bound: without it, an extreme value (e.g. type(uint256).max) would make
+        // RevealFailed finalization unreachable and lock every in-flight stake indefinitely.
+        // Bounding to the configured maxRoundDuration + 1 day leaves keepers ample headroom
+        // while still keeping the grace period within an order of magnitude of a round.
+        uint256 maxRevealGrace = uint256(roundConfigBounds.maxRoundDuration) + 1 days;
+        if (value > maxRevealGrace) revert InvalidConfig();
         revealGracePeriod = value;
         emit RevealGracePeriodUpdated(value);
     }
@@ -260,32 +389,136 @@ contract ProtocolConfig is Initializable, AccessControl {
     }
 
     function _setConfig(uint256 epochDuration, uint256 maxDuration, uint256 minVoters, uint256 maxVoters) internal {
-        if (epochDuration < 5 minutes) revert InvalidConfig();
-        if (maxDuration < 1 days || maxDuration > 30 days) revert InvalidConfig();
-        if (epochDuration > type(uint32).max) revert InvalidConfig();
-        if (maxDuration / epochDuration > 2016) revert InvalidConfig();
-        if (minVoters < 2) revert InvalidConfig();
-        if (maxVoters < minVoters || maxVoters > 10000) revert InvalidConfig();
+        RoundLib.RoundConfig memory nextConfig =
+            _validateRoundConfig(epochDuration, maxDuration, minVoters, maxVoters, roundConfigBounds);
+        if (drandPeriod > nextConfig.epochDuration) revert InvalidConfig();
 
-        if (revealGracePeriod > 0 && revealGracePeriod < epochDuration) {
-            revealGracePeriod = epochDuration;
-            emit RevealGracePeriodUpdated(epochDuration);
+        if (revealGracePeriod > 0 && revealGracePeriod < roundConfigBounds.maxEpochDuration) {
+            revealGracePeriod = roundConfigBounds.maxEpochDuration;
+            emit RevealGracePeriodUpdated(roundConfigBounds.maxEpochDuration);
         }
 
-        config = RoundLib.RoundConfig({
+        config = nextConfig;
+
+        emit ConfigUpdated(epochDuration, maxDuration, minVoters, maxVoters);
+    }
+
+    function _setRoundConfigBounds(
+        uint256 minEpochDuration,
+        uint256 maxEpochDuration,
+        uint256 minRoundDuration,
+        uint256 maxRoundDuration,
+        uint256 minSettlementVoters,
+        uint256 maxSettlementVoters,
+        uint256 minVoterCap,
+        uint256 maxVoterCap
+    ) internal {
+        RoundConfigBounds memory bounds = _validateRoundConfigBounds(
+            minEpochDuration,
+            maxEpochDuration,
+            minRoundDuration,
+            maxRoundDuration,
+            minSettlementVoters,
+            maxSettlementVoters,
+            minVoterCap,
+            maxVoterCap
+        );
+        _validateRoundConfig(config.epochDuration, config.maxDuration, config.minVoters, config.maxVoters, bounds);
+        if (drandPeriod > bounds.minEpochDuration) revert InvalidConfig();
+
+        roundConfigBounds = bounds;
+        if (revealGracePeriod > 0 && revealGracePeriod < maxEpochDuration) {
+            revealGracePeriod = maxEpochDuration;
+            emit RevealGracePeriodUpdated(maxEpochDuration);
+        }
+        // Symmetric clamp on the other side: _setRevealGracePeriod caps values at
+        // maxRoundDuration + 1 day. If governance shrinks maxRoundDuration here without
+        // re-pushing revealGracePeriod, the stored value can silently exceed that cap
+        // and get snapshotted into new rounds. Clamp down to keep the invariant.
+        uint256 maxRevealGrace = maxRoundDuration + 1 days;
+        if (revealGracePeriod > maxRevealGrace) {
+            revealGracePeriod = maxRevealGrace;
+            emit RevealGracePeriodUpdated(maxRevealGrace);
+        }
+
+        emit RoundConfigBoundsUpdated(
+            minEpochDuration,
+            maxEpochDuration,
+            minRoundDuration,
+            maxRoundDuration,
+            minSettlementVoters,
+            maxSettlementVoters,
+            minVoterCap,
+            maxVoterCap
+        );
+    }
+
+    function _validateRoundConfigBounds(
+        uint256 minEpochDuration,
+        uint256 maxEpochDuration,
+        uint256 minRoundDuration,
+        uint256 maxRoundDuration,
+        uint256 minSettlementVoters,
+        uint256 maxSettlementVoters,
+        uint256 minVoterCap,
+        uint256 maxVoterCap
+    ) internal pure returns (RoundConfigBounds memory bounds) {
+        if (minEpochDuration < 5 minutes || maxEpochDuration < minEpochDuration) {
+            revert InvalidConfig();
+        }
+        if (maxEpochDuration > type(uint32).max) revert InvalidConfig();
+        if (minRoundDuration < maxEpochDuration || maxRoundDuration < minRoundDuration) revert InvalidConfig();
+        if (maxRoundDuration > type(uint32).max || maxRoundDuration > ABSOLUTE_MAX_ROUND_DURATION) {
+            revert InvalidConfig();
+        }
+        if (minRoundDuration / minEpochDuration > 2016) revert InvalidConfig();
+        if (minSettlementVoters < 2 || maxSettlementVoters < minSettlementVoters) revert InvalidConfig();
+        if (minVoterCap < minSettlementVoters || maxVoterCap < maxSettlementVoters) revert InvalidConfig();
+        if (maxVoterCap > 10_000) revert InvalidConfig();
+
+        bounds = RoundConfigBounds({
+            minEpochDuration: uint32(minEpochDuration),
+            maxEpochDuration: uint32(maxEpochDuration),
+            minRoundDuration: uint32(minRoundDuration),
+            maxRoundDuration: uint32(maxRoundDuration),
+            minSettlementVoters: uint16(minSettlementVoters),
+            maxSettlementVoters: uint16(maxSettlementVoters),
+            minVoterCap: uint16(minVoterCap),
+            maxVoterCap: uint16(maxVoterCap)
+        });
+    }
+
+    function _validateRoundConfig(
+        uint256 epochDuration,
+        uint256 maxDuration,
+        uint256 minVoters,
+        uint256 maxVoters,
+        RoundConfigBounds memory bounds
+    ) internal pure returns (RoundLib.RoundConfig memory cfg) {
+        if (epochDuration < bounds.minEpochDuration || epochDuration > bounds.maxEpochDuration) {
+            revert InvalidConfig();
+        }
+        if (maxDuration < bounds.minRoundDuration || maxDuration > bounds.maxRoundDuration) revert InvalidConfig();
+        if (epochDuration > type(uint32).max || maxDuration > type(uint32).max) revert InvalidConfig();
+        if (maxDuration / epochDuration > 2016) revert InvalidConfig();
+        if (minVoters < bounds.minSettlementVoters || minVoters > bounds.maxSettlementVoters) revert InvalidConfig();
+        if (maxVoters < bounds.minVoterCap || maxVoters > bounds.maxVoterCap) revert InvalidConfig();
+        if (maxVoters < minVoters) revert InvalidConfig();
+
+        cfg = RoundLib.RoundConfig({
             epochDuration: uint32(epochDuration),
             maxDuration: uint32(maxDuration),
             minVoters: uint16(minVoters),
             maxVoters: uint16(maxVoters)
         });
-
-        emit ConfigUpdated(epochDuration, maxDuration, minVoters, maxVoters);
     }
 
     function _setDrandConfig(bytes32 chainHash, uint64 genesisTime, uint64 period) internal {
         if (chainHash == bytes32(0)) revert InvalidConfig();
         if (genesisTime == 0) revert InvalidConfig();
         if (period == 0) revert InvalidConfig();
+        if (genesisTime > block.timestamp) revert InvalidConfig();
+        if (period > roundConfigBounds.minEpochDuration) revert InvalidConfig();
 
         drandChainHash = chainHash;
         drandGenesisTime = genesisTime;
@@ -309,9 +542,13 @@ contract ProtocolConfig is Initializable, AccessControl {
         uint16 conservativePenaltyMaxBps,
         uint16 conservativePenaltyMinBps
     ) internal {
-        if (smoothingAlpha > type(uint128).max || smoothingBeta > type(uint128).max) revert InvalidConfig();
-        if (confidenceMassMin == 0 || confidenceMassInitial < confidenceMassMin || confidenceMassMax < confidenceMassInitial)
-        {
+        if (smoothingAlpha > type(uint128).max || smoothingBeta > type(uint128).max) {
+            revert InvalidConfig();
+        }
+        if (
+            confidenceMassMin == 0 || confidenceMassInitial < confidenceMassMin
+                || confidenceMassMax < confidenceMassInitial
+        ) {
             revert InvalidConfig();
         }
         if (
@@ -320,14 +557,29 @@ contract ProtocolConfig is Initializable, AccessControl {
         ) {
             revert InvalidConfig();
         }
-        if (observationBetaX18 == 0) revert InvalidConfig();
+        // Lower-bound WAD-scaled parameters to prevent governance from passing degenerate
+        // values that would cause PRBMath SD59x18 overflow in RatingMath.applySettlement
+        // and permanently brick any future round created after the bad config is set
+        // (ratingConfig is snapshotted per-round at creation time).
+        // 1e16 = 0.01 in WAD, two orders of magnitude below the launch defaults
+        // (observationBetaX18=2e18, surpriseReferenceX18=8e17, maxDeltaLogitX18=6e17),
+        // which gives governance ample room to tune while keeping the logit pipeline stable.
+        uint256 minWadLowerBound = 1e16;
+        if (observationBetaX18 < minWadLowerBound) revert InvalidConfig();
         if (observationBetaX18 > uint256(type(int256).max)) revert InvalidConfig();
         if (confidenceGainBps > 10_000 || confidenceReopenBps > 10_000) revert InvalidConfig();
-        if (surpriseReferenceX18 == 0) revert InvalidConfig();
+        if (surpriseReferenceX18 < minWadLowerBound) revert InvalidConfig();
         if (maxAbsLogitX18 > uint256(uint128(type(int128).max))) revert InvalidConfig();
-        if (maxDeltaLogitX18 == 0 || maxAbsLogitX18 == 0 || maxDeltaLogitX18 > maxAbsLogitX18) revert InvalidConfig();
-        if (conservativePenaltyMaxBps > RatingLib.BPS_SCALE || conservativePenaltyMinBps > conservativePenaltyMaxBps)
-        {
+        if (maxDeltaLogitX18 < minWadLowerBound || maxAbsLogitX18 < minWadLowerBound) revert InvalidConfig();
+        if (maxDeltaLogitX18 > maxAbsLogitX18) revert InvalidConfig();
+        // Conservative penalty is capped at 50% (5000 BPS); governance could previously
+        // choose 100%, which zeroes out every conservative rating -- not useful and a
+        // needless foot-gun.
+        uint16 conservativePenaltyMaxBpsCap = 5_000;
+        if (
+            conservativePenaltyMaxBps > conservativePenaltyMaxBpsCap
+                || conservativePenaltyMinBps > conservativePenaltyMaxBps
+        ) {
             revert InvalidConfig();
         }
 
@@ -370,7 +622,9 @@ contract ProtocolConfig is Initializable, AccessControl {
         uint48 minSlashLowDuration,
         uint256 minSlashEvidence
     ) internal {
-        if (slashThresholdBps == 0 || slashThresholdBps >= RatingLib.BPS_SCALE) revert InvalidConfig();
+        if (slashThresholdBps == 0 || slashThresholdBps >= RatingLib.BPS_SCALE) {
+            revert InvalidConfig();
+        }
         if (minSlashSettledRounds == 0) revert InvalidConfig();
         if (minSlashLowDuration == 0) revert InvalidConfig();
 

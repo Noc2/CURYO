@@ -59,7 +59,7 @@ test("describeOpenRoundActivity uses committed votes before the settle quorum is
       revealedCount: 0,
       minVoters: 3,
     }),
-    "30 cREP active · 1 more vote to settle.",
+    "30 HREP active · 1 more vote to settle.",
   );
 });
 
@@ -71,7 +71,7 @@ test("describeOpenRoundActivity switches to reveal progress after commit quorum 
       revealedCount: 1,
       minVoters: 3,
     }),
-    "30 cREP active · Waiting for 2 more reveals.",
+    "30 HREP active · Waiting for 2 more reveals.",
   );
 });
 
@@ -89,9 +89,9 @@ test("estimateVoteReturn uses informed weight during open phase", () => {
   );
 
   assert.equal(estimate.effectiveStakeMicro, 2_500_000n);
-  assert.equal(estimate.projectedVoterPoolMicro, 30_400_000n);
-  assert.equal(estimate.projectedPoolShareMicro, 3_377_777n);
-  assert.equal(estimate.estimatedGrossReturnMicro, 13_377_777n);
+  assert.equal(estimate.projectedVoterPoolMicro, 34_200_000n);
+  assert.equal(estimate.projectedPoolShareMicro, 3_800_000n);
+  assert.equal(estimate.estimatedGrossReturnMicro, 13_800_000n);
   assert.equal(estimate.revealedLoserRefundMicro, 500_000n);
 });
 
@@ -109,6 +109,6 @@ test("estimateVoteReturn keeps full weight during blind phase", () => {
   );
 
   assert.equal(estimate.effectiveStakeMicro, 10_000_000n);
-  assert.equal(estimate.projectedPoolShareMicro, 10_133_333n);
-  assert.equal(estimate.estimatedGrossReturnMicro, 20_133_333n);
+  assert.equal(estimate.projectedPoolShareMicro, 11_400_000n);
+  assert.equal(estimate.estimatedGrossReturnMicro, 21_400_000n);
 });

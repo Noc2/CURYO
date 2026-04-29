@@ -1,4 +1,5 @@
 import { clampContentRating, formatRatingScoreOutOfTen } from "../ui/ratingDisplay";
+import { RATE_ROUTE } from "~~/constants/routes";
 import { detectPlatform, getThumbnailUrl } from "~~/utils/platforms";
 
 export const VOTE_SHARE_RATING_VERSION_PARAM = "rv";
@@ -6,24 +7,7 @@ export const VOTE_SHARE_RATING_VERSION_PARAM = "rv";
 const TITLE_MAX_LENGTH = 96;
 const DESCRIPTION_MAX_LENGTH = 180;
 const ALT_MAX_LENGTH = 180;
-const ALLOWED_SHARE_IMAGE_HOSTS = new Set([
-  "api.scryfall.com",
-  "assets.coingecko.com",
-  "avatars.githubusercontent.com",
-  "cards.scryfall.io",
-  "cdn-avatars.huggingface.co",
-  "cdn-thumbnails.huggingface.co",
-  "coin-images.coingecko.com",
-  "covers.openlibrary.org",
-  "huggingface.co",
-  "i.scdn.co",
-  "i.ytimg.com",
-  "image.tmdb.org",
-  "img.youtube.com",
-  "media.rawg.io",
-  "pbs.twimg.com",
-  "upload.wikimedia.org",
-]);
+const ALLOWED_SHARE_IMAGE_HOSTS = new Set(["i.ytimg.com", "img.youtube.com"]);
 
 export type ContentShareRatingSource = "open_round_reference" | "content_rating_bps" | "content_rating";
 
@@ -190,8 +174,8 @@ export function buildContentShareRatingVersion(
   return `r-${content.id}-${rating.ratingBps}-${totalVotes}-${openRoundVoteCount}-${activitySeconds}`;
 }
 
-export function buildVoteShareUrl(origin: string, contentId: string, ratingVersion?: string): string {
-  const url = new URL("/vote", `${origin.replace(/\/+$/, "")}/`);
+function buildVoteShareUrl(origin: string, contentId: string, ratingVersion?: string): string {
+  const url = new URL(RATE_ROUTE, `${origin.replace(/\/+$/, "")}/`);
   url.searchParams.set("content", contentId);
   if (ratingVersion) {
     url.searchParams.set(VOTE_SHARE_RATING_VERSION_PARAM, ratingVersion);
@@ -199,7 +183,7 @@ export function buildVoteShareUrl(origin: string, contentId: string, ratingVersi
   return url.toString();
 }
 
-export function buildVoteShareImageUrl(origin: string, contentId: string, ratingVersion: string): string {
+function buildVoteShareImageUrl(origin: string, contentId: string, ratingVersion: string): string {
   const url = new URL("/api/og/vote", `${origin.replace(/\/+$/, "")}/`);
   url.searchParams.set("content", contentId);
   url.searchParams.set(VOTE_SHARE_RATING_VERSION_PARAM, ratingVersion);
@@ -218,7 +202,7 @@ export function buildContentShareData(content: ContentShareContentInput, origin:
   const voteLabel = `${totalVotes} vote${totalVotes === 1 ? "" : "s"}`;
   const title = truncateText(`Rated ${rating.label}/10 on Curyo: ${contentTitle}`, TITLE_MAX_LENGTH);
   const description = truncateText(
-    `Current rating ${rating.label}/10 from ${voteLabel}. Disagree? Stake cREP and vote.`,
+    `Current rating ${rating.label}/10 from ${voteLabel}. Disagree? Stake HREP and vote.`,
     DESCRIPTION_MAX_LENGTH,
   );
   const imageAlt = truncateText(

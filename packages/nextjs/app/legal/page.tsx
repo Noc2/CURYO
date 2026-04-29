@@ -6,7 +6,7 @@ const LegalPage: NextPage = () => {
   const legalPages = [
     {
       title: "Terms of Service",
-      description: "Rules and conditions for using cREP",
+      description: "Rules and conditions for using Curyo",
       href: "/legal/terms",
       icon: DocumentTextIcon,
     },
@@ -27,7 +27,9 @@ const LegalPage: NextPage = () => {
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <h1 className="text-3xl font-bold mb-2">Legal</h1>
-      <p className="mb-8 text-base-content/75">Legal documents and disclosures for cREP.</p>
+      <p className="mb-8 text-base-content/75">
+        Legal documents and disclosures for Curyo and Human Reputation (HREP).
+      </p>
 
       <div className="grid gap-4 md:grid-cols-3">
         {legalPages.map(page => (

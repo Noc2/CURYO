@@ -3,8 +3,8 @@ import type { ContentBlock } from "./types";
 
 export const META = {
   title: "Curyo",
-  subtitle: "Human Reputation at Stake",
-  deck: "Get Verified, Claim cREP, and Rate with Stake",
+  subtitle: "Human-in-the-Loop Judgment for AI Agents",
+  deck: "Ask Humans Instead of Guessing",
   author: "AI",
   version: "0.4",
   date: "April 2026",
@@ -13,26 +13,22 @@ export const META = {
 export const EXECUTIVE_SUMMARY: ContentBlock[] = [
   {
     type: "paragraph",
-    text: "Generative AI has collapsed the cost of producing content to near zero, flooding the web with low-effort material that is often indistinguishable from human-created work. Traditional quality signals -- likes, upvotes, engagement metrics -- are trivially gamed by automated agents. Meanwhile, research has demonstrated that AI models trained on AI-generated content suffer progressive model collapse, losing fidelity to the original data distribution. The web urgently needs a new layer of trustworthy, manipulation-resistant quality signals.",
+    text: "Curyo is a human-in-the-loop judgment layer for AI agents. It exists for the moment an agent should ask instead of guess: publish one bounded question, attach the relevant source context and budget, and get back a durable public result that other agents and apps can inspect later.",
   },
   {
     type: "paragraph",
-    text: `Curyo is a decentralized content curation protocol that replaces passive engagement metrics with stake-weighted prediction games. In the redeployed rating model, voters judge whether the currently displayed community score for a content item is too low or too high and back that judgment with cREP token stakes. Each round snapshots a canonical reference score on-chain, and the settlement logic updates the next score from that anchor rather than recomputing from scratch. Votes are encrypted via tlock (time-lock encryption) and hidden until each ${protocolDocFacts.blindPhaseDurationLabel} epoch ends, preventing herding. Commits in the redeployed stack bind the reference score together with explicit drand metadata (targetRound and drandChainHash), and on-chain logic rejects malformed or non-armored ciphertexts while the keeper/runtime layer still performs deeper stanza checks before reveal. After the epoch, the keeper normally reveals eligible votes, and connected users can self-reveal if needed. The side with the larger epoch-weighted stake wins -- early (blind) voters earn full reward weight, while later voters who saw epoch-1 results earn ${protocolDocFacts.openPhaseWeightLabel} weight, creating a ${protocolDocFacts.earlyVoterAdvantageLabel} incentive to vote early.`,
+    text: "The protocol turns judgment into an explicit market. Every ask is question-first, requires a context URL, can include optional preview media, and carries a non-refundable bounty funded in HREP or USDC on Celo. Verified humans vote by staking HREP on whether the currently displayed rating should move up or down, optional hidden feedback unlocks after settlement, and eligible revealed voters claim bounty payouts while an eligible frontend operator reserve keeps distribution open to third-party surfaces.",
   },
   {
     type: "paragraph",
-    text: "Sybil resistance is enforced through Voter ID NFTs -- soulbound tokens tied to verified human identities via zero-knowledge Self.xyz passport or biometric ID card verification. Each verified identity is capped regardless of how many wallets it controls, making systematic manipulation expensive relative to the signal produced.",
+    text: `Signal integrity comes from combining verified humans, stake-backed voting, and blind rounds. Voter ID NFTs limit each eligible person to one identity path and cap stake per content per round. Votes stay hidden through tlock until the blind epoch ends, later voters earn only ${protocolDocFacts.openPhaseWeightLabel} reward weight instead of ${protocolDocFacts.blindPhaseWeightLabel}, and settlement waits for the configured reveal conditions so the result is harder to herd or selectively reveal.`,
   },
   {
     type: "paragraph",
-    text: "A core design decision is that all rating data lives on-chain as a permanent, permissionless data layer. Every vote, stake amount, round outcome, and resulting content rating is publicly accessible without proprietary API keys or gatekeepers. Hosted indexers and reference frontends can still apply service-level rate limits and policy-driven moderation filters to displayed reads, but the underlying chain data remains open. This makes Curyo's quality signals available as a public good -- usable by AI training pipelines to filter data by human-verified quality, by search engines as an independent ranking signal, and by any third-party platform without permission or payment.",
+    text: "The agent product surface is intentionally narrow. MCP-style tools, typed SDK helpers, signed callbacks, structured result templates, and delegated agent-wallet funding let agents quote cost, submit with idempotency, wait asynchronously, and read a machine-usable answer without giving the front-end operator custody of bounty funds. Curyo returns a public human judgment signal, not a claim of objective truth.",
   },
   {
     type: "paragraph",
-    text: "Curyo also incorporates AI as a first-class participant through reference bot tooling with pluggable rating strategies. Bots follow the same staking and commit-reveal rules as human voters and are transparent participants in the curation game, but the current reference bot is a manual or schedulable CLI rather than an always-on protocol service. The SDK and hosted MCP surface expose structured reads plus narrow wallet-bound write helpers so applications and agents can integrate without bypassing the protocol's stake and identity checks.",
-  },
-  {
-    type: "paragraph",
-    text: "This paper describes the protocol's mechanisms in detail: the tlock commit-reveal voting flow, the score-relative rating update, epoch-weighted reward distribution, parimutuel stake settlement, governance-tunable rating parameters, tokenomics, on-chain governance, and the role of SDK, MCP, keeper, bot, and indexer services in building trustworthy quality infrastructure for the age of AI.",
+    text: "Because the underlying result lives on-chain, Curyo behaves like public infrastructure rather than a closed approval service. Agents, frontends, and researchers can audit the same settlement history, governance can tune bounds and treasury use in public, and future systems can reuse prior judgment instead of paying humans to answer the same question repeatedly.",
   },
 ];

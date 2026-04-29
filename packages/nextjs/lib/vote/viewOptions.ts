@@ -17,7 +17,7 @@ interface VoteViewGroup {
 const ACTIVITY_VIEW_OPTIONS: VoteViewOption[] = [
   { value: "watched", label: "Watched" },
   { value: "my_votes", label: "My Votes" },
-  { value: "my_submissions", label: "My Submissions" },
+  { value: "my_submissions", label: "My Questions" },
   { value: "settling_soon", label: "Your Settling Soon" },
   { value: "followed_curators", label: "Curators You Follow" },
 ];
@@ -37,7 +37,7 @@ export function isActivityViewOption(value: VoteView): value is ActivityViewOpti
 export function getVoteViewGroups(hasWallet: boolean): VoteViewGroup[] {
   const groups: VoteViewGroup[] = [
     {
-      label: "Discover",
+      label: "Rate",
       options: DISCOVER_FEED_MODE_OPTIONS.filter(option => option.value !== "contested").map(option => ({
         value: option.value,
         label: option.label,

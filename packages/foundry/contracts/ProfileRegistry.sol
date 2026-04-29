@@ -7,8 +7,8 @@ import { IProfileRegistry } from "./interfaces/IProfileRegistry.sol";
 import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
 
 /// @title ProfileRegistry
-/// @notice Manages on-chain user profiles with unique names and short rating strategies
-/// @dev Users can set their profile name (unique) and public rating strategy. No stake required.
+/// @notice Manages on-chain user profiles with unique names and public self-reported context
+/// @dev Users can set their profile name (unique) and public self-reported audience context. No stake required.
 contract ProfileRegistry is IProfileRegistry, Initializable, AccessControlUpgradeable {
     // --- Access Control Roles ---
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
@@ -16,11 +16,11 @@ contract ProfileRegistry is IProfileRegistry, Initializable, AccessControlUpgrad
     // --- Constants ---
     uint256 public constant MIN_NAME_LENGTH = 3;
     uint256 public constant MAX_NAME_LENGTH = 20;
-    uint256 public constant MAX_STRATEGY_LENGTH = 560;
+    uint256 public constant MAX_SELF_REPORT_LENGTH = 1600;
 
     struct StoredProfile {
         string name;
-        string strategy;
+        string selfReport;
         uint256 createdAt;
         uint256 updatedAt;
     }
@@ -36,11 +36,12 @@ contract ProfileRegistry is IProfileRegistry, Initializable, AccessControlUpgrad
     uint256[49] private __gap;
 
     // --- Events ---
-    event ProfileCreated(address indexed user, string name, string strategy);
-    event ProfileUpdated(address indexed user, string name, string strategy);
+    event ProfileCreated(address indexed user, string name, string selfReport);
+    event ProfileUpdated(address indexed user, string name, string selfReport);
     event AvatarAccentUpdated(address indexed user, uint24 rgb);
     event AvatarAccentCleared(address indexed user);
     event VoterIdNFTUpdated(address voterIdNFT);
+    event ProfileNameReleased(address indexed user, string name);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -76,15 +77,36 @@ contract ProfileRegistry is IProfileRegistry, Initializable, AccessControlUpgrad
         emit VoterIdNFTUpdated(_voterIdNFT);
     }
 
+    /// @notice Release a profile name so it can be claimed again after the user loses eligibility.
+    /// @param user The profile owner whose name should be released.
+    function releaseName(address user) external onlyRole(ADMIN_ROLE) {
+        require(user != address(0), "Invalid address");
+
+        StoredProfile storage profile = _profiles[user];
+        require(profile.createdAt != 0 && bytes(profile.name).length > 0, "No name to release");
+
+        string memory releasedName = profile.name;
+        bytes32 nameHash = _normalizeAndHash(releasedName);
+        if (_nameToAddress[nameHash] == user) {
+            delete _nameToAddress[nameHash];
+        }
+
+        profile.name = "";
+        profile.updatedAt = block.timestamp;
+
+        emit ProfileNameReleased(user, releasedName);
+        emit ProfileUpdated(user, "", profile.selfReport);
+    }
+
     // --- Public Functions ---
 
     /// @inheritdoc IProfileRegistry
-    function setProfile(string calldata name, string calldata strategy) external override {
+    function setProfile(string calldata name, string calldata selfReport) external override {
         _requireEligibleVoterIdHolder(msg.sender);
 
         require(bytes(name).length >= MIN_NAME_LENGTH, "Name too short");
         require(bytes(name).length <= MAX_NAME_LENGTH, "Name too long");
-        require(bytes(strategy).length <= MAX_STRATEGY_LENGTH, "Strategy too long");
+        require(bytes(selfReport).length <= MAX_SELF_REPORT_LENGTH, "Self-report too long");
         require(_isValidName(name), "Invalid name format");
 
         bytes32 nameHash = _normalizeAndHash(name);
@@ -106,15 +128,15 @@ contract ProfileRegistry is IProfileRegistry, Initializable, AccessControlUpgrad
 
         // Update or create profile
         profile.name = name;
-        profile.strategy = strategy;
+        profile.selfReport = selfReport;
         profile.updatedAt = block.timestamp;
 
         if (isNewProfile) {
             profile.createdAt = block.timestamp;
             _registeredAddresses.push(msg.sender);
-            emit ProfileCreated(msg.sender, name, strategy);
+            emit ProfileCreated(msg.sender, name, selfReport);
         } else {
-            emit ProfileUpdated(msg.sender, name, strategy);
+            emit ProfileUpdated(msg.sender, name, selfReport);
         }
 
         // Register name ownership
@@ -143,7 +165,10 @@ contract ProfileRegistry is IProfileRegistry, Initializable, AccessControlUpgrad
     function getProfile(address user) external view override returns (Profile memory) {
         StoredProfile storage profile = _profiles[user];
         return Profile({
-            name: profile.name, strategy: profile.strategy, createdAt: profile.createdAt, updatedAt: profile.updatedAt
+            name: profile.name,
+            selfReport: profile.selfReport,
+            createdAt: profile.createdAt,
+            updatedAt: profile.updatedAt
         });
     }
 
@@ -203,10 +228,7 @@ contract ProfileRegistry is IProfileRegistry, Initializable, AccessControlUpgrad
     // --- Internal Functions ---
 
     function _requireEligibleVoterIdHolder(address user) internal view {
-        if (address(voterIdNFT) == address(0)) {
-            return;
-        }
-
+        require(address(voterIdNFT) != address(0), "VoterIdNFT not set");
         require(voterIdNFT.hasVoterId(user), "Voter ID required");
         require(voterIdNFT.resolveHolder(user) == user, "Profile owner must hold Voter ID");
     }

@@ -15,18 +15,18 @@ test("getThirdwebAuthMode uses popup auth away from localhost", () => {
 test("getThirdwebWalletAuthConfig adds a redirect URL for localhost flows", () => {
   const auth = getThirdwebWalletAuthConfig({
     hostname: "localhost",
-    currentUrl: "http://localhost:3000/vote?content=1",
+    currentUrl: "http://localhost:3000/rate?content=1",
   });
 
   assert.equal(auth.mode, "redirect");
-  assert.equal(auth.redirectUrl, "http://localhost:3000/vote?content=1");
+  assert.equal(auth.redirectUrl, "http://localhost:3000/rate?content=1");
   assert.deepEqual(auth.options, ["google", "apple", "email", "passkey", "wallet"]);
 });
 
 test("getThirdwebWalletAuthConfig keeps popup mode for non-localhost flows", () => {
   const auth = getThirdwebWalletAuthConfig({
-    hostname: "app.curyo.xyz",
-    currentUrl: "https://app.curyo.xyz/vote",
+    hostname: "curyo.xyz",
+    currentUrl: "https://curyo.xyz/rate",
   });
 
   assert.equal(auth.mode, "popup");
@@ -36,7 +36,7 @@ test("getThirdwebWalletAuthConfig keeps popup mode for non-localhost flows", () 
 
 test("getThirdwebWalletAuthConfig can omit wallet auth when external wallets are already available", () => {
   const auth = getThirdwebWalletAuthConfig({
-    hostname: "app.curyo.xyz",
+    hostname: "curyo.xyz",
     includeWalletOption: false,
   });
 

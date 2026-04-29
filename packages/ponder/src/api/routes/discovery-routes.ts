@@ -1,4 +1,4 @@
-import { DEFAULT_ROUND_CONFIG, ROUND_STATE } from "@curyo/contracts/protocol";
+import { ROUND_STATE } from "@curyo/contracts/protocol";
 import { and, asc, desc, eq, gte, inArray, or, sql } from "ponder";
 import { db } from "ponder:api";
 import { content, profile, round, vote } from "ponder:schema";
@@ -44,6 +44,7 @@ export function registerDiscoveryRoutes(app: ApiApp) {
         submitter: content.submitter,
         categoryId: content.categoryId,
         roundStartTime: round.startTime,
+        epochDuration: round.epochDuration,
         profileName: profile.name,
       })
       .from(vote)
@@ -58,7 +59,7 @@ export function registerDiscoveryRoutes(app: ApiApp) {
           allowedContentCondition,
           eq(vote.voter, address),
           eq(round.state, ROUND_STATE.Open),
-          gte(round.voteCount, DEFAULT_ROUND_CONFIG.minVoters),
+          gte(round.voteCount, round.minVoters),
         ),
       )
       .orderBy(asc(round.startTime))
@@ -77,6 +78,7 @@ export function registerDiscoveryRoutes(app: ApiApp) {
             submitter: content.submitter,
             categoryId: content.categoryId,
             roundStartTime: round.startTime,
+            epochDuration: round.epochDuration,
             profileName: profile.name,
           })
           .from(round)
@@ -87,7 +89,7 @@ export function registerDiscoveryRoutes(app: ApiApp) {
               allowedContentCondition,
               inArray(round.contentId, watchedContentIds),
               eq(round.state, ROUND_STATE.Open),
-              gte(round.voteCount, DEFAULT_ROUND_CONFIG.minVoters),
+              gte(round.voteCount, round.minVoters),
             ),
           )
           .orderBy(asc(round.startTime))
@@ -103,6 +105,7 @@ export function registerDiscoveryRoutes(app: ApiApp) {
       submitter: string;
       categoryId: bigint;
       roundStartTime: bigint | null;
+      epochDuration: number;
       estimatedSettlementTime: bigint | null;
       profileName: string | null;
       source: "watched" | "voted" | "watched_voted";
@@ -114,7 +117,7 @@ export function registerDiscoveryRoutes(app: ApiApp) {
         const existing = settlingSoonMap.get(key);
         settlingSoonMap.set(key, {
           ...item,
-          estimatedSettlementTime: getEstimatedSettlementTime(item.roundStartTime),
+          estimatedSettlementTime: getEstimatedSettlementTime(item.roundStartTime, item.epochDuration),
           source: existing && existing.source !== source ? "watched_voted" : existing?.source ?? source,
         });
       }
@@ -227,6 +230,7 @@ export function registerDiscoveryRoutes(app: ApiApp) {
         submitter: content.submitter,
         categoryId: content.categoryId,
         roundStartTime: round.startTime,
+        epochDuration: round.epochDuration,
         profileName: profile.name,
       })
       .from(vote)
@@ -238,7 +242,7 @@ export function registerDiscoveryRoutes(app: ApiApp) {
           allowedContentCondition,
           eq(vote.voter, address),
           eq(round.state, ROUND_STATE.Open),
-          gte(round.voteCount, DEFAULT_ROUND_CONFIG.minVoters),
+          gte(round.voteCount, round.minVoters),
         ),
       )
       .orderBy(asc(round.startTime))
@@ -257,6 +261,7 @@ export function registerDiscoveryRoutes(app: ApiApp) {
             submitter: content.submitter,
             categoryId: content.categoryId,
             roundStartTime: round.startTime,
+            epochDuration: round.epochDuration,
             profileName: profile.name,
           })
           .from(round)
@@ -267,7 +272,7 @@ export function registerDiscoveryRoutes(app: ApiApp) {
               allowedContentCondition,
               inArray(round.contentId, watchedContentIds),
               eq(round.state, ROUND_STATE.Open),
-              gte(round.voteCount, DEFAULT_ROUND_CONFIG.minVoters),
+              gte(round.voteCount, round.minVoters),
             ),
           )
           .orderBy(asc(round.startTime))
@@ -280,7 +285,7 @@ export function registerDiscoveryRoutes(app: ApiApp) {
         const existing = settlingSoonMap.get(key);
         settlingSoonMap.set(key, {
           ...item,
-          estimatedSettlementTime: getEstimatedSettlementTime(item.roundStartTime),
+          estimatedSettlementTime: getEstimatedSettlementTime(item.roundStartTime, item.epochDuration),
           source: existing && existing.source !== source ? "watched_voted" : existing?.source ?? source,
         });
       }
@@ -469,6 +474,7 @@ export function registerDiscoveryRoutes(app: ApiApp) {
       submitter: content.submitter,
       categoryId: content.categoryId,
       voteCount: round.voteCount,
+      minVoters: round.minVoters,
       totalStake: round.totalStake,
       roundStartTime: round.startTime,
       profileName: profile.name,
@@ -483,7 +489,7 @@ export function registerDiscoveryRoutes(app: ApiApp) {
         allowedContentCondition,
         eq(round.state, ROUND_STATE.Open),
         eq(content.status, 0),
-        gte(round.voteCount, DEFAULT_ROUND_CONFIG.minVoters),
+        gte(round.voteCount, round.minVoters),
       ))
       .orderBy(desc(round.totalStake), desc(round.voteCount), desc(round.startTime))
       .limit(activeLimit);
@@ -497,7 +503,7 @@ export function registerDiscoveryRoutes(app: ApiApp) {
         allowedContentCondition,
         eq(round.state, ROUND_STATE.Open),
         eq(content.status, 0),
-        sql`${round.voteCount} < ${DEFAULT_ROUND_CONFIG.minVoters}`,
+        sql`${round.voteCount} < ${round.minVoters}`,
       ))
       .orderBy(desc(round.startTime), desc(round.totalStake))
       .limit(earlyLimit);
@@ -513,7 +519,7 @@ export function registerDiscoveryRoutes(app: ApiApp) {
       .map(item => ({
         ...item,
         featuredReason:
-          item.voteCount >= DEFAULT_ROUND_CONFIG.minVoters
+          item.voteCount >= item.minVoters
             ? "Active debate"
             : item.voteCount > 0
               ? "Needs early signal"

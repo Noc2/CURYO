@@ -1,31 +1,36 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { ScaffoldETHDeploy } from "./DeployHelpers.s.sol";
-import { console } from "forge-std/console.sol";
-import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import { ProxyAdmin } from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
-import { IAccessControl } from "@openzeppelin/contracts/access/IAccessControl.sol";
-import { TimelockController } from "@openzeppelin/contracts/governance/TimelockController.sol";
-import { IVotes } from "@openzeppelin/contracts/governance/utils/IVotes.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
-import { ContentRegistry } from "../contracts/ContentRegistry.sol";
-import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
-import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
-import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
-import { CategoryRegistry } from "../contracts/CategoryRegistry.sol";
-import { ProfileRegistry } from "../contracts/ProfileRegistry.sol";
-import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
-import { VoterIdNFT } from "../contracts/VoterIdNFT.sol";
-import { CuryoGovernor } from "../contracts/governance/CuryoGovernor.sol";
-import { ParticipationPool } from "../contracts/ParticipationPool.sol";
-import { HumanFaucet } from "../contracts/HumanFaucet.sol";
-import { MockIdentityVerificationHub } from "../contracts/mocks/MockIdentityVerificationHub.sol";
-import { IIdentityVerificationHubV2 } from "@selfxyz/contracts/contracts/interfaces/IIdentityVerificationHubV2.sol";
-import { SelfStructs } from "@selfxyz/contracts/contracts/libraries/SelfStructs.sol";
+import {ScaffoldETHDeploy} from "./DeployHelpers.s.sol";
+import {console} from "forge-std/console.sol";
+import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
+import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
+import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
+import {HumanReputation} from "../contracts/HumanReputation.sol";
+import {ContentRegistry} from "../contracts/ContentRegistry.sol";
+import {RoundVotingEngine} from "../contracts/RoundVotingEngine.sol";
+import {RoundRewardDistributor} from "../contracts/RoundRewardDistributor.sol";
+import {FrontendRegistry} from "../contracts/FrontendRegistry.sol";
+import {CategoryRegistry} from "../contracts/CategoryRegistry.sol";
+import {FeedbackBonusEscrow} from "../contracts/FeedbackBonusEscrow.sol";
+import {ProfileRegistry} from "../contracts/ProfileRegistry.sol";
+import {ProtocolConfig} from "../contracts/ProtocolConfig.sol";
+import {QuestionRewardPoolEscrow} from "../contracts/QuestionRewardPoolEscrow.sol";
+import {X402QuestionSubmitter} from "../contracts/X402QuestionSubmitter.sol";
+import {VoterIdNFT} from "../contracts/VoterIdNFT.sol";
+import {CuryoGovernor} from "../contracts/governance/CuryoGovernor.sol";
+import {ParticipationPool} from "../contracts/ParticipationPool.sol";
+import {HumanFaucet} from "../contracts/HumanFaucet.sol";
+import {MockERC20} from "../contracts/mocks/MockERC20.sol";
+import {MockIdentityVerificationHub} from "../contracts/mocks/MockIdentityVerificationHub.sol";
+import {IIdentityVerificationHubV2} from "@selfxyz/contracts/contracts/interfaces/IIdentityVerificationHubV2.sol";
+import {SelfStructs} from "@selfxyz/contracts/contracts/libraries/SelfStructs.sol";
+import {SelfUtils} from "@selfxyz/contracts/contracts/libraries/SelfUtils.sol";
 
 /// @notice Deploy script for all Curyo contracts with transparent proxies.
-/// @dev All protocol operations use cREP token only (no stablecoins).
+/// @dev Core protocol voting uses HREP; bounty escrow deployments also wire USDC test collateral.
 ///      Local dev: deployer is governance (all roles go to deployer).
 ///      Production: TimelockController + CuryoGovernor are deployed, timelock gets all permanent roles including treasury routing.
 contract DeployCuryo is ScaffoldETHDeploy {
@@ -33,6 +38,8 @@ contract DeployCuryo is ScaffoldETHDeploy {
     error UnsupportedHumanFaucetChain(uint256 chainId);
 
     bytes32 internal constant ERC1967_ADMIN_SLOT = bytes32(uint256(keccak256("eip1967.proxy.admin")) - 1);
+    bytes32 internal constant QUESTION_ESCROW_CONFIG_ROLE = keccak256("CONFIG_ROLE");
+    bytes32 internal constant QUESTION_ESCROW_PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
     // Timelock delay: 2 days for standard operations
     uint256 public constant TIMELOCK_MIN_DELAY = 2 days;
@@ -40,17 +47,69 @@ contract DeployCuryo is ScaffoldETHDeploy {
     // Launch token allocations (6 decimals)
     uint256 public constant TOTAL_SUPPLY_CAP = 100_000_000 * 1e6;
     uint256 public constant CONSENSUS_POOL_AMOUNT = 4_000_000 * 1e6;
-    uint256 public constant TREASURY_AMOUNT = 10_000_000 * 1e6;
-    uint256 public constant PARTICIPATION_POOL_AMOUNT = 34_000_000 * 1e6;
+    uint256 public constant TREASURY_AMOUNT = 32_000_000 * 1e6;
+    uint256 public constant PARTICIPATION_POOL_AMOUNT = 12_000_000 * 1e6;
     uint256 public constant FAUCET_POOL_AMOUNT =
         TOTAL_SUPPLY_CAP - CONSENSUS_POOL_AMOUNT - TREASURY_AMOUNT - PARTICIPATION_POOL_AMOUNT;
+    uint256 public constant MAX_FAUCET_CLAIMANTS_WITHOUT_REFERRALS = 41_110_000;
+    uint256 internal constant MIGRATION_TIER_0_THRESHOLD = 10;
+    uint256 internal constant MIGRATION_TIER_1_THRESHOLD = 1_000;
+    uint256 internal constant MIGRATION_TIER_2_THRESHOLD = 10_000;
+    uint256 internal constant MIGRATION_TIER_3_THRESHOLD = 1_000_000;
+    uint256 internal constant MIGRATION_TIER_0_AMOUNT = 10_000e6;
+    uint256 internal constant MIGRATION_TIER_1_AMOUNT = 1_000e6;
+    uint256 internal constant MIGRATION_TIER_2_AMOUNT = 100e6;
+    uint256 internal constant MIGRATION_TIER_3_AMOUNT = 10e6;
+    uint256 internal constant MIGRATION_TIER_4_AMOUNT = 1e6;
+    uint256 internal constant MIGRATION_REFERRAL_RATIO_BPS = 5_000;
+    uint256 internal constant MIGRATION_BPS_SCALE = 10_000;
+    uint256 internal constant DEFAULT_MIGRATION_BOOTSTRAP_BATCH_SIZE = 20;
+    uint256 internal constant MAX_MIGRATION_BOOTSTRAP_BATCH_SIZE = 100;
 
     // Self.xyz IdentityVerificationHub addresses
     address constant CELO_MAINNET_HUB = 0xe57F4773bd9c9d8b6Cd70431117d353298B9f5BF;
     address constant CELO_SEPOLIA_HUB = 0x16ECBA51e18a4a7e61fdC417f0d47AFEeDfbed74;
 
+    // Native Circle USDC on Celo. Testnet address follows Circle's published testnet contract list.
+    address constant CELO_MAINNET_USDC = 0xcebA9300f2b948710d2653dD7B07f33A8B32118C;
+    address constant CELO_SEPOLIA_USDC = 0x01C5C0122039549AD1493B8220cABEdD739BC44E;
+
+    uint256 public constant FAUCET_MINIMUM_AGE = 18;
+
+    struct MigrationBootstrapConfig {
+        address[] users;
+        uint256[] nullifiers;
+        uint256[] amounts;
+        address[] referrers;
+        uint256[] claimantBonuses;
+        uint256[] referrerRewards;
+    }
+
+    struct ProductionDeploymentRoleVerification {
+        address deployerAddress;
+        address governance;
+        address governorAddr;
+        HumanReputation hrepToken;
+        ContentRegistry registry;
+        RoundVotingEngine votingEngine;
+        ProtocolConfig protocolConfig;
+        RoundRewardDistributor rewardDistributor;
+        QuestionRewardPoolEscrow questionRewardPoolEscrow;
+        X402QuestionSubmitter x402QuestionSubmitter;
+        FeedbackBonusEscrow feedbackBonusEscrow;
+        FrontendRegistry frontendRegistry;
+        ProfileRegistry profileRegistry;
+        CategoryRegistry categoryRegistry;
+        VoterIdNFT voterIdNFT;
+        ParticipationPool participationPool;
+        HumanFaucet humanFaucet;
+        bool humanFaucetOpen;
+    }
+
     function _preBroadcastChecks() internal view override {
         _resolveHumanFaucetConfig(block.chainid == 31337);
+        MigrationBootstrapConfig memory migrationConfig = _loadMigrationBootstrapConfig();
+        _validateMigrationBootstrapConfig(migrationConfig);
     }
 
     function run() external ScaffoldEthDeployerRunner {
@@ -87,14 +146,14 @@ contract DeployCuryo is ScaffoldETHDeploy {
             console.log("Treasury routed to governance:", governance);
         }
 
-        // 2. Deploy CuryoReputation (non-upgradeable governance token)
-        CuryoReputation crepToken = new CuryoReputation(deployer, governance);
-        console.log("CuryoReputation deployed at:", address(crepToken));
+        // 2. Deploy HumanReputation (non-upgradeable governance token)
+        HumanReputation hrepToken = new HumanReputation(deployer, governance);
+        console.log("HumanReputation deployed at:", address(hrepToken));
 
         // 3. Deploy CuryoGovernor (production only)
         //    Excluded holders are set later via initializePools() after protocol contracts are deployed.
         if (!isLocalDev) {
-            governor = new CuryoGovernor(IVotes(address(crepToken)), TimelockController(payable(governance)));
+            governor = new CuryoGovernor(IVotes(address(hrepToken)), TimelockController(payable(governance)));
             governorAddr = address(governor);
             console.log("CuryoGovernor deployed at:", governorAddr);
 
@@ -107,7 +166,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
             console.log("Granted PROPOSER_ROLE + CANCELLER_ROLE to Governor, CANCELLER_ROLE to deployer");
 
             // Set governor on token (deployer has CONFIG_ROLE)
-            crepToken.setGovernor(governorAddr);
+            hrepToken.setGovernor(governorAddr);
         }
 
         // 4. Deploy implementations
@@ -117,12 +176,14 @@ contract DeployCuryo is ScaffoldETHDeploy {
         FrontendRegistry frontendRegistryImpl = new FrontendRegistry();
         ProfileRegistry profileRegistryImpl = new ProfileRegistry();
         ProtocolConfig protocolConfigImpl = new ProtocolConfig();
+        QuestionRewardPoolEscrow questionRewardPoolEscrowImpl = new QuestionRewardPoolEscrow();
+        FeedbackBonusEscrow feedbackBonusEscrowImpl = new FeedbackBonusEscrow();
 
         // 5. Deploy transparent proxies with initialization (governance owns each ProxyAdmin)
         TransparentUpgradeableProxy frontendRegistryProxy = new TransparentUpgradeableProxy(
             address(frontendRegistryImpl),
             governance,
-            abi.encodeCall(FrontendRegistry.initialize, (deployer, governance, address(crepToken)))
+            abi.encodeCall(FrontendRegistry.initialize, (deployer, governance, address(hrepToken)))
         );
         FrontendRegistry frontendRegistry = FrontendRegistry(address(frontendRegistryProxy));
 
@@ -134,7 +195,9 @@ contract DeployCuryo is ScaffoldETHDeploy {
         TransparentUpgradeableProxy registryProxy = new TransparentUpgradeableProxy(
             address(registryImpl),
             governance,
-            abi.encodeCall(ContentRegistry.initialize, (deployer, governance, address(crepToken)))
+            abi.encodeCall(
+                ContentRegistry.initializeWithTreasury, (deployer, governance, governance, address(hrepToken))
+            )
         );
         ContentRegistry registry = ContentRegistry(address(registryProxy));
 
@@ -150,7 +213,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
             governance,
             abi.encodeCall(
                 RoundVotingEngine.initialize,
-                (governance, address(crepToken), address(registry), address(protocolConfig))
+                (governance, address(hrepToken), address(registry), address(protocolConfig))
             )
         );
         RoundVotingEngine votingEngine = RoundVotingEngine(address(votingEngineProxy));
@@ -160,31 +223,65 @@ contract DeployCuryo is ScaffoldETHDeploy {
             governance,
             abi.encodeCall(
                 RoundRewardDistributor.initialize,
-                (governance, address(crepToken), address(votingEngine), address(registry))
+                (governance, address(hrepToken), address(votingEngine), address(registry))
             )
         );
         RoundRewardDistributor rewardDistributor = RoundRewardDistributor(address(rewardDistributorProxy));
 
         // 6. Deploy CategoryRegistry (non-upgradeable)
-        CategoryRegistry categoryRegistry = new CategoryRegistry(
-            deployer,
-            address(crepToken),
-            governorAddr,
-            governance, // timelock as governance
-            address(votingEngine)
-        );
-        if (!isLocalDev) {
-            CuryoGovernor(payable(governorAddr)).setCategoryRegistry(address(categoryRegistry));
-        }
+        CategoryRegistry categoryRegistry = new CategoryRegistry(deployer, governance);
 
         // 7. Deploy VoterIdNFT (soulbound identity for verified humans)
         VoterIdNFT voterIdNFT = new VoterIdNFT(deployer, governance);
         voterIdNFT.setStakeRecorder(address(votingEngine));
 
+        // 7a. Deploy Curyo 2 USDC bounty escrow.
+        address usdcTokenAddress;
+        MockERC20 localUsdcToken;
+        if (isLocalDev) {
+            localUsdcToken = new MockERC20("USD Coin", "USDC", 6);
+            usdcTokenAddress = address(localUsdcToken);
+            console.log("Mock USDC deployed at:", usdcTokenAddress);
+        } else {
+            usdcTokenAddress = _resolveCeloUsdcAddress();
+            console.log("Circle USDC resolved at:", usdcTokenAddress);
+        }
+
+        TransparentUpgradeableProxy questionRewardPoolEscrowProxy = new TransparentUpgradeableProxy(
+            address(questionRewardPoolEscrowImpl),
+            governance,
+            abi.encodeCall(
+                QuestionRewardPoolEscrow.initialize,
+                (
+                    governance,
+                    address(hrepToken),
+                    usdcTokenAddress,
+                    address(registry),
+                    address(votingEngine),
+                    address(voterIdNFT)
+                )
+            )
+        );
+        QuestionRewardPoolEscrow questionRewardPoolEscrow =
+            QuestionRewardPoolEscrow(address(questionRewardPoolEscrowProxy));
+        X402QuestionSubmitter x402QuestionSubmitter =
+            new X402QuestionSubmitter(registry, usdcTokenAddress, address(questionRewardPoolEscrow));
+        TransparentUpgradeableProxy feedbackBonusEscrowProxy = new TransparentUpgradeableProxy(
+            address(feedbackBonusEscrowImpl),
+            governance,
+            abi.encodeCall(
+                FeedbackBonusEscrow.initialize,
+                (governance, usdcTokenAddress, address(registry), address(votingEngine), address(voterIdNFT))
+            )
+        );
+        FeedbackBonusEscrow feedbackBonusEscrow = FeedbackBonusEscrow(address(feedbackBonusEscrowProxy));
+
         // 8. Wire contracts together (deployer uses temporary config/admin roles where needed)
         registry.setVotingEngine(address(votingEngine));
         registry.setProtocolConfig(address(votingEngine.protocolConfig()));
         registry.setCategoryRegistry(address(categoryRegistry));
+        registry.setQuestionRewardPoolEscrow(address(questionRewardPoolEscrow));
+        registry.grantRole(registry.X402_GATEWAY_ROLE(), address(x402QuestionSubmitter));
         ProtocolConfig(address(votingEngine.protocolConfig())).setRewardDistributor(address(rewardDistributor));
         ProtocolConfig(address(votingEngine.protocolConfig())).setFrontendRegistry(address(frontendRegistry));
         ProtocolConfig(address(votingEngine.protocolConfig())).setCategoryRegistry(address(categoryRegistry));
@@ -192,19 +289,18 @@ contract DeployCuryo is ScaffoldETHDeploy {
         // Wire VoterIdNFT to all contracts
         ProtocolConfig(address(votingEngine.protocolConfig())).setVoterIdNFT(address(voterIdNFT));
         registry.setVoterIdNFT(address(voterIdNFT));
-        categoryRegistry.setVoterIdNFT(address(voterIdNFT));
         frontendRegistry.setVoterIdNFT(address(voterIdNFT));
         profileRegistry.setVoterIdNFT(address(voterIdNFT));
 
         // Wire FrontendRegistry to VotingEngine for slashing
+        frontendRegistry.initializeFeeCreditor(address(rewardDistributor));
         frontendRegistry.setVotingEngine(address(votingEngine));
-        frontendRegistry.addFeeCreditor(address(rewardDistributor));
 
         // 9. Seed initial categories
         _seedCategories(categoryRegistry);
 
         // 10. Set content voting contracts on token (for governance lock bypass)
-        crepToken.setContentVotingContracts(address(votingEngine), address(registry));
+        hrepToken.setContentVotingContracts(address(votingEngine), address(registry));
 
         // 11. Configure round parameters
         ProtocolConfig(address(votingEngine.protocolConfig())).setConfig(20 minutes, 7 days, 3, 1000); // epochDuration, maxDuration, minVoters, maxVoters
@@ -213,78 +309,66 @@ contract DeployCuryo is ScaffoldETHDeploy {
         // Local dev: deployer has DEFAULT_ADMIN_ROLE and needs to grant MINTER_ROLE
         // Production: deployer gets only MINTER_ROLE + CONFIG_ROLE from constructor
         if (isLocalDev) {
-            crepToken.grantRole(crepToken.MINTER_ROLE(), deployer);
+            hrepToken.grantRole(hrepToken.MINTER_ROLE(), deployer);
         }
-        crepToken.mint(deployer, CONSENSUS_POOL_AMOUNT);
-        crepToken.approve(address(votingEngine), CONSENSUS_POOL_AMOUNT);
+        hrepToken.mint(deployer, CONSENSUS_POOL_AMOUNT);
+        hrepToken.approve(address(votingEngine), CONSENSUS_POOL_AMOUNT);
         votingEngine.addToConsensusReserve(CONSENSUS_POOL_AMOUNT);
-        console.log("Funded 4M cREP to consensus reserve");
+        console.log("Funded 4M HREP to consensus reserve");
 
-        // 12a. Fund treasury (10M cREP to governance treasury)
-        crepToken.mint(governance, TREASURY_AMOUNT);
-        console.log("Minted 10M cREP to governance treasury");
+        // 12a. Fund treasury (32M HREP to governance treasury)
+        hrepToken.mint(governance, TREASURY_AMOUNT);
+        console.log("Minted 32M HREP to governance treasury");
 
-        // 12b. Deploy and fund ParticipationPool (34M cREP)
-        ParticipationPool participationPool = new ParticipationPool(address(crepToken), governance);
+        // 12b. Deploy and fund ParticipationPool (12M HREP, user-facing Bootstrap Pool)
+        ParticipationPool participationPool = new ParticipationPool(address(hrepToken), governance);
         participationPool.setAuthorizedCaller(address(rewardDistributor), true);
-        participationPool.setAuthorizedCaller(address(registry), true);
-        crepToken.mint(deployer, PARTICIPATION_POOL_AMOUNT);
-        crepToken.approve(address(participationPool), PARTICIPATION_POOL_AMOUNT);
+        hrepToken.mint(deployer, PARTICIPATION_POOL_AMOUNT);
+        hrepToken.approve(address(participationPool), PARTICIPATION_POOL_AMOUNT);
         participationPool.depositPool(PARTICIPATION_POOL_AMOUNT);
         ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(address(participationPool));
-        registry.setParticipationPool(address(participationPool));
         if (!isLocalDev) {
             participationPool.transferOwnership(governance);
         }
-        console.log("ParticipationPool deployed and funded with 34M cREP");
+        console.log("ParticipationPool deployed and funded with 12M HREP");
 
-        // 12c. Deploy and fund HumanFaucet (52,000,000 cREP, Self.xyz identity verification)
+        // 12c. Deploy and fund HumanFaucet (52,000,000 HREP, Self.xyz identity verification)
         HumanFaucet humanFaucet;
+        address humanFaucetHubAddress;
+        bool isFaucetMock;
         {
-            (address hubAddress, bool isFaucetMock) = _resolveHumanFaucetConfig(isLocalDev);
+            (humanFaucetHubAddress, isFaucetMock) = _resolveHumanFaucetConfig(isLocalDev);
 
             if (isFaucetMock) {
                 MockIdentityVerificationHub mockHub = new MockIdentityVerificationHub();
-                hubAddress = address(mockHub);
-                console.log("MockIdentityVerificationHub deployed at:", hubAddress);
+                humanFaucetHubAddress = address(mockHub);
+                console.log("MockIdentityVerificationHub deployed at:", humanFaucetHubAddress);
             }
 
-            humanFaucet = new HumanFaucet(address(crepToken), hubAddress, governance);
+            humanFaucet = new HumanFaucet(address(hrepToken), humanFaucetHubAddress, governance);
             console.log("HumanFaucet deployed at:", address(humanFaucet));
+            if (!isLocalDev) {
+                humanFaucet.pause();
+                console.log("Paused HumanFaucet until final launch checks open public claims");
+            }
 
             // Wire VoterIdNFT
             voterIdNFT.addMinter(address(humanFaucet));
             humanFaucet.setVoterIdNFT(address(voterIdNFT));
 
-            // Fund the faucet with the full remaining launch allocation so launch minting reaches MAX_SUPPLY.
-            crepToken.mint(address(humanFaucet), FAUCET_POOL_AMOUNT);
-            console.log("Minted 52,000,000 cREP to HumanFaucet");
+            // Fund the faucet with the full remaining launch allocation.
+            hrepToken.mint(address(humanFaucet), FAUCET_POOL_AMOUNT);
+            console.log("Minted 52,000,000 HREP to HumanFaucet");
 
-            // Set verification config
-            if (!isFaucetMock) {
-                SelfStructs.VerificationConfigV2 memory config = SelfStructs.VerificationConfigV2({
-                    olderThanEnabled: false,
-                    olderThan: 0,
-                    forbiddenCountriesEnabled: false,
-                    forbiddenCountriesListPacked: [uint256(0), uint256(0), uint256(0), uint256(0)],
-                    ofacEnabled: [true, true, true]
-                });
-                bytes32 configId = IIdentityVerificationHubV2(hubAddress).setVerificationConfigV2(config);
-                humanFaucet.setConfigId(configId);
-                _assertFaucetVerificationConfig(humanFaucet, hubAddress, configId);
-                console.log("Set verification config on HumanFaucet");
-            } else {
-                bytes32 mockConfigId = MockIdentityVerificationHub(hubAddress).MOCK_CONFIG_ID();
-                humanFaucet.setConfigId(mockConfigId);
-                _assertFaucetVerificationConfig(humanFaucet, hubAddress, mockConfigId);
-                console.log("Set mock configId on HumanFaucet");
+            MigrationBootstrapConfig memory migrationConfig = _loadMigrationBootstrapConfig();
+            if (migrationConfig.users.length > 0) {
+                uint256 migrationBatchCount =
+                    _bootstrapMigratedClaimsInBatches(humanFaucet, migrationConfig, _migrationBootstrapBatchSize());
+                console.log("Bootstrapped migrated HumanFaucet claims:", migrationConfig.users.length);
+                console.log("Migration bootstrap batches:", migrationBatchCount);
             }
-
-            // Transfer ownership to governance (production only)
-            if (!isLocalDev) {
-                humanFaucet.transferOwnership(governance);
-                console.log("HumanFaucet ownership transferred to governance");
-            }
+            humanFaucet.closeMigrationBootstrap();
+            console.log("Closed HumanFaucet migration bootstrap");
         }
 
         // 12d. Initialize Governor excluded holders for dynamic quorum (production only)
@@ -296,14 +380,31 @@ contract DeployCuryo is ScaffoldETHDeploy {
                 address(votingEngine),
                 governance,
                 address(registry),
-                address(frontendRegistry),
-                address(categoryRegistry)
+                address(frontendRegistry)
             );
             CuryoGovernor(payable(governorAddr)).initializePools(excludedHolders);
             console.log("Governor excluded holders initialized for dynamic quorum");
         }
 
-        _verifyLaunchMintAllocation(crepToken, governance, votingEngine, participationPool, humanFaucet);
+        _verifyLaunchMintAllocation(hrepToken, governance, votingEngine, participationPool, humanFaucet, voterIdNFT);
+
+        // Set verification config only after launch allocation and migration bootstrap checks pass.
+        if (!isFaucetMock) {
+            SelfStructs.VerificationConfigV2 memory config = _buildFaucetVerificationConfig();
+            bytes32 configId = IIdentityVerificationHubV2(humanFaucetHubAddress).setVerificationConfigV2(config);
+            humanFaucet.setConfigId(configId);
+            _assertFaucetVerificationConfig(humanFaucet, humanFaucetHubAddress, configId);
+            console.log("Set verification config on HumanFaucet");
+        } else {
+            bytes32 mockConfigId = MockIdentityVerificationHub(humanFaucetHubAddress).MOCK_CONFIG_ID();
+            humanFaucet.setConfigId(mockConfigId);
+            _assertFaucetVerificationConfig(humanFaucet, humanFaucetHubAddress, mockConfigId);
+            console.log("Set mock configId on HumanFaucet");
+        }
+        if (!isLocalDev) {
+            humanFaucet.setRecipientAuthorizationRequired(true);
+            console.log("Enabled HumanFaucet recipient wallet authorization");
+        }
 
         // 12e. Mint test tokens and Voter IDs for localhost development
         if (isLocalDev) {
@@ -320,9 +421,10 @@ contract DeployCuryo is ScaffoldETHDeploy {
                 0xBcd4042DE499D14e55001CcbB24a551F3b954096
             ];
             for (uint256 i = 0; i < testAccounts.length; i++) {
-                crepToken.transfer(testAccounts[i], testAmount);
+                hrepToken.transfer(testAccounts[i], testAmount);
+                localUsdcToken.mint(testAccounts[i], 10_000 * 1e6);
             }
-            console.log("Transferred 1000 cREP to 9 test accounts from treasury");
+            console.log("Transferred 1000 HREP and minted 10000 mock USDC to 9 test accounts");
 
             voterIdNFT.addMinter(deployer);
             for (uint256 i = 0; i < testAccounts.length; i++) {
@@ -331,26 +433,55 @@ contract DeployCuryo is ScaffoldETHDeploy {
             console.log("Minted Voter IDs to 9 test accounts");
 
             address anvilAccount0 = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
-            crepToken.grantRole(crepToken.MINTER_ROLE(), anvilAccount0);
+            hrepToken.grantRole(hrepToken.MINTER_ROLE(), anvilAccount0);
             voterIdNFT.addMinter(anvilAccount0);
         }
 
-        // 13. Renounce deployer's temporary roles
+        // 13. Register addresses for scaffold-eth ABI generation before any public launch transaction.
+        if (address(timelock) != address(0)) {
+            deployments.push(Deployment("TimelockController", address(timelock)));
+        }
+        if (address(governor) != address(0)) {
+            deployments.push(Deployment("CuryoGovernor", address(governor)));
+        }
+        deployments.push(Deployment("HumanReputation", address(hrepToken)));
+        deployments.push(Deployment("FrontendRegistry", address(frontendRegistryProxy)));
+        deployments.push(Deployment("ProfileRegistry", address(profileRegistryProxy)));
+        deployments.push(Deployment("ContentRegistry", address(registryProxy)));
+        deployments.push(Deployment("RoundVotingEngine", address(votingEngineProxy)));
+        deployments.push(Deployment("ProtocolConfig", address(protocolConfigProxy)));
+        deployments.push(Deployment("RoundRewardDistributor", address(rewardDistributorProxy)));
+        deployments.push(Deployment("QuestionRewardPoolEscrow", address(questionRewardPoolEscrowProxy)));
+        deployments.push(Deployment("X402QuestionSubmitter", address(x402QuestionSubmitter)));
+        deployments.push(Deployment("FeedbackBonusEscrow", address(feedbackBonusEscrowProxy)));
+        if (isLocalDev && usdcTokenAddress != address(0)) {
+            deployments.push(Deployment("MockERC20", usdcTokenAddress));
+        }
+        deployments.push(Deployment("CategoryRegistry", address(categoryRegistry)));
+        deployments.push(Deployment("VoterIdNFT", address(voterIdNFT)));
+        deployments.push(Deployment("ParticipationPool", address(participationPool)));
+        if (address(humanFaucet) != address(0)) {
+            deployments.push(Deployment("HumanFaucet", address(humanFaucet)));
+        }
+
+        // 14. Renounce deployer's temporary roles
         // Local dev: deployer IS governance, so don't renounce (need roles for dev)
         if (!isLocalDev) {
             // Production/testnet dev faucet grants now require governance after deployment.
             address devFaucet = vm.envOr("DEV_FAUCET_ADDRESS", address(0));
             bool isTestnet = (block.chainid == 44787 || block.chainid == 11142220);
             if (devFaucet != address(0) && isTestnet) {
-                console.log("DEV_FAUCET_ADDRESS configured; grant MINTER_ROLE/VoterId minter via governance post-deploy:");
+                console.log(
+                    "DEV_FAUCET_ADDRESS configured; grant MINTER_ROLE/VoterId minter via governance post-deploy:"
+                );
                 console.logAddress(devFaucet);
             }
 
-            // Renounce all deployer roles on CuryoReputation
+            // Renounce all deployer roles on HumanReputation
             // DEFAULT_ADMIN_ROLE last (it controls the other roles)
-            crepToken.renounceRole(crepToken.MINTER_ROLE(), deployer);
-            crepToken.renounceRole(crepToken.CONFIG_ROLE(), deployer);
-            crepToken.renounceRole(crepToken.DEFAULT_ADMIN_ROLE(), deployer);
+            hrepToken.renounceRole(hrepToken.MINTER_ROLE(), deployer);
+            hrepToken.renounceRole(hrepToken.CONFIG_ROLE(), deployer);
+            hrepToken.renounceRole(hrepToken.DEFAULT_ADMIN_ROLE(), deployer);
 
             // Renounce deployer config/admin roles on protocol contracts
             registry.renounceRole(registry.CONFIG_ROLE(), deployer);
@@ -374,58 +505,77 @@ contract DeployCuryo is ScaffoldETHDeploy {
             console.log("Renounced all deployer temporary roles (including Timelock)");
             console.log("VoterIdNFT ownership transferred to governance");
 
-            _verifyProductionDeploymentRoles({
-                deployerAddress: deployer,
-                governance: governance,
-                governorAddr: governorAddr,
-                crepToken: crepToken,
-                registry: registry,
-                votingEngine: votingEngine,
-                protocolConfig: protocolConfig,
-                rewardDistributor: rewardDistributor,
-                frontendRegistry: frontendRegistry,
-                profileRegistry: profileRegistry,
-                categoryRegistry: categoryRegistry,
-                voterIdNFT: voterIdNFT,
-                participationPool: participationPool,
-                humanFaucet: humanFaucet
-            });
-            console.log("Verified governance ownership and deployer role renunciation");
+            _verifyProductionDeploymentRoles(
+                ProductionDeploymentRoleVerification({
+                    deployerAddress: deployer,
+                    governance: governance,
+                    governorAddr: governorAddr,
+                    hrepToken: hrepToken,
+                    registry: registry,
+                    votingEngine: votingEngine,
+                    protocolConfig: protocolConfig,
+                    rewardDistributor: rewardDistributor,
+                    questionRewardPoolEscrow: questionRewardPoolEscrow,
+                    x402QuestionSubmitter: x402QuestionSubmitter,
+                    feedbackBonusEscrow: feedbackBonusEscrow,
+                    frontendRegistry: frontendRegistry,
+                    profileRegistry: profileRegistry,
+                    categoryRegistry: categoryRegistry,
+                    voterIdNFT: voterIdNFT,
+                    participationPool: participationPool,
+                    humanFaucet: humanFaucet,
+                    humanFaucetOpen: false
+                })
+            );
+            console.log("Verified governance ownership, deployer role renunciation, and paused faucet pre-launch");
+
+            exportDeployments(false);
+            console.log("Exported incomplete deployment addresses before opening HumanFaucet claims");
+
+            humanFaucet.openClaimsAndTransferOwnership();
+            console.log("Opened HumanFaucet public claims and transferred ownership to governance");
+
+            _verifyProductionDeploymentRoles(
+                ProductionDeploymentRoleVerification({
+                    deployerAddress: deployer,
+                    governance: governance,
+                    governorAddr: governorAddr,
+                    hrepToken: hrepToken,
+                    registry: registry,
+                    votingEngine: votingEngine,
+                    protocolConfig: protocolConfig,
+                    rewardDistributor: rewardDistributor,
+                    questionRewardPoolEscrow: questionRewardPoolEscrow,
+                    x402QuestionSubmitter: x402QuestionSubmitter,
+                    feedbackBonusEscrow: feedbackBonusEscrow,
+                    frontendRegistry: frontendRegistry,
+                    profileRegistry: profileRegistry,
+                    categoryRegistry: categoryRegistry,
+                    voterIdNFT: voterIdNFT,
+                    participationPool: participationPool,
+                    humanFaucet: humanFaucet,
+                    humanFaucetOpen: true
+                })
+            );
+            console.log("Verified HumanFaucet final launch state");
         } else {
             // Local dev: just revoke MINTER_ROLE as before
-            crepToken.revokeRole(crepToken.MINTER_ROLE(), deployer);
-        }
-
-        // 14. Register addresses for scaffold-eth ABI generation
-        if (address(timelock) != address(0)) {
-            deployments.push(Deployment("TimelockController", address(timelock)));
-        }
-        if (address(governor) != address(0)) {
-            deployments.push(Deployment("CuryoGovernor", address(governor)));
-        }
-        deployments.push(Deployment("CuryoReputation", address(crepToken)));
-        deployments.push(Deployment("FrontendRegistry", address(frontendRegistryProxy)));
-        deployments.push(Deployment("ProfileRegistry", address(profileRegistryProxy)));
-        deployments.push(Deployment("ContentRegistry", address(registryProxy)));
-        deployments.push(Deployment("RoundVotingEngine", address(votingEngineProxy)));
-        deployments.push(Deployment("ProtocolConfig", address(protocolConfigProxy)));
-        deployments.push(Deployment("RoundRewardDistributor", address(rewardDistributorProxy)));
-        deployments.push(Deployment("CategoryRegistry", address(categoryRegistry)));
-        deployments.push(Deployment("VoterIdNFT", address(voterIdNFT)));
-        deployments.push(Deployment("ParticipationPool", address(participationPool)));
-        if (address(humanFaucet) != address(0)) {
-            deployments.push(Deployment("HumanFaucet", address(humanFaucet)));
+            hrepToken.revokeRole(hrepToken.MINTER_ROLE(), deployer);
         }
 
         // Log deployed addresses
         console.log("=== Curyo Protocol Deployed ===");
-        console.log("CuryoReputation:", address(crepToken));
+        console.log("HumanReputation:", address(hrepToken));
         console.log("FrontendRegistry:", address(frontendRegistry));
         console.log("ProfileRegistry:", address(profileRegistry));
         console.log("ContentRegistry:", address(registry));
         console.log("RoundVotingEngine:", address(votingEngine));
         console.log("ProtocolConfig:", address(protocolConfig));
         console.log("RoundRewardDistributor:", address(rewardDistributor));
+        console.log("QuestionRewardPoolEscrow:", address(questionRewardPoolEscrow));
+        console.log("X402QuestionSubmitter:", address(x402QuestionSubmitter));
+        console.log("FeedbackBonusEscrow:", address(feedbackBonusEscrow));
+        console.log("USDC token:", usdcTokenAddress);
         console.log("CategoryRegistry:", address(categoryRegistry));
         console.log("VoterIdNFT:", address(voterIdNFT));
         console.log("ParticipationPool:", address(participationPool));
@@ -437,7 +587,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         if (!isLocalDev) {
             console.log("CuryoGovernor:", governorAddr);
         }
-        (, uint256 seededCategoryCount) = categoryRegistry.getApprovedCategoryIdsPaginated(0, 0);
+        (, uint256 seededCategoryCount) = categoryRegistry.getCategoryIdsPaginated(0, 0);
         console.log("Seeded categories:", seededCategoryCount);
         console.log("Local dev:", isLocalDev);
     }
@@ -455,26 +605,297 @@ contract DeployCuryo is ScaffoldETHDeploy {
         revert UnsupportedHumanFaucetChain(block.chainid);
     }
 
+    function _resolveCeloUsdcAddress() internal view returns (address) {
+        if (block.chainid == 42220) {
+            return CELO_MAINNET_USDC;
+        }
+        if (block.chainid == 11142220) {
+            return CELO_SEPOLIA_USDC;
+        }
+        revert UnsupportedHumanFaucetChain(block.chainid);
+    }
+
+    function _buildFaucetVerificationConfig() internal pure returns (SelfStructs.VerificationConfigV2 memory) {
+        return SelfUtils.formatVerificationConfigV2(
+            SelfUtils.UnformattedVerificationConfigV2({
+                olderThan: FAUCET_MINIMUM_AGE, forbiddenCountries: _buildFaucetForbiddenCountries(), ofacEnabled: true
+            })
+        );
+    }
+
+    function _buildFaucetForbiddenCountries() internal pure returns (string[] memory forbiddenCountries) {
+        forbiddenCountries = new string[](4);
+        forbiddenCountries[0] = "CUB";
+        forbiddenCountries[1] = "IRN";
+        forbiddenCountries[2] = "PRK";
+        forbiddenCountries[3] = "SYR";
+    }
+
+    function _loadMigrationBootstrapConfig() internal view returns (MigrationBootstrapConfig memory migrationConfig) {
+        string memory filePath = vm.envOr("MIGRATION_BOOTSTRAP_FILE", string(""));
+        if (bytes(filePath).length == 0) {
+            bool explicitSkip = vm.envOr("MIGRATION_BOOTSTRAP_SKIP", false);
+            _require(block.chainid == 31337 || explicitSkip, "Migration bootstrap file or skip required");
+            return migrationConfig;
+        }
+
+        string memory json = vm.readFile(filePath);
+        migrationConfig.users = vm.parseJsonAddressArray(json, ".users");
+        migrationConfig.nullifiers = _parseJsonUintStringArray(json, ".nullifiers");
+        migrationConfig.amounts = _parseJsonUintStringArray(json, ".amounts");
+        migrationConfig.referrers = vm.parseJsonAddressArray(json, ".referrers");
+        migrationConfig.claimantBonuses = _parseJsonUintStringArray(json, ".claimantBonuses");
+        migrationConfig.referrerRewards = _parseJsonUintStringArray(json, ".referrerRewards");
+    }
+
+    function _parseJsonUintStringArray(string memory json, string memory key)
+        internal
+        pure
+        returns (uint256[] memory values)
+    {
+        string[] memory rawValues = vm.parseJsonStringArray(json, key);
+        values = new uint256[](rawValues.length);
+        for (uint256 i = 0; i < rawValues.length; ++i) {
+            values[i] = _parseUintString(rawValues[i]);
+        }
+    }
+
+    function _parseUintString(string memory value) internal pure returns (uint256 parsed) {
+        bytes memory raw = bytes(value);
+        _require(raw.length > 0, "Migration uint empty");
+
+        if (raw.length > 2 && raw[0] == bytes1("0") && (raw[1] == bytes1("x") || raw[1] == bytes1("X"))) {
+            _require(raw.length <= 66, "Migration uint invalid hex length");
+            for (uint256 i = 2; i < raw.length; ++i) {
+                uint8 nibble = _hexNibble(uint8(raw[i]));
+                _require(nibble != type(uint8).max, "Migration uint invalid hex");
+                parsed = (parsed << 4) | uint256(nibble);
+            }
+            return parsed;
+        }
+
+        for (uint256 i = 0; i < raw.length; ++i) {
+            uint8 charCode = uint8(raw[i]);
+            _require(charCode >= 48 && charCode <= 57, "Migration uint invalid decimal");
+            parsed = parsed * 10 + uint256(charCode - 48);
+        }
+    }
+
+    function _hexNibble(uint8 charCode) internal pure returns (uint8) {
+        if (charCode >= 48 && charCode <= 57) return charCode - 48;
+        if (charCode >= 65 && charCode <= 70) return charCode - 55;
+        if (charCode >= 97 && charCode <= 102) return charCode - 87;
+        return type(uint8).max;
+    }
+
+    function _migrationBaseClaimAmount(uint256 claimIndex) internal pure returns (uint256) {
+        if (claimIndex < MIGRATION_TIER_0_THRESHOLD) return MIGRATION_TIER_0_AMOUNT;
+        if (claimIndex < MIGRATION_TIER_1_THRESHOLD) return MIGRATION_TIER_1_AMOUNT;
+        if (claimIndex < MIGRATION_TIER_2_THRESHOLD) return MIGRATION_TIER_2_AMOUNT;
+        if (claimIndex < MIGRATION_TIER_3_THRESHOLD) return MIGRATION_TIER_3_AMOUNT;
+        return MIGRATION_TIER_4_AMOUNT;
+    }
+
+    function _migrationReferralAmount(uint256 baseAmount) internal pure returns (uint256) {
+        return baseAmount * MIGRATION_REFERRAL_RATIO_BPS / MIGRATION_BPS_SCALE;
+    }
+
+    function _migrationBootstrapBatchSize() internal view returns (uint256 batchSize) {
+        batchSize = vm.envOr("MIGRATION_BOOTSTRAP_BATCH_SIZE", DEFAULT_MIGRATION_BOOTSTRAP_BATCH_SIZE);
+        _require(batchSize > 0, "Migration batch size zero");
+        _require(batchSize <= MAX_MIGRATION_BOOTSTRAP_BATCH_SIZE, "Migration batch size too large");
+    }
+
+    function _bootstrapMigratedClaimsInBatches(
+        HumanFaucet humanFaucet,
+        MigrationBootstrapConfig memory migrationConfig,
+        uint256 batchSize
+    ) internal returns (uint256 batchCount) {
+        _require(batchSize > 0, "Migration batch size zero");
+        uint256 claimCount = migrationConfig.users.length;
+        for (uint256 start = 0; start < claimCount;) {
+            uint256 remaining = claimCount - start;
+            uint256 end = start + (remaining < batchSize ? remaining : batchSize);
+            MigrationBootstrapConfig memory batch = _sliceMigrationBootstrapConfig(migrationConfig, start, end);
+            humanFaucet.bootstrapMigratedClaims(
+                batch.users,
+                batch.nullifiers,
+                batch.amounts,
+                batch.referrers,
+                batch.claimantBonuses,
+                batch.referrerRewards
+            );
+            unchecked {
+                ++batchCount;
+                start = end;
+            }
+        }
+    }
+
+    function _sliceMigrationBootstrapConfig(MigrationBootstrapConfig memory migrationConfig, uint256 start, uint256 end)
+        internal
+        pure
+        returns (MigrationBootstrapConfig memory batch)
+    {
+        uint256 length = end - start;
+        batch.users = new address[](length);
+        batch.nullifiers = new uint256[](length);
+        batch.amounts = new uint256[](length);
+        batch.referrers = new address[](length);
+        batch.claimantBonuses = new uint256[](length);
+        batch.referrerRewards = new uint256[](length);
+
+        for (uint256 i = 0; i < length; ++i) {
+            uint256 sourceIndex = start + i;
+            batch.users[i] = migrationConfig.users[sourceIndex];
+            batch.nullifiers[i] = migrationConfig.nullifiers[sourceIndex];
+            batch.amounts[i] = migrationConfig.amounts[sourceIndex];
+            batch.referrers[i] = migrationConfig.referrers[sourceIndex];
+            batch.claimantBonuses[i] = migrationConfig.claimantBonuses[sourceIndex];
+            batch.referrerRewards[i] = migrationConfig.referrerRewards[sourceIndex];
+        }
+    }
+
+    function _validateMigrationBootstrapConfig(MigrationBootstrapConfig memory migrationConfig) internal pure {
+        uint256 claimCount = migrationConfig.users.length;
+        _validateMigrationBootstrapLengths(migrationConfig, claimCount);
+
+        uint256 tableSize = _migrationLookupTableSize(claimCount);
+        address[] memory seenUsers = new address[](tableSize);
+        uint256[] memory seenNullifiers = new uint256[](tableSize);
+        uint256 totalMigratedClaimed;
+        for (uint256 i = 0; i < claimCount; ++i) {
+            totalMigratedClaimed += _validateMigrationBootstrapEntry(migrationConfig, seenUsers, seenNullifiers, i);
+        }
+        _require(totalMigratedClaimed <= FAUCET_POOL_AMOUNT, "Migration faucet allocation");
+    }
+
+    function _validateMigrationBootstrapLengths(MigrationBootstrapConfig memory migrationConfig, uint256 claimCount)
+        internal
+        pure
+    {
+        _require(migrationConfig.nullifiers.length == claimCount, "Migration nullifiers length");
+        _require(migrationConfig.amounts.length == claimCount, "Migration amounts length");
+        _require(migrationConfig.referrers.length == claimCount, "Migration referrers length");
+        _require(migrationConfig.claimantBonuses.length == claimCount, "Migration claimant bonuses length");
+        _require(migrationConfig.referrerRewards.length == claimCount, "Migration referrer rewards length");
+    }
+
+    function _validateMigrationBootstrapEntry(
+        MigrationBootstrapConfig memory migrationConfig,
+        address[] memory seenUsers,
+        uint256[] memory seenNullifiers,
+        uint256 index
+    ) internal pure returns (uint256 totalRequired) {
+        address user = migrationConfig.users[index];
+        uint256 nullifier = migrationConfig.nullifiers[index];
+        _require(user != address(0), "Migration user zero");
+        _require(nullifier != 0, "Migration nullifier zero");
+        _insertMigrationUser(seenUsers, user);
+        _insertMigrationNullifier(seenNullifiers, nullifier);
+
+        uint256 baseAmount = _migrationBaseClaimAmount(index);
+        uint256 claimantBonus;
+        uint256 referrerReward;
+        address referrer = migrationConfig.referrers[index];
+        if (referrer == address(0)) {
+            _require(migrationConfig.claimantBonuses[index] == 0, "Migration claimant bonus mismatch");
+            _require(migrationConfig.referrerRewards[index] == 0, "Migration referrer reward mismatch");
+        } else {
+            _require(referrer != user, "Migration self referral");
+            _require(_migrationUserSeen(seenUsers, referrer), "Migration referrer order");
+            claimantBonus = _migrationReferralAmount(baseAmount);
+            referrerReward = claimantBonus;
+            _require(migrationConfig.claimantBonuses[index] == claimantBonus, "Migration claimant bonus mismatch");
+            _require(migrationConfig.referrerRewards[index] == referrerReward, "Migration referrer reward mismatch");
+        }
+
+        _require(migrationConfig.amounts[index] == baseAmount + claimantBonus, "Migration amount mismatch");
+        totalRequired = migrationConfig.amounts[index] + referrerReward;
+    }
+
+    function _migrationLookupTableSize(uint256 claimCount) internal pure returns (uint256 size) {
+        size = 1;
+        uint256 minimumSize = claimCount == 0 ? 1 : claimCount * 2;
+        while (size < minimumSize) {
+            size <<= 1;
+        }
+    }
+
+    function _insertMigrationUser(address[] memory seenUsers, address user) internal pure {
+        uint256 slot = _migrationAddressSlot(user, seenUsers.length);
+        while (true) {
+            address current = seenUsers[slot];
+            if (current == address(0)) {
+                seenUsers[slot] = user;
+                return;
+            }
+            _require(current != user, "Migration duplicate user");
+            slot = (slot + 1) & (seenUsers.length - 1);
+        }
+    }
+
+    function _migrationUserSeen(address[] memory seenUsers, address user) internal pure returns (bool) {
+        uint256 slot = _migrationAddressSlot(user, seenUsers.length);
+        while (true) {
+            address current = seenUsers[slot];
+            if (current == address(0)) return false;
+            if (current == user) return true;
+            slot = (slot + 1) & (seenUsers.length - 1);
+        }
+        return false;
+    }
+
+    function _insertMigrationNullifier(uint256[] memory seenNullifiers, uint256 nullifier) internal pure {
+        uint256 slot = _migrationUintSlot(nullifier, seenNullifiers.length);
+        while (true) {
+            uint256 current = seenNullifiers[slot];
+            if (current == 0) {
+                seenNullifiers[slot] = nullifier;
+                return;
+            }
+            _require(current != nullifier, "Migration duplicate nullifier");
+            slot = (slot + 1) & (seenNullifiers.length - 1);
+        }
+    }
+
+    function _migrationAddressSlot(address value, uint256 tableSize) internal pure returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(value))) & (tableSize - 1);
+    }
+
+    function _migrationUintSlot(uint256 value, uint256 tableSize) internal pure returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(value))) & (tableSize - 1);
+    }
+
     function _verifyLaunchMintAllocation(
-        CuryoReputation crepToken,
+        HumanReputation hrepToken,
         address governance,
         RoundVotingEngine votingEngine,
         ParticipationPool participationPool,
-        HumanFaucet humanFaucet
+        HumanFaucet humanFaucet,
+        VoterIdNFT voterIdNFT
     ) internal view {
         _require(address(humanFaucet) != address(0), "HumanFaucet deployed");
-        _require(crepToken.MAX_SUPPLY() == TOTAL_SUPPLY_CAP, "cREP max supply constant");
-        _require(crepToken.totalSupply() == TOTAL_SUPPLY_CAP, "cREP full launch mint");
+        _require(hrepToken.MAX_SUPPLY() == TOTAL_SUPPLY_CAP, "HREP max supply constant");
+        _require(voterIdNFT.MAX_SUPPLY() >= MAX_FAUCET_CLAIMANTS_WITHOUT_REFERRALS, "VoterIdNFT faucet claim capacity");
+        _require(hrepToken.totalSupply() == TOTAL_SUPPLY_CAP, "HREP full launch mint");
         _require(votingEngine.consensusReserve() == CONSENSUS_POOL_AMOUNT, "Consensus reserve launch allocation");
         _require(
-            crepToken.balanceOf(address(votingEngine)) == CONSENSUS_POOL_AMOUNT, "RoundVotingEngine launch balance"
+            hrepToken.balanceOf(address(votingEngine)) == CONSENSUS_POOL_AMOUNT, "RoundVotingEngine launch balance"
         );
-        _require(crepToken.balanceOf(governance) == TREASURY_AMOUNT, "Treasury launch allocation");
+        _require(hrepToken.balanceOf(governance) == TREASURY_AMOUNT, "Treasury launch allocation");
         _require(
-            crepToken.balanceOf(address(participationPool)) == PARTICIPATION_POOL_AMOUNT,
+            hrepToken.balanceOf(address(participationPool)) == PARTICIPATION_POOL_AMOUNT,
             "ParticipationPool launch allocation"
         );
-        _require(crepToken.balanceOf(address(humanFaucet)) == FAUCET_POOL_AMOUNT, "HumanFaucet launch allocation");
+        _assertHumanFaucetLaunchAllocation(hrepToken, humanFaucet);
+    }
+
+    function _assertHumanFaucetLaunchAllocation(HumanReputation hrepToken, HumanFaucet humanFaucet) internal view {
+        _require(
+            hrepToken.balanceOf(address(humanFaucet)) + humanFaucet.totalClaimed() == FAUCET_POOL_AMOUNT,
+            "HumanFaucet launch allocation"
+        );
     }
 
     function _assertFaucetVerificationConfig(HumanFaucet humanFaucet, address hubAddress, bytes32 expectedConfigId)
@@ -489,7 +910,10 @@ contract DeployCuryo is ScaffoldETHDeploy {
         );
     }
 
-    function _assertExactExcludedHolders(CuryoGovernor governor, address[] memory expectedExcludedHolders) internal view {
+    function _assertExactExcludedHolders(CuryoGovernor governor, address[] memory expectedExcludedHolders)
+        internal
+        view
+    {
         address[] memory actualExcludedHolders = governor.getExcludedHolders();
         _require(actualExcludedHolders.length == expectedExcludedHolders.length, "Governor excluded holders length");
         for (uint256 i = 0; i < expectedExcludedHolders.length; i++) {
@@ -497,177 +921,459 @@ contract DeployCuryo is ScaffoldETHDeploy {
         }
     }
 
-    function _verifyProductionDeploymentRoles(
-        address deployerAddress,
-        address governance,
-        address governorAddr,
-        CuryoReputation crepToken,
-        ContentRegistry registry,
-        RoundVotingEngine votingEngine,
-        ProtocolConfig protocolConfig,
-        RoundRewardDistributor rewardDistributor,
-        FrontendRegistry frontendRegistry,
-        ProfileRegistry profileRegistry,
-        CategoryRegistry categoryRegistry,
-        VoterIdNFT voterIdNFT,
-        ParticipationPool participationPool,
-        HumanFaucet humanFaucet
-    ) internal view {
-        _requireHasRole(address(crepToken), crepToken.DEFAULT_ADMIN_ROLE(), governance, "cREP governance default admin");
-        _requireHasRole(address(crepToken), crepToken.CONFIG_ROLE(), governance, "cREP governance config");
-        _requireLacksRole(
-            address(crepToken), crepToken.DEFAULT_ADMIN_ROLE(), deployerAddress, "cREP deployer default admin"
-        );
-        _requireLacksRole(address(crepToken), crepToken.CONFIG_ROLE(), deployerAddress, "cREP deployer config");
-        _requireLacksRole(address(crepToken), crepToken.MINTER_ROLE(), deployerAddress, "cREP deployer minter");
+    function _verifyProductionDeploymentRoles(ProductionDeploymentRoleVerification memory targets) internal view {
+        _verifyProductionTokenRoles(targets);
+        _verifyProductionRegistryRoles(targets);
+        _verifyProductionVotingEngineRoles(targets);
+        _verifyProductionProtocolConfigRoles(targets);
+        _verifyProductionRewardDistributorRoles(targets);
+        _verifyProductionQuestionEscrowRoles(targets);
+        _verifyProductionFeedbackEscrowRoles(targets);
+        _verifyProductionUserRegistryRoles(targets);
+        _verifyProductionCoreWiring(targets);
+        _verifyProductionEscrowWiring(targets);
+        _verifyProductionX402SubmitterWiring(targets);
+        _verifyProductionParticipationAndFaucetWiring(targets);
+        _verifyProductionGovernorAndTimelock(targets);
+    }
 
+    function _verifyProductionTokenRoles(ProductionDeploymentRoleVerification memory targets) internal view {
+        HumanReputation hrepToken = targets.hrepToken;
         _requireHasRole(
-            address(registry), registry.DEFAULT_ADMIN_ROLE(), governance, "ContentRegistry governance default admin"
+            address(hrepToken), hrepToken.DEFAULT_ADMIN_ROLE(), targets.governance, "HREP governance default admin"
         );
-        _requireHasRole(address(registry), registry.ADMIN_ROLE(), governance, "ContentRegistry governance admin");
-        _requireHasRole(address(registry), registry.CONFIG_ROLE(), governance, "ContentRegistry governance config");
-        _requireHasRole(address(registry), registry.PAUSER_ROLE(), governance, "ContentRegistry governance pauser");
-        _requireHasRole(address(registry), registry.TREASURY_ROLE(), governance, "ContentRegistry governance treasury");
-        _requireHasRole(
-            address(registry), registry.TREASURY_ADMIN_ROLE(), governance, "ContentRegistry governance treasury admin"
-        );
-        _requireLacksRole(address(registry), registry.CONFIG_ROLE(), deployerAddress, "ContentRegistry deployer config");
+        _requireHasRole(address(hrepToken), hrepToken.CONFIG_ROLE(), targets.governance, "HREP governance config");
         _requireLacksRole(
-            address(registry), registry.TREASURY_ROLE(), deployerAddress, "ContentRegistry deployer treasury"
+            address(hrepToken), hrepToken.DEFAULT_ADMIN_ROLE(), targets.deployerAddress, "HREP deployer default admin"
         );
-        _requireProxyAdminOwner(address(registry), governance, "ContentRegistry proxy admin owner");
+        _requireLacksRole(address(hrepToken), hrepToken.CONFIG_ROLE(), targets.deployerAddress, "HREP deployer config");
+        _requireLacksRole(address(hrepToken), hrepToken.MINTER_ROLE(), targets.deployerAddress, "HREP deployer minter");
+    }
 
+    function _verifyProductionRegistryRoles(ProductionDeploymentRoleVerification memory targets) internal view {
+        ContentRegistry registry = targets.registry;
+        _requireHasRole(
+            address(registry),
+            registry.DEFAULT_ADMIN_ROLE(),
+            targets.governance,
+            "ContentRegistry governance default admin"
+        );
+        _requireHasRole(
+            address(registry), registry.CONFIG_ROLE(), targets.governance, "ContentRegistry governance config"
+        );
+        _requireHasRole(
+            address(registry), registry.PAUSER_ROLE(), targets.governance, "ContentRegistry governance pauser"
+        );
+        _requireHasRole(
+            address(registry), registry.TREASURY_ROLE(), targets.governance, "ContentRegistry governance treasury"
+        );
+        _requireHasRole(
+            address(registry),
+            registry.TREASURY_ADMIN_ROLE(),
+            targets.governance,
+            "ContentRegistry governance treasury admin"
+        );
+        _requireHasRole(
+            address(registry),
+            registry.X402_GATEWAY_ROLE(),
+            address(targets.x402QuestionSubmitter),
+            "ContentRegistry x402 gateway"
+        );
+        _requireLacksRole(
+            address(registry), registry.CONFIG_ROLE(), targets.deployerAddress, "ContentRegistry deployer config"
+        );
+        _requireLacksRole(
+            address(registry), registry.TREASURY_ROLE(), targets.deployerAddress, "ContentRegistry deployer treasury"
+        );
+        _requireProxyAdminOwner(address(registry), targets.governance, "ContentRegistry proxy admin owner");
+    }
+
+    function _verifyProductionVotingEngineRoles(ProductionDeploymentRoleVerification memory targets) internal view {
+        RoundVotingEngine votingEngine = targets.votingEngine;
         _requireHasRole(
             address(votingEngine),
             votingEngine.DEFAULT_ADMIN_ROLE(),
-            governance,
+            targets.governance,
             "RoundVotingEngine governance default admin"
         );
         _requireHasRole(
-            address(votingEngine), votingEngine.PAUSER_ROLE(), governance, "RoundVotingEngine governance pauser"
+            address(votingEngine), votingEngine.PAUSER_ROLE(), targets.governance, "RoundVotingEngine governance pauser"
         );
-        _requireProxyAdminOwner(address(votingEngine), governance, "RoundVotingEngine proxy admin owner");
+        _requireProxyAdminOwner(address(votingEngine), targets.governance, "RoundVotingEngine proxy admin owner");
+    }
 
+    function _verifyProductionProtocolConfigRoles(ProductionDeploymentRoleVerification memory targets) internal view {
+        ProtocolConfig protocolConfig = targets.protocolConfig;
         _requireHasRole(
             address(protocolConfig),
             protocolConfig.DEFAULT_ADMIN_ROLE(),
-            governance,
+            targets.governance,
             "ProtocolConfig governance default admin"
         );
         _requireHasRole(
-            address(protocolConfig), protocolConfig.CONFIG_ROLE(), governance, "ProtocolConfig governance config"
+            address(protocolConfig),
+            protocolConfig.CONFIG_ROLE(),
+            targets.governance,
+            "ProtocolConfig governance config"
         );
         _requireHasRole(
-            address(protocolConfig), protocolConfig.TREASURY_ROLE(), governance, "ProtocolConfig governance treasury"
+            address(protocolConfig),
+            protocolConfig.TREASURY_ROLE(),
+            targets.governance,
+            "ProtocolConfig governance treasury"
         );
         _requireHasRole(
             address(protocolConfig),
             protocolConfig.TREASURY_ADMIN_ROLE(),
-            governance,
+            targets.governance,
             "ProtocolConfig governance treasury admin"
         );
         _requireLacksRole(
-            address(protocolConfig), protocolConfig.CONFIG_ROLE(), deployerAddress, "ProtocolConfig deployer config"
+            address(protocolConfig),
+            protocolConfig.CONFIG_ROLE(),
+            targets.deployerAddress,
+            "ProtocolConfig deployer config"
         );
         _requireLacksRole(
-            address(protocolConfig), protocolConfig.TREASURY_ROLE(), deployerAddress, "ProtocolConfig deployer treasury"
+            address(protocolConfig),
+            protocolConfig.TREASURY_ROLE(),
+            targets.deployerAddress,
+            "ProtocolConfig deployer treasury"
         );
-        _requireProxyAdminOwner(address(protocolConfig), governance, "ProtocolConfig proxy admin owner");
+        _requireProxyAdminOwner(address(protocolConfig), targets.governance, "ProtocolConfig proxy admin owner");
+    }
 
+    function _verifyProductionRewardDistributorRoles(ProductionDeploymentRoleVerification memory targets)
+        internal
+        view
+    {
+        RoundRewardDistributor rewardDistributor = targets.rewardDistributor;
         _requireHasRole(
             address(rewardDistributor),
             rewardDistributor.DEFAULT_ADMIN_ROLE(),
-            governance,
+            targets.governance,
             "RoundRewardDistributor governance default admin"
         );
-        _requireProxyAdminOwner(address(rewardDistributor), governance, "RoundRewardDistributor proxy admin owner");
+        _requireProxyAdminOwner(
+            address(rewardDistributor), targets.governance, "RoundRewardDistributor proxy admin owner"
+        );
+    }
 
+    function _verifyProductionQuestionEscrowRoles(ProductionDeploymentRoleVerification memory targets) internal view {
+        QuestionRewardPoolEscrow questionRewardPoolEscrow = targets.questionRewardPoolEscrow;
+        _requireHasRole(
+            address(questionRewardPoolEscrow),
+            questionRewardPoolEscrow.DEFAULT_ADMIN_ROLE(),
+            targets.governance,
+            "QuestionRewardPoolEscrow governance default admin"
+        );
+        _requireHasRole(
+            address(questionRewardPoolEscrow),
+            QUESTION_ESCROW_CONFIG_ROLE,
+            targets.governance,
+            "QuestionRewardPoolEscrow governance config"
+        );
+        _requireHasRole(
+            address(questionRewardPoolEscrow),
+            QUESTION_ESCROW_PAUSER_ROLE,
+            targets.governance,
+            "QuestionRewardPoolEscrow governance pauser"
+        );
+        _requireProxyAdminOwner(
+            address(questionRewardPoolEscrow), targets.governance, "QuestionRewardPoolEscrow proxy admin owner"
+        );
+    }
+
+    function _verifyProductionFeedbackEscrowRoles(ProductionDeploymentRoleVerification memory targets) internal view {
+        FeedbackBonusEscrow feedbackBonusEscrow = targets.feedbackBonusEscrow;
+        _requireHasRole(
+            address(feedbackBonusEscrow),
+            feedbackBonusEscrow.DEFAULT_ADMIN_ROLE(),
+            targets.governance,
+            "FeedbackBonusEscrow governance default admin"
+        );
+        _requireHasRole(
+            address(feedbackBonusEscrow),
+            feedbackBonusEscrow.CONFIG_ROLE(),
+            targets.governance,
+            "FeedbackBonusEscrow governance config"
+        );
+        _requireHasRole(
+            address(feedbackBonusEscrow),
+            feedbackBonusEscrow.PAUSER_ROLE(),
+            targets.governance,
+            "FeedbackBonusEscrow governance pauser"
+        );
+        _requireProxyAdminOwner(
+            address(feedbackBonusEscrow), targets.governance, "FeedbackBonusEscrow proxy admin owner"
+        );
+    }
+
+    function _verifyProductionUserRegistryRoles(ProductionDeploymentRoleVerification memory targets) internal view {
+        FrontendRegistry frontendRegistry = targets.frontendRegistry;
         _requireHasRole(
             address(frontendRegistry),
             frontendRegistry.DEFAULT_ADMIN_ROLE(),
-            governance,
+            targets.governance,
             "FrontendRegistry governance default admin"
         );
         _requireHasRole(
-            address(frontendRegistry), frontendRegistry.ADMIN_ROLE(), governance, "FrontendRegistry governance admin"
+            address(frontendRegistry),
+            frontendRegistry.ADMIN_ROLE(),
+            targets.governance,
+            "FrontendRegistry governance admin"
         );
         _requireHasRole(
             address(frontendRegistry),
             frontendRegistry.GOVERNANCE_ROLE(),
-            governance,
+            targets.governance,
             "FrontendRegistry governance governance-role"
         );
-        _requireLacksRole(
-            address(frontendRegistry), frontendRegistry.ADMIN_ROLE(), deployerAddress, "FrontendRegistry deployer admin"
+        _requireHasRole(
+            address(frontendRegistry),
+            frontendRegistry.FEE_CREDITOR_ROLE(),
+            address(targets.rewardDistributor),
+            "FrontendRegistry reward distributor fee creditor"
         );
-        _requireProxyAdminOwner(address(frontendRegistry), governance, "FrontendRegistry proxy admin owner");
+        _requireLacksRole(
+            address(frontendRegistry),
+            frontendRegistry.ADMIN_ROLE(),
+            targets.deployerAddress,
+            "FrontendRegistry deployer admin"
+        );
+        _requireProxyAdminOwner(address(frontendRegistry), targets.governance, "FrontendRegistry proxy admin owner");
 
+        ProfileRegistry profileRegistry = targets.profileRegistry;
         _requireHasRole(
             address(profileRegistry),
             profileRegistry.DEFAULT_ADMIN_ROLE(),
-            governance,
+            targets.governance,
             "ProfileRegistry governance default admin"
         );
         _requireHasRole(
-            address(profileRegistry), profileRegistry.ADMIN_ROLE(), governance, "ProfileRegistry governance admin"
+            address(profileRegistry),
+            profileRegistry.ADMIN_ROLE(),
+            targets.governance,
+            "ProfileRegistry governance admin"
         );
         _requireLacksRole(
-            address(profileRegistry), profileRegistry.ADMIN_ROLE(), deployerAddress, "ProfileRegistry deployer admin"
+            address(profileRegistry),
+            profileRegistry.ADMIN_ROLE(),
+            targets.deployerAddress,
+            "ProfileRegistry deployer admin"
         );
-        _requireProxyAdminOwner(address(profileRegistry), governance, "ProfileRegistry proxy admin owner");
+        _requireProxyAdminOwner(address(profileRegistry), targets.governance, "ProfileRegistry proxy admin owner");
 
+        CategoryRegistry categoryRegistry = targets.categoryRegistry;
         _requireHasRole(
             address(categoryRegistry),
             categoryRegistry.DEFAULT_ADMIN_ROLE(),
-            governance,
+            targets.governance,
             "CategoryRegistry governance default admin"
         );
         _requireHasRole(
-            address(categoryRegistry), categoryRegistry.ADMIN_ROLE(), governance, "CategoryRegistry governance admin"
+            address(categoryRegistry),
+            categoryRegistry.ADMIN_ROLE(),
+            targets.governance,
+            "CategoryRegistry governance admin"
         );
         _requireLacksRole(
-            address(categoryRegistry), categoryRegistry.ADMIN_ROLE(), deployerAddress, "CategoryRegistry deployer admin"
+            address(categoryRegistry),
+            categoryRegistry.ADMIN_ROLE(),
+            targets.deployerAddress,
+            "CategoryRegistry deployer admin"
         );
+    }
 
-        _require(protocolConfig.voterIdNFT() == address(voterIdNFT), "ProtocolConfig voterIdNFT");
-        _require(protocolConfig.treasury() == governance, "ProtocolConfig treasury");
-        _require(address(registry.voterIdNFT()) == address(voterIdNFT), "ContentRegistry voterIdNFT");
-        _require(registry.treasury() == governance, "ContentRegistry treasury");
-        _require(registry.bonusPool() == governance, "ContentRegistry bonus pool");
-        _require(address(categoryRegistry.voterIdNFT()) == address(voterIdNFT), "CategoryRegistry voterIdNFT");
-        _require(address(frontendRegistry.voterIdNFT()) == address(voterIdNFT), "FrontendRegistry voterIdNFT");
-        _require(address(profileRegistry.voterIdNFT()) == address(voterIdNFT), "ProfileRegistry voterIdNFT");
-        _require(voterIdNFT.owner() == governance, "VoterIdNFT governance owner");
-        _require(participationPool.owner() == governance, "ParticipationPool governance owner");
-        if (address(humanFaucet) != address(0)) {
-            _require(address(humanFaucet.voterIdNFT()) == address(voterIdNFT), "HumanFaucet voterIdNFT");
-            _require(humanFaucet.owner() == governance, "HumanFaucet governance owner");
+    function _verifyProductionCoreWiring(ProductionDeploymentRoleVerification memory targets) internal view {
+        _require(targets.hrepToken.governor() == targets.governorAddr, "HREP governor");
+        _require(targets.hrepToken.votingEngine() == address(targets.votingEngine), "HREP voting engine");
+        _require(targets.hrepToken.contentRegistry() == address(targets.registry), "HREP content registry");
+        _require(
+            address(targets.rewardDistributor.hrepToken()) == address(targets.hrepToken),
+            "RoundRewardDistributor HREP token"
+        );
+        _require(
+            address(targets.rewardDistributor.votingEngine()) == address(targets.votingEngine),
+            "RoundRewardDistributor voting engine"
+        );
+        _require(
+            address(targets.rewardDistributor.registry()) == address(targets.registry),
+            "RoundRewardDistributor registry"
+        );
+        _require(
+            address(targets.votingEngine.protocolConfig()) == address(targets.protocolConfig),
+            "RoundVotingEngine protocol config"
+        );
+        _require(
+            targets.protocolConfig.rewardDistributor() == address(targets.rewardDistributor),
+            "ProtocolConfig reward distributor"
+        );
+        _require(
+            targets.protocolConfig.frontendRegistry() == address(targets.frontendRegistry),
+            "ProtocolConfig frontend registry"
+        );
+        _require(
+            targets.protocolConfig.categoryRegistry() == address(targets.categoryRegistry),
+            "ProtocolConfig category registry"
+        );
+        _require(
+            targets.protocolConfig.participationPool() == address(targets.participationPool),
+            "ProtocolConfig participation pool"
+        );
+        _require(targets.protocolConfig.voterIdNFT() == address(targets.voterIdNFT), "ProtocolConfig voterIdNFT");
+        _require(targets.protocolConfig.treasury() == targets.governance, "ProtocolConfig treasury");
+        _require(address(targets.registry.hrepToken()) == address(targets.hrepToken), "ContentRegistry HREP token");
+        _require(targets.registry.votingEngine() == address(targets.votingEngine), "ContentRegistry voting engine");
+        _require(
+            address(targets.registry.categoryRegistry()) == address(targets.categoryRegistry),
+            "ContentRegistry category registry"
+        );
+        _require(
+            address(targets.registry.protocolConfig()) == address(targets.protocolConfig),
+            "ContentRegistry protocol config"
+        );
+        _require(
+            targets.registry.questionRewardPoolEscrow() == address(targets.questionRewardPoolEscrow),
+            "ContentRegistry question reward pool escrow"
+        );
+        _require(address(targets.registry.voterIdNFT()) == address(targets.voterIdNFT), "ContentRegistry voterIdNFT");
+        _require(targets.registry.treasury() == targets.governance, "ContentRegistry treasury");
+        _require(targets.registry.bonusPool() == targets.governance, "ContentRegistry bonus pool");
+        _require(
+            address(targets.frontendRegistry.hrepToken()) == address(targets.hrepToken), "FrontendRegistry HREP token"
+        );
+        _require(
+            address(targets.frontendRegistry.votingEngine()) == address(targets.votingEngine),
+            "FrontendRegistry voting engine"
+        );
+        _require(
+            address(targets.frontendRegistry.voterIdNFT()) == address(targets.voterIdNFT), "FrontendRegistry voterIdNFT"
+        );
+        _require(
+            address(targets.profileRegistry.voterIdNFT()) == address(targets.voterIdNFT), "ProfileRegistry voterIdNFT"
+        );
+    }
+
+    function _verifyProductionEscrowWiring(ProductionDeploymentRoleVerification memory targets) internal view {
+        (
+            address questionHrep,
+            address questionUsdc,
+            address questionRegistry,
+            address questionVotingEngine,
+            address questionVoterIdNFT
+        ) = targets.questionRewardPoolEscrow.getWiring();
+        _require(questionHrep == address(targets.hrepToken), "QuestionRewardPoolEscrow HREP");
+        _require(questionVoterIdNFT == address(targets.voterIdNFT), "QuestionRewardPoolEscrow voterIdNFT");
+        _require(questionRegistry == address(targets.registry), "QuestionRewardPoolEscrow registry");
+        _require(questionVotingEngine == address(targets.votingEngine), "QuestionRewardPoolEscrow voting engine");
+        _require(questionUsdc == _resolveCeloUsdcAddress(), "QuestionRewardPoolEscrow USDC");
+        _require(
+            address(targets.feedbackBonusEscrow.voterIdNFT()) == address(targets.voterIdNFT),
+            "FeedbackBonusEscrow voterIdNFT"
+        );
+        _require(
+            address(targets.feedbackBonusEscrow.registry()) == address(targets.registry), "FeedbackBonusEscrow registry"
+        );
+        _require(
+            address(targets.feedbackBonusEscrow.votingEngine()) == address(targets.votingEngine),
+            "FeedbackBonusEscrow voting engine"
+        );
+        _require(
+            address(targets.feedbackBonusEscrow.usdcToken()) == _resolveCeloUsdcAddress(), "FeedbackBonusEscrow USDC"
+        );
+    }
+
+    function _verifyProductionX402SubmitterWiring(ProductionDeploymentRoleVerification memory targets) internal view {
+        _require(targets.x402QuestionSubmitter.registry() == targets.registry, "X402QuestionSubmitter registry");
+        _require(
+            address(targets.x402QuestionSubmitter.usdcToken()) == _resolveCeloUsdcAddress(),
+            "X402QuestionSubmitter USDC"
+        );
+        _require(
+            targets.x402QuestionSubmitter.questionRewardPoolEscrow() == address(targets.questionRewardPoolEscrow),
+            "X402QuestionSubmitter question escrow"
+        );
+    }
+
+    function _verifyProductionParticipationAndFaucetWiring(ProductionDeploymentRoleVerification memory targets)
+        internal
+        view
+    {
+        _require(targets.voterIdNFT.owner() == targets.governance, "VoterIdNFT governance owner");
+        _require(targets.voterIdNFT.governance() == targets.governance, "VoterIdNFT governance");
+        _require(targets.voterIdNFT.stakeRecorder() == address(targets.votingEngine), "VoterIdNFT stake recorder");
+        _require(targets.participationPool.owner() == targets.governance, "ParticipationPool governance owner");
+        _require(
+            address(targets.participationPool.hrepToken()) == address(targets.hrepToken), "ParticipationPool HREP token"
+        );
+        _require(targets.participationPool.governance() == targets.governance, "ParticipationPool governance");
+        _require(
+            targets.participationPool.authorizedCallers(address(targets.rewardDistributor)),
+            "ParticipationPool reward distributor authorized"
+        );
+        if (address(targets.humanFaucet) != address(0)) {
+            _require(
+                targets.voterIdNFT.authorizedMinters(address(targets.humanFaucet)), "VoterIdNFT HumanFaucet minter"
+            );
+            _require(address(targets.humanFaucet.hrepToken()) == address(targets.hrepToken), "HumanFaucet HREP token");
+            _require(address(targets.humanFaucet.voterIdNFT()) == address(targets.voterIdNFT), "HumanFaucet voterIdNFT");
+            _require(targets.humanFaucet.governance() == targets.governance, "HumanFaucet governance");
+            _require(targets.humanFaucet.migrationBootstrapClosed(), "HumanFaucet migration bootstrap closed");
+            _require(
+                targets.humanFaucet.recipientAuthorizationRequired(), "HumanFaucet recipient authorization required"
+            );
+            if (targets.humanFaucetOpen) {
+                _require(targets.humanFaucet.owner() == targets.governance, "HumanFaucet governance owner");
+                _require(!targets.humanFaucet.paused(), "HumanFaucet production claims open");
+            } else {
+                _require(
+                    targets.humanFaucet.owner() == targets.deployerAddress, "HumanFaucet deployer owner pre-launch"
+                );
+                _require(targets.humanFaucet.paused(), "HumanFaucet paused pre-launch");
+            }
         }
+    }
 
-        _require(governorAddr != address(0), "Governor deployed");
-        CuryoGovernor governor = CuryoGovernor(payable(governorAddr));
-        _require(governor.categoryRegistry() == address(categoryRegistry), "Governor category registry");
+    function _verifyProductionGovernorAndTimelock(ProductionDeploymentRoleVerification memory targets) internal view {
+        _require(targets.governorAddr != address(0), "Governor deployed");
+        CuryoGovernor governor = CuryoGovernor(payable(targets.governorAddr));
+        _require(address(governor.hrepToken()) == address(targets.hrepToken), "Governor HREP token");
+        _require(governor.timelock() == targets.governance, "Governor timelock");
         _require(governor.poolsInitialized(), "Governor pools initialized");
-        _assertExactExcludedHolders(
-            governor,
-            _buildQuorumExcludedHolders(
-                address(humanFaucet),
-                address(participationPool),
-                address(rewardDistributor),
-                address(votingEngine),
-                governance,
-                address(registry),
-                address(frontendRegistry),
-                address(categoryRegistry)
-            )
+        _assertExactExcludedHolders(governor, _buildProductionQuorumExcludedHolders(targets));
+
+        TimelockController timelock = TimelockController(payable(targets.governance));
+        _requireHasRole(address(timelock), timelock.DEFAULT_ADMIN_ROLE(), address(timelock), "Timelock self admin");
+        _requireHasRole(address(timelock), timelock.PROPOSER_ROLE(), targets.governorAddr, "Timelock governor proposer");
+        _requireHasRole(
+            address(timelock), timelock.CANCELLER_ROLE(), targets.governorAddr, "Timelock governor canceller"
         );
-        TimelockController timelock = TimelockController(payable(governance));
-        _requireHasRole(address(timelock), timelock.PROPOSER_ROLE(), governorAddr, "Timelock governor proposer");
-        _requireHasRole(address(timelock), timelock.CANCELLER_ROLE(), governorAddr, "Timelock governor canceller");
-        _requireLacksRole(address(timelock), timelock.PROPOSER_ROLE(), deployerAddress, "Timelock deployer proposer");
-        _requireLacksRole(address(timelock), timelock.CANCELLER_ROLE(), deployerAddress, "Timelock deployer canceller");
+        _requireHasRole(address(timelock), timelock.EXECUTOR_ROLE(), address(0), "Timelock open executor");
         _requireLacksRole(
-            address(timelock), timelock.DEFAULT_ADMIN_ROLE(), deployerAddress, "Timelock deployer default admin"
+            address(timelock), timelock.PROPOSER_ROLE(), targets.deployerAddress, "Timelock deployer proposer"
+        );
+        _requireLacksRole(
+            address(timelock), timelock.CANCELLER_ROLE(), targets.deployerAddress, "Timelock deployer canceller"
+        );
+        _requireLacksRole(
+            address(timelock), timelock.DEFAULT_ADMIN_ROLE(), targets.deployerAddress, "Timelock deployer default admin"
+        );
+    }
+
+    function _buildProductionQuorumExcludedHolders(ProductionDeploymentRoleVerification memory targets)
+        internal
+        pure
+        returns (address[] memory)
+    {
+        return _buildQuorumExcludedHolders(
+            address(targets.humanFaucet),
+            address(targets.participationPool),
+            address(targets.rewardDistributor),
+            address(targets.votingEngine),
+            targets.governance,
+            address(targets.registry),
+            address(targets.frontendRegistry)
         );
     }
 
@@ -705,10 +1411,9 @@ contract DeployCuryo is ScaffoldETHDeploy {
         address votingEngine,
         address treasury,
         address contentRegistry,
-        address frontendRegistry,
-        address categoryRegistry
+        address frontendRegistry
     ) internal pure returns (address[] memory holders) {
-        address[] memory temp = new address[](8);
+        address[] memory temp = new address[](7);
         uint256 count;
 
         if (humanFaucet != address(0)) {
@@ -720,7 +1425,6 @@ contract DeployCuryo is ScaffoldETHDeploy {
         temp[count++] = treasury;
         temp[count++] = contentRegistry;
         temp[count++] = frontendRegistry;
-        temp[count++] = categoryRegistry;
 
         holders = new address[](count);
         for (uint256 i = 0; i < count; i++) {
@@ -729,178 +1433,117 @@ contract DeployCuryo is ScaffoldETHDeploy {
     }
 
     function _seedCategories(CategoryRegistry registry) internal {
-        // YouTube (categoryId: 1)
-        string[] memory youtubeSubcats = new string[](12);
-        youtubeSubcats[0] = "Education";
-        youtubeSubcats[1] = "Entertainment";
-        youtubeSubcats[2] = "Technology";
-        youtubeSubcats[3] = "Science";
-        youtubeSubcats[4] = "Music";
-        youtubeSubcats[5] = "Art";
-        youtubeSubcats[6] = "Gaming";
-        youtubeSubcats[7] = "News";
-        youtubeSubcats[8] = "Sports";
-        youtubeSubcats[9] = "Lifestyle";
-        youtubeSubcats[10] = "Finance";
-        youtubeSubcats[11] = "Health";
-        registry.addApprovedCategory("YouTube", "youtube.com", youtubeSubcats);
+        string[] memory productSubcats = new string[](8);
+        productSubcats[0] = "Value";
+        productSubcats[1] = "Quality";
+        productSubcats[2] = "Usability";
+        productSubcats[3] = "Durability";
+        productSubcats[4] = "Design";
+        productSubcats[5] = "Support";
+        productSubcats[6] = "Safety";
+        productSubcats[7] = "Sustainability";
+        registry.addCategory("Products", "products", productSubcats);
 
-        // Twitch (categoryId: 2)
-        string[] memory twitchSubcats = new string[](5);
-        twitchSubcats[0] = "Gaming";
-        twitchSubcats[1] = "Music";
-        twitchSubcats[2] = "Talk Shows";
-        twitchSubcats[3] = "Sports";
-        twitchSubcats[4] = "Creative";
-        registry.addApprovedCategory("Twitch", "twitch.tv", twitchSubcats);
+        string[] memory placesTravelSubcats = new string[](13);
+        placesTravelSubcats[0] = "Restaurants";
+        placesTravelSubcats[1] = "Cafes";
+        placesTravelSubcats[2] = "Nightlife";
+        placesTravelSubcats[3] = "Hotels";
+        placesTravelSubcats[4] = "Attractions";
+        placesTravelSubcats[5] = "Itineraries";
+        placesTravelSubcats[6] = "Service";
+        placesTravelSubcats[7] = "Atmosphere";
+        placesTravelSubcats[8] = "Accessibility";
+        placesTravelSubcats[9] = "Value";
+        placesTravelSubcats[10] = "Local Tips";
+        placesTravelSubcats[11] = "Family";
+        placesTravelSubcats[12] = "Solo Travel";
+        registry.addCategory("Places & Travel", "places-travel", placesTravelSubcats);
 
-        // Magic: The Gathering - Scryfall (categoryId: 3)
-        string[] memory mtgSubcats = new string[](8);
-        mtgSubcats[0] = "Creatures";
-        mtgSubcats[1] = "Instants";
-        mtgSubcats[2] = "Sorceries";
-        mtgSubcats[3] = "Enchantments";
-        mtgSubcats[4] = "Artifacts";
-        mtgSubcats[5] = "Lands";
-        mtgSubcats[6] = "Planeswalkers";
-        mtgSubcats[7] = "Commanders";
-        registry.addApprovedCategory("Magic: The Gathering", "scryfall.com", mtgSubcats);
+        string[] memory softwareSubcats = new string[](12);
+        softwareSubcats[0] = "Web Apps";
+        softwareSubcats[1] = "Mobile Apps";
+        softwareSubcats[2] = "Developer Tools";
+        softwareSubcats[3] = "Repos";
+        softwareSubcats[4] = "Libraries";
+        softwareSubcats[5] = "APIs";
+        softwareSubcats[6] = "Smart Contracts";
+        softwareSubcats[7] = "Productivity";
+        softwareSubcats[8] = "Onboarding";
+        softwareSubcats[9] = "Performance";
+        softwareSubcats[10] = "Trust";
+        softwareSubcats[11] = "Pricing";
+        registry.addCategory("Software", "software", softwareSubcats);
 
-        // Movies - TMDB (categoryId: 4)
-        string[] memory movieSubcats = new string[](10);
-        movieSubcats[0] = "Action";
-        movieSubcats[1] = "Comedy";
-        movieSubcats[2] = "Drama";
-        movieSubcats[3] = "Horror";
-        movieSubcats[4] = "Sci-Fi";
-        movieSubcats[5] = "Documentary";
-        movieSubcats[6] = "Animation";
-        movieSubcats[7] = "Thriller";
-        movieSubcats[8] = "Romance";
-        movieSubcats[9] = "Fantasy";
-        registry.addApprovedCategory("Movies", "themoviedb.org", movieSubcats);
+        string[] memory mediaSubcats = new string[](8);
+        mediaSubcats[0] = "Images";
+        mediaSubcats[1] = "YouTube";
+        mediaSubcats[2] = "Education";
+        mediaSubcats[3] = "Entertainment";
+        mediaSubcats[4] = "Art";
+        mediaSubcats[5] = "Photography";
+        mediaSubcats[6] = "Audio";
+        mediaSubcats[7] = "Culture";
+        registry.addCategory("Media", "media", mediaSubcats);
 
-        // People - Wikipedia (categoryId: 5)
-        string[] memory peopleSubcats = new string[](8);
-        peopleSubcats[0] = "Athletes";
-        peopleSubcats[1] = "Musicians";
-        peopleSubcats[2] = "Politicians";
-        peopleSubcats[3] = "Scientists";
-        peopleSubcats[4] = "Actors";
-        peopleSubcats[5] = "Business";
-        peopleSubcats[6] = "Artists";
-        peopleSubcats[7] = "Authors";
-        registry.addApprovedCategory("People", "en.wikipedia.org", peopleSubcats);
+        string[] memory designSubcats = new string[](8);
+        designSubcats[0] = "Visual Design";
+        designSubcats[1] = "Brand";
+        designSubcats[2] = "Typography";
+        designSubcats[3] = "Layout";
+        designSubcats[4] = "Accessibility";
+        designSubcats[5] = "Photography";
+        designSubcats[6] = "Fashion";
+        designSubcats[7] = "Architecture";
+        registry.addCategory("Design", "design", designSubcats);
 
-        // Games - RAWG (categoryId: 6)
-        string[] memory gameSubcats = new string[](8);
-        gameSubcats[0] = "Action";
-        gameSubcats[1] = "RPG";
-        gameSubcats[2] = "Strategy";
-        gameSubcats[3] = "Simulation";
-        gameSubcats[4] = "Adventure";
-        gameSubcats[5] = "Indie";
-        gameSubcats[6] = "Sports";
-        gameSubcats[7] = "Puzzle";
-        registry.addApprovedCategory("Games", "rawg.io", gameSubcats);
+        string[] memory aiAnswerSubcats = new string[](8);
+        aiAnswerSubcats[0] = "Helpfulness";
+        aiAnswerSubcats[1] = "Clarity";
+        aiAnswerSubcats[2] = "Safety";
+        aiAnswerSubcats[3] = "Creativity";
+        aiAnswerSubcats[4] = "Reasoning";
+        aiAnswerSubcats[5] = "Code";
+        aiAnswerSubcats[6] = "Images";
+        aiAnswerSubcats[7] = "Research";
+        registry.addCategory("AI Answers", "ai-answers", aiAnswerSubcats);
 
-        // Books - Open Library (categoryId: 7)
-        string[] memory bookSubcats = new string[](8);
-        bookSubcats[0] = "Fiction";
-        bookSubcats[1] = "Non-Fiction";
-        bookSubcats[2] = "Science Fiction";
-        bookSubcats[3] = "Fantasy";
-        bookSubcats[4] = "Biography";
-        bookSubcats[5] = "History";
-        bookSubcats[6] = "Science";
-        bookSubcats[7] = "Philosophy";
-        registry.addApprovedCategory("Books", "openlibrary.org", bookSubcats);
+        string[] memory textSubcats = new string[](13);
+        textSubcats[0] = "Developer Docs";
+        textSubcats[1] = "Getting Started";
+        textSubcats[2] = "API Reference";
+        textSubcats[3] = "Tutorials";
+        textSubcats[4] = "Articles";
+        textSubcats[5] = "Research";
+        textSubcats[6] = "Policy";
+        textSubcats[7] = "Copywriting";
+        textSubcats[8] = "Accuracy";
+        textSubcats[9] = "Completeness";
+        textSubcats[10] = "Readability";
+        textSubcats[11] = "Troubleshooting";
+        textSubcats[12] = "Examples";
+        registry.addCategory("Text", "text", textSubcats);
 
-        // AI - Hugging Face (categoryId: 8)
-        string[] memory aiSubcats = new string[](9);
-        aiSubcats[0] = "Chatbots";
-        aiSubcats[1] = "Image Generation";
-        aiSubcats[2] = "Coding";
-        aiSubcats[3] = "Writing";
-        aiSubcats[4] = "Research";
-        aiSubcats[5] = "Music";
-        aiSubcats[6] = "Video";
-        aiSubcats[7] = "Productivity";
-        aiSubcats[8] = "Agents";
-        registry.addApprovedCategory("AI", "huggingface.co", aiSubcats);
+        string[] memory safetySubcats = new string[](8);
+        safetySubcats[0] = "Trust";
+        safetySubcats[1] = "Spam";
+        safetySubcats[2] = "Harassment";
+        safetySubcats[3] = "Moderation";
+        safetySubcats[4] = "Privacy";
+        safetySubcats[5] = "Disclosure";
+        safetySubcats[6] = "Risk";
+        safetySubcats[7] = "Policy";
+        registry.addCategory("Trust", "trust", safetySubcats);
 
-        // Crypto Tokens - CoinGecko (categoryId: 9)
-        string[] memory cryptoSubcats = new string[](8);
-        cryptoSubcats[0] = "Layer 1";
-        cryptoSubcats[1] = "Layer 2";
-        cryptoSubcats[2] = "DeFi";
-        cryptoSubcats[3] = "Memecoins";
-        cryptoSubcats[4] = "Stablecoins";
-        cryptoSubcats[5] = "Gaming/NFT";
-        cryptoSubcats[6] = "Infrastructure";
-        cryptoSubcats[7] = "Privacy";
-        registry.addApprovedCategory("Crypto Tokens", "coingecko.com", cryptoSubcats);
-
-        // Tweets - X/Twitter (categoryId: 10)
-        string[] memory tweetSubcats = new string[](10);
-        tweetSubcats[0] = "News";
-        tweetSubcats[1] = "Commentary";
-        tweetSubcats[2] = "Tech";
-        tweetSubcats[3] = "Science";
-        tweetSubcats[4] = "Politics";
-        tweetSubcats[5] = "Sports";
-        tweetSubcats[6] = "Humor";
-        tweetSubcats[7] = "Culture";
-        tweetSubcats[8] = "Threads";
-        tweetSubcats[9] = "Announcements";
-        registry.addApprovedCategory("Tweets", "x.com", tweetSubcats);
-
-        // GitHub Repos (categoryId: 11)
-        string[] memory githubSubcats = new string[](8);
-        githubSubcats[0] = "Libraries";
-        githubSubcats[1] = "Developer Tools";
-        githubSubcats[2] = "Frameworks";
-        githubSubcats[3] = "DeFi/Web3";
-        githubSubcats[4] = "AI/ML";
-        githubSubcats[5] = "Infrastructure";
-        githubSubcats[6] = "Security";
-        githubSubcats[7] = "Education";
-        registry.addApprovedCategory("GitHub Repos", "github.com", githubSubcats);
-
-        // Spotify Podcasts (categoryId: 12)
-        string[] memory spotifySubcats = new string[](8);
-        spotifySubcats[0] = "Technology";
-        spotifySubcats[1] = "Business";
-        spotifySubcats[2] = "Comedy";
-        spotifySubcats[3] = "News";
-        spotifySubcats[4] = "Science";
-        spotifySubcats[5] = "Health";
-        spotifySubcats[6] = "Sports";
-        spotifySubcats[7] = "Culture";
-        registry.addApprovedCategory("Spotify Podcasts", "open.spotify.com", spotifySubcats);
-
-        // npm Packages (categoryId: 13)
-        string[] memory npmSubcats = new string[](8);
-        npmSubcats[0] = "Frameworks";
-        npmSubcats[1] = "UI Libraries";
-        npmSubcats[2] = "Developer Tools";
-        npmSubcats[3] = "Build Tooling";
-        npmSubcats[4] = "Testing";
-        npmSubcats[5] = "Backend/Data";
-        npmSubcats[6] = "AI/ML";
-        npmSubcats[7] = "Web3";
-        registry.addApprovedCategory("npm Packages", "npmjs.com", npmSubcats);
-
-        // PyPI Packages (categoryId: 14)
-        string[] memory pypiSubcats = new string[](8);
-        pypiSubcats[0] = "AI/ML";
-        pypiSubcats[1] = "Data Science";
-        pypiSubcats[2] = "Web Frameworks";
-        pypiSubcats[3] = "Automation";
-        pypiSubcats[4] = "Developer Tools";
-        pypiSubcats[5] = "Scientific Computing";
-        pypiSubcats[6] = "Security";
-        pypiSubcats[7] = "LLM/Agents";
-        registry.addApprovedCategory("PyPI Packages", "pypi.org", pypiSubcats);
+        string[] memory opinionSubcats = new string[](8);
+        opinionSubcats[0] = "Taste";
+        opinionSubcats[1] = "Usefulness";
+        opinionSubcats[2] = "Interesting";
+        opinionSubcats[3] = "Clear";
+        opinionSubcats[4] = "Fun";
+        opinionSubcats[5] = "Convincing";
+        opinionSubcats[6] = "Worthwhile";
+        opinionSubcats[7] = "Other";
+        registry.addCategory("General", "general", opinionSubcats);
     }
 }

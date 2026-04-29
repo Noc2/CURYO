@@ -5,6 +5,7 @@ import { getPrimaryServerTargetNetwork, getServerRpcOverrides, getServerTargetNe
 
 interface ProfileRegistryProfile {
   username: string | null;
+  selfReport: string | null;
   createdAt: string | null;
   updatedAt: string | null;
 }
@@ -28,6 +29,7 @@ type DeployedContractsMap = Record<
 
 const EMPTY_PROFILE: ProfileRegistryProfile = {
   username: null,
+  selfReport: null,
   createdAt: null,
   updatedAt: null,
 };
@@ -39,7 +41,7 @@ const EMPTY_AVATAR_ACCENT: ProfileRegistryAvatarAccent = {
 const MULTICALL_BATCH_SIZE = 200;
 
 type ProfileRegistryReadContext = {
-  crepToken?: {
+  hrepToken?: {
     abi: Abi;
     address: Address;
   };
@@ -72,7 +74,7 @@ function resolveProfileRegistryReadContext(chainId?: number): ProfileRegistryRea
   }
 
   return {
-    crepToken: contractsForChain?.CuryoReputation,
+    hrepToken: contractsForChain?.HumanReputation,
     profileRegistry: contractsForChain?.ProfileRegistry,
     publicClient: createPublicClient({
       chain: targetNetwork,
@@ -106,19 +108,27 @@ function normalizeUniqueAddresses(addresses: string[]): `0x${string}`[] {
 function parseProfile(result: unknown): ProfileRegistryProfile {
   const profile = result as {
     name?: unknown;
+    selfReport?: unknown;
     createdAt?: unknown;
     updatedAt?: unknown;
   };
+  const tuple = Array.isArray(result) ? (result as unknown[]) : [];
 
-  const createdAt = typeof profile.createdAt === "bigint" ? profile.createdAt : 0n;
+  const createdAt =
+    typeof profile.createdAt === "bigint" ? profile.createdAt : typeof tuple[2] === "bigint" ? tuple[2] : 0n;
   if (createdAt === 0n) {
     return EMPTY_PROFILE;
   }
 
-  const updatedAt = typeof profile.updatedAt === "bigint" ? profile.updatedAt : createdAt;
+  const name = typeof profile.name === "string" ? profile.name : typeof tuple[0] === "string" ? tuple[0] : "";
+  const selfReport =
+    typeof profile.selfReport === "string" ? profile.selfReport : typeof tuple[1] === "string" ? tuple[1] : "";
+  const updatedAt =
+    typeof profile.updatedAt === "bigint" ? profile.updatedAt : typeof tuple[3] === "bigint" ? tuple[3] : createdAt;
 
   return {
-    username: typeof profile.name === "string" && profile.name.length > 0 ? profile.name : null,
+    username: name.length > 0 ? name : null,
+    selfReport: selfReport.length > 0 ? selfReport : null,
     createdAt: createdAt.toString(),
     updatedAt: updatedAt.toString(),
   };
@@ -226,7 +236,7 @@ export async function readProfileRegistryAvatarAccent(
   }
 }
 
-export async function readCRepBalances(
+export async function readHrepBalances(
   addresses: string[],
   options: { chainId?: number } = {},
 ): Promise<Record<string, bigint>> {
@@ -238,7 +248,7 @@ export async function readCRepBalances(
   }
 
   const context = resolveProfileRegistryReadContext(options.chainId);
-  if (!context?.crepToken || normalizedAddresses.length === 0) {
+  if (!context?.hrepToken || normalizedAddresses.length === 0) {
     return balances;
   }
 
@@ -247,8 +257,8 @@ export async function readCRepBalances(
       const results = await context.publicClient.multicall({
         allowFailure: true,
         contracts: batch.map(address => ({
-          address: context.crepToken!.address,
-          abi: context.crepToken!.abi,
+          address: context.hrepToken!.address,
+          abi: context.hrepToken!.abi,
           functionName: "balanceOf",
           args: [address],
         })),
@@ -263,8 +273,8 @@ export async function readCRepBalances(
         batch.map(async address => {
           try {
             const result = await context.publicClient.readContract({
-              address: context.crepToken!.address,
-              abi: context.crepToken!.abi,
+              address: context.hrepToken!.address,
+              abi: context.hrepToken!.abi,
               functionName: "balanceOf",
               args: [address],
             });

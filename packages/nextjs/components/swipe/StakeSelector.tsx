@@ -12,13 +12,16 @@ import { useContentLabel } from "~~/hooks/useCategoryRegistry";
 import { useParticipationRate } from "~~/hooks/useParticipationRate";
 import { useRoundSnapshot } from "~~/hooks/useRoundSnapshot";
 import { useVoterIdNFT, useVoterIdStake } from "~~/hooks/useVoterIdNFT";
-import { estimateVoteReturn, formatCrepAmount } from "~~/lib/vote/voteIncentives";
+import type { OpenRoundFallbackData, VotingConfig } from "~~/lib/contracts/roundVotingEngine";
+import { estimateVoteReturn, formatHrepAmount } from "~~/lib/vote/voteIncentives";
 
 interface StakeSelectorProps {
   isOpen: boolean;
   isUp: boolean;
   contentId: bigint;
   categoryId?: bigint;
+  openRound?: OpenRoundFallbackData | null;
+  roundConfig?: VotingConfig | null;
   cooldownSecondsRemaining?: number;
   isConfirming?: boolean;
   confirmError?: string | null;
@@ -36,6 +39,8 @@ export function StakeSelector({
   isUp,
   contentId,
   categoryId,
+  openRound,
+  roundConfig,
   cooldownSecondsRemaining = 0,
   isConfirming = false,
   confirmError = null,
@@ -50,7 +55,7 @@ export function StakeSelector({
   const hasVoterId = voterIdData.hasVoterId;
   const tokenId = voterIdData.tokenId as bigint;
 
-  const roundSnapshot = useRoundSnapshot(contentId);
+  const roundSnapshot = useRoundSnapshot(contentId, openRound ?? undefined, roundConfig ?? undefined);
   const { roundId: currentRoundId, phase, isEpoch1, upPool, downPool } = roundSnapshot;
   const effectiveIsBlind = phase !== "voting" || isEpoch1;
 
@@ -64,14 +69,14 @@ export function StakeSelector({
 
   const { remainingCapacity } = useVoterIdStake(contentId, currentRoundId, tokenId);
 
-  const { data: crepBalance } = useScaffoldReadContract({
-    contractName: "CuryoReputation",
+  const { data: hrepBalance } = useScaffoldReadContract({
+    contractName: "HumanReputation",
     functionName: "balanceOf",
     args: [address],
   });
 
   const { data: tokenSymbol } = useScaffoldReadContract({
-    contractName: "CuryoReputation",
+    contractName: "HumanReputation",
     functionName: "symbol",
   });
 
@@ -84,12 +89,12 @@ export function StakeSelector({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isConfirming, isOpen, onCancel]);
 
-  const symbol = tokenSymbol ?? "cREP";
+  const symbol = tokenSymbol ?? "HREP";
   const { calculateBonus } = useParticipationRate();
   const voteBonus = calculateBonus(amount);
   const voteEstimate = estimateVoteReturn(estimateSnapshot, isUp, amount);
 
-  const balanceFormatted = crepBalance ? Number(crepBalance) / 1e6 : 0;
+  const balanceFormatted = hrepBalance ? Number(hrepBalance) / 1e6 : 0;
   const capacityFormatted = remainingCapacity != null ? Number(remainingCapacity) / 1e6 : 100;
   const maxByBalance = Math.floor(balanceFormatted);
   const maxByCapacity = Math.floor(capacityFormatted);
@@ -181,7 +186,7 @@ export function StakeSelector({
               </span>
             </h3>
 
-            <div className="mb-5 space-y-1 text-center text-base text-base-content/40">
+            <div className="mb-5 space-y-1 text-center text-base text-base-content/60">
               <p>
                 Balance: {balanceFormatted.toLocaleString(undefined, { maximumFractionDigits: 0 })} {symbol}
               </p>
@@ -219,7 +224,7 @@ export function StakeSelector({
                 disabled={isConfirming || maxStake < 1}
                 aria-label="Stake amount"
               />
-              <div className="mt-1 flex justify-between text-base text-base-content/30">
+              <div className="mt-1 flex justify-between text-base text-base-content/60">
                 <span>1</span>
                 <span>{sliderMax}</span>
               </div>
@@ -227,7 +232,7 @@ export function StakeSelector({
 
             <div className="my-5 text-center">
               <span className="text-4xl font-bold tabular-nums">{amount}</span>
-              <span className="ml-2 text-base text-base-content/40">{symbol}</span>
+              <span className="ml-2 text-base text-base-content/60">{symbol}</span>
               {isCapacityLimited && (
                 <span
                   className="tooltip tooltip-top ml-2 inline-block cursor-help align-middle"
@@ -282,7 +287,7 @@ export function StakeSelector({
                       <span>Est. return if right</span>
                       <span className="font-semibold tabular-nums">
                         {openPhaseGrossReturnMicro !== null
-                          ? `${formatCrepAmount(openPhaseGrossReturnMicro)} ${symbol}`
+                          ? `${formatHrepAmount(openPhaseGrossReturnMicro)} ${symbol}`
                           : "Loading"}
                       </span>
                     </div>
@@ -290,14 +295,14 @@ export function StakeSelector({
                       <span>If wrong but revealed</span>
                       <span className="font-semibold tabular-nums">
                         {openPhaseRevealedRefundMicro !== null
-                          ? `${formatCrepAmount(openPhaseRevealedRefundMicro)} ${symbol}`
+                          ? `${formatHrepAmount(openPhaseRevealedRefundMicro)} ${symbol}`
                           : "Loading"}
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-3">
                       <span>Live pools</span>
                       <span className="font-semibold tabular-nums">
-                        up {formatCrepAmount(upPool, 0)} · down {formatCrepAmount(downPool, 0)}
+                        up {formatHrepAmount(upPool, 0)} · down {formatHrepAmount(downPool, 0)}
                       </span>
                     </div>
                   </>
@@ -319,7 +324,7 @@ export function StakeSelector({
                 disabled={confirmDisabled}
               >
                 {isConfirming ? (
-                  <span className="flex items-center gap-2">
+                  <span className="flex items-center gap-2 text-base-content">
                     <span className="loading loading-spinner loading-xs" />
                     <span>Submitting...</span>
                   </span>

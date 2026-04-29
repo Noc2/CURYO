@@ -17,7 +17,7 @@ contract VotingHandler is VotingTestBase {
     RoundVotingEngine public engine;
     RoundRewardDistributor public distributor;
     ContentRegistry public registry;
-    IERC20 public crepToken;
+    IERC20 public hrepToken;
 
     // --- Actors ---
     address[] public voters;
@@ -31,7 +31,6 @@ contract VotingHandler is VotingTestBase {
     // --- Ghost variables (token flow accounting) ---
     uint256 public ghost_totalStaked;
     uint256 public ghost_totalClaimed; // voter rewards (stake return + pool share)
-    uint256 public ghost_totalSubmitterClaimed;
     uint256 public ghost_totalRefunded;
     uint256 public ghost_totalConsensusSubsidy;
 
@@ -41,7 +40,6 @@ contract VotingHandler is VotingTestBase {
         uint256 roundId;
         uint256 totalStaked;
         uint256 totalClaimed;
-        uint256 submitterClaimed;
         uint256 totalRefunded;
         bool settled;
         bool cancelled;
@@ -77,7 +75,6 @@ contract VotingHandler is VotingTestBase {
     uint256 public processCount;
     uint256 public cleanupRewardCount;
     uint256 public claimCount;
-    uint256 public submitterClaimCount;
     uint256 public refundCount;
     uint256 public timeAdvanceCount;
 
@@ -85,14 +82,14 @@ contract VotingHandler is VotingTestBase {
         address _engine,
         address _distributor,
         address _registry,
-        address _crepToken,
+        address _hrepToken,
         address[] memory _voters,
         uint256[] memory _contentIds
     ) {
         engine = RoundVotingEngine(_engine);
         distributor = RoundRewardDistributor(_distributor);
         registry = ContentRegistry(_registry);
-        crepToken = IERC20(_crepToken);
+        hrepToken = IERC20(_hrepToken);
         voters = _voters;
         contentIds = _contentIds;
     }
@@ -110,11 +107,11 @@ contract VotingHandler is VotingTestBase {
         if (voteRecords[voter][contentId].committed && !voteRecords[voter][contentId].claimed) return;
 
         // Skip if content not active
-        (uint256 existingContentId,,,,,, ContentRegistry.ContentStatus status,,,,,) = registry.contents(contentId);
+        (uint256 existingContentId,,,,, ContentRegistry.ContentStatus status,,,,) = registry.contents(contentId);
         if (existingContentId == 0 || status != ContentRegistry.ContentStatus.Active) return;
 
         // Skip if voter doesn't have enough balance
-        if (crepToken.balanceOf(voter) < stakeAmount) return;
+        if (hrepToken.balanceOf(voter) < stakeAmount) return;
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
@@ -123,8 +120,19 @@ contract VotingHandler is VotingTestBase {
         bytes32 commitHash = _commitHash(isUp, salt, contentId, ciphertext);
 
         vm.startPrank(voter);
-        crepToken.approve(address(engine), stakeAmount);
-        try engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, stakeAmount, address(0)) {
+        hrepToken.approve(address(engine), stakeAmount);
+        uint256 cachedRoundContext1 =
+            _roundContext(engine.previewCommitRoundId(contentId), _defaultRatingReferenceBps());
+        try engine.commitVote(
+            contentId,
+            cachedRoundContext1,
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            commitHash,
+            ciphertext,
+            stakeAmount,
+            address(0)
+        ) {
             vm.stopPrank();
 
             // Get the round ID that was used/created
@@ -248,11 +256,11 @@ contract VotingHandler is VotingTestBase {
         // Check if already claimed on-chain
         if (distributor.rewardClaimed(contentId, roundId, voter)) return;
 
-        uint256 balBefore = crepToken.balanceOf(voter);
+        uint256 balBefore = hrepToken.balanceOf(voter);
 
         vm.prank(voter);
         try distributor.claimReward(contentId, roundId) {
-            uint256 balAfter = crepToken.balanceOf(voter);
+            uint256 balAfter = hrepToken.balanceOf(voter);
             uint256 payout = balAfter - balBefore;
 
             record.claimed = true;
@@ -268,48 +276,7 @@ contract VotingHandler is VotingTestBase {
     }
 
     // =========================================================================
-    // ACTION 5: claimSubmitterReward
-    // =========================================================================
-
-    function claimSubmitterReward(uint256 contentSeed) external {
-        uint256 contentId = contentIds[contentSeed % contentIds.length];
-
-        // Find a settled round for this content
-        uint256 recordCount = roundRecords.length;
-        if (recordCount == 0) return;
-
-        for (uint256 i = 0; i < recordCount; i++) {
-            RoundRecord memory rec = roundRecords[i];
-            if (rec.contentId != contentId) continue;
-
-            uint256 roundId = rec.roundId;
-            RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
-            if (round.state != RoundLib.RoundState.Settled) continue;
-            if (distributor.submitterRewardClaimed(contentId, roundId)) continue;
-
-            (,, address submitter,,,,,,,,,) = registry.contents(contentId);
-            uint256 balBefore = crepToken.balanceOf(submitter);
-
-            vm.prank(submitter);
-            try distributor.claimSubmitterReward(contentId, roundId) {
-                uint256 balAfter = crepToken.balanceOf(submitter);
-                uint256 payout = balAfter - balBefore;
-
-                ghost_totalSubmitterClaimed += payout;
-                submitterClaimCount++;
-
-                _ensureRoundRecord(contentId, roundId);
-                uint256 idx = roundRecordIndex[contentId][roundId] - 1;
-                roundRecords[idx].submitterClaimed += payout;
-            } catch {
-                // Failed
-            }
-            break; // Only try one round per call
-        }
-    }
-
-    // =========================================================================
-    // ACTION 6: claimRefund
+    // ACTION 5: claimRefund
     // =========================================================================
 
     function claimRefund(uint256 contentSeed, uint256 voterSeed) external {
@@ -333,11 +300,11 @@ contract VotingHandler is VotingTestBase {
         // Check if already refunded on-chain
         if (engine.cancelledRoundRefundClaimed(contentId, roundId, voter)) return;
 
-        uint256 balBefore = crepToken.balanceOf(voter);
+        uint256 balBefore = hrepToken.balanceOf(voter);
 
         vm.prank(voter);
         try engine.claimCancelledRoundRefund(contentId, roundId) {
-            uint256 balAfter = crepToken.balanceOf(voter);
+            uint256 balAfter = hrepToken.balanceOf(voter);
             uint256 payout = balAfter - balBefore;
 
             record.claimed = true;
@@ -432,11 +399,11 @@ contract VotingHandler is VotingTestBase {
         uint256 count = bound(countSeed, 0, maxCount);
 
         uint256 voterBalancesBefore = _sumTrackedVoterBalances();
-        uint256 handlerBalanceBefore = crepToken.balanceOf(address(this));
+        uint256 handlerBalanceBefore = hrepToken.balanceOf(address(this));
 
         try engine.processUnrevealedVotes(rec.contentId, rec.roundId, startIndex, count) {
             uint256 voterBalancesAfter = _sumTrackedVoterBalances();
-            uint256 handlerBalanceAfter = crepToken.balanceOf(address(this));
+            uint256 handlerBalanceAfter = hrepToken.balanceOf(address(this));
             uint256 idx = roundRecordIndex[rec.contentId][rec.roundId] - 1;
 
             if (voterBalancesAfter > voterBalancesBefore) {
@@ -489,7 +456,6 @@ contract VotingHandler is VotingTestBase {
                     roundId: roundId,
                     totalStaked: 0,
                     totalClaimed: 0,
-                    submitterClaimed: 0,
                     totalRefunded: 0,
                     settled: false,
                     cancelled: false,
@@ -503,7 +469,7 @@ contract VotingHandler is VotingTestBase {
 
     function _sumTrackedVoterBalances() internal view returns (uint256 total) {
         for (uint256 i = 0; i < voters.length; i++) {
-            total += crepToken.balanceOf(voters[i]);
+            total += hrepToken.balanceOf(voters[i]);
         }
     }
 

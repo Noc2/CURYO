@@ -6,11 +6,15 @@ import { Vm, VmSafe } from "forge-std/Vm.sol";
 import { Base64 } from "@openzeppelin/contracts/utils/Base64.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { CuryoReputation } from "../../contracts/CuryoReputation.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { HumanReputation } from "../../contracts/HumanReputation.sol";
 import { ContentRegistry } from "../../contracts/ContentRegistry.sol";
 import { ProtocolConfig } from "../../contracts/ProtocolConfig.sol";
 import { RoundVotingEngine } from "../../contracts/RoundVotingEngine.sol";
 import { RatingLib } from "../../contracts/libraries/RatingLib.sol";
+import { RoundLib } from "../../contracts/libraries/RoundLib.sol";
+import { MockQuestionRewardPoolEscrow } from "../mocks/MockQuestionRewardPoolEscrow.sol";
+import { MockVoterIdNFT } from "../mocks/MockVoterIdNFT.sol";
 
 function deployInitializedProtocolConfig(address admin) returns (ProtocolConfig protocolConfig) {
     return deployInitializedProtocolConfig(admin, admin);
@@ -28,6 +32,35 @@ function deployInitializedProtocolConfig(address admin, address governance) retu
 abstract contract ContentSubmissionTestBase {
     Vm internal constant HEVM = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
     ContentRegistry internal activeTlockContentRegistry;
+    uint8 internal constant DEFAULT_SUBMISSION_REWARD_ASSET_HREP = 0;
+    uint256 internal constant DEFAULT_SUBMISSION_REWARD_POOL = 1e6;
+    uint256 internal constant DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS = 3;
+    uint256 internal constant DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS = 1;
+    uint256 internal constant DEFAULT_SUBMISSION_REWARD_BOUNTY_CLOSES_AT = 0;
+    uint256 internal constant DEFAULT_SUBMISSION_REWARD_FEEDBACK_CLOSES_AT = 0;
+    uint256 internal constant DEFAULT_SUBMISSION_REWARD_EXPIRES_AT = DEFAULT_SUBMISSION_REWARD_BOUNTY_CLOSES_AT;
+    bytes32 internal constant DEFAULT_QUESTION_METADATA_HASH = keccak256("curyo.generic.question.metadata.v1");
+    bytes32 internal constant DEFAULT_RESULT_SPEC_HASH = keccak256("curyo.generic.result.spec.v1");
+
+    struct NoMediaQuestionText {
+        string url;
+        string title;
+        string description;
+        string tags;
+    }
+
+    struct MediaQuestionReservation {
+        ContentRegistry registry;
+        string contextUrl;
+        string[] imageUrls;
+        string videoUrl;
+        string title;
+        string description;
+        string tags;
+        uint256 categoryId;
+        bytes32 salt;
+        address submitter;
+    }
 
     function _submitContentWithReservation(
         ContentRegistry registry,
@@ -38,30 +71,438 @@ abstract contract ContentSubmissionTestBase {
         uint256 categoryId
     ) internal returns (uint256 contentId) {
         activeTlockContentRegistry = registry;
-        (VmSafe.CallerMode mode, address msgSender, address txOrigin) = HEVM.readCallers();
-        bool normalizedPrank = false;
-        if (mode == VmSafe.CallerMode.Prank) {
-            HEVM.startPrank(msgSender, txOrigin);
-            normalizedPrank = true;
-        }
+        (VmSafe.CallerMode mode, address msgSender,) = HEVM.readCallers();
+        bool stopNormalizedPrank = mode == VmSafe.CallerMode.Prank;
+        address submitter = _submissionCallerAddress(mode, msgSender);
+        uint256 submissionCategoryId = categoryId == 0 ? 1 : categoryId;
+        bytes32 salt = _contentSubmissionSalt(url, submitter);
+        NoMediaQuestionText memory question;
+        question.url = url;
+        question.title = title;
+        question.description = description;
+        question.tags = tags;
 
-        (, bytes32 submissionKey) = registry.previewSubmissionKey(url, categoryId);
-
-        address submitter =
-            mode == VmSafe.CallerMode.None ? address(this) : (msgSender != address(0) ? msgSender : address(this));
-        bytes32 salt = keccak256(
-            abi.encode(url, title, description, tags, categoryId, submitter, block.timestamp, block.number, gasleft())
-        );
-        bytes32 revealCommitment =
-            keccak256(abi.encode(submissionKey, title, description, tags, categoryId, salt, submitter));
-
-        registry.reserveSubmission(revealCommitment);
+        _reserveNoMediaQuestionSubmission(registry, question, submissionCategoryId, salt, submitter);
         HEVM.warp(block.timestamp + 1);
-        contentId = registry.submitContent(url, title, description, tags, categoryId, salt);
+        contentId = _submitNoMediaQuestion(registry, question, submissionCategoryId, salt);
 
-        if (normalizedPrank) {
+        if (stopNormalizedPrank) {
             HEVM.stopPrank();
         }
+    }
+
+    function _submissionCallerAddress(VmSafe.CallerMode mode, address msgSender) internal view returns (address) {
+        if (mode == VmSafe.CallerMode.None) return address(this);
+        return msgSender != address(0) ? msgSender : address(this);
+    }
+
+    function _contentSubmissionSalt(string memory url, address submitter) internal view returns (bytes32) {
+        return keccak256(abi.encodePacked(url, submitter, block.timestamp, block.number, gasleft()));
+    }
+
+    function _reserveNoMediaQuestionSubmission(
+        ContentRegistry registry,
+        NoMediaQuestionText memory question,
+        uint256 categoryId,
+        bytes32 salt,
+        address submitter
+    ) internal {
+        _reserveQuestionMediaSubmission(
+            registry,
+            question.url,
+            _emptyImageUrls(),
+            "",
+            question.title,
+            question.description,
+            question.tags,
+            categoryId,
+            salt,
+            submitter
+        );
+    }
+
+    function _submitNoMediaQuestion(
+        ContentRegistry registry,
+        NoMediaQuestionText memory question,
+        uint256 categoryId,
+        bytes32 salt
+    ) internal returns (uint256) {
+        return registry.submitQuestion(
+            question.url,
+            _emptyImageUrls(),
+            "",
+            question.title,
+            question.description,
+            question.tags,
+            categoryId,
+            salt,
+            _defaultQuestionSpec()
+        );
+    }
+
+    function _reserveQuestionMediaSubmission(
+        ContentRegistry registry,
+        string memory contextUrl,
+        string[] memory imageUrls,
+        string memory videoUrl,
+        string memory title,
+        string memory description,
+        string memory tags,
+        uint256 categoryId,
+        bytes32 salt,
+        address submitter
+    ) internal returns (bytes32 submissionKey) {
+        MediaQuestionReservation memory reservation;
+        reservation.registry = registry;
+        reservation.contextUrl = contextUrl;
+        reservation.imageUrls = imageUrls;
+        reservation.videoUrl = videoUrl;
+        reservation.title = title;
+        reservation.description = description;
+        reservation.tags = tags;
+        reservation.categoryId = categoryId;
+        reservation.salt = salt;
+        reservation.submitter = submitter;
+        return _reserveQuestionMediaSubmission(reservation);
+    }
+
+    function _reserveQuestionMediaSubmission(MediaQuestionReservation memory reservation)
+        internal
+        returns (bytes32 submissionKey)
+    {
+        (VmSafe.CallerMode mode, address msgSender, address txOrigin) = HEVM.readCallers();
+        bool hasActivePrank = mode == VmSafe.CallerMode.Prank || mode == VmSafe.CallerMode.RecurrentPrank;
+        if (hasActivePrank) {
+            HEVM.stopPrank();
+        }
+        _ensureActiveProtocolConfig(reservation.registry);
+        _ensureDefaultSubmitterVoterId(reservation.registry, reservation.submitter);
+        address rewardEscrow = _ensureDefaultQuestionRewardPoolEscrow(reservation.registry);
+        if (hasActivePrank) {
+            HEVM.startPrank(msgSender, txOrigin);
+        }
+        (, submissionKey) = reservation.registry
+            .previewQuestionSubmissionKey(
+                reservation.contextUrl,
+                reservation.imageUrls,
+                reservation.videoUrl,
+                reservation.title,
+                reservation.description,
+                reservation.tags,
+                reservation.categoryId
+            );
+        uint256 rewardAmount = _defaultSubmissionRewardAmount(reservation.registry);
+        bytes32 revealCommitment = _questionReservationRevealCommitment(reservation, submissionKey, rewardAmount);
+        IERC20(reservation.registry.hrepToken()).approve(rewardEscrow, rewardAmount);
+        reservation.registry.reserveSubmission(revealCommitment);
+    }
+
+    function _questionReservationRevealCommitment(
+        MediaQuestionReservation memory reservation,
+        bytes32 submissionKey,
+        uint256 rewardAmount
+    ) internal view returns (bytes32) {
+        ContentRegistry.SubmissionRewardTerms memory rewardTerms =
+            ContentRegistry.SubmissionRewardTerms({
+                asset: DEFAULT_SUBMISSION_REWARD_ASSET_HREP,
+                amount: rewardAmount,
+                requiredVoters: DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+                requiredSettledRounds: DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+                bountyClosesAt: DEFAULT_SUBMISSION_REWARD_BOUNTY_CLOSES_AT,
+                feedbackClosesAt: DEFAULT_SUBMISSION_REWARD_FEEDBACK_CLOSES_AT
+            });
+        return _questionRevealCommitment(
+            submissionKey,
+            _submissionMediaHash(reservation.imageUrls, reservation.videoUrl),
+            reservation.title,
+            reservation.description,
+            reservation.tags,
+            reservation.categoryId,
+            reservation.salt,
+            reservation.submitter,
+            rewardTerms,
+            _defaultQuestionRoundConfig(reservation.registry),
+            _defaultQuestionSpec()
+        );
+    }
+
+    function _defaultQuestionRevealCommitment(
+        ContentRegistry registry,
+        bytes32 submissionKey,
+        string[] memory imageUrls,
+        string memory videoUrl,
+        string memory title,
+        string memory description,
+        string memory tags,
+        uint256 categoryId,
+        bytes32 salt,
+        address submitter
+    ) internal view returns (bytes32) {
+        uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
+        ContentRegistry.SubmissionRewardTerms memory rewardTerms = ContentRegistry.SubmissionRewardTerms({
+            asset: DEFAULT_SUBMISSION_REWARD_ASSET_HREP,
+            amount: rewardAmount,
+            requiredVoters: DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+            requiredSettledRounds: DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+            bountyClosesAt: DEFAULT_SUBMISSION_REWARD_BOUNTY_CLOSES_AT,
+            feedbackClosesAt: DEFAULT_SUBMISSION_REWARD_FEEDBACK_CLOSES_AT
+        });
+        return _questionRevealCommitment(
+            submissionKey,
+            _submissionMediaHash(imageUrls, videoUrl),
+            title,
+            description,
+            tags,
+            categoryId,
+            salt,
+            submitter,
+            rewardTerms,
+            _defaultQuestionRoundConfig(registry),
+            _defaultQuestionSpec()
+        );
+    }
+
+    function _questionRevealCommitment(
+        bytes32 submissionKey,
+        bytes32 mediaHash,
+        string memory title,
+        string memory description,
+        string memory tags,
+        uint256 categoryId,
+        bytes32 salt,
+        address submitter,
+        ContentRegistry.SubmissionRewardTerms memory rewardTerms,
+        RoundLib.RoundConfig memory roundConfig,
+        ContentRegistry.QuestionSpecCommitment memory spec
+    ) internal pure returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                "curyo-question-reveal-v3",
+                submissionKey,
+                mediaHash,
+                keccak256(abi.encode(title, description, tags)),
+                categoryId,
+                salt,
+                submitter,
+                keccak256(
+                    abi.encode(
+                        rewardTerms.asset,
+                        rewardTerms.amount,
+                        rewardTerms.requiredVoters,
+                        rewardTerms.requiredSettledRounds,
+                        rewardTerms.bountyClosesAt,
+                        rewardTerms.feedbackClosesAt
+                    )
+                ),
+                keccak256(
+                    abi.encode(
+                        roundConfig.epochDuration, roundConfig.maxDuration, roundConfig.minVoters, roundConfig.maxVoters
+                    )
+                ),
+                spec.questionMetadataHash,
+                spec.resultSpecHash
+            )
+        );
+    }
+
+    function _questionRevealCommitment(
+        bytes32 submissionKey,
+        bytes32 mediaHash,
+        string memory title,
+        string memory description,
+        string memory tags,
+        uint256 categoryId,
+        bytes32 salt,
+        address submitter,
+        ContentRegistry.SubmissionRewardTerms memory rewardTerms,
+        RoundLib.RoundConfig memory roundConfig
+    ) internal pure returns (bytes32) {
+        return _questionRevealCommitment(
+            submissionKey,
+            mediaHash,
+            title,
+            description,
+            tags,
+            categoryId,
+            salt,
+            submitter,
+            rewardTerms,
+            roundConfig,
+            _defaultQuestionSpec()
+        );
+    }
+
+    function _defaultQuestionRoundConfig(ContentRegistry registry)
+        internal
+        view
+        returns (RoundLib.RoundConfig memory cfg)
+    {
+        ProtocolConfig protocolConfig = registry.protocolConfig();
+        if (address(protocolConfig) != address(0)) {
+            (cfg.epochDuration, cfg.maxDuration, cfg.minVoters, cfg.maxVoters) = protocolConfig.config();
+            return cfg;
+        }
+        cfg = RoundLib.RoundConfig({
+            epochDuration: uint32(20 minutes),
+            maxDuration: uint32(7 days),
+            minVoters: uint16(3),
+            maxVoters: uint16(1000)
+        });
+    }
+
+    function _submissionMediaHash(string[] memory imageUrls, string memory videoUrl) internal pure returns (bytes32) {
+        return keccak256(abi.encode(imageUrls, videoUrl));
+    }
+
+    function _submitQuestionImageWithReservation(
+        ContentRegistry registry,
+        string memory imageUrl,
+        string memory title,
+        string memory description,
+        string memory tags,
+        uint256 categoryId,
+        bytes32 salt,
+        address submitter
+    ) internal returns (uint256 contentId, bytes32 submissionKey) {
+        string[] memory imageUrls = _singleImageUrls(imageUrl);
+        submissionKey = _reserveQuestionMediaSubmission(
+            registry, imageUrl, imageUrls, "", title, description, tags, categoryId, salt, submitter
+        );
+        HEVM.warp(block.timestamp + 1);
+        contentId = registry.submitQuestion(
+            imageUrl, imageUrls, "", title, description, tags, categoryId, salt, _defaultQuestionSpec()
+        );
+    }
+
+    function _defaultQuestionSpec() internal pure returns (ContentRegistry.QuestionSpecCommitment memory) {
+        return ContentRegistry.QuestionSpecCommitment({
+            questionMetadataHash: DEFAULT_QUESTION_METADATA_HASH, resultSpecHash: DEFAULT_RESULT_SPEC_HASH
+        });
+    }
+
+    function _defaultSubmissionRewardAmount(ContentRegistry registry) internal view returns (uint256) {
+        ProtocolConfig config = registry.protocolConfig();
+        if (address(config) != address(0)) {
+            uint256 configuredMinimum = config.minSubmissionHrepPool();
+            if (configuredMinimum != 0) return configuredMinimum;
+        }
+        return DEFAULT_SUBMISSION_REWARD_POOL;
+    }
+
+    function _defaultSubmissionRewardTerms(ContentRegistry registry)
+        internal
+        view
+        returns (ContentRegistry.SubmissionRewardTerms memory)
+    {
+        uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
+        return ContentRegistry.SubmissionRewardTerms({
+            asset: DEFAULT_SUBMISSION_REWARD_ASSET_HREP,
+            amount: rewardAmount,
+            requiredVoters: DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+            requiredSettledRounds: DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+            bountyClosesAt: DEFAULT_SUBMISSION_REWARD_BOUNTY_CLOSES_AT,
+            feedbackClosesAt: DEFAULT_SUBMISSION_REWARD_FEEDBACK_CLOSES_AT
+        });
+    }
+
+    function _activeSubmissionProtocolConfig() internal view virtual returns (ProtocolConfig) {
+        return ProtocolConfig(address(0));
+    }
+
+    function _ensureActiveProtocolConfig(ContentRegistry registry) internal {
+        ProtocolConfig desiredConfig = _activeSubmissionProtocolConfig();
+        if (address(desiredConfig) == address(0) || address(registry.protocolConfig()) == address(desiredConfig)) {
+            return;
+        }
+
+        bytes32 configRole = registry.CONFIG_ROLE();
+        address[8] memory candidates = [
+            address(this), address(1), address(2), address(0xA), address(0xB), address(0xAA), address(0xBB), address(10)
+        ];
+        for (uint256 i = 0; i < candidates.length; i++) {
+            if (registry.hasRole(configRole, candidates[i])) {
+                HEVM.prank(candidates[i]);
+                registry.setProtocolConfig(address(desiredConfig));
+                return;
+            }
+        }
+    }
+
+    function _ensureDefaultSubmitterVoterId(ContentRegistry registry, address submitter) internal {
+        if (address(registry.voterIdNFT()) != address(0)) {
+            return;
+        }
+
+        MockVoterIdNFT mockVoterIdNFT = new MockVoterIdNFT();
+        mockVoterIdNFT.setHolder(submitter);
+
+        bytes32 configRole = registry.CONFIG_ROLE();
+        address[8] memory candidates = [
+            address(this), address(1), address(2), address(0xA), address(0xB), address(0xAA), address(0xBB), address(10)
+        ];
+        for (uint256 i = 0; i < candidates.length; i++) {
+            if (registry.hasRole(configRole, candidates[i])) {
+                HEVM.prank(candidates[i]);
+                registry.setVoterIdNFT(address(mockVoterIdNFT));
+                return;
+            }
+        }
+        revert("Voter ID NFT not set");
+    }
+
+    function _ensureDefaultQuestionRewardPoolEscrow(ContentRegistry registry) internal returns (address rewardEscrow) {
+        rewardEscrow = registry.questionRewardPoolEscrow();
+        if (rewardEscrow != address(0)) return rewardEscrow;
+
+        MockQuestionRewardPoolEscrow mockRewardPoolEscrow = new MockQuestionRewardPoolEscrow();
+        bytes32 configRole = registry.CONFIG_ROLE();
+        address[8] memory candidates = [
+            address(this), address(1), address(2), address(0xA), address(0xB), address(0xAA), address(0xBB), address(10)
+        ];
+        for (uint256 i = 0; i < candidates.length; i++) {
+            if (registry.hasRole(configRole, candidates[i])) {
+                HEVM.prank(candidates[i]);
+                registry.setQuestionRewardPoolEscrow(address(mockRewardPoolEscrow));
+                return address(mockRewardPoolEscrow);
+            }
+        }
+        revert("Bounty escrow not set");
+    }
+
+    function _singleImageUrls(string memory imageUrl) internal pure returns (string[] memory imageUrls) {
+        imageUrls = new string[](1);
+        imageUrls[0] = imageUrl;
+    }
+
+    function _emptyImageUrls() internal pure returns (string[] memory imageUrls) {
+        imageUrls = new string[](0);
+    }
+
+    function _submissionImageUrl(string memory url) internal pure returns (string memory) {
+        bytes memory urlBytes = bytes(url);
+        if (urlBytes.length == 0) return "https://example.com/test.jpg";
+
+        uint256 suffixOffset = urlBytes.length;
+        for (uint256 i = 0; i < urlBytes.length; i++) {
+            if (urlBytes[i] == "?" || urlBytes[i] == "#") {
+                suffixOffset = i;
+                break;
+            }
+        }
+        if (suffixOffset == urlBytes.length) return string.concat(url, ".jpg");
+
+        bytes memory suffix = ".jpg";
+        bytes memory out = new bytes(urlBytes.length + suffix.length);
+        for (uint256 i = 0; i < suffixOffset; i++) {
+            out[i] = urlBytes[i];
+        }
+        for (uint256 i = 0; i < suffix.length; i++) {
+            out[suffixOffset + i] = suffix[i];
+        }
+        for (uint256 i = suffixOffset; i < urlBytes.length; i++) {
+            out[i + suffix.length] = urlBytes[i];
+        }
+        return string(out);
     }
 }
 
@@ -70,6 +511,7 @@ abstract contract ContentSubmissionTestBase {
 abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
     struct TestCommitArtifacts {
         bytes ciphertext;
+        uint256 roundId;
         uint16 roundReferenceRatingBps;
         uint64 targetRound;
         bytes32 drandChainHash;
@@ -79,7 +521,7 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
 
     struct DirectTestCommitRequest {
         RoundVotingEngine engine;
-        CuryoReputation crepToken;
+        HumanReputation hrepToken;
         address voter;
         uint256 contentId;
         bool isUp;
@@ -90,7 +532,7 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
 
     struct TransferAndCallTestCommitRequest {
         RoundVotingEngine engine;
-        CuryoReputation crepToken;
+        HumanReputation hrepToken;
         address voter;
         uint256 contentId;
         bool isUp;
@@ -225,13 +667,15 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         );
     }
 
-    /// @dev Build commit hash bound to the exact ciphertext bytes used at commit time.
-    function _commitHash(bool isUp, bytes32 salt, uint256 contentId) internal view returns (bytes32) {
+    /// @dev Build commit hash bound to the exact voter and ciphertext bytes used at commit time.
+    function _commitHash(bool isUp, bytes32 salt, address voter, uint256 contentId) internal view returns (bytes32) {
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
         return _commitHash(
             isUp,
             salt,
+            voter,
             contentId,
+            _defaultTestCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -239,8 +683,13 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         );
     }
 
+    /// @dev Legacy helper for tests that do not submit/reveal the commit.
+    function _commitHash(bool isUp, bytes32 salt, uint256 contentId) internal view returns (bytes32) {
+        return _commitHash(isUp, salt, address(this), contentId);
+    }
+
     /// @dev Build commit hash for a caller-supplied ciphertext.
-    function _commitHash(bool isUp, bytes32 salt, uint256 contentId, bytes memory ciphertext)
+    function _commitHash(bool isUp, bytes32 salt, address voter, uint256 contentId, bytes memory ciphertext)
         internal
         view
         returns (bytes32)
@@ -248,12 +697,23 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         return _commitHash(
             isUp,
             salt,
+            voter,
             contentId,
+            _defaultTestCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
             ciphertext
         );
+    }
+
+    /// @dev Legacy helper for tests that do not submit/reveal the commit.
+    function _commitHash(bool isUp, bytes32 salt, uint256 contentId, bytes memory ciphertext)
+        internal
+        view
+        returns (bytes32)
+    {
+        return _commitHash(isUp, salt, address(this), contentId, ciphertext);
     }
 
     function _buildTestCommitArtifacts(address voter, bool isUp, bytes32 salt, uint256 contentId)
@@ -262,13 +722,16 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         returns (TestCommitArtifacts memory artifacts)
     {
         artifacts.ciphertext = _testCiphertext(isUp, salt, contentId);
+        artifacts.roundId = _defaultTestCommitRoundId(contentId);
         artifacts.roundReferenceRatingBps = _currentRatingReferenceBps(contentId);
         artifacts.targetRound = _tlockCommitTargetRound();
         artifacts.drandChainHash = _tlockDrandChainHash();
         artifacts.commitHash = _commitHash(
             isUp,
             salt,
+            voter,
             contentId,
+            artifacts.roundId,
             artifacts.roundReferenceRatingBps,
             artifacts.targetRound,
             artifacts.drandChainHash,
@@ -278,21 +741,23 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
     }
 
     function _commitTestVote(DirectTestCommitRequest memory request) internal returns (bytes32 commitKey) {
-        TestCommitArtifacts memory artifacts =
-            _buildTestCommitArtifacts(request.voter, request.isUp, request.salt, request.contentId);
+        TestCommitArtifacts memory artifacts = _buildTestCommitArtifacts(
+            address(request.engine), request.voter, request.isUp, request.salt, request.contentId
+        );
 
         vm.startPrank(request.voter);
-        request.crepToken.approve(address(request.engine), request.stake);
-        request.engine.commitVote(
-            request.contentId,
-            artifacts.roundReferenceRatingBps,
-            artifacts.targetRound,
-            artifacts.drandChainHash,
-            artifacts.commitHash,
-            artifacts.ciphertext,
-            request.stake,
-            request.frontend
-        );
+        request.hrepToken.approve(address(request.engine), request.stake);
+        request.engine
+            .commitVote(
+                request.contentId,
+                _roundContext(artifacts.roundId, artifacts.roundReferenceRatingBps),
+                artifacts.targetRound,
+                artifacts.drandChainHash,
+                artifacts.commitHash,
+                artifacts.ciphertext,
+                request.stake,
+                request.frontend
+            );
         vm.stopPrank();
 
         return artifacts.commitKey;
@@ -302,11 +767,12 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         internal
         returns (bytes32 commitKey)
     {
-        TestCommitArtifacts memory artifacts =
-            _buildTestCommitArtifacts(request.voter, request.isUp, request.salt, request.contentId);
+        TestCommitArtifacts memory artifacts = _buildTestCommitArtifacts(
+            address(request.engine), request.voter, request.isUp, request.salt, request.contentId
+        );
         bytes memory payload = abi.encode(
             request.contentId,
-            artifacts.roundReferenceRatingBps,
+            _roundContext(artifacts.roundId, artifacts.roundReferenceRatingBps),
             artifacts.commitHash,
             artifacts.ciphertext,
             request.frontend,
@@ -315,22 +781,30 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         );
 
         vm.prank(request.voter);
-        request.crepToken.transferAndCall(address(request.engine), request.stake, payload);
+        request.hrepToken.transferAndCall(address(request.engine), request.stake, payload);
 
         return artifacts.commitKey;
     }
 
     function _tlockCommitTargetRound() internal view returns (uint64) {
-        return _roundAt(block.timestamp + _tlockEpochDuration(), _tlockDrandGenesisTime(), _tlockDrandPeriod());
+        return _roundAtOrAfter(block.timestamp + _tlockEpochDuration(), _tlockDrandGenesisTime(), _tlockDrandPeriod());
     }
 
     function _tlockTargetRoundAt(uint256 revealableAfter) internal view returns (uint64) {
-        return _roundAt(revealableAfter, _tlockDrandGenesisTime(), _tlockDrandPeriod());
+        return _roundAtOrAfter(revealableAfter, _tlockDrandGenesisTime(), _tlockDrandPeriod());
     }
 
     function _tlockRoundTimestamp(uint64 targetRound) internal view returns (uint256) {
         if (targetRound == 0) return 0;
         return uint256(_tlockDrandGenesisTime()) + (uint256(targetRound) - 1) * uint256(_tlockDrandPeriod());
+    }
+
+    function _warpPastTlockRevealTime(uint256 revealableAfter) internal {
+        uint64 targetRound = _tlockTargetRoundAt(revealableAfter);
+        uint256 revealableAt = _tlockRoundTimestamp(targetRound);
+        if (block.timestamp <= revealableAt) {
+            vm.warp(revealableAt + 1);
+        }
     }
 
     function _tlockDrandChainHash() internal view virtual returns (bytes32) {
@@ -345,6 +819,10 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         return activeTlockDrandPeriod;
     }
 
+    function _activeSubmissionProtocolConfig() internal view override returns (ProtocolConfig) {
+        return activeTlockProtocolConfig;
+    }
+
     function _tlockEpochDuration() internal view virtual returns (uint256) {
         return activeTlockEpochDuration;
     }
@@ -354,9 +832,16 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         return uint64(((timestamp - genesisTime) / period) + 1);
     }
 
+    function _roundAtOrAfter(uint256 timestamp, uint64 genesisTime, uint64 period) internal pure returns (uint64) {
+        if (period == 0 || timestamp < genesisTime) return 0;
+        uint256 elapsed = timestamp - genesisTime;
+        return uint64(((elapsed + uint256(period) - 1) / uint256(period)) + 1);
+    }
+
     function _commitHash(
         bool isUp,
         bytes32 salt,
+        address voter,
         uint256 contentId,
         uint64 targetRound,
         bytes32 drandChainHash,
@@ -365,7 +850,9 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         return _commitHash(
             isUp,
             salt,
+            voter,
             contentId,
+            _defaultTestCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             targetRound,
             drandChainHash,
@@ -373,6 +860,60 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         );
     }
 
+    /// @dev Legacy helper for tests that do not submit/reveal the commit.
+    function _commitHash(
+        bool isUp,
+        bytes32 salt,
+        uint256 contentId,
+        uint64 targetRound,
+        bytes32 drandChainHash,
+        bytes memory ciphertext
+    ) internal view returns (bytes32) {
+        return _commitHash(isUp, salt, address(this), contentId, targetRound, drandChainHash, ciphertext);
+    }
+
+    function _commitHash(
+        bool isUp,
+        bytes32 salt,
+        address voter,
+        uint256 contentId,
+        uint16 roundReferenceRatingBps,
+        uint64 targetRound,
+        bytes32 drandChainHash,
+        bytes memory ciphertext
+    ) internal pure returns (bytes32) {
+        return _commitHash(
+            isUp, salt, voter, contentId, 1, roundReferenceRatingBps, targetRound, drandChainHash, ciphertext
+        );
+    }
+
+    function _commitHash(
+        bool isUp,
+        bytes32 salt,
+        address voter,
+        uint256 contentId,
+        uint256 roundId,
+        uint16 roundReferenceRatingBps,
+        uint64 targetRound,
+        bytes32 drandChainHash,
+        bytes memory ciphertext
+    ) internal pure returns (bytes32) {
+        return keccak256(
+            abi.encodePacked(
+                isUp,
+                salt,
+                voter,
+                contentId,
+                roundId,
+                roundReferenceRatingBps,
+                targetRound,
+                drandChainHash,
+                keccak256(ciphertext)
+            )
+        );
+    }
+
+    /// @dev Legacy helper for tests that do not submit/reveal the commit.
     function _commitHash(
         bool isUp,
         bytes32 salt,
@@ -381,16 +922,43 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         uint64 targetRound,
         bytes32 drandChainHash,
         bytes memory ciphertext
-    )
-        internal
-        pure
-        returns (bytes32)
-    {
-        return keccak256(
-            abi.encodePacked(
-                isUp, salt, contentId, roundReferenceRatingBps, targetRound, drandChainHash, keccak256(ciphertext)
-            )
+    ) internal pure returns (bytes32) {
+        return _commitHash(
+            isUp, salt, address(0), contentId, 1, roundReferenceRatingBps, targetRound, drandChainHash, ciphertext
         );
+    }
+
+    function _buildTestCommitArtifacts(address engine, address voter, bool isUp, bytes32 salt, uint256 contentId)
+        internal
+        view
+        returns (TestCommitArtifacts memory artifacts)
+    {
+        artifacts = _buildTestCommitArtifacts(voter, isUp, salt, contentId);
+        artifacts.roundId = _previewTestCommitRoundId(engine, contentId);
+        artifacts.commitHash = _commitHash(
+            isUp,
+            salt,
+            voter,
+            contentId,
+            artifacts.roundId,
+            artifacts.roundReferenceRatingBps,
+            artifacts.targetRound,
+            artifacts.drandChainHash,
+            artifacts.ciphertext
+        );
+        artifacts.commitKey = _commitKey(voter, artifacts.commitHash);
+    }
+
+    function _previewTestCommitRoundId(address engine, uint256 contentId) internal view returns (uint256) {
+        if (engine != address(0)) {
+            return RoundVotingEngine(engine).previewCommitRoundId(contentId);
+        }
+
+        return _defaultTestCommitRoundId(contentId);
+    }
+
+    function _defaultTestCommitRoundId(uint256) internal pure returns (uint256) {
+        return 1;
     }
 
     function _currentRatingReferenceBps(uint256 contentId) internal view returns (uint16) {
@@ -398,8 +966,15 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
             return RatingLib.DEFAULT_RATING_BPS;
         }
 
-        uint16 ratingBps = activeTlockContentRegistry.getRating(contentId);
-        return ratingBps == 0 ? RatingLib.DEFAULT_RATING_BPS : ratingBps;
+        return activeTlockContentRegistry.getRating(contentId);
+    }
+
+    function _defaultRatingReferenceBps() internal pure returns (uint16) {
+        return RatingLib.DEFAULT_RATING_BPS;
+    }
+
+    function _roundContext(uint256 roundId, uint16 referenceRatingBps) internal pure returns (uint256) {
+        return (roundId << 16) | uint256(referenceRatingBps);
     }
 
     function _decodeTestCiphertext(bytes memory ciphertext) internal pure returns (bool isUp, bytes32 salt) {
@@ -587,8 +1162,7 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
             bytes1 fourth = clean[i + 3];
             if (third == "=" && fourth != "=") revert("Invalid test ciphertext");
 
-            uint24 chunk =
-                (uint24(_base64Value(clean[i])) << 18) | (uint24(_base64Value(clean[i + 1])) << 12);
+            uint24 chunk = (uint24(_base64Value(clean[i])) << 18) | (uint24(_base64Value(clean[i + 1])) << 12);
             if (third != "=") {
                 chunk |= uint24(_base64Value(third)) << 6;
             }
@@ -606,7 +1180,11 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         }
     }
 
-    function _stripBase64Whitespace(bytes memory data, uint256 start, uint256 end) private pure returns (bytes memory clean) {
+    function _stripBase64Whitespace(bytes memory data, uint256 start, uint256 end)
+        private
+        pure
+        returns (bytes memory clean)
+    {
         uint256 cleanLength = 0;
         for (uint256 i = start; i < end; i++) {
             bytes1 ch = data[i];

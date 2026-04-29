@@ -46,13 +46,61 @@ const EXECUTED_EVENT = parseAbiItem(
   "event Executed(address indexed user, address indexed signer, address indexed executor, uint256 batchSize)",
 );
 const contractsForChain = (deployedContracts as Record<number, Record<string, ContractRecord>>)[CHAIN_ID];
-const crepContract = contractsForChain.CuryoReputation;
+const hrepContract = contractsForChain.HumanReputation;
 const contentRegistryContract = contractsForChain.ContentRegistry;
-const categoryRegistryContract = contractsForChain.CategoryRegistry;
 const frontendRegistryContract = contractsForChain.FrontendRegistry;
 const profileRegistryContract = contractsForChain.ProfileRegistry;
+const rewardEscrowContract = contractsForChain.QuestionRewardPoolEscrow;
 const rewardDistributorContract = contractsForChain.RoundRewardDistributor;
 const votingEngineContract = contractsForChain.RoundVotingEngine;
+const submitQuestionWithRewardAndRoundConfigAbi = [
+  {
+    type: "function",
+    name: "submitQuestionWithRewardAndRoundConfig",
+    inputs: [
+      { name: "contextUrl", type: "string" },
+      { name: "imageUrls", type: "string[]" },
+      { name: "videoUrl", type: "string" },
+      { name: "title", type: "string" },
+      { name: "description", type: "string" },
+      { name: "tags", type: "string" },
+      { name: "categoryId", type: "uint256" },
+      { name: "salt", type: "bytes32" },
+      {
+        name: "rewardTerms",
+        type: "tuple",
+        components: [
+          { name: "asset", type: "uint8" },
+          { name: "amount", type: "uint256" },
+          { name: "requiredVoters", type: "uint256" },
+          { name: "requiredSettledRounds", type: "uint256" },
+          { name: "bountyClosesAt", type: "uint256" },
+          { name: "feedbackClosesAt", type: "uint256" },
+        ],
+      },
+      {
+        name: "roundConfig",
+        type: "tuple",
+        components: [
+          { name: "epochDuration", type: "uint32" },
+          { name: "maxDuration", type: "uint32" },
+          { name: "minVoters", type: "uint16" },
+          { name: "maxVoters", type: "uint16" },
+        ],
+      },
+      {
+        name: "spec",
+        type: "tuple",
+        components: [
+          { name: "questionMetadataHash", type: "bytes32" },
+          { name: "resultSpecHash", type: "bytes32" },
+        ],
+      },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "nonpayable",
+  },
+] as const;
 
 let dbModule: DbModule;
 let dbTestMemory: DbTestMemoryModule;
@@ -147,7 +195,7 @@ function buildExecutedEventLog(user: `0x${string}`) {
 }
 
 const voteCall = (voteMarker: `0x${string}`) =>
-  encodeCall(crepContract, "transferAndCall", [votingEngineContract.address, 1n, voteMarker]);
+  encodeCall(hrepContract, "transferAndCall", [votingEngineContract.address, 1n, voteMarker]);
 
 function createStoreUnavailableError() {
   return new Error("database offline", {
@@ -417,25 +465,55 @@ test("supported sponsored operation families are allowlisted", async () => {
   const supportedCases = [
     [voteCall("0x07")],
     [
-      encodeCall(crepContract, "approve", [contentRegistryContract.address, 10n]),
+      encodeCall(hrepContract, "approve", [rewardEscrowContract.address, 1_000_000n]),
       encodeCall(contentRegistryContract, "reserveSubmission", [`0x${"1".repeat(64)}`]),
     ],
     [encodeCall(contentRegistryContract, "cancelReservedSubmission", [`0x${"2".repeat(64)}`])],
     [
-      encodeCall(crepContract, "approve", [categoryRegistryContract.address, 10n]),
-      encodeCall(categoryRegistryContract, "submitCategory", ["Security", "security.example", ["Smart Contracts"]]),
+      encodeCall(
+        { address: contentRegistryContract.address, abi: submitQuestionWithRewardAndRoundConfigAbi },
+        "submitQuestionWithRewardAndRoundConfig",
+        [
+          "https://example.com/product",
+          ["https://example.com/question-a.jpg"],
+          "",
+          "Is this product worth recommending?",
+          "Vote based on the image.",
+          "Products,Value",
+          1n,
+          `0x${"5".repeat(64)}`,
+          {
+            asset: 0,
+            amount: 1_000_000n,
+            requiredVoters: 3n,
+            requiredSettledRounds: 1n,
+            bountyClosesAt: 0n,
+            feedbackClosesAt: 0n,
+          },
+          { epochDuration: 1200, maxDuration: 604800, minVoters: 3, maxVoters: 1000 },
+          {
+            questionMetadataHash: `0x${"6".repeat(64)}`,
+            resultSpecHash: `0x${"7".repeat(64)}`,
+          },
+        ],
+      ),
     ],
     [encodeCall(frontendRegistryContract, "register")],
     [encodeCall(frontendRegistryContract, "claimFees")],
-    [encodeCall(profileRegistryContract, "setProfile", ["EthHealth", "I check primary sources before rating."])],
+    [
+      encodeCall(profileRegistryContract, "setProfile", [
+        "EthHealth",
+        '{"v":1,"ageGroup":"25-34","residenceCountry":"US"}',
+      ]),
+    ],
     [encodeCall(profileRegistryContract, "setAvatarAccent", [0x76bb40])],
     [encodeCall(profileRegistryContract, "clearAvatarAccent")],
-    [encodeCall(contentRegistryContract, "claimSubmitterParticipationReward", [1n])],
     [encodeCall(votingEngineContract, "claimCancelledRoundRefund", [1n, 1n])],
     [encodeCall(rewardDistributorContract, "claimFrontendFee", [1n, 1n, WALLET])],
     [encodeCall(rewardDistributorContract, "claimParticipationReward", [1n, 1n])],
     [encodeCall(rewardDistributorContract, "claimReward", [1n, 1n])],
-    [encodeCall(rewardDistributorContract, "claimSubmitterReward", [1n, 1n])],
+    [encodeCall(rewardEscrowContract, "claimQuestionReward", [1n, 1n])],
+    [encodeCall(rewardEscrowContract, "claimQuestionBundleReward", [1n, 0n])],
   ] as const;
 
   for (const calls of supportedCases) {
@@ -449,7 +527,7 @@ test("supported sponsored operation families are allowlisted", async () => {
 
 test("rejects token approvals to unsupported spenders", async () => {
   const decision = await freeTransactions.evaluateFreeTransactionAllowance(
-    buildRequest([encodeCall(crepContract, "approve", [WALLET, 10n])]) as never,
+    buildRequest([encodeCall(hrepContract, "approve", [WALLET, 10n])]) as never,
   );
 
   assert.equal(decision.isAllowed, false);
@@ -459,7 +537,7 @@ test("rejects token approvals to unsupported spenders", async () => {
 
 test("rejects arbitrary token methods even on allowlisted contracts", async () => {
   const decision = await freeTransactions.evaluateFreeTransactionAllowance(
-    buildRequest([encodeCall(crepContract, "transfer", [WALLET, 10n])]) as never,
+    buildRequest([encodeCall(hrepContract, "transfer", [WALLET, 10n])]) as never,
   );
 
   assert.equal(decision.isAllowed, false);

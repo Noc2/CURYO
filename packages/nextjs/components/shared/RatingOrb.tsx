@@ -33,7 +33,6 @@ export function RatingOrb({ rating, size = 196, className = "", showGlow = true 
   const animatedRatingRef = useRef(0);
   const center = size / 2;
   const trackRadius = size * 0.41;
-  const trackWidth = Math.max(8, size * 0.034);
   const displayedRating = clampContentRating(animatedRating);
   const displayedScore = formatRatingScoreOutOfTen(displayedRating);
   const progress = displayedRating / 100;
@@ -42,10 +41,21 @@ export function RatingOrb({ rating, size = 196, className = "", showGlow = true 
   const flareStroke = `url(#${orbId}-flare)`;
   const coreStroke = `url(#${orbId}-core)`;
   const endPoint = polarToCartesian(center, trackRadius, START_ANGLE + progress * 360);
+  const isTinyOrb = size <= 64;
   const isSmallOrb = size <= 100;
-  const ratingFontSize = isSmallOrb ? Math.max(30, size * 0.32) : Math.max(36, size * 0.25);
-  const scaleFontSize = isSmallOrb ? Math.max(12, ratingFontSize * 0.36) : Math.max(16, ratingFontSize * 0.4);
-  const scoreGapClassName = isSmallOrb ? "ml-1" : "ml-2";
+  const trackWidth = isTinyOrb ? Math.max(3, size * 0.065) : Math.max(8, size * 0.034);
+  const ratingFontSize = isTinyOrb
+    ? Math.max(13, size * 0.3)
+    : isSmallOrb
+      ? Math.max(30, size * 0.32)
+      : Math.max(36, size * 0.25);
+  const scaleFontSize = isTinyOrb
+    ? Math.max(6, ratingFontSize * 0.38)
+    : isSmallOrb
+      ? Math.max(12, ratingFontSize * 0.36)
+      : Math.max(16, ratingFontSize * 0.4);
+  const scoreGapClassName = isTinyOrb ? "ml-0.5" : isSmallOrb ? "ml-1" : "ml-2";
+  const scoreMaxWidth = isTinyOrb ? size * 0.84 : trackRadius * 1.7;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -240,13 +250,13 @@ export function RatingOrb({ rating, size = 196, className = "", showGlow = true 
       <div className="relative z-10 flex flex-col items-center justify-center text-center">
         <span
           className="display-metric inline-flex items-end justify-center text-base-content tabular-nums"
-          style={{ maxWidth: trackRadius * 1.7 }}
+          style={{ maxWidth: scoreMaxWidth }}
         >
-          <span className="font-semibold tracking-[-0.04em]" style={{ fontSize: ratingFontSize }}>
+          <span className="font-semibold tracking-normal" style={{ fontSize: ratingFontSize }}>
             {displayedScore}
           </span>
           <span
-            className={`${scoreGapClassName} mb-[0.12em] shrink-0 font-medium leading-[0.92] text-base-content/46`}
+            className={`${scoreGapClassName} mb-[0.12em] shrink-0 font-medium leading-[0.92] text-base-content/60`}
             style={{ fontSize: scaleFontSize }}
           >
             /10

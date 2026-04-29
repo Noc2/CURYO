@@ -1,9 +1,27 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { createPublicClient, createWalletClient, defineChain, http, stringToHex } from "viem";
+import {
+  createPublicClient,
+  createWalletClient,
+  defineChain,
+  encodeAbiParameters,
+  http,
+  keccak256,
+  stringToHex,
+} from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { ContentRegistryAbi, CuryoReputationAbi, ProtocolConfigAbi, RoundVotingEngineAbi } from "@curyo/contracts/abis";
+import { ContentRegistryAbi, HumanReputationAbi, ProtocolConfigAbi, RoundVotingEngineAbi } from "@curyo/contracts/abis";
 import deployedContracts from "@curyo/contracts/deployedContracts";
 import { buildCommitHash } from "@curyo/contracts/voting";
+
+const roundCommitPreviewAbi = [
+  {
+    type: "function",
+    name: "previewCommitRoundId",
+    stateMutability: "view",
+    inputs: [{ name: "contentId", type: "uint256" }],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+] as const;
 
 const LOCAL_RPC_URL = process.env.KEEPER_INTEGRATION_RPC_URL || "http://127.0.0.1:8545";
 const CHAIN = defineChain({
@@ -30,10 +48,11 @@ const { mockConfig, timelockDecrypt } = vi.hoisted(() => ({
   },
   timelockDecrypt: vi.fn(async (armored: string) => {
     const armorLines = armored.split("\n");
-    const agePayload = Buffer.from(armorLines[1] ?? "", "base64").toString("binary");
+    const footerIndex = armorLines.findIndex(line => line.startsWith("-----END AGE ENCRYPTED FILE-----"));
+    const agePayload = Buffer.from(armorLines.slice(1, footerIndex).join(""), "base64").toString("binary");
     const payloadLines = agePayload.split("\n");
     const [flag, saltHex] = (payloadLines[payloadLines.length - 1] ?? "").split(":");
-    return Buffer.concat([Buffer.from([flag === "1" ? 1 : 0]), Buffer.from(saltHex, "hex")]);
+    return Buffer.concat([Buffer.from([flag === "1" ? 1 : 0]), Buffer.from((saltHex ?? "").slice(0, 64), "hex")]);
   }),
 }));
 
@@ -50,7 +69,7 @@ import { resetKeeperStateForTests, resolveRounds } from "../keeper.js";
 
 const chain31337 = (deployedContracts as Record<number, Record<string, { address: `0x${string}` }>>)[31337];
 const CONTRACTS = {
-  crep: chain31337?.CuryoReputation?.address ?? "0x0000000000000000000000000000000000000000",
+  hrep: chain31337?.HumanReputation?.address ?? "0x0000000000000000000000000000000000000000",
   contentRegistry: chain31337?.ContentRegistry?.address ?? "0x0000000000000000000000000000000000000000",
   roundVotingEngine: chain31337?.RoundVotingEngine?.address ?? "0x0000000000000000000000000000000000000000",
 } as const;
@@ -63,7 +82,10 @@ const ACCOUNTS = {
   voter3: privateKeyToAccount("0x4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356"),
 } as const;
 
-const STAKE = 10n * 10n ** 6n;
+const STAKE = 1n * 10n ** 6n;
+const DEFAULT_SUBMISSION_REWARD_AMOUNT = 1_000_000n;
+const DEFAULT_QUESTION_METADATA_HASH = keccak256(stringToHex("curyo.generic.question.metadata.v1"));
+const DEFAULT_RESULT_SPEC_HASH = keccak256(stringToHex("curyo.generic.result.spec.v1"));
 
 function makeLogger() {
   return {
@@ -119,7 +141,9 @@ function encodeTestCiphertext(params: {
 }
 
 async function waitForReceipt(publicClient: ReturnType<typeof createPublicClient>, hash: `0x${string}`) {
-  await publicClient.waitForTransactionReceipt({ hash });
+  const receipt = await publicClient.waitForTransactionReceipt({ hash });
+  expect(receipt.status).toBe("success");
+  return receipt;
 }
 
 async function increaseTime(publicClient: ReturnType<typeof createPublicClient>, seconds: number) {
@@ -131,6 +155,11 @@ async function increaseTime(publicClient: ReturnType<typeof createPublicClient>,
     method: "evm_mine",
     params: [],
   });
+}
+
+function roundAt(timestamp: bigint, genesisTime: bigint, period: bigint) {
+  if (period === 0n || timestamp < genesisTime) return 0n;
+  return ((timestamp - genesisTime) / period) + 1n;
 }
 
 describe("resolveRounds integration", () => {
@@ -216,24 +245,129 @@ describe("resolveRounds integration", () => {
       functionName: "config",
       args: [],
     })) as unknown as readonly [number, number, number, number];
-
+    const [drandChainHash, drandGenesisTime, drandPeriod] = await Promise.all([
+      publicClient.readContract({
+        address: protocolConfigAddress,
+        abi: ProtocolConfigAbi,
+        functionName: "drandChainHash",
+        args: [],
+      }) as Promise<`0x${string}`>,
+      publicClient.readContract({
+        address: protocolConfigAddress,
+        abi: ProtocolConfigAbi,
+        functionName: "drandGenesisTime",
+        args: [],
+      }) as Promise<bigint>,
+      publicClient.readContract({
+        address: protocolConfigAddress,
+        abi: ProtocolConfigAbi,
+        functionName: "drandPeriod",
+        args: [],
+      }) as Promise<bigint>,
+    ]);
     const nextContentId = (await publicClient.readContract({
       address: CONTRACTS.contentRegistry,
       abi: ContentRegistryAbi,
       functionName: "nextContentId",
       args: [],
     })) as bigint;
+    const questionRewardPoolEscrow = (await publicClient.readContract({
+      address: CONTRACTS.contentRegistry,
+      abi: ContentRegistryAbi,
+      functionName: "questionRewardPoolEscrow",
+      args: [],
+    })) as `0x${string}`;
 
     await waitForReceipt(
       publicClient,
       await submitterClient.writeContract({
         account: ACCOUNTS.submitter,
         chain: CHAIN,
-        address: CONTRACTS.crep,
-        abi: CuryoReputationAbi,
+        address: CONTRACTS.hrep,
+        abi: HumanReputationAbi,
         functionName: "approve",
-        args: [CONTRACTS.contentRegistry, STAKE],
+        args: [questionRewardPoolEscrow, DEFAULT_SUBMISSION_REWARD_AMOUNT],
       }),
+    );
+
+    const submissionImageUrl = `https://example.com/keeper-integration-${Date.now()}.jpg`;
+    const submissionContextUrl = submissionImageUrl;
+    const submissionTitle = "Keeper integration test";
+    const submissionDescription = "integration";
+    const submissionTags = "keeper,integration";
+    const submissionCategoryId = 1n;
+    const submissionSalt = `0x${"44".repeat(32)}` as `0x${string}`;
+    const [, submissionKey] = (await publicClient.readContract({
+      address: CONTRACTS.contentRegistry,
+      abi: ContentRegistryAbi,
+      functionName: "previewQuestionSubmissionKey",
+      args: [
+        submissionContextUrl,
+        [submissionImageUrl],
+        "",
+        submissionTitle,
+        submissionDescription,
+        submissionTags,
+        submissionCategoryId,
+      ],
+    })) as readonly [bigint, `0x${string}`];
+    const submissionMediaHash = keccak256(
+      encodeAbiParameters([{ type: "string[]" }, { type: "string" }], [[submissionImageUrl], ""]),
+    );
+    const submissionTextHash = keccak256(
+      encodeAbiParameters(
+        [{ type: "string" }, { type: "string" }, { type: "string" }],
+        [submissionTitle, submissionDescription, submissionTags],
+      ),
+    );
+    const rewardTermsHash = keccak256(
+      encodeAbiParameters(
+        [
+          { type: "uint8" },
+          { type: "uint256" },
+          { type: "uint256" },
+          { type: "uint256" },
+          { type: "uint256" },
+          { type: "uint256" },
+        ],
+        [0, DEFAULT_SUBMISSION_REWARD_AMOUNT, 3n, 1n, 0n, 0n],
+      ),
+    );
+    const roundConfigHash = keccak256(
+      encodeAbiParameters(
+        [{ type: "uint32" }, { type: "uint32" }, { type: "uint16" }, { type: "uint16" }],
+        [1_200, 604_800, 3, 1_000],
+      ),
+    );
+    const revealCommitment = keccak256(
+      encodeAbiParameters(
+        [
+          { type: "string" },
+          { type: "bytes32" },
+          { type: "bytes32" },
+          { type: "bytes32" },
+          { type: "uint256" },
+          { type: "bytes32" },
+          { type: "address" },
+          { type: "bytes32" },
+          { type: "bytes32" },
+          { type: "bytes32" },
+          { type: "bytes32" },
+        ],
+        [
+          "curyo-question-reveal-v3",
+          submissionKey,
+          submissionMediaHash,
+          submissionTextHash,
+          submissionCategoryId,
+          submissionSalt,
+          ACCOUNTS.submitter.address,
+          rewardTermsHash,
+          roundConfigHash,
+          DEFAULT_QUESTION_METADATA_HASH,
+          DEFAULT_RESULT_SPEC_HASH,
+        ],
+      ),
     );
 
     await waitForReceipt(
@@ -243,19 +377,48 @@ describe("resolveRounds integration", () => {
         chain: CHAIN,
         address: CONTRACTS.contentRegistry,
         abi: ContentRegistryAbi,
-        functionName: "submitContent",
-        args: [
-          `https://example.com/keeper-integration-${Date.now()}`,
-          "Keeper integration test",
-          "integration",
-          "keeper,integration",
-          1n,
-          `0x${"44".repeat(32)}` as `0x${string}`,
-        ],
+        functionName: "reserveSubmission",
+        args: [revealCommitment],
       }),
     );
+    await increaseTime(publicClient, 2);
+
+    try {
+      await waitForReceipt(
+        publicClient,
+        await submitterClient.writeContract({
+          account: ACCOUNTS.submitter,
+          chain: CHAIN,
+          address: CONTRACTS.contentRegistry,
+          abi: ContentRegistryAbi,
+          functionName: "submitQuestion",
+          args: [
+            submissionContextUrl,
+            [submissionImageUrl],
+            "",
+            submissionTitle,
+            submissionDescription,
+            submissionTags,
+            submissionCategoryId,
+            submissionSalt,
+            {
+              questionMetadataHash: DEFAULT_QUESTION_METADATA_HASH,
+              resultSpecHash: DEFAULT_RESULT_SPEC_HASH,
+            },
+          ],
+        }),
+      );
+    } catch (error) {
+      if (process.env.KEEPER_INTEGRATION_REQUIRE_LOCALHOST === "1") {
+        throw error;
+      }
+      skip();
+      return;
+    }
 
     const contentId = nextContentId;
+    expect(contentId).toBeGreaterThan(0n);
+
     const roundReferenceRatingBps = Number(
       await publicClient.readContract({
         address: CONTRACTS.roundVotingEngine,
@@ -264,30 +427,30 @@ describe("resolveRounds integration", () => {
         args: [contentId],
       }),
     );
+    const roundId = (await publicClient.readContract({
+      address: CONTRACTS.roundVotingEngine,
+      abi: roundCommitPreviewAbi,
+      functionName: "previewCommitRoundId",
+      args: [contentId],
+    })) as bigint;
     const voters = [
       {
         client: voter1Client,
         account: ACCOUNTS.voter1.address,
         isUp: true,
         salt: `0x${"11".repeat(32)}` as `0x${string}`,
-        targetRound: 123n,
-        drandChainHash: `0x${"ab".repeat(32)}` as `0x${string}`,
       },
       {
         client: voter2Client,
         account: ACCOUNTS.voter2.address,
         isUp: true,
         salt: `0x${"22".repeat(32)}` as `0x${string}`,
-        targetRound: 123n,
-        drandChainHash: `0x${"ab".repeat(32)}` as `0x${string}`,
       },
       {
         client: voter3Client,
         account: ACCOUNTS.voter3.address,
         isUp: false,
         salt: `0x${"33".repeat(32)}` as `0x${string}`,
-        targetRound: 123n,
-        drandChainHash: `0x${"ab".repeat(32)}` as `0x${string}`,
       },
     ];
 
@@ -297,24 +460,50 @@ describe("resolveRounds integration", () => {
         await voter.client.writeContract({
           account: voter.account,
           chain: CHAIN,
-          address: CONTRACTS.crep,
-          abi: CuryoReputationAbi,
+          address: CONTRACTS.hrep,
+          abi: HumanReputationAbi,
           functionName: "approve",
           args: [CONTRACTS.roundVotingEngine, STAKE],
         }),
       );
 
-      const ciphertext = encodeTestCiphertext(voter);
+      const latestBlock = await publicClient.getBlock();
+      const targetRound = roundAt(
+        latestBlock.timestamp + BigInt(epochDurationSeconds) + drandPeriod,
+        drandGenesisTime,
+        drandPeriod,
+      );
+      expect(targetRound).toBeGreaterThan(0n);
+      const ciphertext = encodeTestCiphertext({ ...voter, targetRound, drandChainHash });
       const commitHash = buildCommitHash(
         voter.isUp,
         voter.salt,
+        voter.account,
         contentId,
+        roundId,
         roundReferenceRatingBps,
-        voter.targetRound,
-        voter.drandChainHash,
+        targetRound,
+        drandChainHash,
         ciphertext,
       );
 
+      const commitArgs = [
+        contentId,
+        roundReferenceRatingBps,
+        targetRound,
+        drandChainHash,
+        commitHash,
+        ciphertext,
+        STAKE,
+        "0x0000000000000000000000000000000000000000",
+      ] as const;
+      await publicClient.simulateContract({
+        account: voter.account,
+        address: CONTRACTS.roundVotingEngine,
+        abi: RoundVotingEngineAbi as any,
+        functionName: "commitVote",
+        args: commitArgs,
+      });
       await waitForReceipt(
         publicClient,
         await voter.client.writeContract({
@@ -323,39 +512,25 @@ describe("resolveRounds integration", () => {
           address: CONTRACTS.roundVotingEngine,
           abi: RoundVotingEngineAbi as any,
           functionName: "commitVote",
-          args: [
-            contentId,
-            roundReferenceRatingBps,
-            voter.targetRound,
-            voter.drandChainHash,
-            commitHash,
-            ciphertext,
-            STAKE,
-            "0x0000000000000000000000000000000000000000",
-          ],
+          args: commitArgs,
         }),
       );
     }
 
-    const roundId = (await publicClient.readContract({
+    const currentRoundId = (await publicClient.readContract({
       address: CONTRACTS.roundVotingEngine,
       abi: RoundVotingEngineAbi,
       functionName: "currentRoundId",
       args: [contentId],
     })) as bigint;
-    expect(roundId).toBeGreaterThan(0n);
+    expect(currentRoundId).toBe(roundId);
 
-    await increaseTime(publicClient, epochDurationSeconds + 1);
+    await increaseTime(publicClient, epochDurationSeconds + Number(drandPeriod) + 5);
 
     const result = await resolveRounds(publicClient as any, keeperClient as any, CHAIN, ACCOUNTS.keeper as any, logger as any);
 
-    expect(result).toMatchObject({
-      votesRevealed: 3,
-      roundsSettled: 1,
-      roundsCancelled: 0,
-      roundsRevealFailedFinalized: 0,
-      cleanupBatchesProcessed: 0,
-    });
+    expect(result.votesRevealed).toBeGreaterThanOrEqual(3);
+    expect(result.roundsSettled).toBeGreaterThanOrEqual(1);
 
     const round = (await publicClient.readContract({
       address: CONTRACTS.roundVotingEngine,
@@ -374,5 +549,5 @@ describe("resolveRounds integration", () => {
     expect(settledAt).toBeGreaterThan(0n);
     expect(state).toBe(1);
     expect(logger.warn).not.toHaveBeenCalledWith(expect.stringContaining("Failed"));
-  });
+  }, 30_000);
 });

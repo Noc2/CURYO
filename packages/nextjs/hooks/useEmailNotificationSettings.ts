@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSignMessage } from "wagmi";
+import { ensurePrivateAccountReadSession } from "~~/hooks/usePrivateAccountSession";
 import {
   DEFAULT_EMAIL_NOTIFICATION_SETTINGS,
   type EmailNotificationSettingsPayload,
@@ -47,37 +48,9 @@ async function readEmailNotificationSettings(
     return { ...DEFAULT_EMAIL_NOTIFICATION_SETTINGS };
   }
 
-  const challengeRes = await fetch("/api/notifications/email/challenge", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      address,
-      intent: "read",
-    }),
-  });
+  await ensurePrivateAccountReadSession(address, signMessageAsync);
 
-  const challengeData = (await challengeRes.json().catch(() => null)) as {
-    error?: string;
-    message?: string;
-    challengeId?: string;
-  } | null;
-
-  if (!challengeRes.ok || !challengeData?.message || !challengeData.challengeId) {
-    throw new Error(challengeData?.error || "Failed to create signature challenge");
-  }
-
-  const signature = await signMessageAsync({ message: challengeData.message });
-
-  const res = await fetch("/api/notifications/email", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      address,
-      signature,
-      challengeId: challengeData.challengeId,
-    }),
-  });
-
+  const res = await fetch(`/api/notifications/email?address=${encodeURIComponent(address)}`);
   const body = (await res.json().catch(() => null)) as
     | ({ error?: string } & Partial<EmailNotificationSettingsState>)
     | null;

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { NextPage } from "next";
+import { SETTINGS_FRONTEND_ROUTE } from "~~/constants/routes";
 import { protocolDocFacts } from "~~/lib/docs/protocolFacts";
 
 const sdkSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/sdk";
@@ -47,9 +48,9 @@ const FrontendCodes: NextPage = () => {
             Register a frontend address when you want votes made through your interface to earn{" "}
             <strong>{protocolDocFacts.frontendShareLabel}</strong> from settled two-sided rounds.
           </p>
-          <a href="#register-a-frontend-operator" className="link link-primary">
-            Jump to operator setup
-          </a>
+          <Link href={SETTINGS_FRONTEND_ROUTE} className="link link-primary">
+            Open frontend settings
+          </Link>
         </div>
       </div>
 
@@ -91,11 +92,19 @@ const FrontendCodes: NextPage = () => {
       <p>
         Frontend operators who build frontends, mobile apps, or integrations receive{" "}
         <strong>{protocolDocFacts.frontendShareLabel}</strong> from settled two-sided rounds on votes made through their
-        interface.
+        interface. Bounties also reserve a default 3% share for the eligible frontend operator attributed at vote commit
+        time.
+      </p>
+      <p>
+        The reference app registration flow lives in{" "}
+        <Link href={SETTINGS_FRONTEND_ROUTE} className="link link-primary">
+          Settings
+        </Link>
+        .
       </p>
       <ol>
         <li>
-          <strong>Stake 1,000 cREP</strong> to the FrontendRegistry contract.
+          <strong>Stake 1,000 HREP</strong> to the FrontendRegistry contract.
         </li>
         <li>
           <strong>Integrate:</strong> Include your registered address in the vote payload, or configure it as the
@@ -104,16 +113,17 @@ const FrontendCodes: NextPage = () => {
         <li>
           <strong>Claim:</strong> First call{" "}
           <code>RoundRewardDistributor.claimFrontendFee(contentId, roundId, frontend)</code> from your operator address
-          on each settled round, then withdraw your accumulated cREP from <code>FrontendRegistry.claimFees()</code>{" "}
+          on each settled round, then withdraw your accumulated HREP from <code>FrontendRegistry.claimFees()</code>{" "}
           while active, or with <code>completeDeregister()</code> after exit. If governance slashes your frontend, you
-          must restore the full 1,000 cREP bond before fee claims can accrue to you again.
+          must restore the full 1,000 HREP bond before fee claims can accrue to you again. Reward-pool frontend shares
+          are paid automatically when eligible voters claim.
         </li>
       </ol>
 
       <h2>Frontend Attribution</h2>
       <p>Include your frontend address in the payload you send through the single-transaction vote flow:</p>
       <pre className="bg-base-200 p-4 rounded-lg overflow-x-auto">
-        <code>{`CuryoReputation.transferAndCall(
+        <code>{`HumanReputation.transferAndCall(
     votingEngineAddress,
     stakeAmount,
     abi.encode(
@@ -223,8 +233,8 @@ const FrontendCodes: NextPage = () => {
       <p>The reference implementation includes a policy-driven moderation layer that:</p>
       <ul>
         <li>
-          <strong>Blocks submissions</strong> containing prohibited terms or blocked domains in URLs, titles,
-          descriptions, custom content categories, platform names, domains, and platform subcategories.
+          <strong>Blocks submissions</strong> containing prohibited terms or blocked domains in URLs, questions,
+          descriptions, seeded category names, category tags, or unsafe media embeds.
         </li>
         <li>
           <strong>Filters indexed reads centrally</strong> in the bundled Ponder query layer so blocked content stays
@@ -291,11 +301,11 @@ const FrontendCodes: NextPage = () => {
       <p>Frontend operators are subject to governance control:</p>
       <ul>
         <li>
-          <strong>Slashing</strong> - Governance can slash staked cREP for abuse and confiscate already accrued frontend
+          <strong>Slashing</strong> - Governance can slash staked HREP for abuse and confiscate already accrued frontend
           fees.
         </li>
         <li>
-          <strong>Rebonding required</strong> - After a partial slash, operators must top back up to the full 1,000 cREP
+          <strong>Rebonding required</strong> - After a partial slash, operators must top back up to the full 1,000 HREP
           stake before frontend fees can accrue again.
         </li>
       </ul>

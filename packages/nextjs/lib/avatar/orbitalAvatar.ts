@@ -63,7 +63,7 @@ interface OrbitalAvatarModel {
 
 const VIEWBOX_SIZE = 512;
 const CENTER = VIEWBOX_SIZE / 2;
-const CREP_DECIMALS = 1e6;
+const HREP_DECIMALS = 1e6;
 const FLARE_START_ROTATION_DEGREES = -90;
 const AVATAR_FLARE_WIDTH = 17.5;
 const AVATAR_FLARE_GLOW_WIDTH = 22;
@@ -202,9 +202,9 @@ function getPaletteSeedHex(payload: ReputationAvatarPayload) {
 }
 
 function getSignalScores(payload: ReputationAvatarPayload) {
-  const balanceCrep = Number(BigInt(payload.balance || "0")) / CREP_DECIMALS;
+  const balanceHrep = Number(BigInt(payload.balance || "0")) / HREP_DECIMALS;
   const stats = payload.stats;
-  const balanceScore = logScore(balanceCrep, 100000);
+  const balanceScore = logScore(balanceHrep, 100000);
   const totalSettledVotes = stats?.totalSettledVotes ?? 0;
   const accuracy = clamp(stats?.winRate ?? 0, 0, 1);
   const accuracyConfidence = clamp(totalSettledVotes / 25, 0, 1);

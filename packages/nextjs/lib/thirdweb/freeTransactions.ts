@@ -124,6 +124,140 @@ const USER_OPERATION_RECEIPT_EVENT_ABI = parseAbi([
 const EXECUTED_RECEIPT_EVENT_ABI = parseAbi([
   "event Executed(address indexed user, address indexed signer, address indexed executor, uint256 batchSize)",
 ]);
+const ERC20_APPROVAL_ABI = parseAbi(["function approve(address spender, uint256 amount) returns (bool)"]);
+const CONTENT_REGISTRY_SUBMISSION_ABI = [
+  {
+    type: "function",
+    name: "cancelReservedSubmission",
+    inputs: [{ name: "revealCommitment", type: "bytes32" }],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "reserveSubmission",
+    inputs: [{ name: "revealCommitment", type: "bytes32" }],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "submitQuestion",
+    inputs: [
+      { name: "contextUrl", type: "string" },
+      { name: "imageUrls", type: "string[]" },
+      { name: "videoUrl", type: "string" },
+      { name: "title", type: "string" },
+      { name: "description", type: "string" },
+      { name: "tags", type: "string" },
+      { name: "categoryId", type: "uint256" },
+      { name: "salt", type: "bytes32" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "submitQuestionWithRewardAndRoundConfig",
+    inputs: [
+      { name: "contextUrl", type: "string" },
+      { name: "imageUrls", type: "string[]" },
+      { name: "videoUrl", type: "string" },
+      { name: "title", type: "string" },
+      { name: "description", type: "string" },
+      { name: "tags", type: "string" },
+      { name: "categoryId", type: "uint256" },
+      { name: "salt", type: "bytes32" },
+      {
+        name: "rewardTerms",
+        type: "tuple",
+        components: [
+          { name: "asset", type: "uint8" },
+          { name: "amount", type: "uint256" },
+          { name: "requiredVoters", type: "uint256" },
+          { name: "requiredSettledRounds", type: "uint256" },
+          { name: "bountyClosesAt", type: "uint256" },
+          { name: "feedbackClosesAt", type: "uint256" },
+        ],
+      },
+      {
+        name: "roundConfig",
+        type: "tuple",
+        components: [
+          { name: "epochDuration", type: "uint32" },
+          { name: "maxDuration", type: "uint32" },
+          { name: "minVoters", type: "uint16" },
+          { name: "maxVoters", type: "uint16" },
+        ],
+      },
+      {
+        name: "spec",
+        type: "tuple",
+        components: [
+          { name: "questionMetadataHash", type: "bytes32" },
+          { name: "resultSpecHash", type: "bytes32" },
+        ],
+      },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "submitQuestionBundleWithRewardAndRoundConfig",
+    inputs: [
+      {
+        name: "questions",
+        type: "tuple[]",
+        components: [
+          { name: "contextUrl", type: "string" },
+          { name: "imageUrls", type: "string[]" },
+          { name: "videoUrl", type: "string" },
+          { name: "title", type: "string" },
+          { name: "description", type: "string" },
+          { name: "tags", type: "string" },
+          { name: "categoryId", type: "uint256" },
+          { name: "salt", type: "bytes32" },
+          {
+            name: "spec",
+            type: "tuple",
+            components: [
+              { name: "questionMetadataHash", type: "bytes32" },
+              { name: "resultSpecHash", type: "bytes32" },
+            ],
+          },
+        ],
+      },
+      {
+        name: "rewardTerms",
+        type: "tuple",
+        components: [
+          { name: "asset", type: "uint8" },
+          { name: "amount", type: "uint256" },
+          { name: "requiredVoters", type: "uint256" },
+          { name: "requiredSettledRounds", type: "uint256" },
+          { name: "bountyClosesAt", type: "uint256" },
+          { name: "feedbackClosesAt", type: "uint256" },
+        ],
+      },
+      {
+        name: "roundConfig",
+        type: "tuple",
+        components: [
+          { name: "epochDuration", type: "uint32" },
+          { name: "maxDuration", type: "uint32" },
+          { name: "minVoters", type: "uint16" },
+          { name: "maxVoters", type: "uint16" },
+        ],
+      },
+    ],
+    outputs: [
+      { name: "bundleId", type: "uint256" },
+      { name: "contentIds", type: "uint256[]" },
+    ],
+    stateMutability: "nonpayable",
+  },
+] as const;
 
 let ensureFreeTransactionQuotaTablePromise: Promise<void> | null = null;
 let freeTransactionTestOverrides: {
@@ -166,6 +300,13 @@ function getContractsByAddress(chainId: number): Map<string, { name: string; add
         { name, address: contract.address, abi: contract.abi },
       ]),
   );
+}
+
+function decodeContentRegistryCallData(data: Hex) {
+  return decodeFunctionData({
+    abi: CONTENT_REGISTRY_SUBMISSION_ABI,
+    data,
+  }) as { functionName: string; args: readonly unknown[] | undefined };
 }
 
 function getRpcUrl(chainId: number) {
@@ -527,18 +668,30 @@ function normalizeAddressArg(value: unknown): `0x${string}` | null {
   return normalizeAddress(value);
 }
 
+function isApprovalToAllowedSpender(callData: Hex, allowedSpenders: ReadonlySet<string>) {
+  try {
+    const decoded = decodeFunctionData({
+      abi: ERC20_APPROVAL_ABI,
+      data: callData,
+    }) as { functionName: string; args: readonly unknown[] | undefined };
+    const spender = normalizeAddressArg(decoded.args?.[0]);
+    return decoded.functionName === "approve" && Boolean(spender && allowedSpenders.has(spender.toLowerCase()));
+  } catch {
+    return false;
+  }
+}
+
 function validateSponsoredCalls(
   chainId: number,
   calls: readonly NormalizedVerifierCall[],
 ): { ok: true } | { ok: false; debugCode: "target_not_allowlisted" | "unsupported_operation" } {
   const contracts = getContractsForChain(chainId);
   const contractsByAddress = getContractsByAddress(chainId);
-  const contentRegistry = contracts?.ContentRegistry;
-  const categoryRegistry = contracts?.CategoryRegistry;
   const frontendRegistry = contracts?.FrontendRegistry;
+  const rewardEscrow = contracts?.QuestionRewardPoolEscrow;
   const votingEngine = contracts?.RoundVotingEngine;
   const allowedApproveSpenders = new Set(
-    [contentRegistry?.address, categoryRegistry?.address, frontendRegistry?.address]
+    [frontendRegistry?.address, rewardEscrow?.address]
       .filter((value): value is Address => Boolean(value))
       .map(value => value.toLowerCase()),
   );
@@ -550,6 +703,9 @@ function validateSponsoredCalls(
 
     const contract = contractsByAddress.get(call.to.toLowerCase());
     if (!contract) {
+      if (isApprovalToAllowedSpender(call.data, allowedApproveSpenders)) {
+        continue;
+      }
       return { ok: false, debugCode: "target_not_allowlisted" };
     }
 
@@ -560,21 +716,28 @@ function validateSponsoredCalls(
         data: call.data,
       }) as { functionName: string; args: readonly unknown[] | undefined };
     } catch {
-      return { ok: false, debugCode: "unsupported_operation" };
+      if (contract.name === "ContentRegistry") {
+        try {
+          decoded = decodeContentRegistryCallData(call.data);
+        } catch {
+          return { ok: false, debugCode: "unsupported_operation" };
+        }
+      } else {
+        return { ok: false, debugCode: "unsupported_operation" };
+      }
     }
 
     const args = decoded.args ?? [];
     const functionName = decoded.functionName;
+    if (functionName === "approve") {
+      const spender = normalizeAddressArg(args[0]);
+      if (spender && allowedApproveSpenders.has(spender.toLowerCase())) {
+        continue;
+      }
+    }
 
     switch (contract.name) {
-      case "CuryoReputation": {
-        if (functionName === "approve") {
-          const spender = normalizeAddressArg(args[0]);
-          if (spender && allowedApproveSpenders.has(spender.toLowerCase())) {
-            continue;
-          }
-        }
-
+      case "HumanReputation": {
         if (functionName === "transferAndCall") {
           const target = normalizeAddressArg(args[0]);
           if (target && votingEngine && target.toLowerCase() === votingEngine.address.toLowerCase()) {
@@ -586,16 +749,12 @@ function validateSponsoredCalls(
       }
       case "ContentRegistry":
         if (
-          functionName === "claimSubmitterParticipationReward" ||
           functionName === "cancelReservedSubmission" ||
           functionName === "reserveSubmission" ||
-          functionName === "submitContent"
+          functionName === "submitQuestion" ||
+          functionName === "submitQuestionWithRewardAndRoundConfig" ||
+          functionName === "submitQuestionBundleWithRewardAndRoundConfig"
         ) {
-          continue;
-        }
-        return { ok: false, debugCode: "unsupported_operation" };
-      case "CategoryRegistry":
-        if (functionName === "submitCategory" || functionName === "linkApprovalProposal") {
           continue;
         }
         return { ok: false, debugCode: "unsupported_operation" };
@@ -627,14 +786,13 @@ function validateSponsoredCalls(
         if (
           functionName === "claimFrontendFee" ||
           functionName === "claimParticipationReward" ||
-          functionName === "claimReward" ||
-          functionName === "claimSubmitterReward"
+          functionName === "claimReward"
         ) {
           continue;
         }
         return { ok: false, debugCode: "unsupported_operation" };
-      case "CuryoGovernor":
-        if (functionName === "proposeCategoryApproval") {
+      case "QuestionRewardPoolEscrow":
+        if (functionName === "claimQuestionReward" || functionName === "claimQuestionBundleReward") {
           continue;
         }
         return { ok: false, debugCode: "unsupported_operation" };

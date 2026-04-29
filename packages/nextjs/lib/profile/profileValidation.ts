@@ -1,1 +1,1 @@
-export const MAX_PROFILE_STRATEGY_LENGTH = 560;
+export { MAX_PROFILE_SELF_REPORT_LENGTH } from "@curyo/node-utils/profileSelfReport";

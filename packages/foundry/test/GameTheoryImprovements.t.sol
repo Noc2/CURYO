@@ -7,7 +7,7 @@ import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
 import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { HumanReputation } from "../contracts/HumanReputation.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
@@ -19,7 +19,7 @@ import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.so
 ///         3. Expired rounds cancelled after maxDuration without enough voters
 ///         4. Consensus subsidy paid from reserve when all voters unanimous
 contract GameTheoryImprovementsTest is VotingTestBase {
-    CuryoReputation crepToken;
+    HumanReputation hrepToken;
     ContentRegistry registry;
     RoundVotingEngine engine;
     RoundRewardDistributor distributor;
@@ -45,8 +45,8 @@ contract GameTheoryImprovementsTest is VotingTestBase {
         vm.warp(10_000); // predictable start time
         vm.startPrank(owner);
 
-        crepToken = new CuryoReputation(owner, owner);
-        crepToken.grantRole(crepToken.MINTER_ROLE(), owner);
+        hrepToken = new HumanReputation(owner, owner);
+        hrepToken.grantRole(hrepToken.MINTER_ROLE(), owner);
 
         ContentRegistry regImpl = new ContentRegistry();
         RoundVotingEngine engImpl = new RoundVotingEngine();
@@ -55,7 +55,8 @@ contract GameTheoryImprovementsTest is VotingTestBase {
         registry = ContentRegistry(
             address(
                 new ERC1967Proxy(
-                    address(regImpl), abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(crepToken)))
+                    address(regImpl),
+                    abi.encodeCall(ContentRegistry.initializeWithTreasury, (owner, owner, owner, address(hrepToken)))
                 )
             )
         );
@@ -67,7 +68,7 @@ contract GameTheoryImprovementsTest is VotingTestBase {
                     address(engImpl),
                     abi.encodeCall(
                         RoundVotingEngine.initialize,
-                        (owner, address(crepToken), address(registry), address(_deployProtocolConfig(owner)))
+                        (owner, address(hrepToken), address(registry), address(_deployProtocolConfig(owner)))
                     )
                 )
             )
@@ -79,7 +80,7 @@ contract GameTheoryImprovementsTest is VotingTestBase {
                     address(distImpl),
                     abi.encodeCall(
                         RoundRewardDistributor.initialize,
-                        (owner, address(crepToken), address(engine), address(registry))
+                        (owner, address(hrepToken), address(engine), address(registry))
                     )
                 )
             )
@@ -95,19 +96,21 @@ contract GameTheoryImprovementsTest is VotingTestBase {
         ProtocolConfig(address(engine.protocolConfig())).setTreasury(treasuryAddr);
 
         // Override config: 1-hour epochs, 7-day max, minVoters=3, maxVoters=1000
-        _setTlockRoundConfig(ProtocolConfig(address(engine.protocolConfig())), EPOCH_DURATION, MAX_DURATION, MIN_VOTERS, 1000);
+        _setTlockRoundConfig(
+            ProtocolConfig(address(engine.protocolConfig())), EPOCH_DURATION, MAX_DURATION, MIN_VOTERS, 1000
+        );
 
         // Fund consensus reserve
-        crepToken.mint(owner, 200_000e6);
-        crepToken.approve(address(engine), 200_000e6);
+        hrepToken.mint(owner, 200_000e6);
+        hrepToken.approve(address(engine), 200_000e6);
         engine.addToConsensusReserve(200_000e6);
 
         // Fund submitter and voters
-        crepToken.mint(submitter, 100_000e6);
-        crepToken.mint(alice, 100_000e6);
-        crepToken.mint(bob, 100_000e6);
-        crepToken.mint(carol, 100_000e6);
-        crepToken.mint(dave, 100_000e6);
+        hrepToken.mint(submitter, 100_000e6);
+        hrepToken.mint(alice, 100_000e6);
+        hrepToken.mint(bob, 100_000e6);
+        hrepToken.mint(carol, 100_000e6);
+        hrepToken.mint(dave, 100_000e6);
 
         vm.stopPrank();
     }
@@ -120,7 +123,7 @@ contract GameTheoryImprovementsTest is VotingTestBase {
     function _submit() internal returns (uint256) {
         contentNonce++;
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         uint256 id = _submitContentWithReservation(
             registry, string(abi.encodePacked("https://t.co/gt", vm.toString(contentNonce))), "Goal", "Goal", "tag", 0
         );
@@ -131,12 +134,16 @@ contract GameTheoryImprovementsTest is VotingTestBase {
     /// @dev Commit a vote for a voter in the current round. Approves and calls commitVote.
     function _commit(address voter, uint256 contentId, bool isUp, uint256 stake) internal {
         bytes32 salt = bytes32(uint256(uint160(voter)) ^ uint256(contentId));
-        bytes32 ch = _commitHash(isUp, salt, contentId);
+        bytes32 ch = _commitHash(isUp, salt, voter, contentId);
         bytes memory ct = _testCiphertext(isUp, salt, contentId);
 
         vm.startPrank(voter);
-        crepToken.approve(address(engine), stake);
-        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch, ct, stake, address(0));
+        hrepToken.approve(address(engine), stake);
+        uint256 cachedRoundContext1 =
+            _roundContext(engine.previewCommitRoundId(contentId), _defaultRatingReferenceBps());
+        engine.commitVote(
+            contentId, cachedRoundContext1, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch, ct, stake, address(0)
+        );
         vm.stopPrank();
     }
 
@@ -162,8 +169,8 @@ contract GameTheoryImprovementsTest is VotingTestBase {
     /// @notice DOWN wins despite raw UP majority (300 vs 100) because epoch weighting
     ///         gives epoch-1 votes 100% weight and epoch-2+ votes only 25% weight.
     ///
-    ///   Alice: DOWN, 100 cREP, epoch-1 → effectiveStake = 100 cREP (weight = 10000 BPS)
-    ///   Bob, Carol, Dave: UP, 100 cREP each, epoch-2 → effectiveStake = 25 cREP each
+    ///   Alice: DOWN, 100 HREP, epoch-1 → effectiveStake = 100 HREP (weight = 10000 BPS)
+    ///   Bob, Carol, Dave: UP, 100 HREP each, epoch-2 → effectiveStake = 25 HREP each
     ///
     ///   weightedDownPool = 100, weightedUpPool = 75 → DOWN wins.
     function test_EpochWeightWinCondition() public {
@@ -174,7 +181,7 @@ contract GameTheoryImprovementsTest is VotingTestBase {
         _commit(alice, cid, false, 100e6); // DOWN, epoch-1
 
         // --- Epoch-2 commits (informed, after epoch-1 ends) ---
-        vm.warp(roundStart + EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(roundStart + EPOCH_DURATION);
         _commit(bob, cid, true, 100e6); // UP, epoch-2
         _commit(carol, cid, true, 100e6); // UP, epoch-2
         _commit(dave, cid, true, 100e6); // UP, epoch-2
@@ -184,7 +191,7 @@ contract GameTheoryImprovementsTest is VotingTestBase {
         // Reveal all votes. Epoch-1 commits are revealable after roundStart + EPOCH_DURATION.
         // Epoch-2 commits are revealable after roundStart + 2 * EPOCH_DURATION.
         // Warp past epoch-2 end so all can be revealed.
-        vm.warp(roundStart + 2 * EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(roundStart + 2 * EPOCH_DURATION);
 
         _reveal(alice, cid, roundId, false);
         _reveal(bob, cid, roundId, true);
@@ -197,8 +204,8 @@ contract GameTheoryImprovementsTest is VotingTestBase {
 
         // weightedDownPool = 100e6 * 10000 / 10000 = 100e6
         // weightedUpPool = 3 * (100e6 * 2500 / 10000) = 3 * 25e6 = 75e6
-        assertEq(round.weightedDownPool, 100e6, "weighted DOWN pool = 100 cREP (epoch-1 full weight)");
-        assertEq(round.weightedUpPool, 75e6, "weighted UP pool = 75 cREP (3x epoch-2 at 25% each)");
+        assertEq(round.weightedDownPool, 100e6, "weighted DOWN pool = 100 HREP (epoch-1 full weight)");
+        assertEq(round.weightedUpPool, 75e6, "weighted UP pool = 75 HREP (3x epoch-2 at 25% each)");
 
         // thresholdReachedAt was set when 3rd vote was revealed (minVoters = 3)
         assertGt(round.thresholdReachedAt, 0, "threshold reached");
@@ -208,21 +215,22 @@ contract GameTheoryImprovementsTest is VotingTestBase {
         RoundLib.Round memory settled = RoundEngineReadHelpers.round(engine, cid, roundId);
         assertEq(uint256(settled.state), uint256(RoundLib.RoundState.Settled), "Round settled");
         assertFalse(settled.upWins, "DOWN wins despite raw UP majority - epoch weighting prevails");
+        assertGt(registry.getRating(cid), 5_000, "rating should follow raw revealed UP majority");
     }
 
     // =========================================================================
     // TEST 2: EpochWeightRewards (4:1 ratio)
     // =========================================================================
 
-    /// @notice Epoch-1 voters earn 4x rewards per cREP vs epoch-2 voters.
+    /// @notice Epoch-1 voters earn 4x rewards per HREP vs epoch-2 voters.
     ///
-    ///   Alice: UP, 100 cREP, epoch-1 → effectiveStake = 100 cREP
-    ///   Bob:   DOWN, 100 cREP, epoch-1 → effectiveStake = 100 cREP
-    ///   Carol: UP, 100 cREP, epoch-2 → effectiveStake = 25 cREP
+    ///   Alice: UP, 100 HREP, epoch-1 → effectiveStake = 100 HREP
+    ///   Bob:   DOWN, 100 HREP, epoch-1 → effectiveStake = 100 HREP
+    ///   Carol: UP, 100 HREP, epoch-2 → effectiveStake = 25 HREP
     ///
-    ///   UP wins. weightedUpPool = 100 + 25 = 125 cREP.
+    ///   UP wins. weightedUpPool = 100 + 25 = 125 HREP.
     ///   Alice share = 100/125 of voterPool, Carol share = 25/125 of voterPool.
-    ///   So Alice earns 4x the reward Carol earns (per cREP staked).
+    ///   So Alice earns 4x the reward Carol earns (per HREP staked).
     function test_EpochWeightRewards() public {
         uint256 cid = _submit();
         uint256 roundStart = block.timestamp;
@@ -232,13 +240,13 @@ contract GameTheoryImprovementsTest is VotingTestBase {
         _commit(bob, cid, false, 100e6); // DOWN, epoch-1
 
         // --- Epoch-2 commit ---
-        vm.warp(roundStart + EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(roundStart + EPOCH_DURATION);
         _commit(carol, cid, true, 100e6); // UP, epoch-2
 
         uint256 roundId = engine.currentRoundId(cid);
 
         // Warp past epoch-2 end to allow all reveals
-        vm.warp(roundStart + 2 * EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(roundStart + 2 * EPOCH_DURATION);
 
         _reveal(alice, cid, roundId, true);
         _reveal(bob, cid, roundId, false);
@@ -249,12 +257,12 @@ contract GameTheoryImprovementsTest is VotingTestBase {
 
         // weightedUpPool = 100e6 + 25e6 = 125e6
         // weightedDownPool = 100e6
-        assertEq(round.weightedUpPool, 125e6, "weighted UP pool = 125 cREP");
-        assertEq(round.weightedDownPool, 100e6, "weighted DOWN pool = 100 cREP");
+        assertEq(round.weightedUpPool, 125e6, "weighted UP pool = 125 HREP");
+        assertEq(round.weightedDownPool, 100e6, "weighted DOWN pool = 100 HREP");
 
         // Record balances before settlement + claims
-        uint256 aliceBefore = crepToken.balanceOf(alice);
-        uint256 carolBefore = crepToken.balanceOf(carol);
+        uint256 aliceBefore = hrepToken.balanceOf(alice);
+        uint256 carolBefore = hrepToken.balanceOf(carol);
 
         _settle(cid, roundId);
 
@@ -272,8 +280,8 @@ contract GameTheoryImprovementsTest is VotingTestBase {
         vm.prank(carol);
         distributor.claimReward(cid, roundId);
 
-        uint256 aliceGain = crepToken.balanceOf(alice) - aliceBefore;
-        uint256 carolGain = crepToken.balanceOf(carol) - carolBefore;
+        uint256 aliceGain = hrepToken.balanceOf(alice) - aliceBefore;
+        uint256 carolGain = hrepToken.balanceOf(carol) - carolBefore;
 
         // Alice received her stake back (100e6) + her share of voterPool
         // Carol received her stake back (100e6) + her share of voterPool
@@ -316,7 +324,7 @@ contract GameTheoryImprovementsTest is VotingTestBase {
         uint256 roundId = engine.currentRoundId(cid);
 
         // Warp past epoch-1 end to make commits revealable
-        vm.warp(roundStart + EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(roundStart + EPOCH_DURATION);
 
         _reveal(alice, cid, roundId, true);
         _reveal(bob, cid, roundId, true);
@@ -359,8 +367,8 @@ contract GameTheoryImprovementsTest is VotingTestBase {
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Cancelled), "Round cancelled after expiry");
 
         // Voters should be able to claim refunds
-        uint256 aliceBefore = crepToken.balanceOf(alice);
-        uint256 bobBefore = crepToken.balanceOf(bob);
+        uint256 aliceBefore = hrepToken.balanceOf(alice);
+        uint256 bobBefore = hrepToken.balanceOf(bob);
 
         // claimCancelledRoundRefund looks up the voter's commit from internal mapping
         vm.prank(alice);
@@ -369,8 +377,8 @@ contract GameTheoryImprovementsTest is VotingTestBase {
         vm.prank(bob);
         engine.claimCancelledRoundRefund(cid, roundId);
 
-        assertEq(crepToken.balanceOf(alice) - aliceBefore, 50e6, "Alice refunded full stake");
-        assertEq(crepToken.balanceOf(bob) - bobBefore, 50e6, "Bob refunded full stake");
+        assertEq(hrepToken.balanceOf(alice) - aliceBefore, 50e6, "Alice refunded full stake");
+        assertEq(hrepToken.balanceOf(bob) - bobBefore, 50e6, "Bob refunded full stake");
     }
 
     // =========================================================================
@@ -394,7 +402,7 @@ contract GameTheoryImprovementsTest is VotingTestBase {
         uint256 roundId = engine.currentRoundId(cid);
 
         // Warp past epoch-1 end
-        vm.warp(roundStart + EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(roundStart + EPOCH_DURATION);
 
         _reveal(alice, cid, roundId, true);
         _reveal(bob, cid, roundId, true);
@@ -423,12 +431,12 @@ contract GameTheoryImprovementsTest is VotingTestBase {
         assertGt(voterPool, 0, "Voter pool non-zero - subsidy distributed");
 
         // Alice can claim her stake + subsidy share
-        uint256 aliceBefore = crepToken.balanceOf(alice);
+        uint256 aliceBefore = hrepToken.balanceOf(alice);
         vm.prank(alice);
         distributor.claimReward(cid, roundId);
-        uint256 aliceAfter = crepToken.balanceOf(alice);
+        uint256 aliceAfter = hrepToken.balanceOf(alice);
         assertGt(aliceAfter, aliceBefore, "Alice received tokens back");
-        // Alice gets her 100 cREP stake returned at minimum
+        // Alice gets her 100 HREP stake returned at minimum
         assertGe(aliceAfter - aliceBefore, 100e6, "Alice gets at least her full stake back");
     }
 }

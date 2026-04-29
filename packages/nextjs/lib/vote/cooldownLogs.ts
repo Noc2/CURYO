@@ -11,7 +11,7 @@ export interface VoteCooldownLogLike {
   logIndex?: number | null;
 }
 
-export interface VoteCooldownLogItem {
+interface VoteCooldownLogItem {
   contentId: string;
   latestCommittedAt: string;
   cooldownEndsAt: string;

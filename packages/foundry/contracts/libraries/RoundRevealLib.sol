@@ -26,6 +26,7 @@ library RoundRevealLib {
         uint256 currentEligibleFrontendStake,
         uint256 currentEligibleFrontendCount,
         uint256 contentId,
+        uint256 roundId,
         bytes32 commitKey,
         bool isUp,
         bytes32 salt,
@@ -49,7 +50,9 @@ library RoundRevealLib {
         bytes32 expectedHash = TlockVoteLib.buildExpectedCommitHash(
             isUp,
             salt,
+            commit.voter,
             contentId,
+            roundId,
             roundReferenceRatingBps,
             commit.targetRound,
             commit.drandChainHash,
@@ -72,7 +75,7 @@ library RoundRevealLib {
         }
 
         uint256 epochWeightBps = RoundLib.epochWeightBps(commit.epochIndex);
-        uint64 effectiveStake = uint64((uint256(commit.stakeAmount) * epochWeightBps) / 10_000);
+        uint64 effectiveStake = ((uint256(commit.stakeAmount) * epochWeightBps) / 10_000).toUint64();
         if (isUp) {
             round.weightedUpPool += effectiveStake;
         } else {

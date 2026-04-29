@@ -223,7 +223,7 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
         className="absolute inset-x-0 flex h-0 max-w-full gap-2 overflow-hidden invisible pointer-events-none"
       >
         {categories.map(category => (
-          <span key={category} className="px-3 py-1.5 rounded-full text-base font-medium whitespace-nowrap shrink-0">
+          <span key={category} className="tab-control px-3 py-1.5 text-base font-medium whitespace-nowrap shrink-0">
             {category}
           </span>
         ))}
@@ -237,7 +237,7 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
             setMobileOpen(prev => !prev);
             setSearch("");
           }}
-          className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-base font-medium whitespace-nowrap transition-colors ${
+          className={`tab-control inline-flex items-center gap-1 px-3 py-1.5 text-base font-medium whitespace-nowrap transition-colors ${
             activeCategory !== categories[0] ? "pill-category" : "pill-inactive"
           }`}
           aria-haspopup="dialog"
@@ -282,7 +282,7 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
                   <label htmlFor={mobileSearchInputId} className="sr-only">
                     Search categories
                   </label>
-                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-base-content/40" />
+                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-base-content/60" />
                   <input
                     id={mobileSearchInputId}
                     ref={mobileSearchInputRef}
@@ -306,9 +306,7 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
                           type="button"
                           onClick={() => handleSelect(category)}
                           className={`flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left text-base font-medium transition-colors ${
-                            isActive
-                              ? "bg-primary/10 text-primary"
-                              : "text-base-content/80 hover:bg-base-300 hover:text-base-content"
+                            isActive ? "choice-row-active" : "choice-row-inactive"
                           }`}
                         >
                           <span className="min-w-0 leading-tight">{category}</span>
@@ -317,7 +315,7 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
                       );
                     })
                   ) : (
-                    <div className="px-2 py-3 text-sm text-base-content/40">No matches</div>
+                    <div className="px-2 py-3 text-sm text-base-content/60">No matches</div>
                   )}
                 </div>
               </div>
@@ -336,7 +334,7 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
             <button
               key={category}
               onClick={() => handleSelect(category)}
-              className={`px-3 py-1.5 rounded-full text-base font-medium whitespace-nowrap transition-colors shrink-0 ${custom ?? defaultCls}`}
+              className={`tab-control px-3 py-1.5 text-base font-medium whitespace-nowrap transition-colors shrink-0 ${custom ?? defaultCls}`}
             >
               {category}
             </button>
@@ -348,7 +346,7 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
             <button
               ref={dropdownButtonRef}
               onClick={() => setDropdownOpen(prev => !prev)}
-              className={`px-3 py-1.5 rounded-full text-base font-medium whitespace-nowrap transition-colors flex items-center gap-1 ${
+              className={`tab-control px-3 py-1.5 text-base font-medium whitespace-nowrap transition-colors flex items-center gap-1 ${
                 overflow.includes(activeCategory) ? "pill-category" : "pill-inactive"
               }`}
             >
@@ -374,7 +372,7 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
                         <label htmlFor={desktopSearchInputId} className="sr-only">
                           Search categories
                         </label>
-                        <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/40" />
+                        <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/60" />
                         <input
                           id={desktopSearchInputId}
                           ref={searchInputRef}
@@ -407,7 +405,7 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
                           </li>
                         ))
                       ) : (
-                        <li className="text-base-content/40 text-sm px-3 py-2">No matches</li>
+                        <li className="text-base-content/60 text-sm px-3 py-2">No matches</li>
                       )}
                     </ul>
                   </div>,

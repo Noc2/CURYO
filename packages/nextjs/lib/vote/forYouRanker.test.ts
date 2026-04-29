@@ -2,12 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import { buildInterestProfile } from "~~/hooks/useInterestProfile";
+import { buildFallbackMediaItems } from "~~/lib/contentMedia";
 import { rankForYouFeed } from "~~/lib/vote/forYouRanker";
 
 function makeContentItem(overrides: Partial<ContentItem> & Pick<ContentItem, "id" | "url" | "title">): ContentItem {
   return {
     id: overrides.id,
     url: overrides.url,
+    media: overrides.media ?? buildFallbackMediaItems(overrides.url),
     title: overrides.title,
     description: overrides.description ?? "Example description",
     tags: overrides.tags ?? [],
@@ -91,7 +93,7 @@ test("voter-stage ranking favors content aligned with prior votes", () => {
     }),
     makeContentItem({
       id: 2n,
-      url: "https://wikipedia.org/wiki/Example",
+      url: "https://example.com/history.jpg",
       title: "Unrelated article",
       categoryId: 1n,
       tags: ["history"],

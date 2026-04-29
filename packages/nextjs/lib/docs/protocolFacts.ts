@@ -39,46 +39,68 @@ function formatDurationLabel(seconds: number): string {
 }
 
 const remainingPoolBps = BPS_SCALE - REWARD_SPLIT_BPS.revealedLoserRefund;
+const ROUND_CONFIG_BOUNDS = {
+  minEpochDurationSeconds: 5 * 60,
+  maxEpochDurationSeconds: 60 * 60,
+  minRoundDurationSeconds: 60 * 60,
+  maxRoundDurationSeconds: 30 * 24 * 60 * 60,
+  minSettlementVoters: 2,
+  maxSettlementVoters: 100,
+  minVoterCap: 2,
+  maxVoterCap: 10_000,
+} as const;
 
 function effectiveRawSharePercent(bucketBps: number): number {
   return percentFromBps((remainingPoolBps * bucketBps) / BPS_SCALE);
 }
 
 export const protocolDocFacts = {
-  governanceProposalThresholdLabel: "10,000 cREP",
-  governanceQuorumLabel: "4% of circulating supply (min 100,000 cREP)",
-  governanceMinimumQuorumLabel: "100,000 cREP",
+  governanceProposalThresholdLabel: "1,000 HREP",
+  governanceQuorumLabel: "4% of circulating supply (min 100,000 HREP)",
+  governanceMinimumQuorumLabel: "100,000 HREP",
   governanceTimelockDelayLabel: "2 days",
   blindPhaseDurationLabel: formatDurationLabel(DEFAULT_ROUND_CONFIG.epochDurationSeconds),
   revealGracePeriodLabel: formatDurationLabel(DEFAULT_REVEAL_GRACE_PERIOD_SECONDS),
   maxRoundDurationLabel: formatDurationLabel(DEFAULT_ROUND_CONFIG.maxDurationSeconds),
   minVotersLabel: String(DEFAULT_ROUND_CONFIG.minVoters),
   maxVotersLabel: DEFAULT_ROUND_CONFIG.maxVoters.toLocaleString(),
+  minBlindPhaseDurationLabel: formatDurationLabel(ROUND_CONFIG_BOUNDS.minEpochDurationSeconds),
+  maxBlindPhaseDurationLabel: formatDurationLabel(ROUND_CONFIG_BOUNDS.maxEpochDurationSeconds),
+  minRoundDurationLabel: formatDurationLabel(ROUND_CONFIG_BOUNDS.minRoundDurationSeconds),
+  maxAllowedRoundDurationLabel: formatDurationLabel(ROUND_CONFIG_BOUNDS.maxRoundDurationSeconds),
+  minSettlementVotersLabel: String(ROUND_CONFIG_BOUNDS.minSettlementVoters),
+  maxSettlementVotersLabel: String(ROUND_CONFIG_BOUNDS.maxSettlementVoters),
+  minVoterCapLabel: String(ROUND_CONFIG_BOUNDS.minVoterCap),
+  maxVoterCapLabel: ROUND_CONFIG_BOUNDS.maxVoterCap.toLocaleString(),
+  roundConfigBoundsSummaryLabel: `${formatDurationLabel(
+    ROUND_CONFIG_BOUNDS.minEpochDurationSeconds,
+  )}-${formatDurationLabel(ROUND_CONFIG_BOUNDS.maxEpochDurationSeconds)} blind phase, ${formatDurationLabel(
+    ROUND_CONFIG_BOUNDS.minRoundDurationSeconds,
+  )}-${formatDurationLabel(ROUND_CONFIG_BOUNDS.maxRoundDurationSeconds)} max duration, ${
+    ROUND_CONFIG_BOUNDS.minSettlementVoters
+  }-${ROUND_CONFIG_BOUNDS.maxSettlementVoters} settlement voters, ${ROUND_CONFIG_BOUNDS.minVoterCap}-${ROUND_CONFIG_BOUNDS.maxVoterCap.toLocaleString()} voter cap`,
   revealedLoserRefundPercentLabel: formatPercent(percentFromBps(REWARD_SPLIT_BPS.revealedLoserRefund)),
   revealedLoserRefundLabel: `${formatPercent(percentFromBps(REWARD_SPLIT_BPS.revealedLoserRefund))} of raw losing stake`,
   revealedLoserRefundShortLabel: `${formatPercent(percentFromBps(REWARD_SPLIT_BPS.revealedLoserRefund))} of raw`,
   remainingPoolLabel: formatPercent(percentFromBps(remainingPoolBps)),
   voterPoolNetSharePercentLabel: formatPercent(percentFromBps(REWARD_SPLIT_BPS.voter)),
-  submitterNetSharePercentLabel: formatPercent(percentFromBps(REWARD_SPLIT_BPS.submitter)),
+  submitterNetSharePercentLabel: "0%",
   consensusNetSharePercentLabel: formatPercent(percentFromBps(REWARD_SPLIT_BPS.consensus)),
   frontendNetSharePercentLabel: formatPercent(percentFromBps(PLATFORM_REWARD_SPLIT_BPS.frontend)),
-  categoryNetSharePercentLabel: formatPercent(percentFromBps(PLATFORM_REWARD_SPLIT_BPS.category)),
   treasuryNetSharePercentLabel: formatPercent(percentFromBps(REWARD_SPLIT_BPS.treasury)),
   voterPoolShareLabel: `${formatPercent(percentFromBps(REWARD_SPLIT_BPS.voter))} of the remaining ${formatPercent(percentFromBps(remainingPoolBps))}`,
-  submitterShareLabel: `${formatPercent(percentFromBps(REWARD_SPLIT_BPS.submitter))} of the remaining ${formatPercent(percentFromBps(remainingPoolBps))}`,
+  submitterShareLabel: `0% of the remaining ${formatPercent(percentFromBps(remainingPoolBps))}`,
   consensusShareLabel: `${formatPercent(percentFromBps(REWARD_SPLIT_BPS.consensus))} of the remaining ${formatPercent(percentFromBps(remainingPoolBps))}`,
   frontendShareLabel: `${formatPercent(percentFromBps(PLATFORM_REWARD_SPLIT_BPS.frontend))} of the remaining ${formatPercent(percentFromBps(remainingPoolBps))}`,
-  categoryShareLabel: `${formatPercent(percentFromBps(PLATFORM_REWARD_SPLIT_BPS.category))} of the remaining ${formatPercent(percentFromBps(remainingPoolBps))}`,
   treasuryShareLabel: `${formatPercent(percentFromBps(REWARD_SPLIT_BPS.treasury))} of the remaining ${formatPercent(percentFromBps(remainingPoolBps))}`,
   voterPoolShortLabel: `${formatPercent(percentFromBps(REWARD_SPLIT_BPS.voter))} of remaining`,
-  submitterShortLabel: `${formatPercent(percentFromBps(REWARD_SPLIT_BPS.submitter))} of remaining`,
+  submitterShortLabel: "0% of remaining",
   consensusShortLabel: `${formatPercent(percentFromBps(REWARD_SPLIT_BPS.consensus))} of remaining`,
   frontendShortLabel: `${formatPercent(percentFromBps(PLATFORM_REWARD_SPLIT_BPS.frontend))} of remaining`,
-  categoryShortLabel: `${formatPercent(percentFromBps(PLATFORM_REWARD_SPLIT_BPS.category))} of remaining`,
   treasuryShortLabel: `${formatPercent(percentFromBps(REWARD_SPLIT_BPS.treasury))} of remaining`,
   voterPoolEffectiveRawPercentLabel: formatPercent(effectiveRawSharePercent(REWARD_SPLIT_BPS.voter)),
   voterPoolEffectiveRawFactorLabel: formatFactor(effectiveRawSharePercent(REWARD_SPLIT_BPS.voter) / 100),
-  rewardSplitSummaryLabel: `${formatPercent(percentFromBps(REWARD_SPLIT_BPS.voter))} voters / ${formatPercent(percentFromBps(REWARD_SPLIT_BPS.submitter))} submitter / ${formatPercent(percentFromBps(REWARD_SPLIT_BPS.consensus))} consensus / ${formatPercent(percentFromBps(PLATFORM_REWARD_SPLIT_BPS.frontend))} frontend / ${formatPercent(percentFromBps(PLATFORM_REWARD_SPLIT_BPS.category))} category / ${formatPercent(percentFromBps(REWARD_SPLIT_BPS.treasury))} treasury`,
+  rewardSplitSummaryLabel: `${formatPercent(percentFromBps(REWARD_SPLIT_BPS.voter))} voters / ${formatPercent(percentFromBps(REWARD_SPLIT_BPS.consensus))} consensus / ${formatPercent(percentFromBps(PLATFORM_REWARD_SPLIT_BPS.frontend))} frontend / ${formatPercent(percentFromBps(REWARD_SPLIT_BPS.treasury))} treasury`,
   blindPhaseWeightLabel: formatPercent(percentFromBps(EPOCH_WEIGHT_BPS.blind)),
   openPhaseWeightLabel: formatPercent(percentFromBps(EPOCH_WEIGHT_BPS.informed)),
   earlyVoterAdvantageLabel: `${EPOCH_WEIGHT_BPS.blind / EPOCH_WEIGHT_BPS.informed}:1`,
@@ -87,10 +109,8 @@ export const protocolDocFacts = {
 const rewardSplitTableRows: [string, string][] = [
   ["Revealed losing voters", protocolDocFacts.revealedLoserRefundLabel],
   ["Content-specific voter pool", protocolDocFacts.voterPoolShareLabel],
-  ["Content submitter", protocolDocFacts.submitterShareLabel],
   ["Consensus subsidy reserve", protocolDocFacts.consensusShareLabel],
   ["Frontend operators", protocolDocFacts.frontendShareLabel],
-  ["Category submitter", protocolDocFacts.categoryShareLabel],
   ["Treasury", protocolDocFacts.treasuryShareLabel],
 ];
 
@@ -114,22 +134,10 @@ export const rewardSplitChartSlices = [
     color: "#B3341B",
   },
   {
-    label: "Content submitter",
-    value: effectiveRawSharePercent(REWARD_SPLIT_BPS.submitter),
-    displayValue: protocolDocFacts.submitterShortLabel,
-    color: "#F5F0EB",
-  },
-  {
     label: "Frontend operators",
     value: effectiveRawSharePercent(PLATFORM_REWARD_SPLIT_BPS.frontend),
     displayValue: protocolDocFacts.frontendShortLabel,
     color: "rgba(242, 100, 38, 0.6)",
-  },
-  {
-    label: "Category submitters",
-    value: effectiveRawSharePercent(PLATFORM_REWARD_SPLIT_BPS.category),
-    displayValue: protocolDocFacts.categoryShortLabel,
-    color: "rgba(126, 137, 150, 0.6)",
   },
   {
     label: "Treasury",
@@ -145,16 +153,36 @@ export const whitepaperRewardSplitRows: string[][] = rewardSplitTableRows.map(([
 ]);
 
 export const whitepaperSettlementConfigRows: string[][] = [
-  ["epochDuration", protocolDocFacts.blindPhaseDurationLabel, "Duration of each reward tier"],
-  ["minVoters", protocolDocFacts.minVotersLabel, "Minimum revealed votes required for settlement"],
+  [
+    "epochDuration",
+    `${protocolDocFacts.blindPhaseDurationLabel} default`,
+    "Creator-selected blind/reward-tier duration within governance bounds",
+  ],
+  [
+    "minVoters",
+    `${protocolDocFacts.minVotersLabel} default`,
+    "Creator-selected minimum revealed votes required for settlement",
+  ],
   [
     "maxDuration",
-    protocolDocFacts.maxRoundDurationLabel,
-    "Maximum round lifetime  -- below commit quorum rounds cancel; commit-quorum rounds can end as RevealFailed",
+    `${protocolDocFacts.maxRoundDurationLabel} default`,
+    "Creator-selected maximum round lifetime  -- below commit quorum rounds cancel; commit-quorum rounds can end as RevealFailed",
+  ],
+  [
+    "maxVoters",
+    `${protocolDocFacts.maxVotersLabel} default`,
+    "Creator-selected cap on voters for the question and upper bound for bounty required-voter terms",
   ],
   [
     "revealGracePeriod",
     protocolDocFacts.revealGracePeriodLabel,
     "Time after each epoch during which all votes must be revealed before settlement",
   ],
+];
+
+export const whitepaperRoundConfigBoundsRows: string[][] = [
+  ["blind phase", `${protocolDocFacts.minBlindPhaseDurationLabel} to ${protocolDocFacts.maxBlindPhaseDurationLabel}`],
+  ["max duration", `${protocolDocFacts.minRoundDurationLabel} to ${protocolDocFacts.maxAllowedRoundDurationLabel}`],
+  ["settlement voters", `${protocolDocFacts.minSettlementVotersLabel} to ${protocolDocFacts.maxSettlementVotersLabel}`],
+  ["voter cap", `${protocolDocFacts.minVoterCapLabel} to ${protocolDocFacts.maxVoterCapLabel}`],
 ];

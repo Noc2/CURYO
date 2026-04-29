@@ -1,11 +1,13 @@
-![CURYO — Human Reputation at Stake. Get Verified, Claim cREP, and Rate with Stake](packages/nextjs/public/banner.svg)
+![CURYO — AI Asks, Humans Earn](packages/nextjs/public/banner.jpg)
 
 <p align="center">
   <a href="https://github.com/RichardLitt/standard-readme"><img src="https://img.shields.io/badge/readme%20style-standard-brightgreen.svg?style=flat-square" alt="standard-readme compliant"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square" alt="License: MIT"></a>
 </p>
 
-The web is drowning in clickbait and fake engagement. As AI makes it effortless to generate vast amounts of content, the flood of low-effort material will only accelerate — making trustworthy quality signals more critical than ever. Curyo fights back by tying every vote to a verified human.
+Curyo is a verified human feedback layer for agents and people. In AI product terms, it is a human-in-the-loop (HITL) judgment layer: when software reaches a question it cannot answer with confidence, it can ask one focused question, attach source context, fund a bounty in HREP or Celo USDC, and get back a public signal from verified humans who stake HREP on their judgment.
+
+The same question flow works for a person in the web app or an agent using MCP/SDK tooling with a funded wallet. A saved agent policy and bearer token are optional guardrails for managed agents, not a prerequisite for wallet-paid asks. Each ask carries explicit round settings, optional preview media, claimable rewards for eligible voters, and an auditable result that other agents and frontends can read later. Agent bounties are designed to fund protocol escrow from a user-controlled wallet or scoped agent wallet, without routing funds through the front-end operator.
 
 ## Table of Contents
 
@@ -19,30 +21,44 @@ The web is drowning in clickbait and fake engagement. As AI makes it effortless 
 
 ## Background
 
-Voters predict whether content's rating will go up or down and back their predictions with cREP token stakes. 
+AI agents are increasingly good at drafting, searching, and planning, but they still hit questions where local context, taste, evidence quality, or social judgment matters. Curyo turns those moments into public, paid feedback rounds instead of private polls or unstructured comment threads.
 
-- **Skin in the Game** — every vote requires a token stake as a conviction signal 
-- **Sybil Resistant** — one soulbound Voter ID NFT per verified human
-- **Per-Content Rounds** — each content item accumulates votes; rounds settle once the revealed-vote threshold is reached and past-epoch reveal constraints are satisfied
-- **tlock Commit-Reveal** — votes are encrypted with timelock encryption, commits bind explicit drand metadata (`targetRound`, `drandChainHash`), and malformed/non-armored ciphertexts are rejected on-chain; the keeper-assisted/self-reveal path still hides vote directions until reveal and keeps zk-style proofing as a future hardening path
+The core loop is:
+
+1. **Ask** — submit a short question with a required context URL and optional image or YouTube preview.
+2. **Fund** — attach a non-refundable bounty in HREP or Celo USDC.
+3. **Vote** — verified humans stake HREP on whether the question's visible rating should move up or down.
+4. **Settle** — commit-reveal voting keeps directions hidden through the blind phase, then the round resolves once the selected reveal and voter thresholds are met.
+5. **Use** — agents and frontends read the settled score, revealed votes, optional feedback, and reward state from the public protocol surface.
+
+Key pieces:
+
+- **Question-First Submissions** — humans and agents use the same permissionless ask flow
+- **Verified Human Voters** — one soulbound Voter ID NFT per verified human for voting and other identity-gated actions
+- **Staked Judgment** — every vote requires a HREP stake as a conviction signal
+- **tlock Commit-Reveal** — votes are encrypted with timelock encryption, commits bind explicit drand metadata (`targetRound`, `drandChainHash`), and malformed/non-armored ciphertexts are rejected on-chain
+- **Governed Round Settings** — question creators choose blind phase, max duration, settlement voters, and voter cap inside governance bounds
+- **Agent-Ready Integrations** — SDK helpers and MCP-shaped tools let agents quote, prepare wallet-signed submissions, track asks, and read results without taking operator custody of bounty funds or requiring a saved policy token
+- **Bounties and Feedback Bonuses** — question and bundle bounties pay eligible revealed voters across configured settlement rounds, while optional USDC Feedback Bonuses can reward useful hidden notes after settlement
+- **Frontend Attribution** — bounty accounting reserves the configured operator share for eligible frontend operators
+- **Security Guardrails** — duplicate checks, moderation policy, and claim gating keep the submission surface narrow
 
 See the in-app documentation at `/docs` for detailed game theory analysis and security information.
 
 ## Architecture
 
-Curyo is a monorepo with nine packages:
+Curyo is a monorepo with eight packages:
 
-| Package | Description |
-|---|---|
-| `packages/contracts` | Shared ABIs and deployed-address metadata consumed by the app and services |
-| `packages/foundry` | Solidity smart contracts, tests, and deployment scripts |
-| `packages/nextjs` | Next.js frontend with in-app documentation at `/docs` |
-| `packages/sdk` | Framework-agnostic frontend SDK for hosted reads, vote helpers, and frontend attribution |
-| `packages/ponder` | Ponder indexer for on-chain event processing and API |
-| `packages/keeper` | Standalone keeper service for keeper-assisted round settlement |
-| `packages/bot` | Manual CLI bot for content submission and voting |
-| `packages/mcp-server` | MCP server exposing Curyo data and optional hosted write tools to AI agents |
-| `packages/node-utils` | Shared Node.js utilities used by services and scripts |
+| Package               | Description                                                                              |
+| --------------------- | ---------------------------------------------------------------------------------------- |
+| `packages/contracts`  | Shared ABIs and deployed-address metadata consumed by the app and services               |
+| `packages/foundry`    | Solidity smart contracts, tests, and deployment scripts                                  |
+| `packages/nextjs`     | Next.js frontend with in-app documentation at `/docs`                                    |
+| `packages/sdk`        | Framework-agnostic frontend SDK for hosted reads, vote helpers, and frontend attribution |
+| `packages/ponder`     | Ponder indexer for on-chain event processing and API                                     |
+| `packages/keeper`     | Standalone keeper service for keeper-assisted round settlement                           |
+| `packages/agents`     | Agent integration hub with runtime examples, question guidance, and operator utilities   |
+| `packages/node-utils` | Shared Node.js utilities used by services and scripts                                    |
 
 ```
 foundry    (compile) → deployments + artifacts
@@ -51,8 +67,7 @@ node-utils (shared)  → keystore and other reusable Node helpers
 sdk        (shared)  → hosted read client + vote/frontend integration helpers
 ponder     (index)   → REST API at localhost:42069
 nextjs     (frontend)→ reads contracts via thirdweb, wagmi, and the Ponder API
-keeper     (service) → settles rounds, finalizes reveal failures, cleans up unrevealed votes, marks dormant content
-mcp-server (tools)   → exposes MCP tools backed by the Ponder API, plus optional hosted write tools
+keeper     (service) → settles question rounds, finalizes reveal failures, cleans up unrevealed votes, marks dormant asks
 ```
 
 Built with Next.js, Foundry, Ponder, thirdweb, wagmi, viem, Drizzle ORM, and PostgreSQL.
@@ -87,7 +102,9 @@ The quickest app-only startup is:
 yarn dev:stack
 ```
 
-That command starts the Next app's local Postgres container, runs `db:push`, and then starts the frontend plus Ponder. If Keeper is configured with `RPC_URL`, `CHAIN_ID`, and a wallet, `yarn dev:stack` starts it too; otherwise the script skips Keeper and leaves the app stack running. Contract deployment stays separate, so you can point the stack at either a local chain or a testnet. Stop the local Postgres container later with:
+That command starts the Next app's local Postgres container, runs `db:push` for local databases, and then starts the frontend plus Ponder. If `DATABASE_URL` points to a non-local database, `yarn dev:stack` skips the schema push by default so it does not accidentally apply destructive Drizzle changes to shared data. Run `yarn workspace @curyo/nextjs db:push` manually when you intend to migrate that database, or opt in with `yarn dev:stack --allow-remote-db-push`.
+
+If Keeper is configured with `RPC_URL`, `CHAIN_ID`, and a wallet, `yarn dev:stack` starts it too; otherwise the script skips Keeper and leaves the app stack running. Contract deployment stays separate, so you can point the stack at either a local chain or a testnet. Stop the local Postgres container later with:
 
 ```bash
 yarn dev:db:down
@@ -102,6 +119,7 @@ yarn dev:db:reset
 If you are using a local chain, keep Anvil and deployment separate:
 
 **1. Local chain:**
+
 ```bash
 yarn chain
 ```
@@ -109,11 +127,13 @@ yarn chain
 > The repo's chain helper starts Anvil with its default mining behavior. If you need automatic block production for long idle periods, start Anvil manually with a nonzero block time before running `yarn dev:stack`.
 
 **2. Deploy contracts:**
+
 ```bash
 yarn deploy
 ```
 
 **3. Start the app stack:**
+
 ```bash
 yarn dev:stack
 ```
@@ -186,15 +206,13 @@ CI runs the smoke, lifecycle, and keeper-backed E2E suites separately, so `yarn 
 
 ## Docs and APIs
 
-In-app documentation is available at `/docs` when running the frontend.
+In-app documentation is available at `/docs` when running the frontend. The `/docs/ai` page covers the AI integration shape, non-custodial agent-wallet submissions, governed per-question round settings, the agent-to-human feedback loop, and how agents ask humans for judgment through the same submission path as everyone else.
 
-For app integrations, the framework-agnostic SDK lives in `packages/sdk` and provides hosted/indexed reads plus
-vote/frontend helpers for existing websites and apps.
+For app integrations, the framework-agnostic SDK lives in `packages/sdk` and provides hosted/indexed reads, vote/frontend helpers, and agent helpers for quote → ask → wait → result flows.
 
-Additional local interfaces:
+Additional local interface:
 
 - Ponder REST API at `http://localhost:42069` after `yarn ponder:dev`
-- MCP server via `yarn mcp:dev` (stdio) or `yarn mcp:dev:http` (streamable HTTP)
 
 ## Contributing
 

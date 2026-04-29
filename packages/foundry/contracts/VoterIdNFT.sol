@@ -13,11 +13,11 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
     // Constants
     // ====================================================
 
-    /// @notice Maximum stake per Voter ID per content per epoch (100 cREP with 6 decimals)
+    /// @notice Maximum stake per Voter ID per content per epoch (100 HREP with 6 decimals)
     uint256 public constant MAX_STAKE_PER_VOTER = 100e6;
 
-    /// @notice Maximum supply of Voter IDs (defense-in-depth against compromised identity provider)
-    uint256 public constant MAX_SUPPLY = 10_000_000;
+    /// @notice Maximum supply of Voter IDs; matches the 52M HREP faucet's no-referral claimant capacity.
+    uint256 public constant MAX_SUPPLY = 41_110_000;
 
     // ====================================================
     // Storage Variables
@@ -35,8 +35,14 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
     /// @notice Mapping to track used nullifiers (prevents double minting)
     mapping(uint256 => bool) public nullifierUsed;
 
+    /// @notice Nullifiers that can be reset because their token was revoked.
+    mapping(uint256 => bool) public nullifierResettable;
+
     /// @notice Mapping from token ID to the nullifier used to mint it
     mapping(uint256 => uint256) private _tokenIdToNullifier;
+
+    /// @notice Current active token ID for a Self.xyz nullifier
+    mapping(uint256 => uint256) private _nullifierToTokenId;
 
     /// @notice Whether a token ID has a recorded nullifier snapshot
     mapping(uint256 => bool) private _tokenIdHasNullifier;
@@ -59,6 +65,12 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
     /// @notice Mapping from delegate address to the holder they represent (address(0) if none)
     mapping(address => address) public delegateOf;
 
+    /// @notice Pending delegate request by holder (address(0) if none)
+    mapping(address => address) public pendingDelegateTo;
+
+    /// @notice Pending holder request by delegate candidate (address(0) if none)
+    mapping(address => address) public pendingDelegateOf;
+
     // ====================================================
     // Events
     // ====================================================
@@ -69,6 +81,7 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
     event MinterRemoved(address indexed minter);
     event StakeRecorderSet(address indexed stakeRecorder);
     event StakeRecorded(uint256 indexed contentId, uint256 indexed epochId, uint256 indexed tokenId, uint256 amount);
+    event DelegateRequested(address indexed holder, address indexed delegate);
     event DelegateSet(address indexed holder, address indexed delegate);
     event DelegateRemoved(address indexed holder, address indexed previousDelegate);
     event GovernanceUpdated(address indexed governance);
@@ -91,7 +104,9 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
     error CannotDelegateSelf();
     error CallerNotHolder();
     error CallerIsDelegate();
+    error NoPendingDelegate();
     error MaxSupplyReached();
+    error InvalidNullifier();
 
     // ====================================================
     // Constructor
@@ -168,15 +183,36 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
         uint256 tokenId = holderToTokenId[holder];
         require(tokenId != 0, "No Voter ID");
 
-        // Clear delegation if any
+        // Clear outbound delegation (holder → delegate)
         address delegate = delegateTo[holder];
         if (delegate != address(0)) {
             delete delegateOf[delegate];
             delete delegateTo[holder];
             emit DelegateRemoved(holder, delegate);
         }
+        _clearPendingDelegateRequest(holder);
 
-        // Clear bidirectional mappings
+        // Clear inbound delegation if revoked holder was acting as someone else's delegate.
+        // Without this scrub, hasVoterId(holder) would still return true via the inbound
+        // delegator, leaking sybil-resistance privileges to a revoked identity.
+        address inboundDelegator = delegateOf[holder];
+        if (inboundDelegator != address(0)) {
+            delete delegateOf[holder];
+            delete delegateTo[inboundDelegator];
+            emit DelegateRemoved(inboundDelegator, holder);
+        }
+        address inboundPendingDelegator = pendingDelegateOf[holder];
+        if (inboundPendingDelegator != address(0)) {
+            delete pendingDelegateOf[holder];
+            delete pendingDelegateTo[inboundPendingDelegator];
+        }
+
+        if (_tokenIdHasNullifier[tokenId]) {
+            nullifierResettable[_tokenIdToNullifier[tokenId]] = true;
+        }
+
+        // Clear bidirectional holder mappings. Keep the token->nullifier snapshot so
+        // historical reward exclusions can still follow the same human after a reset/remint.
         delete holderToTokenId[holder];
         delete tokenIdToHolder[tokenId];
 
@@ -189,7 +225,10 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
     /// @notice Reset a nullifier to allow re-verification after revocation.
     /// @param nullifier The nullifier to reset
     function resetNullifier(uint256 nullifier) external onlyOwner {
+        require(nullifierUsed[nullifier], "Nullifier not used");
+        require(nullifierResettable[nullifier], "Nullifier not revoked");
         nullifierUsed[nullifier] = false;
+        nullifierResettable[nullifier] = false;
         emit NullifierReset(nullifier);
     }
 
@@ -199,7 +238,7 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
 
     /// @notice Mint a new Voter ID NFT
     /// @dev Supply is bounded by unique passport nullifiers from Self.xyz (one per real human)
-    ///      plus an on-chain MAX_SUPPLY cap (10M) as defense-in-depth. If the recipient was
+    ///      plus an on-chain MAX_SUPPLY cap as defense-in-depth. If the recipient was
     ///      previously assigned as someone else's delegate, direct ownership wins and the
     ///      inbound delegation is cleared before minting.
     /// @param to The address to mint to
@@ -207,6 +246,7 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
     /// @return tokenId The minted token ID
     function mint(address to, uint256 nullifier) external override returns (uint256 tokenId) {
         if (!authorizedMinters[msg.sender]) revert OnlyMinter();
+        if (nullifier == 0) revert InvalidNullifier();
         if (nullifierUsed[nullifier]) revert NullifierAlreadyUsed();
         if (holderToTokenId[to] != 0) revert AlreadyHasVoterId();
 
@@ -216,13 +256,20 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
             delete delegateTo[delegator];
             emit DelegateRemoved(delegator, to);
         }
+        address pendingDelegator = pendingDelegateOf[to];
+        if (pendingDelegator != address(0)) {
+            delete pendingDelegateOf[to];
+            delete pendingDelegateTo[pendingDelegator];
+        }
 
         tokenId = _tokenIdCounter++;
         if (tokenId > MAX_SUPPLY) revert MaxSupplyReached();
 
         // Mark nullifier as used
         nullifierUsed[nullifier] = true;
+        nullifierResettable[nullifier] = false;
         _tokenIdToNullifier[tokenId] = nullifier;
+        _nullifierToTokenId[nullifier] = tokenId;
         _tokenIdHasNullifier[tokenId] = true;
 
         // Update bidirectional mappings
@@ -273,6 +320,17 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
         return nullifierUsed[nullifier];
     }
 
+    /// @notice Return the nullifier snapshot for a token ID, including revoked token IDs.
+    function getNullifier(uint256 tokenId) external view override returns (uint256) {
+        return _tokenIdHasNullifier[tokenId] ? _tokenIdToNullifier[tokenId] : 0;
+    }
+
+    /// @notice Return the currently active token ID for a Self.xyz nullifier.
+    function getTokenIdForNullifier(uint256 nullifier) external view override returns (uint256 tokenId) {
+        tokenId = _nullifierToTokenId[nullifier];
+        return tokenIdToHolder[tokenId] == address(0) ? 0 : tokenId;
+    }
+
     // ====================================================
     // Stake Tracking (IVoterIdNFT)
     // ====================================================
@@ -286,9 +344,17 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
         if (msg.sender != stakeRecorder) revert OnlyStakeRecorder();
         require(tokenIdToHolder[tokenId] != address(0), "Token not active"); // L-10: defense-in-depth
 
-        _epochContentStake[contentId][epochId][tokenId] += amount;
+        // Defense-in-depth: also enforce MAX_STAKE_PER_VOTER here, not just on the voting
+        // engine side. If a future engine bug ever lets a voter slip past the cap, this
+        // reverts the bookkeeping update so the cap invariant still holds.
+        uint256 tokenStakeAfter = _epochContentStake[contentId][epochId][tokenId] + amount;
+        require(tokenStakeAfter <= MAX_STAKE_PER_VOTER, "Stake cap exceeded");
+        _epochContentStake[contentId][epochId][tokenId] = tokenStakeAfter;
         if (_tokenIdHasNullifier[tokenId]) {
-            _nullifierEpochContentStake[contentId][epochId][_tokenIdToNullifier[tokenId]] += amount;
+            uint256 nullifier = _tokenIdToNullifier[tokenId];
+            uint256 nullifierStakeAfter = _nullifierEpochContentStake[contentId][epochId][nullifier] + amount;
+            require(nullifierStakeAfter <= MAX_STAKE_PER_VOTER, "Stake cap exceeded");
+            _nullifierEpochContentStake[contentId][epochId][nullifier] = nullifierStakeAfter;
         }
 
         emit StakeRecorded(contentId, epochId, tokenId, amount);
@@ -327,9 +393,9 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
     // Delegation Functions
     // ====================================================
 
-    /// @notice Authorize a delegate address to act on behalf of the caller's Voter ID
-    /// @dev Only the SBT holder can set a delegate. Replaces any existing delegate.
-    ///      The delegate can then pass hasVoterId() and getTokenId() checks transparently.
+    /// @notice Request a delegate address to act on behalf of the caller's Voter ID
+    /// @dev Only the SBT holder can request a delegate. The delegate must accept before
+    ///      hasVoterId(), getTokenId(), and resolveHolder() treat it as active.
     ///      AUDIT NOTE (H-2): A holder who is also acting as a delegate for someone else cannot
     ///      set their own delegate. This prevents identity chaining (A→B→C) that could obscure
     ///      the true number of unique identities behind a set of addresses.
@@ -342,32 +408,76 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
         if (delegateOf[msg.sender] != address(0)) revert CallerIsDelegate();
         if (holderToTokenId[delegate] != 0) revert DelegateIsHolder();
         if (delegateOf[delegate] != address(0)) revert DelegateAlreadyAssigned();
+        if (pendingDelegateOf[delegate] != address(0)) revert DelegateAlreadyAssigned();
         // Prevent delegating to an address that has delegated out to someone else
         if (delegateTo[delegate] != address(0)) revert DelegateAlreadyAssigned();
 
-        // Remove existing delegate if any
-        address oldDelegate = delegateTo[msg.sender];
+        _clearPendingDelegateRequest(msg.sender);
+
+        pendingDelegateTo[msg.sender] = delegate;
+        pendingDelegateOf[delegate] = msg.sender;
+
+        emit DelegateRequested(msg.sender, delegate);
+    }
+
+    /// @notice Accept a pending delegate request and activate delegation
+    function acceptDelegate() external {
+        address holder = pendingDelegateOf[msg.sender];
+        if (holder == address(0)) revert NoPendingDelegate();
+        if (holderToTokenId[holder] == 0) revert CallerNotHolder();
+        if (holderToTokenId[msg.sender] != 0) revert DelegateIsHolder();
+        if (delegateOf[msg.sender] != address(0)) revert DelegateAlreadyAssigned();
+        if (delegateTo[msg.sender] != address(0)) revert DelegateAlreadyAssigned();
+
+        address oldDelegate = delegateTo[holder];
         if (oldDelegate != address(0)) {
             delete delegateOf[oldDelegate];
-            emit DelegateRemoved(msg.sender, oldDelegate);
+            emit DelegateRemoved(holder, oldDelegate);
         }
 
-        // Set new delegate
-        delegateTo[msg.sender] = delegate;
-        delegateOf[delegate] = msg.sender;
+        delete pendingDelegateTo[holder];
+        delete pendingDelegateOf[msg.sender];
 
-        emit DelegateSet(msg.sender, delegate);
+        delegateTo[holder] = msg.sender;
+        delegateOf[msg.sender] = holder;
+
+        emit DelegateSet(holder, msg.sender);
     }
 
     /// @notice Remove the current delegate authorization
     function removeDelegate() external {
         address oldDelegate = delegateTo[msg.sender];
-        if (oldDelegate == address(0)) revert NoDelegateSet();
+        address pendingDelegate = pendingDelegateTo[msg.sender];
+        address pendingDelegator = pendingDelegateOf[msg.sender];
+        address activeDelegator = delegateOf[msg.sender];
+        if (
+            oldDelegate == address(0) && pendingDelegate == address(0) && pendingDelegator == address(0)
+                && activeDelegator == address(0)
+        ) {
+            revert NoDelegateSet();
+        }
 
-        delete delegateTo[msg.sender];
-        delete delegateOf[oldDelegate];
+        if (oldDelegate != address(0)) {
+            delete delegateTo[msg.sender];
+            delete delegateOf[oldDelegate];
+            emit DelegateRemoved(msg.sender, oldDelegate);
+        }
 
-        emit DelegateRemoved(msg.sender, oldDelegate);
+        if (pendingDelegate != address(0)) {
+            delete pendingDelegateTo[msg.sender];
+            delete pendingDelegateOf[pendingDelegate];
+        }
+
+        if (pendingDelegator != address(0)) {
+            delete pendingDelegateOf[msg.sender];
+            delete pendingDelegateTo[pendingDelegator];
+        }
+
+        if (activeDelegator != address(0)) {
+            delete delegateOf[msg.sender];
+            delete delegateTo[activeDelegator];
+            emit DelegateRemoved(activeDelegator, msg.sender);
+        }
     }
 
     /// @notice Resolve an address to the effective SBT holder
@@ -377,6 +487,14 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
     function resolveHolder(address addr) external view returns (address) {
         if (holderToTokenId[addr] != 0) return addr;
         return delegateOf[addr];
+    }
+
+    function _clearPendingDelegateRequest(address holder) internal {
+        address pendingDelegate = pendingDelegateTo[holder];
+        if (pendingDelegate != address(0)) {
+            delete pendingDelegateTo[holder];
+            delete pendingDelegateOf[pendingDelegate];
+        }
     }
 
     function _effectiveStake(uint256 contentId, uint256 epochId, uint256 tokenId) internal view returns (uint256) {

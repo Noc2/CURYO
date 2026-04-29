@@ -65,7 +65,7 @@ export function ProfileImageLightbox({
         onClick={() => setIsOpen(true)}
         aria-haspopup="dialog"
         aria-label={triggerLabel}
-        className={`cursor-zoom-in transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${buttonClassName}`.trim()}
+        className={`cursor-zoom-in transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/80 ${buttonClassName}`.trim()}
       >
         <img
           src={imageSrc}

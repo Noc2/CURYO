@@ -116,7 +116,7 @@ export const ProposalList = () => {
         {(["all", "active", "pending", "closed"] as FilterState[]).map(nextFilter => (
           <button
             key={nextFilter}
-            className={`px-3 py-1.5 rounded-lg text-base font-medium transition-colors capitalize ${
+            className={`tab-control px-3 py-1.5 text-base font-medium transition-colors capitalize ${
               filter === nextFilter ? "pill-active" : "pill-inactive"
             }`}
             onClick={() => setFilter(nextFilter)}
@@ -135,7 +135,7 @@ export const ProposalList = () => {
 
       {!isGovernorContractLoading && !hasGovernorContract && (
         <div className="text-center py-10 text-base-content/75">
-          <DocumentTextIcon className="w-12 h-12 text-base-content/20 mx-auto mb-4" />
+          <DocumentTextIcon className="w-12 h-12 text-base-content/60 mx-auto mb-4" />
           <p className="mb-2">Governance proposals are unavailable on this network.</p>
           <p className="text-base text-base-content/65">
             Direct registry actions can still be used below when the underlying contract allows them.
@@ -152,7 +152,7 @@ export const ProposalList = () => {
 
       {hasGovernorContract && !isGovernorContractLoading && !isLoading && error && (
         <div className="text-center py-10">
-          <DocumentTextIcon className="w-12 h-12 text-base-content/20 mx-auto mb-4" />
+          <DocumentTextIcon className="w-12 h-12 text-base-content/60 mx-auto mb-4" />
           <p className="mb-2 text-base-content/75">Unable to load proposals from chain.</p>
           <p className="text-base text-base-content/65">Check your connection and try again.</p>
         </div>
@@ -175,7 +175,7 @@ export const ProposalList = () => {
 
       {hasGovernorContract && !isGovernorContractLoading && !isLoading && !error && filteredProposals.length === 0 && (
         <div className="text-center py-10">
-          <DocumentTextIcon className="w-12 h-12 text-base-content/20 mx-auto mb-4" />
+          <DocumentTextIcon className="w-12 h-12 text-base-content/60 mx-auto mb-4" />
           <p className="mb-2 text-base-content/75">
             {proposals.length === 0 ? "No on-chain proposals have been created yet." : `No ${filter} proposals found.`}
           </p>

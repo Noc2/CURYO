@@ -2,10 +2,10 @@ import Link from "next/link";
 import type { NextPage } from "next";
 
 const sdkSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/sdk";
+const agentExamplesSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/agents/examples";
 const referenceAppSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/nextjs";
 const keeperSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/keeper";
 const ponderSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/ponder";
-const mcpServerSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/mcp-server";
 
 const SdkPage: NextPage = () => {
   return (
@@ -23,7 +23,7 @@ const SdkPage: NextPage = () => {
       <ul>
         <li>
           <strong>Hosted reads</strong> for indexed content, rounds, votes, profiles, categories, stats, and frontend
-          operator records.
+          operator records, including each question&apos;s selected round settings.
         </li>
         <li>
           <strong>Vote helpers</strong> for stake normalization, frontend-code resolution, tlock commit generation,
@@ -84,12 +84,15 @@ const { frontend } = await curyo.read.getFrontend(
       </p>
       <pre className="bg-base-200 p-4 rounded-lg overflow-x-auto">
         <code>{`const { content } = await curyo.read.getContent("42");
+const epochDuration =
+  content.openRound?.epochDuration ?? content.roundConfig?.epochDuration ?? 20 * 60;
 
 const commit = await buildCommitVoteParams({
+  voter: "0xYourWalletAddress",
   contentId: 42n,
   isUp: true,
   stakeAmount: 2.5,
-  epochDuration: 20 * 60,
+  epochDuration,
   roundReferenceRatingBps: content.openRound?.referenceRatingBps ?? content.ratingBps ?? 5000,
   defaultFrontendCode: curyo.config.frontendCode,
 });
@@ -122,6 +125,36 @@ const txData = buildVoteTransferAndCallData({
         .
       </p>
 
+      <h2>Agent Examples</h2>
+      <p>
+        Runtime-oriented agent examples live under{" "}
+        <a href={agentExamplesSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
+          packages/agents/examples
+        </a>
+        . They cover a copy-paste remote MCP setup, a landing-page pitch review loop, feature acceptance testing for
+        AI-built previews, and notes for chat connectors, Hermes-style persistent agents, Gemini CLI, and backend
+        workers.
+      </p>
+      <ul>
+        <li>
+          Use <code>landing-pitch-review.ts</code> as the canonical <code>quote -&gt; ask -&gt; wait -&gt; result</code>{" "}
+          example.
+        </li>
+        <li>
+          Use <code>questions/feature-acceptance-test.json</code> when an agent has a public preview URL and needs
+          humans to follow test steps, vote on whether it works, and leave reproducible failure notes. Results expose a
+          <code>featureTest</code> summary for bug reports, repro steps, and environment notes.
+        </li>
+        <li>
+          Use the bundled JSON snippets when a runtime expects an <code>mcpServers</code> config with{" "}
+          <code>{'transport: "streamable-http"'}</code>.
+        </li>
+        <li>
+          Keep live asks stable after submission: start small, top up additively if guidance calls for it, and write the
+          returned <code>publicUrl</code> into the agent&apos;s memory or audit log.
+        </li>
+      </ul>
+
       <h2>What Is Out of Scope</h2>
       <p>The current SDK is not trying to bundle the full operator stack into one package.</p>
       <ul>
@@ -137,14 +170,10 @@ const txData = buildVoteTransferAndCallData({
         If you need the surrounding operator stack, the open-source implementation is split across the{" "}
         <a href={keeperSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
           keeper
-        </a>
-        ,{" "}
+        </a>{" "}
+        and{" "}
         <a href={ponderSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
           Ponder indexer
-        </a>
-        , and{" "}
-        <a href={mcpServerSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
-          MCP server
         </a>{" "}
         packages in the monorepo.
       </p>

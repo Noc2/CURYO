@@ -2,6 +2,7 @@
 
 import { type RefObject, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import type { QuestionReferenceContentSummary } from "~~/components/content/QuestionDescription";
 import { FeedVoteCard } from "~~/components/vote/VoteFeedCards";
 import { useMobileHeaderVisibility } from "~~/contexts/MobileHeaderVisibilityContext";
 import type { ContentItem } from "~~/hooks/useContentFeed";
@@ -21,6 +22,7 @@ interface VoteFeedStageProps {
   watchedContentIds: Set<string>;
   followedWallets: Set<string>;
   normalizedAddress?: string;
+  referencedContentById?: ReadonlyMap<string, QuestionReferenceContentSummary>;
   isCommitting: boolean;
   isMetadataPrefetchPending: boolean;
   navigationLocked: boolean;
@@ -31,6 +33,7 @@ interface VoteFeedStageProps {
   onTrackActiveIndex: (targetIndex: number) => boolean;
   onSelectByIndex: (targetIndex: number) => boolean;
   onContentIntent: (item: ContentItem) => void;
+  onOpenFeedback?: (item: ContentItem) => void;
   onSourceOpen: (item: ContentItem) => void;
   onToggleWatch: (contentId: bigint) => void;
   onToggleFollow: (address: string) => void;
@@ -66,6 +69,7 @@ export function VoteFeedStage({
   watchedContentIds,
   followedWallets,
   normalizedAddress,
+  referencedContentById,
   isCommitting,
   isMetadataPrefetchPending,
   navigationLocked,
@@ -76,6 +80,7 @@ export function VoteFeedStage({
   onTrackActiveIndex,
   onSelectByIndex,
   onContentIntent,
+  onOpenFeedback,
   onSourceOpen,
   onToggleWatch,
   onToggleFollow,
@@ -1157,8 +1162,6 @@ export function VoteFeedStage({
       ) : null}
 
       {feedItems.map(({ actualIndex, item }) => {
-        const canPrevious = actualIndex > 0 && !isCommitting && !navigationLocked;
-        const canNext = actualIndex < displayFeed.length - 1 && !isCommitting && !navigationLocked;
         const isActiveCard = actualIndex === renderedActiveIndex;
         const titleId = `vote-feed-title-${item.id.toString()}`;
 
@@ -1186,6 +1189,7 @@ export function VoteFeedStage({
               titleId={titleId}
               isActive={isActiveCard}
               onContentIntent={contentItem => onContentIntent(contentItem)}
+              onOpenFeedback={onOpenFeedback}
               onSourceOpen={contentItem => onSourceOpen(contentItem)}
               onToggleWatch={onToggleWatch}
               onToggleFollow={onToggleFollow}
@@ -1194,16 +1198,12 @@ export function VoteFeedStage({
               following={followedWallets.has(item.submitter.toLowerCase())}
               followPending={isFollowPending(item.submitter)}
               normalizedAddress={normalizedAddress}
-              deferEmbedClientFetch={isMetadataPrefetchPending && actualIndex !== renderedActiveIndex}
-              onPrevious={canPrevious ? () => void scrollToIndex(actualIndex - 1) : undefined}
-              onNext={canNext ? () => void scrollToIndex(actualIndex + 1) : undefined}
-              canPrevious={canPrevious}
-              canNext={canNext}
+              referencedContentById={referencedContentById}
             />
             {!isActiveCard ? (
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-0 rounded-[1.75rem] bg-[linear-gradient(180deg,rgba(0,0,0,0.18),rgba(0,0,0,0.46))]"
+                className="pointer-events-none absolute inset-0 rounded-lg bg-[linear-gradient(180deg,rgba(0,0,0,0.18),rgba(0,0,0,0.46))]"
               />
             ) : null}
           </article>

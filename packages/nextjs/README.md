@@ -1,12 +1,12 @@
 # Curyo — Next.js (Frontend)
 
-Full-stack web application built with Next.js 15 and React 19. Provides the UI for voting on content, submitting content, managing profiles, and reading in-app documentation. Includes server-side API routes and a PostgreSQL database via Drizzle ORM.
+Full-stack web application built with Next.js 15 and React 19. Provides the UI for voting on content, question-first submissions with a required context URL, optional image or YouTube preview media, governed per-question round settings, managing profiles, and reading in-app documentation. Question submissions must attach a non-refundable bounty funded in HREP or USDC, while claim flows remain tied to Voter ID where the protocol still requires it. Humans, bots, and AI agents all submit through the same question-first path. The app includes server-side API routes plus a PostgreSQL database via Drizzle ORM.
 
 ## Quick Start
 
 ```bash
 # From the monorepo root:
-yarn dev:stack   # Start local Postgres, apply schema, then run Next.js + Ponder + Keeper
+yarn dev:stack   # Start local Postgres, apply schema, then run Next.js + Ponder, plus Keeper when configured
 ```
 
 Deployment stays separate, so you can point the app stack at either a local chain or a testnet. For local-chain development, keep `yarn chain` and `yarn deploy` separate. Use `yarn dev:db:down` to stop the local Postgres container when you are done.
@@ -15,27 +15,27 @@ Deployment stays separate, so you can point the app stack at either a local chai
 
 Run these from the monorepo root unless noted otherwise:
 
-| Command                                         | Description                                                     |
-| ----------------------------------------------- | --------------------------------------------------------------- |
-| `yarn start`                                    | Start development server (localhost:3000)                       |
-| `yarn dev:db`                                   | Start the local Postgres container for the Next app             |
-| `yarn dev:db:down`                              | Stop the local Postgres container                               |
-| `yarn dev:db:reset`                             | Reset the local Postgres container and its data volume          |
-| `yarn dev:stack`                                | Start local Postgres, apply schema, then run Next.js + Ponder + Keeper |
-| `yarn next:build`                               | Production build                                                |
-| `yarn next:lint`                                | Run ESLint                                                      |
-| `yarn next:check-types`                         | TypeScript type checking                                        |
-| `yarn workspace @curyo/nextjs format`           | Format frontend code with Prettier                              |
-| `yarn workspace @curyo/nextjs db:generate`      | Generate Drizzle migrations                                     |
-| `yarn workspace @curyo/nextjs db:push`          | Apply migrations to the configured database                     |
-| `yarn workspace @curyo/nextjs db:studio`        | Open the Drizzle studio UI                                      |
-| `yarn workspace @curyo/nextjs whitepaper`       | Generate the whitepaper PDF                                     |
-| `yarn workspace @curyo/nextjs demo:record`      | Record the short Playwright product demo video                  |
-| `yarn e2e`                                      | Run the Playwright smoke suite (Chromium)                       |
-| `yarn workspace @curyo/nextjs e2e:ci:lifecycle` | Run lifecycle suites for settlement, cancellation, and dormancy |
-| `yarn workspace @curyo/nextjs e2e:ci:keeper`    | Run keeper-backed settlement coverage                           |
-| `yarn workspace @curyo/nextjs e2e:full`         | Run the full local Playwright suite, including keeper coverage  |
-| `yarn e2e:ui`                                   | Run E2E tests with interactive Playwright UI                    |
+| Command                                         | Description                                                                                |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `yarn start`                                    | Start development server (localhost:3000)                                                  |
+| `yarn dev:db`                                   | Start the local Postgres container for the Next app                                        |
+| `yarn dev:db:down`                              | Stop the local Postgres container                                                          |
+| `yarn dev:db:reset`                             | Reset the local Postgres container and its data volume                                     |
+| `yarn dev:stack`                                | Start local Postgres, apply schema, then run Next.js + Ponder, plus Keeper when configured |
+| `yarn next:build`                               | Production build                                                                           |
+| `yarn next:lint`                                | Run ESLint                                                                                 |
+| `yarn next:check-types`                         | TypeScript type checking                                                                   |
+| `yarn workspace @curyo/nextjs format`           | Format frontend code with Prettier                                                         |
+| `yarn workspace @curyo/nextjs db:generate`      | Generate Drizzle migrations                                                                |
+| `yarn workspace @curyo/nextjs db:push`          | Apply migrations to the configured database                                                |
+| `yarn workspace @curyo/nextjs db:studio`        | Open the Drizzle studio UI                                                                 |
+| `yarn workspace @curyo/nextjs whitepaper`       | Generate the whitepaper PDF                                                                |
+| `yarn workspace @curyo/nextjs demo:record`      | Record the short Playwright product demo video                                             |
+| `yarn e2e`                                      | Run the Playwright smoke suite (Chromium)                                                  |
+| `yarn workspace @curyo/nextjs e2e:ci:lifecycle` | Run lifecycle suites for settlement, cancellation, and dormancy                            |
+| `yarn workspace @curyo/nextjs e2e:ci:keeper`    | Run keeper-backed settlement coverage                                                      |
+| `yarn workspace @curyo/nextjs e2e:full`         | Run the full local Playwright suite, including keeper coverage                             |
+| `yarn e2e:ui`                                   | Run E2E tests with interactive Playwright UI                                               |
 
 CI runs the smoke, lifecycle, and keeper-backed suites separately, so `yarn e2e` is only the smallest browser pass.
 
@@ -61,49 +61,53 @@ The recorder saves a `.webm` file under `packages/nextjs/e2e/artifacts/demo/`. S
 
 Key environment variables (see `.env.example` for the full list):
 
-| Variable                                | Description                                                                   |
-| --------------------------------------- | ----------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_ALCHEMY_API_KEY`           | Alchemy RPC provider key                                                      |
-| `NEXT_PUBLIC_RPC_URL_31337`             | Optional browser RPC override for local Foundry                               |
-| `NEXT_PUBLIC_RPC_URL_11142220`          | Optional browser RPC override for Celo Sepolia                                |
-| `NEXT_PUBLIC_RPC_URL_42220`             | Optional browser RPC override for Celo mainnet                                |
-| `NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID` | Optional WalletConnect project ID for external wallet discovery               |
-| `NEXT_PUBLIC_THIRDWEB_CLIENT_ID`        | thirdweb client ID for in-app wallets and sponsored transactions              |
-| `NEXT_PUBLIC_TARGET_NETWORKS`           | Comma-separated deployed chain IDs exposed in the UI (required in production) |
-| `TMDB_API_KEY`                          | Server-side TMDB API key for movie metadata                                   |
-| `RAWG_API_KEY`                          | Server-side RAWG API key for games metadata                                   |
-| `DATABASE_URL`                          | PostgreSQL URL for the Next app logical database                              |
-| `RESEND_API_KEY`                        | Resend API key for email notification delivery                                |
-| `RESEND_FROM_EMAIL`                     | Verified sender address/domain used by Resend                                 |
-| `APP_URL`                               | Public app URL used in verification and email links                           |
-| `NOTIFICATION_DELIVERY_SECRET`          | Secret for the email delivery cron endpoint                                   |
-| `NEXT_PUBLIC_PONDER_URL`                | Public Ponder indexer URL (required in production)                            |
-| `THIRDWEB_SERVER_VERIFIER_SECRET`       | Shared secret used by the thirdweb server verifier webhook                    |
-| `FREE_TRANSACTION_LIMIT`                | Free sponsored app transactions per verified Voter ID (defaults to `25`)      |
-| `RATE_LIMIT_TRUSTED_IP_HEADERS`         | Comma-separated proxy IP headers to trust for API rate limiting in production |
-| `CURYO_MCP_HTTP_SESSION_SECRET`         | Shared HMAC secret used to mint wallet-bound MCP bearer sessions              |
-| `CURYO_MCP_HTTP_SESSION_KEY_ID`         | Session signing key id advertised in MCP bearer session headers               |
-| `CURYO_MCP_HTTP_SESSION_ISSUER`         | Issuer claim for wallet-bound MCP bearer sessions                             |
-| `CURYO_MCP_HTTP_SESSION_AUDIENCE`       | Audience claim for wallet-bound MCP bearer sessions                           |
-| `CURYO_MCP_SESSION_WALLET_BINDINGS`     | JSON array mapping wallet addresses to allowed MCP scopes and optional write identity ids |
-| `CURYO_MCP_SESSION_TTL_MS`              | Lifetime for minted wallet-bound MCP bearer sessions                          |
-| `KEYSTORE_ACCOUNT`                      | Optional Foundry keystore name used by the development faucet                 |
-| `KEYSTORE_PASSWORD`                     | Optional password used to decrypt the development faucet keystore             |
-| `DEV_FAUCET_ENABLED`                    | Enable the development-only faucet route                                      |
-| `FAUCET_PRIVATE_KEY`                    | Server-side faucet wallet key                                                 |
+| Variable                                          | Description                                                                                                                              |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_ALCHEMY_API_KEY`                     | Alchemy RPC provider key                                                                                                                 |
+| `NEXT_PUBLIC_RPC_URL_31337`                       | Optional browser RPC override for local Foundry                                                                                          |
+| `NEXT_PUBLIC_RPC_URL_11142220`                    | Optional browser RPC override for Celo Sepolia                                                                                           |
+| `NEXT_PUBLIC_RPC_URL_42220`                       | Optional browser RPC override for Celo mainnet                                                                                           |
+| `NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID`           | Optional WalletConnect project ID for external wallet discovery                                                                          |
+| `NEXT_PUBLIC_THIRDWEB_CLIENT_ID`                  | thirdweb client ID for in-app wallets and sponsored transactions                                                                         |
+| `NEXT_PUBLIC_TARGET_NETWORKS`                     | Comma-separated deployed chain IDs exposed in the UI (required in production)                                                            |
+| `DATABASE_URL`                                    | PostgreSQL URL for the Next app logical database                                                                                         |
+| `RESEND_API_KEY`                                  | Resend API key for email notification delivery                                                                                           |
+| `RESEND_FROM_EMAIL`                               | Verified sender address/domain used by Resend                                                                                            |
+| `APP_URL`                                         | Public app URL used in verification and email links                                                                                      |
+| `NOTIFICATION_DELIVERY_SECRET`                    | Secret for the email delivery cron endpoint                                                                                              |
+| `NEXT_PUBLIC_PONDER_URL`                          | Public Ponder indexer URL (required in production)                                                                                       |
+| `THIRDWEB_SERVER_VERIFIER_SECRET`                 | Shared secret used by the thirdweb server verifier webhook                                                                               |
+| `CURYO_X402_USDC_ADDRESS`                         | Optional Celo USDC override for direct agent bounty planning; Celo and Celo Sepolia default automatically                    |
+| `NEXT_PUBLIC_QUESTION_REWARD_POOL_ESCROW_ADDRESS` | Optional question reward escrow override while generated deployment metadata catches up; supported chains default from `@curyo/contracts` |
+| `NEXT_PUBLIC_CELO_USDC_ADDRESS`                   | Optional browser-side Celo USDC override for USDC Bounties                                                                               |
+| `CURYO_MCP_AGENTS`                                | Optional JSON array of managed MCP agents, bearer token hashes, scopes, daily budgets, per-ask caps, wallet addresses, and optional category allowlists |
+| `CURYO_MCP_ALLOWED_ORIGINS`                       | Comma-separated browser origins allowed to call `/api/mcp` and `/api/mcp/public`; non-browser agent calls may omit `Origin`              |
+| `CURYO_MCP_AUTHORIZATION_SERVER_URL`              | Optional real OAuth/OIDC authorization server advertised in MCP protected-resource metadata; omit for pre-registered bearer-token agents |
+| `FREE_TRANSACTION_LIMIT`                          | Free sponsored app transactions per verified wallet or identity-gated flow (defaults to `25`)                                            |
+| `RATE_LIMIT_TRUSTED_IP_HEADERS`                   | Comma-separated proxy IP headers to trust for API rate limiting in production                                                            |
+| `KEYSTORE_ACCOUNT`                                | Optional Foundry keystore name used by the development faucet                                                                            |
+| `KEYSTORE_PASSWORD`                               | Optional password used to decrypt the development faucet keystore                                                                        |
+| `DEV_FAUCET_ENABLED`                              | Enable the development-only HREP, mock USDC, and Voter ID faucet route                                                                   |
+| `FAUCET_PRIVATE_KEY`                              | Server-side faucet wallet key                                                                                                            |
+| `CURYO_E2E_PRODUCTION_BUILD`                      | Server-side opt-in for local production-style E2E builds                                                                                 |
+| `NEXT_PUBLIC_CURYO_E2E_PRODUCTION_BUILD`          | Browser-side opt-in for local production-style E2E builds                                                                                |
+| `CURYO_AGENT_CALLBACK_DELIVERY_SECRET`            | Shared secret required to trigger the internal callback delivery worker at `/api/agent-callbacks/deliver`                               |
 
 Notes:
 
 - Browser RPC reads prefer `NEXT_PUBLIC_RPC_URL_<chainId>` overrides first, then `NEXT_PUBLIC_ALCHEMY_API_KEY`, then the chain's default public RPC list.
 - Mainnet is not a supported `NEXT_PUBLIC_TARGET_NETWORKS` entry. The browser can still add mainnet for wallet tooling when you provide a mainnet-capable RPC via `NEXT_PUBLIC_ALCHEMY_API_KEY` or a mainnet RPC override, but the target-network parser only accepts `31337`, `11142220`, and `42220`.
-- No contract address env vars are needed for supported chains. The frontend reads deployment metadata from `@curyo/contracts` and fails fast if `NEXT_PUBLIC_TARGET_NETWORKS` includes a chain without it.
+- `/api/mcp/public` exposes tokenless quote, ask, confirm, status, result, template, and category tools for agents that already control a funded wallet. `/api/mcp` remains the managed endpoint for bearer-token policies, balances, signed callbacks, and audit surfaces.
+- Agent clients should follow the AI docs flow: list templates, quote with `walletAddress`, ask with a stable client request ID, execute and confirm wallet calls, wait for a status read or signed managed callback, then fetch the structured result. Operator token lifecycle, scopes, budgets, category allowlists, callback recovery, and audit history belong in `/settings?tab=agents` for managed agents; static `CURYO_MCP_AGENTS` remains supported for server-configured policies.
+- Private artifacts, embargoed asks, restricted voter-only context, and delayed result disclosure are deferred. Current agent flows should assume public context URLs, public submitted questions, and public settled result pages.
+- No core contract address env vars are needed for supported chains. The frontend reads core deployment metadata from `@curyo/contracts` and fails fast if `NEXT_PUBLIC_TARGET_NETWORKS` includes a chain without those definitions; rollout contracts such as question reward pools can use their documented env fallbacks until generated metadata catches up.
 - In production, the intended setup is one Railway Postgres service with separate logical databases for Ponder and Next.js.
 - If your Postgres provider terminates TLS with a private or self-signed chain, append `uselibpqcompat=true&sslmode=require` to `DATABASE_URL` to opt out of the app's default `verify-full` normalization.
-- For local development, `yarn dev:db` and `yarn dev:stack` manage a Docker Postgres container when `DATABASE_URL` points to localhost.
+- For local development, `yarn dev:db` and `yarn dev:stack` manage a Docker Postgres container when `DATABASE_URL` points to localhost. `yarn dev:stack` only runs `db:push` automatically for local databases; non-local databases require a manual `yarn workspace @curyo/nextjs db:push` or the explicit `CURYO_DEV_STACK_ALLOW_REMOTE_DB_PUSH=1` opt-in.
 - On Next.js 15, `NextRequest.ip` is not reliably populated. On non-Vercel production hosts you must configure `RATE_LIMIT_TRUSTED_IP_HEADERS` to the header(s) your hosting proxy overwrites. Vercel auto-trusts `x-real-ip`, and localhost shortcuts are only enabled for development or explicit local production-style E2E builds. Protected API routes fail closed when no trusted client IP can be derived or when the rate-limit store is unavailable.
 - The free transaction quota is enforced by the thirdweb server verifier route at `/api/thirdweb/verify-transaction`. Configure the same secret in thirdweb’s dashboard and in `THIRDWEB_SERVER_VERIFIER_SECRET`.
+- The old x402 question route has been removed. Paid agent asks use ordered wallet calls or native x402-style USDC authorizations that fund protocol escrow directly; no Curyo executor, custody path, saved policy token, or separate service fee is part of the default ask flow. USDC-funded asks do not require a Voter ID, while voting and identity-gated claim flows still do.
 - The Next.js dev faucet reads `KEYSTORE_ACCOUNT`/`KEYSTORE_PASSWORD` or `FAUCET_PRIVATE_KEY` from `packages/nextjs/.env.local`. Keeper wallet settings live separately in `packages/keeper/.env.local`.
-- Wallet-bound MCP session issuance lives at `/api/mcp/session/challenge` and `/api/mcp/session/token`. Keep `CURYO_MCP_HTTP_SESSION_*` aligned with the MCP server so the issued bearer sessions verify server-side, and use `CURYO_MCP_SESSION_WALLET_BINDINGS` to pin each wallet to the exact scopes and optional write identity it may use.
 
 ## Project Structure
 
@@ -112,13 +116,13 @@ app/                          # Next.js App Router
 ├── api/                      # Server-side API routes
 ├── debug/                    # Contract debugger
 ├── docs/                     # In-app documentation
-├── radar/, submit/, vote/    # Discovery and voting flows
+├── ask/, rate/               # Question asking and rating flows
 └── profiles/, settings/      # User profile and preference routes
 
 components/                   # React components
-├── content/embeds/           # Platform-specific embeds (YouTube, Twitter, etc.)
+├── content/embeds/           # Media embeds
 ├── home/, leaderboard/       # Home and leaderboard UIs
-├── profile/, submit/, vote/  # Feature-specific flows
+├── profile/, submit/, vote/  # Feature-specific flow components
 ├── shared/, ui/              # Shared presentation primitives
 └── scaffold-eth/             # Wallet and contract interaction components
 
@@ -132,6 +136,8 @@ services/ponder/client.ts     # REST client for the Ponder indexer API
 services/web3/                # wagmi config and wallet connector setup
 lib/db/schema.ts              # Drizzle ORM database schema
 lib/notifications/            # Email preference and delivery logic
+lib/agent/                    # Agent result packages and off-chain template metadata
+lib/mcp/                      # Public and managed MCP auth, budgets, and tool handlers
 utils/platforms/handlers/     # Platform detection and URL parsing
 scaffold.config.ts            # Target networks, Alchemy/WalletConnect config
 ```

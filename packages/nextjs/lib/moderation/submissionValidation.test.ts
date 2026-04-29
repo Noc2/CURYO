@@ -1,9 +1,5 @@
 import {
-  findBlockedCategorySubcategories,
   findBlockedContentTags,
-  getCategoryDomainValidationError,
-  getCategoryNameValidationError,
-  getCategorySubcategoryValidationError,
   getContentDescriptionValidationError,
   getContentTagValidationError,
   getContentTitleValidationError,
@@ -12,13 +8,20 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 test("getContentTitleValidationError rejects prohibited terms", () => {
-  assert.equal(getContentTitleValidationError("NSFW highlights"), "Your title contains prohibited content");
+  assert.equal(getContentTitleValidationError("NSFW highlights"), "Your question contains prohibited content");
 });
 
 test("getContentDescriptionValidationError rejects prohibited terms", () => {
   assert.equal(
     getContentDescriptionValidationError("A full pornography roundup"),
     "Your description contains prohibited content",
+  );
+});
+
+test("getContentDescriptionValidationError limits question references", () => {
+  assert.equal(
+    getContentDescriptionValidationError("[[question:1]] [[question:2]] [[question:3]] [[question:4]]"),
+    "Description can reference up to 3 questions",
   );
 });
 
@@ -32,24 +35,4 @@ test("getContentTagValidationError allows normal custom tags", () => {
 
 test("findBlockedContentTags returns trimmed blocked tags", () => {
   assert.deepEqual(findBlockedContentTags(["music", " nsfw ", "science"]), ["nsfw"]);
-});
-
-test("getCategoryNameValidationError rejects prohibited platform names", () => {
-  assert.equal(getCategoryNameValidationError("OnlyFans clips"), "Platform name contains prohibited content");
-});
-
-test("getCategoryDomainValidationError rejects prohibited platform domains", () => {
-  assert.equal(getCategoryDomainValidationError("xhamster.com"), "This domain contains prohibited content");
-});
-
-test("getCategorySubcategoryValidationError rejects prohibited subcategories", () => {
-  assert.equal(getCategorySubcategoryValidationError(" hentai "), "This category contains prohibited content");
-});
-
-test("findBlockedCategorySubcategories returns trimmed blocked subcategories", () => {
-  assert.deepEqual(findBlockedCategorySubcategories(["Culture", " rule34 "]), ["rule34"]);
-});
-
-test("findBlockedCategorySubcategories allows normal trimmed subcategories", () => {
-  assert.deepEqual(findBlockedCategorySubcategories([" Culture ", "Podcasts"]), []);
 });

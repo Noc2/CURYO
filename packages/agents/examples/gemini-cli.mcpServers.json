@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "curyo": {
+      "url": "https://curyo.example/api/mcp",
+      "transport": "streamable-http",
+      "headers": {
+        "Authorization": "Bearer ${CURYO_MCP_TOKEN}",
+        "X-Agent-Name": "gemini-cli"
+      }
+    }
+  }
+}

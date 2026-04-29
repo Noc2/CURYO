@@ -40,7 +40,14 @@ library VotePreflightLib {
         if (hasVoterIdNft) {
             if (!voterIdNft.hasVoterId(voter)) revert VoterIdRequired();
             voterId = voterIdNft.getTokenId(voter);
+            uint256 submitterNullifier = registry.contentSubmitterNullifier(contentId);
+            if (submitterNullifier != 0 && voterIdNft.getNullifier(voterId) == submitterNullifier) {
+                revert SelfVote();
+            }
         }
+
+        (,, address rawSubmitter,,,,,,,) = registry.contents(contentId);
+        if (voter == rawSubmitter) revert SelfVote();
 
         address effectiveVoter = voter;
         if (hasVoterIdNft) {
@@ -54,7 +61,11 @@ library VotePreflightLib {
         useTokenIdentity = hasVoterIdNft && voterId != 0;
     }
 
-    function isFrontendEligible(IFrontendRegistry frontendRegistry, address frontend) external view returns (bool eligible) {
+    function isFrontendEligible(IFrontendRegistry frontendRegistry, address frontend)
+        external
+        view
+        returns (bool eligible)
+    {
         if (frontend == address(0) || address(frontendRegistry) == address(0)) {
             return false;
         }
@@ -68,7 +79,10 @@ library VotePreflightLib {
 
     function prepareCommit(
         mapping(uint256 => mapping(uint256 => mapping(address => bytes32))) storage voterCommitHash,
-        mapping(uint256 => mapping(uint256 => mapping(uint256 => bool))) storage hasTokenIdCommitted,
+        mapping(
+            uint256 => mapping(uint256 => mapping(uint256 => bool))
+        ) storage hasTokenIdCommitted,
+        mapping(uint256 => mapping(uint256 => mapping(uint256 => bytes32))) storage voterNullifierCommitKey,
         mapping(uint256 => mapping(address => uint256)) storage lastVoteTimestamp,
         mapping(uint256 => mapping(uint256 => uint256)) storage lastVoteTimestampByToken,
         IVoterIdNFT voterIdNft,
@@ -93,6 +107,8 @@ library VotePreflightLib {
             params.voterId,
             params.useTokenIdentity,
             params.commitHash,
+            voterNullifierCommitKey,
+            voterIdNft,
             params.roundVoteCount,
             params.maxVoters
         );
@@ -136,11 +152,19 @@ library VotePreflightLib {
         uint256 voterId,
         bool useTokenIdentity,
         bytes32 commitHash,
+        mapping(uint256 => mapping(uint256 => mapping(uint256 => bytes32))) storage voterNullifierCommitKey,
+        IVoterIdNFT voterIdNft,
         uint256 roundVoteCount,
         uint256 maxVoters
     ) private view returns (bytes32 commitKey) {
         if (voterCommitHash[contentId][roundId][voter] != bytes32(0)) revert AlreadyCommitted();
         if (useTokenIdentity && hasTokenIdCommitted[contentId][roundId][voterId]) revert AlreadyCommitted();
+        if (useTokenIdentity) {
+            uint256 nullifier = voterIdNft.getNullifier(voterId);
+            if (nullifier != 0 && voterNullifierCommitKey[contentId][roundId][nullifier] != bytes32(0)) {
+                revert AlreadyCommitted();
+            }
+        }
         if (roundVoteCount >= maxVoters) revert MaxVotersReached();
 
         commitKey = keccak256(abi.encodePacked(voter, commitHash));

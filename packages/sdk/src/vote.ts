@@ -1,5 +1,5 @@
 import {
-  CuryoReputationAbi,
+  HumanReputationAbi,
   createTlockVoteCommit,
   encodeVoteTransferPayload,
   type VoteCiphertext,
@@ -13,6 +13,7 @@ import { encodeFunctionData, type Address, type Hex } from "viem";
 export interface CommitVoteParams {
   commitHash: VoteCommitHash;
   ciphertext: VoteCiphertext;
+  roundId: bigint;
   roundReferenceRatingBps: number;
   targetRound: bigint;
   drandChainHash: VoteDrandChainHash;
@@ -46,10 +47,12 @@ export function generateVoteSalt(randomValues?: (bytes: Uint8Array) => Uint8Arra
 }
 
 export async function buildCommitVoteParams(params: {
+  voter: Address;
   contentId: bigint;
   isUp: boolean;
   stakeAmount: number;
   epochDuration: number;
+  roundId: bigint;
   roundReferenceRatingBps: number;
   frontendCode?: `0x${string}`;
   defaultFrontendCode?: `0x${string}`;
@@ -62,9 +65,11 @@ export async function buildCommitVoteParams(params: {
   const { ciphertext, commitHash, roundReferenceRatingBps, targetRound, drandChainHash } =
     await createTlockVoteCommit(
       {
+        voter: params.voter,
         isUp: params.isUp,
         salt,
         contentId: params.contentId,
+        roundId: params.roundId,
         roundReferenceRatingBps: params.roundReferenceRatingBps,
         epochDurationSeconds: params.epochDuration,
       },
@@ -74,6 +79,7 @@ export async function buildCommitVoteParams(params: {
   return {
     commitHash,
     ciphertext,
+    roundId: params.roundId,
     roundReferenceRatingBps,
     targetRound,
     drandChainHash,
@@ -93,7 +99,7 @@ export function buildVoteTransferAndCallData(params: {
   payload: Hex;
 }): Hex {
   return encodeFunctionData({
-    abi: CuryoReputationAbi,
+    abi: HumanReputationAbi,
     functionName: "transferAndCall",
     args: [params.votingEngineAddress, params.stakeWei, params.payload],
   });

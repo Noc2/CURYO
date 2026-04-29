@@ -1,8 +1,8 @@
 import { DEFAULT_REVEAL_GRACE_PERIOD_SECONDS, DEFAULT_ROUND_CONFIG, ROUND_STATE } from "@curyo/contracts/protocol";
 import type { Context, Hono } from "hono";
-import { and, desc, eq, inArray, replaceBigInts } from "ponder";
+import { and, desc, eq, inArray, replaceBigInts, sql } from "ponder";
 import { db } from "ponder:api";
-import { round } from "ponder:schema";
+import { feedbackBonusPool, questionRewardPool, round } from "ponder:schema";
 import { isValidAddress, safeBigInt } from "./utils.js";
 
 export type ApiApp = Hono;
@@ -53,12 +53,15 @@ export function parseAddressList(value: string | undefined, max = 200) {
   return items;
 }
 
-export function getEstimatedSettlementTime(startTime: bigint | null | undefined) {
+export function getEstimatedSettlementTime(
+  startTime: bigint | null | undefined,
+  epochDurationSeconds = DEFAULT_ROUND_CONFIG.epochDurationSeconds,
+) {
   if (startTime === null || startTime === undefined) return null;
 
   return (
     startTime
-    + BigInt(DEFAULT_ROUND_CONFIG.epochDurationSeconds)
+    + BigInt(epochDurationSeconds)
     + BigInt(DEFAULT_REVEAL_GRACE_PERIOD_SECONDS)
   );
 }
@@ -76,7 +79,72 @@ export function getDiscoverResolutionOutcome(state: number | null, isUp: boolean
 
 export async function attachOpenRoundSummary<T extends { id: bigint }>(items: T[]) {
   if (items.length === 0) {
-    return items.map(item => ({ ...item, openRound: null }));
+    return items.map(item => ({
+      ...item,
+      contentId: item.id,
+      question: "title" in item ? item.title : undefined,
+      link: "url" in item ? item.url || null : undefined,
+      rewardPoolSummary: emptyRewardPoolSummary(),
+      feedbackBonusSummary: emptyFeedbackBonusSummary(),
+      openRound: null,
+    }));
+  }
+
+  const contentIds = items.map(item => item.id);
+  const nowSeconds = BigInt(Math.floor(Date.now() / 1000));
+  const rewardPoolRows = await db
+    .select({
+      contentId: questionRewardPool.contentId,
+      rewardPoolCount: sql<number>`count(*)`,
+      activeRewardPoolCount: sql<number>`sum(case when ${questionRewardPool.refunded} = false and ${questionRewardPool.qualifiedRounds} < ${questionRewardPool.requiredSettledRounds} and (${questionRewardPool.bountyClosesAt} = 0 or ${questionRewardPool.bountyClosesAt} > ${nowSeconds}) then 1 else 0 end)`,
+      expiredRewardPoolCount: sql<number>`sum(case when ${questionRewardPool.refunded} = false and ${questionRewardPool.qualifiedRounds} < ${questionRewardPool.requiredSettledRounds} and ${questionRewardPool.bountyClosesAt} != 0 and ${questionRewardPool.bountyClosesAt} <= ${nowSeconds} then 1 else 0 end)`,
+      totalFundedAmount: sql<bigint>`coalesce(sum(${questionRewardPool.fundedAmount}), 0)`,
+      totalUnallocatedAmount: sql<bigint>`coalesce(sum(${questionRewardPool.unallocatedAmount}), 0)`,
+      activeUnallocatedAmount: sql<bigint>`coalesce(sum(case when ${questionRewardPool.refunded} = false and ${questionRewardPool.qualifiedRounds} < ${questionRewardPool.requiredSettledRounds} and (${questionRewardPool.bountyClosesAt} = 0 or ${questionRewardPool.bountyClosesAt} > ${nowSeconds}) then ${questionRewardPool.unallocatedAmount} else 0 end), 0)`,
+      expiredUnallocatedAmount: sql<bigint>`coalesce(sum(case when ${questionRewardPool.refunded} = false and ${questionRewardPool.qualifiedRounds} < ${questionRewardPool.requiredSettledRounds} and ${questionRewardPool.bountyClosesAt} != 0 and ${questionRewardPool.bountyClosesAt} <= ${nowSeconds} then ${questionRewardPool.unallocatedAmount} else 0 end), 0)`,
+      totalAllocatedAmount: sql<bigint>`coalesce(sum(${questionRewardPool.allocatedAmount}), 0)`,
+      totalClaimedAmount: sql<bigint>`coalesce(sum(${questionRewardPool.claimedAmount}), 0)`,
+      claimableAllocatedAmount: sql<bigint>`coalesce(sum(case when ${questionRewardPool.allocatedAmount} > ${questionRewardPool.claimedAmount} then ${questionRewardPool.allocatedAmount} - ${questionRewardPool.claimedAmount} else 0 end), 0)`,
+      totalVoterClaimedAmount: sql<bigint>`coalesce(sum(${questionRewardPool.voterClaimedAmount}), 0)`,
+      totalFrontendClaimedAmount: sql<bigint>`coalesce(sum(${questionRewardPool.frontendClaimedAmount}), 0)`,
+      totalRefundedAmount: sql<bigint>`coalesce(sum(${questionRewardPool.refundedAmount}), 0)`,
+      qualifiedRoundCount: sql<number>`coalesce(sum(${questionRewardPool.qualifiedRounds}), 0)`,
+      nextBountyClosesAt: sql<bigint | null>`min(case when ${questionRewardPool.refunded} = false and ${questionRewardPool.qualifiedRounds} < ${questionRewardPool.requiredSettledRounds} and ${questionRewardPool.bountyClosesAt} != 0 and ${questionRewardPool.bountyClosesAt} > ${nowSeconds} then ${questionRewardPool.bountyClosesAt} else null end)`,
+      nextFeedbackClosesAt: sql<bigint | null>`min(case when ${questionRewardPool.feedbackClosesAt} != 0 and ${questionRewardPool.feedbackClosesAt} > ${nowSeconds} then ${questionRewardPool.feedbackClosesAt} else null end)`,
+    })
+    .from(questionRewardPool)
+    .where(inArray(questionRewardPool.contentId, contentIds))
+    .groupBy(questionRewardPool.contentId);
+
+  const rewardPoolSummaryByContentId = new Map<bigint, ReturnType<typeof formatRewardPoolSummary>>();
+  for (const row of rewardPoolRows) {
+    rewardPoolSummaryByContentId.set(row.contentId, formatRewardPoolSummary(row));
+  }
+
+  const feedbackBonusRows = await db
+    .select({
+      contentId: feedbackBonusPool.contentId,
+      poolCount: sql<number>`count(*)`,
+      activePoolCount: sql<number>`sum(case when ${feedbackBonusPool.forfeited} = false and ${feedbackBonusPool.remainingAmount} > 0 and ${feedbackBonusPool.feedbackClosesAt} > ${nowSeconds} then 1 else 0 end)`,
+      expiredPoolCount: sql<number>`sum(case when ${feedbackBonusPool.forfeited} = false and ${feedbackBonusPool.remainingAmount} > 0 and ${feedbackBonusPool.feedbackClosesAt} <= ${nowSeconds} then 1 else 0 end)`,
+      totalFundedAmount: sql<bigint>`coalesce(sum(${feedbackBonusPool.fundedAmount}), 0)`,
+      totalRemainingAmount: sql<bigint>`coalesce(sum(${feedbackBonusPool.remainingAmount}), 0)`,
+      activeRemainingAmount: sql<bigint>`coalesce(sum(case when ${feedbackBonusPool.forfeited} = false and ${feedbackBonusPool.feedbackClosesAt} > ${nowSeconds} then ${feedbackBonusPool.remainingAmount} else 0 end), 0)`,
+      expiredRemainingAmount: sql<bigint>`coalesce(sum(case when ${feedbackBonusPool.forfeited} = false and ${feedbackBonusPool.remainingAmount} > 0 and ${feedbackBonusPool.feedbackClosesAt} <= ${nowSeconds} then ${feedbackBonusPool.remainingAmount} else 0 end), 0)`,
+      totalAwardedAmount: sql<bigint>`coalesce(sum(${feedbackBonusPool.awardedAmount}), 0)`,
+      totalVoterAwardedAmount: sql<bigint>`coalesce(sum(${feedbackBonusPool.voterAwardedAmount}), 0)`,
+      totalFrontendAwardedAmount: sql<bigint>`coalesce(sum(${feedbackBonusPool.frontendAwardedAmount}), 0)`,
+      totalForfeitedAmount: sql<bigint>`coalesce(sum(${feedbackBonusPool.forfeitedAmount}), 0)`,
+      awardCount: sql<number>`coalesce(sum(${feedbackBonusPool.awardCount}), 0)`,
+      nextFeedbackClosesAt: sql<bigint | null>`min(case when ${feedbackBonusPool.forfeited} = false and ${feedbackBonusPool.remainingAmount} > 0 and ${feedbackBonusPool.feedbackClosesAt} > ${nowSeconds} then ${feedbackBonusPool.feedbackClosesAt} else null end)`,
+    })
+    .from(feedbackBonusPool)
+    .where(inArray(feedbackBonusPool.contentId, contentIds))
+    .groupBy(feedbackBonusPool.contentId);
+
+  const feedbackBonusSummaryByContentId = new Map<bigint, ReturnType<typeof formatFeedbackBonusSummary>>();
+  for (const row of feedbackBonusRows) {
+    feedbackBonusSummaryByContentId.set(row.contentId, formatFeedbackBonusSummary(row));
   }
 
   const openRounds = await db
@@ -98,9 +166,13 @@ export async function attachOpenRoundSummary<T extends { id: bigint }>(items: T[
       settledRounds: round.settledRounds,
       lowSince: round.lowSince,
       startTime: round.startTime,
+      epochDuration: round.epochDuration,
+      maxDuration: round.maxDuration,
+      minVoters: round.minVoters,
+      maxVoters: round.maxVoters,
     })
     .from(round)
-    .where(and(inArray(round.contentId, items.map(item => item.id)), eq(round.state, ROUND_STATE.Open)))
+    .where(and(inArray(round.contentId, contentIds), eq(round.state, ROUND_STATE.Open)))
     .orderBy(desc(round.roundId));
 
   const latestOpenRoundByContentId = new Map<bigint, (typeof openRounds)[number]>();
@@ -112,9 +184,16 @@ export async function attachOpenRoundSummary<T extends { id: bigint }>(items: T[
 
   return items.map(item => {
     const openRound = latestOpenRoundByContentId.get(item.id);
+    const rewardPoolSummary = rewardPoolSummaryByContentId.get(item.id) ?? emptyRewardPoolSummary();
+    const feedbackBonusSummary = feedbackBonusSummaryByContentId.get(item.id) ?? emptyFeedbackBonusSummary();
 
     return {
       ...item,
+      contentId: item.id,
+      question: "title" in item ? item.title : undefined,
+      link: "url" in item ? item.url || null : undefined,
+      rewardPoolSummary,
+      feedbackBonusSummary,
       openRound: openRound
         ? {
             roundId: openRound.roundId,
@@ -133,9 +212,162 @@ export async function attachOpenRoundSummary<T extends { id: bigint }>(items: T[
             settledRounds: openRound.settledRounds,
             lowSince: openRound.lowSince,
             startTime: openRound.startTime,
-            estimatedSettlementTime: getEstimatedSettlementTime(openRound.startTime),
+            epochDuration: openRound.epochDuration,
+            maxDuration: openRound.maxDuration,
+            minVoters: openRound.minVoters,
+            maxVoters: openRound.maxVoters,
+            estimatedSettlementTime: getEstimatedSettlementTime(openRound.startTime, openRound.epochDuration),
           }
         : null,
     };
   });
+}
+
+function emptyRewardPoolSummary() {
+  return {
+    currency: "USDC",
+    displayCurrency: "USD",
+    decimals: 6,
+    rewardPoolCount: 0,
+    activeRewardPoolCount: 0,
+    expiredRewardPoolCount: 0,
+    totalFundedAmount: 0n,
+    totalUnallocatedAmount: 0n,
+    activeUnallocatedAmount: 0n,
+    expiredUnallocatedAmount: 0n,
+    totalAllocatedAmount: 0n,
+    totalClaimedAmount: 0n,
+    claimableAllocatedAmount: 0n,
+    totalVoterClaimedAmount: 0n,
+    totalFrontendClaimedAmount: 0n,
+    totalRefundedAmount: 0n,
+    qualifiedRoundCount: 0,
+    currentRewardPoolAmount: 0n,
+    hasActiveBounty: false,
+    nextBountyClosesAt: null as bigint | null,
+    nextFeedbackClosesAt: null as bigint | null,
+  };
+}
+
+function emptyFeedbackBonusSummary() {
+  return {
+    currency: "USDC",
+    displayCurrency: "USD",
+    decimals: 6,
+    poolCount: 0,
+    activePoolCount: 0,
+    expiredPoolCount: 0,
+    totalFundedAmount: 0n,
+    totalRemainingAmount: 0n,
+    activeRemainingAmount: 0n,
+    expiredRemainingAmount: 0n,
+    totalAwardedAmount: 0n,
+    totalVoterAwardedAmount: 0n,
+    totalFrontendAwardedAmount: 0n,
+    totalForfeitedAmount: 0n,
+    awardCount: 0,
+    hasActiveFeedbackBonus: false,
+    nextFeedbackClosesAt: null as bigint | null,
+  };
+}
+
+function toBigIntValue(value: bigint | string | number | null | undefined) {
+  if (typeof value === "bigint") return value;
+  if (typeof value === "number") return BigInt(value);
+  if (typeof value === "string" && value.length > 0) return BigInt(value);
+  return 0n;
+}
+
+function formatFeedbackBonusSummary(row: {
+  poolCount: number | string | bigint | null;
+  activePoolCount: number | string | bigint | null;
+  expiredPoolCount: number | string | bigint | null;
+  totalFundedAmount: bigint | string | number | null;
+  totalRemainingAmount: bigint | string | number | null;
+  activeRemainingAmount: bigint | string | number | null;
+  expiredRemainingAmount: bigint | string | number | null;
+  totalAwardedAmount: bigint | string | number | null;
+  totalVoterAwardedAmount: bigint | string | number | null;
+  totalFrontendAwardedAmount: bigint | string | number | null;
+  totalForfeitedAmount: bigint | string | number | null;
+  awardCount: number | string | bigint | null;
+  nextFeedbackClosesAt: bigint | string | number | null;
+}) {
+  const activePoolCount = toNumberValue(row.activePoolCount);
+  return {
+    currency: "USDC",
+    displayCurrency: "USD",
+    decimals: 6,
+    poolCount: toNumberValue(row.poolCount),
+    activePoolCount,
+    expiredPoolCount: toNumberValue(row.expiredPoolCount),
+    totalFundedAmount: toBigIntValue(row.totalFundedAmount),
+    totalRemainingAmount: toBigIntValue(row.totalRemainingAmount),
+    activeRemainingAmount: toBigIntValue(row.activeRemainingAmount),
+    expiredRemainingAmount: toBigIntValue(row.expiredRemainingAmount),
+    totalAwardedAmount: toBigIntValue(row.totalAwardedAmount),
+    totalVoterAwardedAmount: toBigIntValue(row.totalVoterAwardedAmount),
+    totalFrontendAwardedAmount: toBigIntValue(row.totalFrontendAwardedAmount),
+    totalForfeitedAmount: toBigIntValue(row.totalForfeitedAmount),
+    awardCount: toNumberValue(row.awardCount),
+    hasActiveFeedbackBonus: activePoolCount > 0,
+    nextFeedbackClosesAt: row.nextFeedbackClosesAt === null ? null : toBigIntValue(row.nextFeedbackClosesAt),
+  };
+}
+
+function toNumberValue(value: number | string | bigint | null | undefined) {
+  if (typeof value === "number") return value;
+  if (typeof value === "bigint") return Number(value);
+  if (typeof value === "string" && value.length > 0) return Number(value);
+  return 0;
+}
+
+function formatRewardPoolSummary(row: {
+  rewardPoolCount: number | string | bigint | null;
+  activeRewardPoolCount: number | string | bigint | null;
+  expiredRewardPoolCount: number | string | bigint | null;
+  totalFundedAmount: bigint | string | number | null;
+  totalUnallocatedAmount: bigint | string | number | null;
+  activeUnallocatedAmount: bigint | string | number | null;
+  expiredUnallocatedAmount: bigint | string | number | null;
+  totalAllocatedAmount: bigint | string | number | null;
+  totalClaimedAmount: bigint | string | number | null;
+  claimableAllocatedAmount: bigint | string | number | null;
+  totalVoterClaimedAmount: bigint | string | number | null;
+  totalFrontendClaimedAmount: bigint | string | number | null;
+  totalRefundedAmount: bigint | string | number | null;
+  qualifiedRoundCount: number | string | bigint | null;
+  nextBountyClosesAt: bigint | string | number | null;
+  nextFeedbackClosesAt: bigint | string | number | null;
+}) {
+  const totalUnallocatedAmount = toBigIntValue(row.totalUnallocatedAmount);
+  const totalAllocatedAmount = toBigIntValue(row.totalAllocatedAmount);
+  const totalClaimedAmount = toBigIntValue(row.totalClaimedAmount);
+  const activeRewardPoolCount = toNumberValue(row.activeRewardPoolCount);
+  const activeUnallocatedAmount = toBigIntValue(row.activeUnallocatedAmount);
+  const claimableAllocatedAmount = toBigIntValue(row.claimableAllocatedAmount);
+
+  return {
+    currency: "USDC",
+    displayCurrency: "USD",
+    decimals: 6,
+    rewardPoolCount: toNumberValue(row.rewardPoolCount),
+    activeRewardPoolCount,
+    expiredRewardPoolCount: toNumberValue(row.expiredRewardPoolCount),
+    totalFundedAmount: toBigIntValue(row.totalFundedAmount),
+    totalUnallocatedAmount,
+    activeUnallocatedAmount,
+    expiredUnallocatedAmount: toBigIntValue(row.expiredUnallocatedAmount),
+    totalAllocatedAmount,
+    totalClaimedAmount,
+    claimableAllocatedAmount,
+    totalVoterClaimedAmount: toBigIntValue(row.totalVoterClaimedAmount),
+    totalFrontendClaimedAmount: toBigIntValue(row.totalFrontendClaimedAmount),
+    totalRefundedAmount: toBigIntValue(row.totalRefundedAmount),
+    qualifiedRoundCount: toNumberValue(row.qualifiedRoundCount),
+    currentRewardPoolAmount: activeUnallocatedAmount + claimableAllocatedAmount,
+    hasActiveBounty: activeRewardPoolCount > 0,
+    nextBountyClosesAt: row.nextBountyClosesAt === null ? null : toBigIntValue(row.nextBountyClosesAt),
+    nextFeedbackClosesAt: row.nextFeedbackClosesAt === null ? null : toBigIntValue(row.nextFeedbackClosesAt),
+  };
 }

@@ -7,10 +7,10 @@ const config: KnipConfig = {
   ignoreWorkspaces: ["packages/foundry"],
   workspaces: {
     ".": {
-      entry: ["design-mockups/**/*.mjs", "scripts/**/*.{js,mjs,cjs,ts,tsx}"],
-      project: ["design-mockups/**/*.mjs", "scripts/**/*.{js,mjs,cjs,ts,tsx}"],
+      entry: ["scripts/**/*.{js,mjs,cjs,ts,tsx}"],
+      project: ["scripts/**/*.{js,mjs,cjs,ts,tsx}"],
     },
-    "packages/bot": {
+    "packages/agents": {
       project: ["src/**/*.ts"],
     },
     "packages/contracts": {
@@ -21,13 +21,9 @@ const config: KnipConfig = {
     "packages/keeper": {
       project: ["src/**/*.ts"],
     },
-    "packages/mcp-server": {
-      project: ["src/**/*.ts"],
-    },
     "packages/nextjs": {
       entry: [
         "app/**/{page,layout,route,error,loading}.{ts,tsx}",
-        "pages/**/*.tsx",
         "scripts/**/*.{js,mjs,cjs,ts,tsx}",
         "e2e/**/*.{ts,tsx}",
         ...testEntries,
@@ -35,12 +31,10 @@ const config: KnipConfig = {
       ignoreDependencies: ["daisyui", "eslint-config-next", "tailwindcss"],
       project: [
         "app/**/*.{ts,tsx}",
-        "pages/**/*.{ts,tsx}",
         "components/**/*.{ts,tsx}",
         "config/**/*.ts",
         "constants/**/*.ts",
         "contexts/**/*.{ts,tsx}",
-        "contracts/**/*.{ts,tsx}",
         "e2e/**/*.{ts,tsx}",
         "hooks/**/*.{ts,tsx}",
         "lib/**/*.{ts,tsx}",

@@ -7,7 +7,7 @@ const WhitepaperPage: NextPage = () => {
     <article className="prose max-w-none">
       <h1>Whitepaper</h1>
       <p className="lead text-base-content/60 text-lg">
-        The complete Curyo protocol specification in a single document.
+        Long-form overview of Curyo as a human-in-the-loop judgment layer for AI agents.
       </p>
 
       <div className="not-prose my-8">
@@ -19,40 +19,21 @@ const WhitepaperPage: NextPage = () => {
           <ArrowDownTrayIcon className="w-5 h-5" />
           Download Whitepaper (PDF)
         </a>
-        <p className="text-sm text-base-content/40 mt-2">
+        <p className="text-sm text-base-content/60 mt-2">
           Version {META.version} | Author: {META.author} | {META.date}
         </p>
       </div>
 
       <h2>Contents</h2>
-      <p>The whitepaper opens with an executive summary, followed by {SECTIONS.length} sections:</p>
+      <p>The PDF is the long-form reference. The short docs are the better starting point.</p>
       <ol>
-        <li>
-          <strong>Introduction</strong> &mdash; Mission, key principles, and voting flow overview
-        </li>
-        <li>
-          <strong>How It Works</strong> &mdash; Round mechanics, voter ID, reward distribution, content rating
-        </li>
-        <li>
-          <strong>tlock Commit-Reveal Voting</strong> &mdash; Encrypted voting, phase-weighted rewards, and resolution
-        </li>
-        <li>
-          <strong>Tokenomics</strong> &mdash; Token distribution, faucet tiers, participation rewards
-        </li>
-        <li>
-          <strong>Governance</strong> &mdash; Community governance, treasury, and collusion prevention
-        </li>
-        <li>
-          <strong>Curyo &amp; AI</strong> &mdash; Model collapse, stake-weighted curation as AI infrastructure, public
-          ratings as a public good, AI-assisted voting with human oversight
-        </li>
-        <li>
-          <strong>Known Limitations</strong> &mdash; Current constraints and open challenges
-        </li>
-        <li>
-          <strong>Rating Research Basis</strong> &mdash; Research references behind the score-relative rating model
-        </li>
+        {SECTIONS.map(section => (
+          <li key={section.title}>
+            <strong>{section.title}</strong> &mdash; {section.lead}
+          </li>
+        ))}
       </ol>
+      <p className="text-sm text-base-content/60">Current source bundle contains {SECTIONS.length} sections.</p>
     </article>
   );
 };

@@ -16,7 +16,7 @@ test("buildCuryoEmailHtml includes the branded header, button, and fallback link
   assert.match(html, />\s*Curyo\s*</);
   assert.match(html, /Email verification/);
   assert.match(html, /Verify your email/);
-  assert.match(html, /background:#f26426/);
+  assert.match(html, /background:#d56a3e/);
   assert.match(html, />\s*Verify email\s*</);
   assert.match(html, /If the button does not work, open this link manually:/);
   assert.match(html, /Unsubscribe from these emails/);

@@ -5,56 +5,89 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+import { TransientSlot } from "@openzeppelin/contracts/utils/TransientSlot.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { ICategoryRegistry } from "./interfaces/ICategoryRegistry.sol";
 import { IRoundVotingEngine } from "./interfaces/IRoundVotingEngine.sol";
 import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
-import { IParticipationPool } from "./interfaces/IParticipationPool.sol";
 import { RoundLib } from "./libraries/RoundLib.sol";
 import { RatingLib } from "./libraries/RatingLib.sol";
 import { RatingMath } from "./libraries/RatingMath.sol";
 import { ProtocolConfig } from "./ProtocolConfig.sol";
-import { SubmissionCanonicalizer } from "./SubmissionCanonicalizer.sol";
+import { SubmissionMediaValidator } from "./SubmissionMediaValidator.sol";
+
+interface IQuestionRewardPoolEscrow {
+    function createSubmissionRewardPoolFromRegistry(
+        uint256 contentId,
+        address funder,
+        uint8 asset,
+        uint256 amount,
+        uint256 requiredVoters,
+        uint256 requiredSettledRounds,
+        uint256 bountyClosesAt,
+        uint256 feedbackClosesAt
+    ) external returns (uint256 rewardPoolId);
+
+    function createSubmissionBundleFromRegistry(
+        uint256 bundleId,
+        uint256[] calldata contentIds,
+        address funder,
+        uint8 asset,
+        uint256 amount,
+        uint256 requiredCompleters,
+        uint256 requiredSettledRounds,
+        uint256 bountyClosesAt,
+        uint256 feedbackClosesAt
+    ) external returns (uint256 rewardPoolId);
+}
 
 /// @title ContentRegistry
 /// @notice Manages content lifecycle: submission → active → dormant → revived / cancelled.
-/// @dev Stores only a metadata hash on-chain; full URL/title/description are emitted in events.
+/// @dev Stores only a metadata hash on-chain; full URL/question/description are emitted in events.
 contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpgradeable, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
     using SafeCast for uint256;
+    using TransientSlot for *;
 
     // --- Access Control Roles ---
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant CONFIG_ROLE = keccak256("CONFIG_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     bytes32 public constant TREASURY_ROLE = keccak256("TREASURY_ROLE");
     bytes32 public constant TREASURY_ADMIN_ROLE = keccak256("TREASURY_ADMIN_ROLE");
+    bytes32 public constant X402_GATEWAY_ROLE = keccak256("X402_GATEWAY_ROLE");
 
     // --- Constants ---
-    uint256 public constant MIN_SUBMITTER_STAKE = 10e6; // 10 cREP (6 decimals)
-    uint256 public constant REVIVAL_STAKE = 5e6; // 5 cREP (6 decimals)
-    uint256 public constant CANCELLATION_FEE = 1e6; // 1 cREP (prevents submit-cancel spam)
-    uint256 public constant DORMANCY_PERIOD = 30 days;
-    uint256 public constant SUBMISSION_RESERVATION_PERIOD = 30 minutes;
-    uint256 public constant RESERVED_SUBMISSION_MIN_AGE = 1 seconds;
-    uint256 public constant DORMANT_EXCLUSIVE_REVIVAL_PERIOD = 1 days;
-    uint8 public constant MAX_REVIVALS = 2;
+    uint256 internal constant REVIVAL_STAKE = 5e6; // 5 HREP (6 decimals)
+    uint256 internal constant DORMANCY_PERIOD = 30 days;
+    uint256 internal constant SUBMISSION_RESERVATION_PERIOD = 30 minutes;
+    uint256 internal constant RESERVED_SUBMISSION_MIN_AGE = 1 seconds;
+    uint256 internal constant DORMANT_EXCLUSIVE_REVIVAL_PERIOD = 1 days;
+    uint8 internal constant MAX_REVIVALS = 2;
+    uint8 internal constant SUBMISSION_REWARD_ASSET_HREP = 0;
+    uint8 internal constant SUBMISSION_REWARD_ASSET_USDC = 1;
+    uint256 internal constant DEFAULT_MIN_SUBMISSION_REWARD_POOL = 1e6;
+    uint256 internal constant MIN_SUBMISSION_REWARD_REQUIRED_VOTERS = 3;
+    uint256 internal constant MIN_SUBMISSION_REWARD_SETTLED_ROUNDS = 1;
+    uint256 internal constant MAX_SUBMISSION_REWARD_SETTLED_ROUNDS = 16;
+    uint256 internal constant MAX_QUESTION_BUNDLE_COUNT = 10;
 
-    // Submitter stake rules
-    uint256 public constant SLASH_RATING_THRESHOLD = 25; // Rating below this triggers slash
-    uint16 public constant DEFAULT_SLASH_THRESHOLD_BPS = 2500;
-    uint16 public constant DEFAULT_MIN_SLASH_SETTLED_ROUNDS = 2;
-    uint48 public constant DEFAULT_MIN_SLASH_LOW_DURATION = 7 days;
-    uint256 public constant DEFAULT_MIN_SLASH_EVIDENCE = 200e6;
-    uint256 public constant DEFAULT_CONFIDENCE_MASS_INITIAL = 80e6;
+    // Rating safety thresholds
+    uint256 internal constant SLASH_RATING_THRESHOLD = 25; // Rating below this triggers slash
+    uint16 internal constant DEFAULT_SLASH_THRESHOLD_BPS = 2500;
+    uint16 internal constant DEFAULT_MIN_SLASH_SETTLED_ROUNDS = 2;
+    uint48 internal constant DEFAULT_MIN_SLASH_LOW_DURATION = 7 days;
+    uint256 internal constant DEFAULT_MIN_SLASH_EVIDENCE = 200e6;
+    uint256 internal constant DEFAULT_CONFIDENCE_MASS_INITIAL = 80e6;
 
     // String length limits (prevent storage bloat)
-    uint256 public constant MAX_URL_LENGTH = 2048;
-    uint256 public constant MAX_TITLE_LENGTH = 72;
-    uint256 public constant MAX_DESCRIPTION_LENGTH = 280;
-    uint256 public constant MAX_TAGS_LENGTH = 256;
+    uint256 internal constant MAX_URL_LENGTH = 2048;
+    uint256 internal constant MAX_QUESTION_LENGTH = 120;
+    uint256 internal constant MAX_DESCRIPTION_LENGTH = 280;
+    uint256 internal constant MAX_TAGS_LENGTH = 256;
+    uint256 internal constant MAX_IMAGE_URLS = 4;
+    uint16 internal constant MAX_QUESTION_BUNDLE_ROUND_VOTERS = 100;
 
     // --- Enums ---
     enum ContentStatus {
@@ -68,21 +101,17 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         uint64 id;
         bytes32 contentHash;
         address submitter;
-        uint64 submitterStake;
         uint48 createdAt;
         uint48 lastActivityAt;
         ContentStatus status;
         uint8 dormantCount;
         address reviver;
-        bool submitterStakeReturned;
         uint8 rating; // 0-100, starts at 50
-        uint64 categoryId; // Reference to approved category
+        uint64 categoryId; // Reference to seeded discovery category
     }
 
     struct PendingSubmission {
         address submitter;
-        address submitterIdentity;
-        uint64 reservedStake;
         uint48 reservedAt;
         uint48 expiresAt;
     }
@@ -95,31 +124,49 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         uint256 categoryId;
     }
 
+    struct SubmissionRewardTerms {
+        uint8 asset;
+        uint256 amount;
+        uint256 requiredVoters;
+        uint256 requiredSettledRounds;
+        uint256 bountyClosesAt;
+        uint256 feedbackClosesAt;
+    }
+
+    struct QuestionSpecCommitment {
+        bytes32 questionMetadataHash;
+        bytes32 resultSpecHash;
+    }
+
+    struct BundleQuestionInput {
+        string contextUrl;
+        string[] imageUrls;
+        string videoUrl;
+        string title;
+        string description;
+        string tags;
+        uint256 categoryId;
+        bytes32 salt;
+        QuestionSpecCommitment spec;
+    }
+
     // --- State ---
-    IERC20 public crepToken;
+    IERC20 public hrepToken;
     address public votingEngine;
     ICategoryRegistry public categoryRegistry;
     address public bonusPool; // Cancellation fee sink (anti-spam), typically the treasury
     address public treasury; // Receives 100% of slashed stakes (governance timelock)
     uint256 public nextContentId;
+    uint256 public nextQuestionBundleId;
     mapping(uint256 => Content) public contents;
     mapping(bytes32 => bool) public submissionKeyUsed; // Canonical submission keys prevent duplicate content variants
     IVoterIdNFT public voterIdNFT; // Voter ID NFT for sybil resistance
 
-    /// @notice Participation pool for rewarding submitters
-    IParticipationPool public participationPool;
-
-    /// @notice Snapshotted submitter participation reward entitlement per content.
-    mapping(uint256 => uint256) public submitterParticipationRewardOwed;
-
-    /// @notice Amount of the snapshotted submitter participation reward already paid.
-    mapping(uint256 => uint256) public submitterParticipationRewardPaid;
-
-    /// @notice Amount of the snapshotted reward that was durably reserved for this content's future claim.
-    mapping(uint256 => uint256) public submitterParticipationRewardReserved;
-
-    /// @notice Participation pool snapshot used to pay submitter participation rewards.
-    mapping(uint256 => address) public submitterParticipationRewardPool;
+    /// @notice Escrow that holds mandatory bounties.
+    address public questionRewardPoolEscrow;
+    uint256 internal votingEngineGeneration;
+    mapping(address => uint256) internal votingEngineCallbackGeneration;
+    mapping(uint256 => uint256) internal contentSettlementEngineGeneration;
 
     /// @notice Canonical submission key per content ID (for releasing/reserving uniqueness on status changes)
     mapping(uint256 => bytes32) internal contentSubmissionKey;
@@ -127,10 +174,25 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     /// @notice Canonical submitter identity snapshot (holder address if submitted through a delegate).
     mapping(uint256 => address) internal contentSubmitterIdentity;
 
+    /// @notice Stable Self nullifier for the canonical submitter identity.
+    mapping(uint256 => uint256) public contentSubmitterNullifier;
+
+    /// @notice Per-question round settings selected at submission and bounded by governance.
+    mapping(uint256 => RoundLib.RoundConfig) internal contentRoundConfig;
+
+    /// @notice Ordered content IDs for a submitted question bundle.
+    mapping(uint256 => uint256[]) internal questionBundleContentIds;
+
+    mapping(uint256 => uint256) public contentBundleId;
+    mapping(uint256 => uint256) internal contentBundleIndex;
+
     /// @notice Meaningful-activity anchor used for dormancy checks.
     /// @dev Vote commits still update `lastActivityAt` for UI/analytics, but only submission, revival,
     ///      and milestone-0 settlement move the dormancy window forward.
     mapping(uint256 => uint256) internal dormancyAnchorAt;
+
+    /// @notice Content that has ever received a commit from any authorized voting engine.
+    mapping(uint256 => bool) internal contentHasVotes;
 
     /// @notice ProtocolConfig used for governance-tunable rating and slash parameters.
     ProtocolConfig public protocolConfig;
@@ -141,35 +203,16 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     /// @notice Timestamp after which a dormant content key may be publicly released for replacement.
     mapping(uint256 => uint256) public dormantKeyReleasableAt;
 
-    /// @notice Snapshotted participation reward rate captured at the latest successful settlement.
-    mapping(uint256 => uint256) public submitterParticipationSnapshotRateBps;
-
-    /// @notice Snapshotted participation pool captured at the latest successful settlement.
-    mapping(uint256 => address) public submitterParticipationSnapshotPool;
-
-    /// @notice Whether milestone-0 submitter resolution terms have been frozen for this content.
-    mapping(uint256 => bool) public milestoneZeroSubmitterTermsSnapshotted;
-
     /// @notice Rich rating state used by the score-relative rating system.
-    mapping(uint256 => RatingLib.RatingState) public ratingState;
+    mapping(uint256 => RatingLib.RatingState) internal ratingState;
 
     /// @notice Slash policy frozen at content creation so governance cannot retroactively rewrite stake terms.
-    mapping(uint256 => RatingLib.SlashConfig) public contentSlashConfigSnapshot;
+    mapping(uint256 => RatingLib.SlashConfig) internal contentSlashConfigSnapshot;
 
-    /// @notice Frozen rating from the first settled round (milestone 0).
-    mapping(uint256 => uint8) public milestoneZeroSubmitterRating;
-
-    /// @notice Frozen participation reward rate from the first settled round (milestone 0).
-    mapping(uint256 => uint256) public milestoneZeroSubmitterParticipationRateBps;
-
-    /// @notice Frozen participation reward pool from the first settled round (milestone 0).
-    mapping(uint256 => address) public milestoneZeroSubmitterParticipationPool;
-
-    /// @dev Stateless helper used to resolve canonical submission keys without bloating the registry runtime.
-    SubmissionCanonicalizer internal immutable SUBMISSION_CANONICALIZER;
+    SubmissionMediaValidator internal immutable SUBMISSION_MEDIA_VALIDATOR;
 
     /// @dev Reserved storage gap for future upgrades
-    uint256[36] private __gap;
+    uint256[43] private __gap;
 
     // --- Events ---
     event ContentSubmitted(
@@ -182,24 +225,39 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         string tags,
         uint256 indexed categoryId
     );
+    event QuestionSpecAnchored(uint256 indexed contentId, bytes32 questionMetadataHash, bytes32 resultSpecHash);
+    event ContentMediaSubmitted(uint256 indexed contentId, string[] imageUrls, string videoUrl);
     event ContentCancelled(uint256 indexed contentId);
     event SubmissionReserved(address indexed submitter, bytes32 indexed revealCommitment, uint256 expiresAt);
-    event SubmissionReservationCancelled(address indexed submitter, bytes32 indexed revealCommitment, uint256 refund);
-    event SubmissionReservationExpired(address indexed submitter, bytes32 indexed revealCommitment, uint256 refund);
+    event SubmissionReservationCancelled(address indexed submitter, bytes32 indexed revealCommitment);
+    event SubmissionReservationExpired(address indexed submitter, bytes32 indexed revealCommitment);
+    event SubmissionRewardPoolAttached(
+        uint256 indexed contentId,
+        address indexed submitter,
+        uint8 indexed rewardAsset,
+        uint256 amount,
+        uint256 requiredVoters,
+        uint256 requiredSettledRounds,
+        uint256 bountyClosesAt,
+        uint256 feedbackClosesAt,
+        uint256 rewardPoolId
+    );
+    event QuestionBundleSubmitted(
+        uint256 indexed bundleId,
+        address indexed submitter,
+        uint256 questionCount,
+        uint8 indexed rewardAsset,
+        uint256 amount,
+        uint256 requiredCompleters,
+        uint256 bountyClosesAt,
+        uint256 feedbackClosesAt,
+        bytes32 bundleHash,
+        uint256 rewardPoolId
+    );
+    event QuestionBundleContentLinked(uint256 indexed bundleId, uint256 indexed contentId, uint256 indexed bundleIndex);
     event ContentDormant(uint256 indexed contentId);
     event DormantSubmissionKeyReleased(uint256 indexed contentId, bytes32 indexed submissionKey);
     event ContentRevived(uint256 indexed contentId, address indexed reviver);
-    event SubmitterStakeReturned(uint256 indexed contentId, uint256 amount);
-    event SubmitterStakeSlashed(uint256 indexed contentId, uint256 slashedAmount);
-    event SubmitterParticipationRewardAccrued(
-        uint256 indexed contentId, address indexed submitter, address indexed rewardPool, uint256 amount
-    );
-    event SubmitterParticipationRewardClaimed(uint256 indexed contentId, address indexed submitter, uint256 amount);
-    event SubmitterParticipationReservationFailed(uint256 indexed contentId, address rewardPool, uint256 amount);
-    event MilestoneZeroSubmitterParticipationRepairNeeded(uint256 indexed contentId, address indexed rewardPool);
-    event MilestoneZeroSubmitterParticipationTermsRepaired(
-        uint256 indexed contentId, address indexed rewardPool, uint256 rewardRateBps, uint256 rewardAmount
-    );
     event RatingUpdated(uint256 indexed contentId, uint256 oldRating, uint256 newRating);
     event RatingStateUpdated(
         uint256 indexed contentId,
@@ -214,40 +272,41 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     );
     event VoterIdNFTUpdated(address voterIdNFT);
     event ProtocolConfigUpdated(address protocolConfig);
+    event QuestionRewardPoolEscrowUpdated(address rewardPoolEscrow);
+    event ContentRoundConfigSet(
+        uint256 indexed contentId, uint32 epochDuration, uint32 maxDuration, uint16 minVoters, uint16 maxVoters
+    );
 
     /// @custom:oz-upgrades-unsafe-allow constructor state-variable-immutable
     constructor() {
-        SUBMISSION_CANONICALIZER = new SubmissionCanonicalizer();
+        SUBMISSION_MEDIA_VALIDATOR = new SubmissionMediaValidator();
         _disableInitializers();
     }
 
-    function initialize(address _admin, address _governance, address _crepToken) public initializer {
-        _initialize(_admin, _governance, _governance, _crepToken);
-    }
-
-    function initializeWithTreasury(address _admin, address _governance, address _treasuryAuthority, address _crepToken)
+    function initializeWithTreasury(address _admin, address _governance, address _treasuryAuthority, address _hrepToken)
         public
         initializer
     {
-        _initialize(_admin, _governance, _treasuryAuthority, _crepToken);
+        _initialize(_admin, _governance, _treasuryAuthority, _hrepToken);
     }
 
-    function _initialize(address _admin, address _governance, address _treasuryAuthority, address _crepToken) internal {
+    function _initialize(address _admin, address _governance, address _treasuryAuthority, address _hrepToken) internal {
         __AccessControl_init();
         __Pausable_init();
 
         require(_admin != address(0), "Invalid admin");
         require(_governance != address(0), "Invalid governance");
-        require(_treasuryAuthority != address(0), "Invalid treasury authority");
-        require(_crepToken != address(0), "Invalid cREP token");
+        require(_treasuryAuthority != address(0), "Bad treasury");
+        require(_hrepToken != address(0), "Invalid HREP token");
 
         // Governance gets all permanent roles
         _grantRole(DEFAULT_ADMIN_ROLE, _governance);
-        _grantRole(ADMIN_ROLE, _governance);
         _grantRole(CONFIG_ROLE, _governance);
         _grantRole(PAUSER_ROLE, _governance);
         _setRoleAdmin(TREASURY_ROLE, TREASURY_ADMIN_ROLE);
         _setRoleAdmin(TREASURY_ADMIN_ROLE, TREASURY_ADMIN_ROLE);
+        _setRoleAdmin(X402_GATEWAY_ROLE, CONFIG_ROLE);
+        _grantRole(TREASURY_ADMIN_ROLE, _governance);
         _grantRole(TREASURY_ADMIN_ROLE, _treasuryAuthority);
         _grantRole(TREASURY_ROLE, _treasuryAuthority);
 
@@ -256,8 +315,9 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             _grantRole(CONFIG_ROLE, _admin);
         }
 
-        crepToken = IERC20(_crepToken);
+        hrepToken = IERC20(_hrepToken);
         nextContentId = 1;
+        nextQuestionBundleId = 1;
         treasury = _treasuryAuthority;
         bonusPool = _treasuryAuthority;
     }
@@ -265,7 +325,16 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     /// @notice Set the VotingEngine address (can only be called by CONFIG_ROLE).
     function setVotingEngine(address _votingEngine) external onlyRole(CONFIG_ROLE) {
         require(_votingEngine != address(0), "Invalid address");
+        require(_votingEngine.code.length != 0, "No code");
+        if (votingEngine == _votingEngine) return;
+        require(votingEngine == address(0) || paused(), "Pause required");
+        uint256 nextGeneration;
+        unchecked {
+            nextGeneration = votingEngineGeneration + 1;
+        }
         votingEngine = _votingEngine;
+        votingEngineGeneration = nextGeneration;
+        votingEngineCallbackGeneration[_votingEngine] = nextGeneration;
     }
 
     /// @notice Set the CategoryRegistry address (can only be called by CONFIG_ROLE).
@@ -288,11 +357,14 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         emit VoterIdNFTUpdated(_voterIdNFT);
     }
 
-    /// @notice Set or update the participation pool contract
-    /// @param _participationPool Address of the ParticipationPool contract
-    function setParticipationPool(address _participationPool) external onlyRole(CONFIG_ROLE) {
-        require(_participationPool != address(0), "Invalid address");
-        participationPool = IParticipationPool(_participationPool);
+    /// @notice Set or update the bounty escrow.
+    function setQuestionRewardPoolEscrow(address _questionRewardPoolEscrow) external onlyRole(CONFIG_ROLE) {
+        require(_questionRewardPoolEscrow != address(0), "Invalid address");
+        require(_questionRewardPoolEscrow.code.length != 0, "No code");
+        if (questionRewardPoolEscrow == _questionRewardPoolEscrow) return;
+        require(questionRewardPoolEscrow == address(0) || paused(), "Pause required");
+        questionRewardPoolEscrow = _questionRewardPoolEscrow;
+        emit QuestionRewardPoolEscrowUpdated(_questionRewardPoolEscrow);
     }
 
     /// @notice Set the cancellation fee sink address (can only be called by TREASURY_ROLE).
@@ -309,24 +381,24 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
     // --- Content Lifecycle ---
 
+    /// @notice Compute the internal storage key for a reservation.
+    /// @dev Scoping the mapping key by `submitter` prevents a front-runner from copying a
+    ///      victim's revealCommitment out of the mempool and squatting the reservation slot.
+    ///      Each submitter has their own namespace, so collisions are impossible.
+    function _reservationKey(bytes32 revealCommitment, address submitter) internal pure returns (bytes32) {
+        return keccak256(abi.encode(revealCommitment, submitter));
+    }
+
     /// @notice Reserve a hidden submission commitment before revealing the public content metadata.
     /// @param revealCommitment Keccak-256 hash of the future submission reveal payload.
     function reserveSubmission(bytes32 revealCommitment) external nonReentrant whenNotPaused {
-        // Require Voter ID if VoterIdNFT is configured
-        if (address(voterIdNFT) != address(0)) {
-            require(voterIdNFT.hasVoterId(msg.sender), "Voter ID required");
-        }
-
         require(revealCommitment != bytes32(0), "Invalid commitment");
-        PendingSubmission storage pending = pendingSubmissions[revealCommitment];
+        bytes32 key = _reservationKey(revealCommitment, msg.sender);
+        PendingSubmission storage pending = pendingSubmissions[key];
         require(pending.submitter == address(0), "Reservation exists");
 
-        crepToken.safeTransferFrom(msg.sender, address(this), MIN_SUBMITTER_STAKE);
-
-        pendingSubmissions[revealCommitment] = PendingSubmission({
+        pendingSubmissions[key] = PendingSubmission({
             submitter: msg.sender,
-            submitterIdentity: _resolveSubmitterIdentity(msg.sender),
-            reservedStake: MIN_SUBMITTER_STAKE.toUint64(),
             reservedAt: block.timestamp.toUint48(),
             expiresAt: (block.timestamp + SUBMISSION_RESERVATION_PERIOD).toUint48()
         });
@@ -335,56 +407,298 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     }
 
     function cancelReservedSubmission(bytes32 revealCommitment) external nonReentrant whenNotPaused {
-        PendingSubmission memory pending = pendingSubmissions[revealCommitment];
+        bytes32 key = _reservationKey(revealCommitment, msg.sender);
+        PendingSubmission memory pending = pendingSubmissions[key];
         require(pending.submitter == msg.sender, "Not submitter");
-        delete pendingSubmissions[revealCommitment];
+        delete pendingSubmissions[key];
 
-        uint256 refund = _refundReservedSubmission(pending, msg.sender);
-        emit SubmissionReservationCancelled(msg.sender, revealCommitment, refund);
+        emit SubmissionReservationCancelled(msg.sender, revealCommitment);
     }
 
     function clearExpiredReservedSubmission(bytes32 revealCommitment) external nonReentrant whenNotPaused {
-        PendingSubmission memory pending = pendingSubmissions[revealCommitment];
+        // Caller sweeps their own expired reservation. Because keys are scoped by submitter,
+        // other users cannot accidentally interfere with each other's expirations.
+        bytes32 key = _reservationKey(revealCommitment, msg.sender);
+        PendingSubmission memory pending = pendingSubmissions[key];
         require(pending.submitter != address(0), "Reservation not found");
         require(block.timestamp > pending.expiresAt, "Reservation active");
-        delete pendingSubmissions[revealCommitment];
+        delete pendingSubmissions[key];
 
-        uint256 refund = _refundReservedSubmission(pending, pending.submitter);
-        emit SubmissionReservationExpired(pending.submitter, revealCommitment, refund);
+        emit SubmissionReservationExpired(pending.submitter, revealCommitment);
     }
 
-    function submitContent(
-        string calldata url,
-        string calldata title,
-        string calldata description,
-        string calldata tags,
+    function submitQuestionWithRewardAndRoundConfig(
+        string memory contextUrl,
+        string[] memory imageUrls,
+        string memory videoUrl,
+        string memory title,
+        string memory description,
+        string memory tags,
         uint256 categoryId,
-        bytes32 salt
-    ) external nonReentrant whenNotPaused returns (uint256) {
-        // Require Voter ID if VoterIdNFT is configured
-        if (address(voterIdNFT) != address(0)) {
-            require(voterIdNFT.hasVoterId(msg.sender), "Voter ID required");
+        bytes32 salt,
+        SubmissionRewardTerms memory rewardTerms,
+        RoundLib.RoundConfig memory roundConfig,
+        QuestionSpecCommitment memory spec
+    ) public returns (uint256) {
+        SubmissionMetadata memory metadata = _validatedContextSubmissionMetadata(
+            contextUrl, imageUrls, videoUrl, title, description, tags, categoryId
+        );
+        return _submitQuestionWithRewardAndRoundConfig(
+            metadata, imageUrls, videoUrl, salt, rewardTerms, _validatedRoundConfig(roundConfig), spec
+        );
+    }
+
+    function _submitQuestionWithRewardAndRoundConfig(
+        SubmissionMetadata memory metadata,
+        string[] memory imageUrls,
+        string memory videoUrl,
+        bytes32 salt,
+        SubmissionRewardTerms memory rewardTerms,
+        RoundLib.RoundConfig memory roundConfig,
+        QuestionSpecCommitment memory spec
+    ) private returns (uint256) {
+        _enterQuestionSubmissionGuard();
+        _requireNotPaused();
+        uint256 contentId = _submitValidatedQuestionWithMedia(
+            metadata, imageUrls, videoUrl, salt, rewardTerms, roundConfig, 0, 0, spec
+        );
+        _exitQuestionSubmissionGuard();
+        return contentId;
+    }
+
+    function submitQuestionBundleWithRewardAndRoundConfig(
+        BundleQuestionInput[] calldata questions,
+        SubmissionRewardTerms calldata rewardTerms,
+        RoundLib.RoundConfig calldata roundConfig
+    ) external nonReentrant whenNotPaused returns (uint256 bundleId, uint256[] memory contentIds) {
+        require(questions.length > 0, "No questions");
+        require(questions.length > 1, "Bundle needs multiple questions");
+        require(questions.length <= MAX_QUESTION_BUNDLE_COUNT, "Too many questions");
+        require(questionRewardPoolEscrow != address(0), "Bounty escrow not set");
+
+        RoundLib.RoundConfig memory validatedRoundConfig = _validatedRoundConfig(roundConfig);
+        require(validatedRoundConfig.maxVoters <= MAX_QUESTION_BUNDLE_ROUND_VOTERS);
+        require(rewardTerms.requiredVoters <= validatedRoundConfig.maxVoters);
+        _validateSubmissionReward(rewardTerms);
+        require(rewardTerms.bountyClosesAt != 0, "Bundle bounty close required");
+
+        SubmissionMetadata[] memory metadataList = new SubmissionMetadata[](questions.length);
+        bytes32[] memory submissionKeys = new bytes32[](questions.length);
+        bytes32[] memory mediaHashes = new bytes32[](questions.length);
+        uint256[] memory resolvedCategoryIds = new uint256[](questions.length);
+
+        for (uint256 i = 0; i < questions.length; i++) {
+            BundleQuestionInput calldata question = questions[i];
+            _validateQuestionSpec(question.spec);
+            SubmissionMetadata memory metadata = _validatedContextSubmissionMetadata(
+                question.contextUrl,
+                question.imageUrls,
+                question.videoUrl,
+                question.title,
+                question.description,
+                question.tags,
+                question.categoryId
+            );
+            uint256 resolvedCategoryId = _resolveQuestionSubmissionCategory(metadata);
+            bytes32 submissionKey = _deriveQuestionMediaSubmissionKey(metadata, resolvedCategoryId);
+            // Eager write in this loop also catches duplicates WITHIN the same bundle --
+            // without it, two identical questions in one bundle would both pass the
+            // check here and later point at the same submissionKey, so releasing one
+            // in Dormant state would brick the sibling forever ("Dormant key released").
+            require(!submissionKeyUsed[submissionKey], "Question already submitted");
+            submissionKeyUsed[submissionKey] = true;
+            // A zero salt collapses the reveal commitment's entropy and lets a front-runner
+            // pre-reserve the same (metadata, ..., salt=0) tuple. Force non-zero salt per
+            // question so every reveal hash carries caller-supplied randomness.
+            require(question.salt != bytes32(0), "Salt required");
+
+            metadataList[i] = metadata;
+            submissionKeys[i] = submissionKey;
+            mediaHashes[i] = _submissionMediaHash(question.imageUrls, question.videoUrl);
+            resolvedCategoryIds[i] = resolvedCategoryId;
         }
 
-        SubmissionMetadata memory metadata = SubmissionMetadata({
-            url: url, title: title, description: description, tags: tags, categoryId: categoryId
-        });
-        _validateSubmissionMetadata(metadata);
+        bytes32 bundleHash = _computeQuestionBundleHash(metadataList, mediaHashes, resolvedCategoryIds, questions);
+        bytes32 revealCommitment =
+            _computeBundleRevealCommitment(bundleHash, msg.sender, rewardTerms, validatedRoundConfig);
+        bytes32 reservationKey = _reservationKey(revealCommitment, msg.sender);
+        PendingSubmission memory pending = pendingSubmissions[reservationKey];
+        require(pending.submitter == msg.sender, "Reservation not found");
+        require(block.timestamp <= pending.expiresAt, "Reservation expired");
+        require(block.timestamp >= pending.reservedAt + RESERVED_SUBMISSION_MIN_AGE, "Reservation too new");
+        delete pendingSubmissions[reservationKey];
 
-        require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
-        return _submitValidatedContent(metadata, salt);
+        bundleId = nextQuestionBundleId++;
+        contentIds = new uint256[](questions.length);
+        for (uint256 i = 0; i < questions.length; i++) {
+            // submissionKeyUsed is already set in the preparation loop above to catch
+            // duplicates within the same bundle.
+            bytes32 contentHash = keccak256(
+                abi.encode(
+                    "curyo-question-context-v2",
+                    metadataList[i].url,
+                    questions[i].imageUrls,
+                    questions[i].videoUrl,
+                    metadataList[i].title,
+                    metadataList[i].description,
+                    metadataList[i].tags,
+                    resolvedCategoryIds[i],
+                    questions[i].spec.questionMetadataHash,
+                    questions[i].spec.resultSpecHash
+                )
+            );
+            uint256 contentId = _storeSubmittedContent(
+                submissionKeys[i],
+                pending.submitter,
+                true,
+                contentHash,
+                resolvedCategoryIds[i],
+                validatedRoundConfig,
+                bundleId,
+                i
+            );
+            contentIds[i] = contentId;
+            questionBundleContentIds[bundleId].push(contentId);
+
+            emit ContentSubmitted(
+                contentId,
+                msg.sender,
+                contentHash,
+                metadataList[i].url,
+                metadataList[i].title,
+                metadataList[i].description,
+                metadataList[i].tags,
+                resolvedCategoryIds[i]
+            );
+            emit QuestionSpecAnchored(
+                contentId, questions[i].spec.questionMetadataHash, questions[i].spec.resultSpecHash
+            );
+            emit ContentMediaSubmitted(contentId, questions[i].imageUrls, questions[i].videoUrl);
+            emit QuestionBundleContentLinked(bundleId, contentId, i);
+        }
+
+        uint256 rewardPoolId = IQuestionRewardPoolEscrow(questionRewardPoolEscrow)
+            .createSubmissionBundleFromRegistry(
+                bundleId,
+                contentIds,
+                msg.sender,
+                rewardTerms.asset,
+                rewardTerms.amount,
+                rewardTerms.requiredVoters,
+                rewardTerms.requiredSettledRounds,
+                rewardTerms.bountyClosesAt,
+                rewardTerms.feedbackClosesAt
+            );
+        emit QuestionBundleSubmitted(
+            bundleId,
+            msg.sender,
+            questions.length,
+            rewardTerms.asset,
+            rewardTerms.amount,
+            rewardTerms.requiredVoters,
+            rewardTerms.bountyClosesAt,
+            rewardTerms.feedbackClosesAt,
+            bundleHash,
+            rewardPoolId
+        );
     }
 
-    /// @notice Cancel content before any votes. Returns submitter stake in cREP.
+    /// @notice Submit a question with a required context link and optional preview media.
+    /// @dev Attaches the governance minimum HREP bounty and default round configuration.
+    function submitQuestion(
+        string memory contextUrl,
+        string[] memory imageUrls,
+        string memory videoUrl,
+        string memory title,
+        string memory description,
+        string memory tags,
+        uint256 categoryId,
+        bytes32 salt,
+        QuestionSpecCommitment memory spec
+    ) public returns (uint256) {
+        SubmissionRewardTerms memory rewardTerms = SubmissionRewardTerms({
+            asset: SUBMISSION_REWARD_ASSET_HREP,
+            amount: _minimumSubmissionReward(SUBMISSION_REWARD_ASSET_HREP),
+            requiredVoters: MIN_SUBMISSION_REWARD_REQUIRED_VOTERS,
+            requiredSettledRounds: MIN_SUBMISSION_REWARD_SETTLED_ROUNDS,
+            bountyClosesAt: 0,
+            feedbackClosesAt: 0
+        });
+        SubmissionMetadata memory metadata =
+            _validatedContextSubmissionMetadata(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId);
+
+        return _submitQuestionWithRewardAndRoundConfig(
+            metadata, imageUrls, videoUrl, salt, rewardTerms, _defaultRoundConfig(), spec
+        );
+    }
+
+    function submitQuestionFromX402Gateway(
+        string memory contextUrl,
+        string[] memory imageUrls,
+        string memory videoUrl,
+        string memory title,
+        string memory description,
+        string memory tags,
+        uint256 categoryId,
+        bytes32 salt,
+        SubmissionRewardTerms memory rewardTerms,
+        RoundLib.RoundConfig memory roundConfig,
+        QuestionSpecCommitment memory spec,
+        address submitter
+    ) external onlyRole(X402_GATEWAY_ROLE) returns (uint256 contentId) {
+        require(submitter != address(0), "Invalid submitter");
+        require(rewardTerms.asset == SUBMISSION_REWARD_ASSET_USDC, "USDC required");
+        _enterQuestionSubmissionGuard();
+        _requireNotPaused();
+        SubmissionMetadata memory metadata =
+            _validatedContextSubmissionMetadata(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId);
+        RoundLib.RoundConfig memory validatedRoundConfig = _validatedRoundConfig(roundConfig);
+        (uint256 resolvedCategoryId, bytes32 submissionKey,) = _prepareQuestionMediaSubmission(
+            metadata, imageUrls, videoUrl, salt, rewardTerms, validatedRoundConfig, spec, submitter
+        );
+        contentId = _storeQuestionAndAttachReward(
+            submissionKey,
+            submitter,
+            msg.sender,
+            true,
+            metadata,
+            imageUrls,
+            videoUrl,
+            resolvedCategoryId,
+            rewardTerms,
+            validatedRoundConfig,
+            0,
+            0,
+            spec
+        );
+        _exitQuestionSubmissionGuard();
+    }
+
+    function getContentRoundConfig(uint256 contentId) public view returns (RoundLib.RoundConfig memory cfg) {
+        cfg = contentRoundConfig[contentId];
+        if (cfg.epochDuration == 0) {
+            cfg = _defaultRoundConfig();
+        }
+    }
+
+    function getQuestionBundleContentIds(uint256 bundleId) external view returns (uint256[] memory) {
+        return questionBundleContentIds[bundleId];
+    }
+
+    /// @notice Cancel content before any votes. Attached submission bounties stay non-refundable.
     /// @dev Only callable by the submitter. VotingEngine must confirm 0 votes.
     function cancelContent(uint256 contentId) external nonReentrant whenNotPaused {
         require(bonusPool != address(0), "Bonus pool not set");
         Content storage c = contents[contentId];
-        require(c.submitter == msg.sender, "Not submitter");
+        require(contentSubmitterIdentity[contentId] == _resolveOptionalSubmitterIdentity(msg.sender), "Not submitter");
         require(c.status == ContentStatus.Active, "Not active");
+        require(!contentHasVotes[contentId], "Content has votes");
         if (votingEngine != address(0)) {
             require(!IRoundVotingEngine(votingEngine).hasCommits(contentId), "Content has votes");
         }
+        // Cancelling a bundle member would permanently prevent the bundle escrow from
+        // completing all configured round sets. Treat bundles as atomic once submitted.
+        require(contentBundleId[contentId] == 0, "Bundled content");
 
         c.status = ContentStatus.Cancelled;
 
@@ -394,98 +708,226 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             submissionKeyUsed[submissionKey] = false;
         }
 
-        // Return stake minus cancellation fee (fee goes to the configured anti-spam sink)
-        if (!c.submitterStakeReturned) {
-            c.submitterStakeReturned = true;
-            uint256 fee = c.submitterStake >= CANCELLATION_FEE ? CANCELLATION_FEE : c.submitterStake;
-            uint256 refund = c.submitterStake - fee;
-            if (fee > 0 && bonusPool != address(0)) {
-                crepToken.safeTransfer(bonusPool, fee);
-            }
-            if (refund > 0) {
-                crepToken.safeTransfer(msg.sender, refund);
-            }
-        }
-
         emit ContentCancelled(contentId);
     }
 
-    function _validateSubmissionMetadata(SubmissionMetadata memory metadata) internal pure {
-        require(bytes(metadata.url).length > 0, "URL required");
+    function _validateTextFields(SubmissionMetadata memory metadata) internal pure {
+        require(bytes(metadata.url).length > 0, "Context URL required");
         require(bytes(metadata.url).length <= MAX_URL_LENGTH, "URL too long");
-        require(_isValidSubmissionUrl(metadata.url), "Invalid URL");
-        require(bytes(metadata.title).length > 0, "Title required");
-        require(bytes(metadata.title).length <= MAX_TITLE_LENGTH, "Title too long");
-        require(bytes(metadata.description).length > 0, "Description required");
+        require(bytes(metadata.title).length > 0, "Question required");
+        require(bytes(metadata.title).length <= MAX_QUESTION_LENGTH, "Question too long");
         require(bytes(metadata.description).length <= MAX_DESCRIPTION_LENGTH, "Description too long");
         require(bytes(metadata.tags).length > 0, "Tags required");
         require(bytes(metadata.tags).length <= MAX_TAGS_LENGTH, "Tags too long");
     }
 
-    function _submitValidatedContent(SubmissionMetadata memory metadata, bytes32 salt)
-        internal
-        returns (uint256 contentId)
-    {
-        (uint256 resolvedCategoryId, bytes32 submissionKey, PendingSubmission memory pending) =
-            _prepareSubmission(metadata, salt);
-        bytes32 contentHash = keccak256(abi.encode(metadata.url, metadata.title, metadata.description, metadata.tags));
-        contentId = _storeSubmittedContent(submissionKey, pending, contentHash, resolvedCategoryId);
-        emit ContentSubmitted(
-            contentId,
+    function _validatedContextSubmissionMetadata(
+        string memory contextUrl,
+        string[] memory imageUrls,
+        string memory videoUrl,
+        string memory title,
+        string memory description,
+        string memory tags,
+        uint256 categoryId
+    ) internal view returns (SubmissionMetadata memory metadata) {
+        SUBMISSION_MEDIA_VALIDATOR.validateContextUrl(contextUrl);
+        SUBMISSION_MEDIA_VALIDATOR.validateOptionalMediaSet(imageUrls, videoUrl);
+        metadata = SubmissionMetadata({
+            url: contextUrl, title: title, description: description, tags: tags, categoryId: categoryId
+        });
+        _validateTextFields(metadata);
+        require(address(categoryRegistry) != address(0), "Category unset");
+    }
+
+    function _submitValidatedQuestionWithMedia(
+        SubmissionMetadata memory metadata,
+        string[] memory imageUrls,
+        string memory videoUrl,
+        bytes32 salt,
+        SubmissionRewardTerms memory rewardTerms,
+        RoundLib.RoundConfig memory roundConfig,
+        uint256 bundleId,
+        uint256 bundleIndex,
+        QuestionSpecCommitment memory spec
+    ) internal returns (uint256 contentId) {
+        (uint256 resolvedCategoryId, bytes32 submissionKey, PendingSubmission memory pending) = _prepareQuestionMediaSubmission(
+            metadata, imageUrls, videoUrl, salt, rewardTerms, roundConfig, spec, msg.sender
+        );
+        contentId = _storeQuestionAndAttachReward(
+            submissionKey,
+            pending.submitter,
             msg.sender,
-            contentHash,
-            metadata.url,
-            metadata.title,
-            metadata.description,
-            metadata.tags,
-            resolvedCategoryId
+            true,
+            metadata,
+            imageUrls,
+            videoUrl,
+            resolvedCategoryId,
+            rewardTerms,
+            roundConfig,
+            bundleId,
+            bundleIndex,
+            spec
         );
     }
 
-    function _prepareSubmission(SubmissionMetadata memory metadata, bytes32 salt)
-        internal
-        returns (uint256 resolvedCategoryId, bytes32 submissionKey, PendingSubmission memory pending)
-    {
-        (resolvedCategoryId, submissionKey) = SUBMISSION_CANONICALIZER.resolveCategoryAndSubmissionKey(
-            categoryRegistry, metadata.url, metadata.categoryId
-        );
-        require(!submissionKeyUsed[submissionKey], "URL already submitted");
+    function _prepareQuestionMediaSubmission(
+        SubmissionMetadata memory metadata,
+        string[] memory imageUrls,
+        string memory videoUrl,
+        bytes32 salt,
+        SubmissionRewardTerms memory rewardTerms,
+        RoundLib.RoundConfig memory roundConfig,
+        QuestionSpecCommitment memory spec,
+        address submitter
+    ) internal returns (uint256 resolvedCategoryId, bytes32 submissionKey, PendingSubmission memory pending) {
+        _validateQuestionSpec(spec);
+        resolvedCategoryId = _resolveQuestionSubmissionCategory(metadata);
+        submissionKey = _deriveQuestionMediaSubmissionKey(metadata, resolvedCategoryId);
+        require(!submissionKeyUsed[submissionKey], "Question already submitted");
+        // A zero salt collapses the reveal commitment's entropy and lets a front-runner
+        // pre-reserve the same (metadata, ..., salt=0) tuple. Force non-zero salt so every
+        // reveal hash carries caller-supplied randomness.
+        require(salt != bytes32(0), "Salt required");
+        _validateSubmissionReward(rewardTerms);
+        require(rewardTerms.requiredVoters <= roundConfig.maxVoters, "Voters exceed max");
 
+        bytes32 mediaHash = _submissionMediaHash(imageUrls, videoUrl);
         bytes32 revealCommitment = _computeRevealCommitment(
-            submissionKey, metadata.title, metadata.description, metadata.tags, metadata.categoryId, salt, msg.sender
+            submissionKey,
+            mediaHash,
+            metadata.title,
+            metadata.description,
+            metadata.tags,
+            metadata.categoryId,
+            salt,
+            submitter,
+            rewardTerms,
+            roundConfig,
+            spec
         );
-        pending = pendingSubmissions[revealCommitment];
-        require(pending.submitter == msg.sender, "Reservation not found");
+        pending = _consumeReservedSubmission(revealCommitment, submitter);
+        submissionKeyUsed[submissionKey] = true;
+    }
+
+    function _consumeReservedSubmission(bytes32 revealCommitment, address submitter)
+        internal
+        returns (PendingSubmission memory pending)
+    {
+        bytes32 reservationKey = _reservationKey(revealCommitment, submitter);
+        pending = pendingSubmissions[reservationKey];
+        require(pending.submitter == submitter, "Reservation not found");
         require(block.timestamp <= pending.expiresAt, "Reservation expired");
         require(block.timestamp >= pending.reservedAt + RESERVED_SUBMISSION_MIN_AGE, "Reservation too new");
 
-        delete pendingSubmissions[revealCommitment];
-        submissionKeyUsed[submissionKey] = true;
+        delete pendingSubmissions[reservationKey];
+    }
+
+    function _submissionMediaHash(string[] memory imageUrls, string memory videoUrl) internal pure returns (bytes32) {
+        return keccak256(abi.encode(imageUrls, videoUrl));
+    }
+
+    function _questionContentHash(
+        SubmissionMetadata memory metadata,
+        string[] memory imageUrls,
+        string memory videoUrl,
+        uint256 resolvedCategoryId,
+        QuestionSpecCommitment memory spec
+    ) internal pure returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                "curyo-question-context-v2",
+                metadata.url,
+                imageUrls,
+                videoUrl,
+                metadata.title,
+                metadata.description,
+                metadata.tags,
+                resolvedCategoryId,
+                spec.questionMetadataHash,
+                spec.resultSpecHash
+            )
+        );
+    }
+
+    function _enterQuestionSubmissionGuard() private {
+        if (_reentrancyGuardEntered()) {
+            revert ReentrancyGuardReentrantCall();
+        }
+        _reentrancyGuardStorageSlot().asBoolean().tstore(true);
+    }
+
+    function _exitQuestionSubmissionGuard() private {
+        _reentrancyGuardStorageSlot().asBoolean().tstore(false);
+    }
+
+    function _validateQuestionSpec(QuestionSpecCommitment memory spec) internal pure {
+        require(spec.questionMetadataHash != bytes32(0), "Bad metadata");
+        require(spec.resultSpecHash != bytes32(0), "Bad spec");
+    }
+
+    function _resolveQuestionSubmissionCategory(SubmissionMetadata memory metadata)
+        internal
+        view
+        returns (uint256 resolvedCategoryId)
+    {
+        require(metadata.categoryId != 0, "Category required");
+        require(categoryRegistry.isCategory(metadata.categoryId), "Category not registered");
+        return metadata.categoryId;
+    }
+
+    function _deriveQuestionMediaSubmissionKey(SubmissionMetadata memory metadata, uint256 resolvedCategoryId)
+        internal
+        pure
+        returns (bytes32)
+    {
+        return keccak256(
+            abi.encode(
+                "curyo-question-context-v1",
+                resolvedCategoryId,
+                metadata.url,
+                metadata.title,
+                metadata.description,
+                metadata.tags
+            )
+        );
     }
 
     function _storeSubmittedContent(
         bytes32 submissionKey,
-        PendingSubmission memory pending,
+        address submitter,
+        bool requireSubmitterVoterId,
         bytes32 contentHash,
-        uint256 resolvedCategoryId
+        uint256 resolvedCategoryId,
+        RoundLib.RoundConfig memory roundConfig,
+        uint256 bundleId,
+        uint256 bundleIndex
     ) internal returns (uint256 contentId) {
         contentId = nextContentId++;
         contentSubmissionKey[contentId] = submissionKey;
-        contentSubmitterIdentity[contentId] = pending.submitterIdentity;
+        (address submitterIdentity, uint256 submitterNullifier) =
+            _snapshotSubmitterIdentity(submitter, requireSubmitterVoterId);
+        contentSubmitterIdentity[contentId] = submitterIdentity;
+        contentSubmitterNullifier[contentId] = submitterNullifier;
+        contentRoundConfig[contentId] = roundConfig;
         contents[contentId] = Content({
             id: contentId.toUint64(),
             contentHash: contentHash,
-            submitter: msg.sender,
-            submitterStake: pending.reservedStake,
+            submitter: submitter,
             createdAt: block.timestamp.toUint48(),
             lastActivityAt: block.timestamp.toUint48(),
             status: ContentStatus.Active,
             dormantCount: 0,
             reviver: address(0),
-            submitterStakeReturned: false,
             rating: 50,
             categoryId: resolvedCategoryId.toUint64()
         });
+        if (bundleId != 0) {
+            contentBundleId[contentId] = bundleId;
+            contentBundleIndex[contentId] = bundleIndex;
+        }
+        emit ContentRoundConfigSet(
+            contentId, roundConfig.epochDuration, roundConfig.maxDuration, roundConfig.minVoters, roundConfig.maxVoters
+        );
         ratingState[contentId] = RatingLib.RatingState({
             ratingLogitX18: int128(RatingLib.DEFAULT_RATING_LOGIT_X18),
             confidenceMass: uint128(_getInitialConfidenceMass()),
@@ -501,32 +943,73 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         delete dormantKeyReleasableAt[contentId];
     }
 
-    function _isValidSubmissionUrl(string memory url) internal pure returns (bool) {
-        bytes memory urlBytes = bytes(url);
-        bytes memory prefix = bytes("https://");
-        if (urlBytes.length < prefix.length) {
-            return false;
-        }
+    function _storeQuestionAndAttachReward(
+        bytes32 submissionKey,
+        address submitter,
+        address funder,
+        bool requireSubmitterVoterId,
+        SubmissionMetadata memory metadata,
+        string[] memory imageUrls,
+        string memory videoUrl,
+        uint256 resolvedCategoryId,
+        SubmissionRewardTerms memory rewardTerms,
+        RoundLib.RoundConfig memory roundConfig,
+        uint256 bundleId,
+        uint256 bundleIndex,
+        QuestionSpecCommitment memory spec
+    ) internal returns (uint256 contentId) {
+        bytes32 contentHash = _questionContentHash(metadata, imageUrls, videoUrl, resolvedCategoryId, spec);
+        contentId = _storeSubmittedContent(
+            submissionKey,
+            submitter,
+            requireSubmitterVoterId,
+            contentHash,
+            resolvedCategoryId,
+            roundConfig,
+            bundleId,
+            bundleIndex
+        );
+        require(questionRewardPoolEscrow != address(0), "Bounty escrow not set");
+        uint256 rewardPoolId = IQuestionRewardPoolEscrow(questionRewardPoolEscrow)
+            .createSubmissionRewardPoolFromRegistry(
+                contentId,
+                funder,
+                rewardTerms.asset,
+                rewardTerms.amount,
+                rewardTerms.requiredVoters,
+                rewardTerms.requiredSettledRounds,
+                rewardTerms.bountyClosesAt,
+                rewardTerms.feedbackClosesAt
+            );
 
-        for (uint256 i = 0; i < prefix.length; i++) {
-            if (urlBytes[i] != prefix[i]) {
-                return false;
-            }
-        }
-
-        for (uint256 i = 0; i < urlBytes.length; i++) {
-            bytes1 char = urlBytes[i];
-            if (char <= 0x20 || char == 0x7F) {
-                return false;
-            }
-        }
-
-        return true;
+        emit ContentSubmitted(
+            contentId,
+            submitter,
+            contentHash,
+            metadata.url,
+            metadata.title,
+            metadata.description,
+            metadata.tags,
+            resolvedCategoryId
+        );
+        emit QuestionSpecAnchored(contentId, spec.questionMetadataHash, spec.resultSpecHash);
+        emit ContentMediaSubmitted(contentId, imageUrls, videoUrl);
+        emit SubmissionRewardPoolAttached(
+            contentId,
+            submitter,
+            rewardTerms.asset,
+            rewardTerms.amount,
+            rewardTerms.requiredVoters,
+            rewardTerms.requiredSettledRounds,
+            rewardTerms.bountyClosesAt,
+            rewardTerms.feedbackClosesAt,
+            rewardPoolId
+        );
     }
 
     /// @notice Mark content as dormant if it hasn't reached milestone 0 within DORMANCY_PERIOD.
-    /// @dev Anyone can call this. Returns submitter stake in cREP.
-    function markDormant(uint256 contentId) external nonReentrant {
+    /// @dev Anyone can call this. The mandatory submission bounty is not refunded.
+    function markDormant(uint256 contentId) external nonReentrant whenNotPaused {
         Content storage c = contents[contentId];
         require(c.id != 0, "Content does not exist");
         require(c.status == ContentStatus.Active, "Not active");
@@ -540,16 +1023,14 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             dormantKeyReleasableAt[contentId] = block.timestamp + DORMANT_EXCLUSIVE_REVIVAL_PERIOD;
         }
 
-        _resolvePendingSubmitterStake(contentId, c);
-
         emit ContentDormant(contentId);
     }
 
-    /// @notice Revive dormant content by staking REVIVAL_STAKE cREP tokens.
+    /// @notice Revive dormant content by staking REVIVAL_STAKE HREP tokens.
     /// @dev Resets the activity timer. Max MAX_REVIVALS revivals per content.
     ///      Revival stake is sent to treasury (non-refundable).
     function reviveContent(uint256 contentId) external nonReentrant whenNotPaused {
-        // M-4 fix: require Voter ID (same sybil check as submitContent)
+        // Revivals still require the canonical submitter identity while preserving the original submission key.
         if (address(voterIdNFT) != address(0)) {
             require(voterIdNFT.hasVoterId(msg.sender), "Voter ID required");
         }
@@ -569,7 +1050,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
         // M-1/M-2 fix: send revival stake to treasury instead of leaving it unaccounted
         require(treasury != address(0), "Treasury not set");
-        crepToken.safeTransferFrom(msg.sender, treasury, REVIVAL_STAKE);
+        hrepToken.safeTransferFrom(msg.sender, treasury, REVIVAL_STAKE);
 
         c.status = ContentStatus.Active;
         c.dormantCount++;
@@ -582,7 +1063,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     }
 
     /// @notice Release a dormant content key after the exclusive revival window expires.
-    function releaseDormantSubmissionKey(uint256 contentId) external nonReentrant {
+    function releaseDormantSubmissionKey(uint256 contentId) external nonReentrant whenNotPaused {
         Content storage c = contents[contentId];
         require(c.id != 0, "Content does not exist");
         require(c.status == ContentStatus.Dormant, "Not dormant");
@@ -603,37 +1084,15 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     /// @dev Vote commits refresh UI-facing activity without extending the dormancy window.
     function updateActivity(uint256 contentId) external {
         require(msg.sender == votingEngine, "Only VotingEngine");
+        contentHasVotes[contentId] = true;
         contents[contentId].lastActivityAt = uint48(block.timestamp);
     }
 
     /// @notice Called by VotingEngine when content reaches milestone 0 through a settled round.
     function recordMeaningfulActivity(uint256 contentId) external {
-        require(msg.sender == votingEngine, "Only VotingEngine");
+        require(votingEngineCallbackGeneration[msg.sender] != 0, "Only VotingEngine");
         contents[contentId].lastActivityAt = uint48(block.timestamp);
         dormancyAnchorAt[contentId] = block.timestamp;
-    }
-
-    /// @notice Called by VotingEngine to set content rating directly (live updates on each vote).
-    /// @param contentId The content ID.
-    /// @param newRating The new rating value [0, 100].
-    function updateRatingDirect(uint256 contentId, uint16 newRating) external {
-        require(msg.sender == votingEngine, "Only VotingEngine");
-
-        Content storage c = contents[contentId];
-        uint8 oldRating = c.rating;
-        uint8 clampedRating = newRating > 100 ? 100 : uint8(newRating);
-
-        if (clampedRating == oldRating) return;
-
-        c.rating = clampedRating;
-        RatingLib.RatingState storage state = ratingState[contentId];
-        state.ratingBps = uint16(uint256(clampedRating) * 100);
-        state.ratingLogitX18 = int128(RatingMath.ratingBpsToLogitX18(state.ratingBps));
-        if (state.conservativeRatingBps == 0 || state.conservativeRatingBps > state.ratingBps) {
-            state.conservativeRatingBps = state.ratingBps;
-        }
-        state.lastUpdatedAt = uint48(block.timestamp);
-        emit RatingUpdated(contentId, oldRating, clampedRating);
     }
 
     function updateRatingState(
@@ -642,10 +1101,13 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         uint16 referenceRatingBps,
         RatingLib.RatingState calldata nextState
     ) external {
-        require(msg.sender == votingEngine, "Only VotingEngine");
+        uint256 callerGeneration = votingEngineCallbackGeneration[msg.sender];
+        require(callerGeneration != 0, "Only VotingEngine");
+        require(callerGeneration >= contentSettlementEngineGeneration[contentId], "Stale VotingEngine");
 
         Content storage c = contents[contentId];
         require(c.id != 0, "Content does not exist");
+        contentSettlementEngineGeneration[contentId] = callerGeneration;
 
         RatingLib.RatingState storage state = ratingState[contentId];
         uint16 oldRatingBps = state.ratingBps == 0 ? uint16(uint256(c.rating) * 100) : state.ratingBps;
@@ -682,255 +1144,21 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         );
     }
 
-    /// @notice Called by VotingEngine to return submitter stake with a snapshotted submission reward rate.
-    /// @dev This avoids coupling the submitter reward to whatever the live participation rate is when the
-    ///      stake finally gets returned.
-    function returnSubmitterStakeWithRewardRate(uint256 contentId, uint256 rewardRateBps) external {
-        address rewardPool = submitterParticipationSnapshotPool[contentId];
-        if (rewardPool == address(0)) {
-            rewardPool = address(participationPool);
-        }
-        _returnSubmitterStake(contentId, rewardPool, rewardRateBps);
-    }
-
-    /// @notice Called by VotingEngine to return submitter stake using frozen milestone-0 reward terms.
-    function returnSubmitterStakeWithMilestoneZeroTerms(uint256 contentId) external {
-        address rewardPool = milestoneZeroSubmitterParticipationPool[contentId];
-        if (rewardPool == address(0)) {
-            rewardPool = address(participationPool);
-        }
-        _returnSubmitterStake(contentId, rewardPool, milestoneZeroSubmitterParticipationRateBps[contentId]);
-    }
-
-    /// @notice Called by VotingEngine to snapshot the submitter participation terms at settlement time.
-    function snapshotSubmitterParticipationTerms(uint256 contentId, address rewardPool, uint256 rewardRateBps)
-        external
-    {
-        require(msg.sender == votingEngine, "Only VotingEngine");
-        Content storage c = contents[contentId];
-        require(c.id != 0, "Content does not exist");
-        if (c.submitterStakeReturned) return;
-
-        submitterParticipationSnapshotPool[contentId] = rewardPool;
-        submitterParticipationSnapshotRateBps[contentId] = rewardRateBps;
-    }
-
-    /// @notice Called by VotingEngine to freeze milestone-0 submitter resolution terms on the first settled round.
-    function snapshotMilestoneZeroSubmitterTerms(
-        uint256 contentId,
-        uint256 rating,
-        address rewardPool,
-        uint256 rewardRateBps
-    ) external {
-        require(msg.sender == votingEngine, "Only VotingEngine");
-        Content storage c = contents[contentId];
-        require(c.id != 0, "Content does not exist");
-        if (c.submitterStakeReturned || milestoneZeroSubmitterTermsSnapshotted[contentId]) return;
-
-        milestoneZeroSubmitterTermsSnapshotted[contentId] = true;
-        milestoneZeroSubmitterRating[contentId] = rating > 100 ? 100 : uint8(rating);
-        milestoneZeroSubmitterParticipationPool[contentId] = rewardPool;
-        milestoneZeroSubmitterParticipationRateBps[contentId] = rewardRateBps;
-
-        if (rewardPool != address(0) && rewardRateBps == 0) {
-            emit MilestoneZeroSubmitterParticipationRepairNeeded(contentId, rewardPool);
-        }
-    }
-
-    /// @notice Governance-only repair hook for milestone-zero snapshots that were frozen with a zero participation rate.
-    /// @dev Only repairs healthy first-settlement outcomes and can be used once before any submitter reward state exists.
-    function repairMilestoneZeroSubmitterParticipationTerms(uint256 contentId, uint256 rewardRateBps)
-        external
-        nonReentrant
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        Content storage c = contents[contentId];
-        require(c.id != 0, "Content does not exist");
-        require(milestoneZeroSubmitterTermsSnapshotted[contentId], "Milestone-zero terms missing");
-
-        address rewardPool = milestoneZeroSubmitterParticipationPool[contentId];
-        require(rewardPool != address(0), "No milestone-zero pool");
-        require(milestoneZeroSubmitterParticipationRateBps[contentId] == 0, "Repair not needed");
-        require(rewardRateBps > 0 && rewardRateBps <= 9000, "Invalid reward rate");
-        require(ratingState[contentId].conservativeRatingBps >= _getSlashConfigForContent(contentId).slashThresholdBps, "Slashable milestone-zero");
-        require(submitterParticipationRewardOwed[contentId] == 0, "Reward already accrued");
-        require(submitterParticipationRewardPaid[contentId] == 0, "Reward already claimed");
-        require(submitterParticipationRewardReserved[contentId] == 0, "Reward already reserved");
-
-        milestoneZeroSubmitterParticipationRateBps[contentId] = rewardRateBps;
-
-        uint256 rewardAmount = c.submitterStake * rewardRateBps / 10000;
-        if (c.submitterStakeReturned) {
-            _accrueSubmitterParticipationReward(contentId, c, rewardPool, rewardRateBps);
-        }
-
-        emit MilestoneZeroSubmitterParticipationTermsRepaired(contentId, rewardPool, rewardRateBps, rewardAmount);
-    }
-
-    /// @notice Called by VotingEngine once the dormancy window elapses without any settled round.
-    function resolvePendingSubmitterStake(uint256 contentId) external {
-        require(msg.sender == votingEngine, "Only VotingEngine");
-        Content storage c = contents[contentId];
-        require(c.id != 0, "Content does not exist");
-        _resolvePendingSubmitterStake(contentId, c);
-    }
-
-    function _returnSubmitterStake(uint256 contentId, address rewardPool, uint256 rewardRateBps) internal {
-        require(msg.sender == votingEngine, "Only VotingEngine");
-        Content storage c = contents[contentId];
-        require(!c.submitterStakeReturned, "Already returned");
-
-        c.submitterStakeReturned = true;
-        crepToken.safeTransfer(c.submitter, c.submitterStake);
-
-        _accrueSubmitterParticipationReward(contentId, c, rewardPool, rewardRateBps);
-
-        emit SubmitterStakeReturned(contentId, c.submitterStake);
-    }
-
-    /// @notice Claim a snapshotted submitter participation reward after the healthy submitter path resolves.
-    /// @dev Uses the participation pool snapshot captured when the submitter stake was returned.
-    function claimSubmitterParticipationReward(uint256 contentId) external nonReentrant returns (uint256 paidAmount) {
-        Content storage c = contents[contentId];
-        require(c.id != 0, "Content does not exist");
-        require(msg.sender == c.submitter, "Not submitter");
-        (paidAmount,) = _claimSubmitterParticipationReward(contentId, c);
-    }
-
-    function _resolvePendingSubmitterStake(uint256 contentId, Content storage c) internal {
-        if (c.submitterStakeReturned) return;
-
-        bool useMilestoneZeroTerms = milestoneZeroSubmitterTermsSnapshotted[contentId];
-
-        if (isSubmitterStakeSlashable(contentId)) {
-            require(treasury != address(0), "Treasury not set");
-            c.submitterStakeReturned = true;
-            crepToken.safeTransfer(treasury, c.submitterStake);
-            emit SubmitterStakeSlashed(contentId, c.submitterStake);
-            return;
-        }
-
-        if (useMilestoneZeroTerms) {
-            if (block.timestamp < uint256(c.createdAt) + 4 days) {
-                return;
-            }
-
-            if (ratingState[contentId].lowSince != 0) {
-                return;
-            }
-        }
-
-        c.submitterStakeReturned = true;
-        crepToken.safeTransfer(c.submitter, c.submitterStake);
-
-        address rewardPool = useMilestoneZeroTerms
-            ? milestoneZeroSubmitterParticipationPool[contentId]
-            : submitterParticipationSnapshotPool[contentId];
-        uint256 rewardRateBps = useMilestoneZeroTerms
-            ? milestoneZeroSubmitterParticipationRateBps[contentId]
-            : submitterParticipationSnapshotRateBps[contentId];
-
-        _accrueSubmitterParticipationReward(contentId, c, rewardPool, rewardRateBps);
-        emit SubmitterStakeReturned(contentId, c.submitterStake);
-    }
-
-    function _accrueSubmitterParticipationReward(
-        uint256 contentId,
-        Content storage c,
-        address rewardPool,
-        uint256 rewardRateBps
-    ) internal {
-        if (rewardPool == address(0)) return;
-
-        uint256 rewardAmount = c.submitterStake * rewardRateBps / 10000;
-
-        if (rewardAmount == 0) return;
-
-        submitterParticipationRewardPool[contentId] = rewardPool;
-        submitterParticipationRewardOwed[contentId] = rewardAmount;
-        emit SubmitterParticipationRewardAccrued(contentId, c.submitter, rewardPool, rewardAmount);
-
-        try IParticipationPool(rewardPool).reserveReward(address(this), rewardAmount) returns (uint256 reservedAmount) {
-            if (reservedAmount > 0) {
-                submitterParticipationRewardReserved[contentId] = reservedAmount;
-            }
-        } catch {
-            emit SubmitterParticipationReservationFailed(contentId, rewardPool, rewardAmount);
-        }
-    }
-
-    function _claimSubmitterParticipationReward(uint256 contentId, Content storage c)
-        internal
-        returns (uint256 paidAmount, uint256 remainingReward)
-    {
-        uint256 totalReward = submitterParticipationRewardOwed[contentId];
-        require(totalReward > 0, "No reward");
-
-        uint256 alreadyPaid = submitterParticipationRewardPaid[contentId];
-        require(alreadyPaid < totalReward, "Already claimed");
-
-        address rewardPool = submitterParticipationRewardPool[contentId];
-        require(rewardPool != address(0), "No reward pool");
-
-        uint256 reservedAmount = submitterParticipationRewardReserved[contentId];
-        uint256 reservedRemaining = reservedAmount > alreadyPaid ? reservedAmount - alreadyPaid : 0;
-        if (reservedRemaining > 0) {
-            uint256 reservedPayout =
-                IParticipationPool(rewardPool).withdrawReservedReward(c.submitter, reservedRemaining);
-            paidAmount += reservedPayout;
-            alreadyPaid += reservedPayout;
-        }
-
-        if (alreadyPaid < totalReward) {
-            remainingReward = totalReward - alreadyPaid;
-            try IParticipationPool(rewardPool).distributeReward(c.submitter, remainingReward) returns (
-                uint256 streamedReward
-            ) {
-                paidAmount += streamedReward;
-                alreadyPaid += streamedReward;
-            } catch { }
-        }
-
-        require(paidAmount > 0, "Pool depleted");
-
-        submitterParticipationRewardPaid[contentId] = alreadyPaid;
-        emit SubmitterParticipationRewardClaimed(contentId, c.submitter, paidAmount);
-    }
-
-    /// @notice Called by VotingEngine to slash submitter stake after milestone 0 resolves unfavorably.
-    /// @dev 100% of stake is slashed and sent to the treasury.
-    /// @return slashAmount The amount that was slashed.
-    function slashSubmitterStake(uint256 contentId) external returns (uint256 slashAmount) {
-        require(msg.sender == votingEngine, "Only VotingEngine");
-        Content storage c = contents[contentId];
-        require(!c.submitterStakeReturned, "Already returned");
-        require(treasury != address(0), "Treasury not set");
-        require(isSubmitterStakeSlashable(contentId), "Not slashable");
-
-        c.submitterStakeReturned = true;
-        slashAmount = c.submitterStake; // 100% slashed
-
-        crepToken.safeTransfer(treasury, slashAmount);
-
-        emit SubmitterStakeSlashed(contentId, slashAmount);
-    }
-
     // --- View functions ---
 
     function getSubmitterIdentity(uint256 contentId) external view returns (address) {
-        if (contents[contentId].submitter == address(0)) return address(0);
         return contentSubmitterIdentity[contentId];
-    }
-
-    function getContentSubmitter(uint256 contentId) external view returns (address) {
-        return contents[contentId].submitter;
     }
 
     function getRatingState(uint256 contentId) external view returns (RatingLib.RatingState memory state) {
         state = ratingState[contentId];
     }
 
-    function getSlashConfigForContent(uint256 contentId) external view returns (RatingLib.SlashConfig memory slashConfig) {
+    function getSlashConfigForContent(uint256 contentId)
+        external
+        view
+        returns (RatingLib.SlashConfig memory slashConfig)
+    {
         slashConfig = _getSlashConfigForContent(contentId);
     }
 
@@ -946,22 +1174,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         return conservativeRatingBps;
     }
 
-    function isSubmitterStakeSlashable(uint256 contentId) public view returns (bool) {
-        Content storage c = contents[contentId];
-        if (c.id == 0 || c.submitterStakeReturned) return false;
-        if (block.timestamp < uint256(c.createdAt) + 24 hours) return false;
-
-        RatingLib.RatingState memory state = ratingState[contentId];
-        RatingLib.SlashConfig memory slashConfig = _getSlashConfigForContent(contentId);
-
-        if (state.conservativeRatingBps >= slashConfig.slashThresholdBps) return false;
-        if (state.effectiveEvidence < slashConfig.minSlashEvidence) return false;
-        if (state.settledRounds < slashConfig.minSlashSettledRounds) return false;
-        if (state.lowSince == 0) return false;
-
-        return block.timestamp >= uint256(state.lowSince) + slashConfig.minSlashLowDuration;
-    }
-
     function isContentActive(uint256 contentId) external view returns (bool) {
         Content storage c = contents[contentId];
         return c.id != 0 && c.status == ContentStatus.Active;
@@ -974,81 +1186,210 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         return !_hasOpenRound(contentId);
     }
 
-    function isUrlSubmitted(string calldata url) external view returns (bool) {
-        if (bytes(url).length == 0 || !_isValidSubmissionUrl(url)) return false;
-
-        if (address(categoryRegistry) == address(0)) {
-            return submissionKeyUsed[keccak256(abi.encodePacked(url))];
-        }
-
-        try SUBMISSION_CANONICALIZER.resolveSubmissionKey(categoryRegistry, url, 0) returns (bytes32 submissionKey) {
-            return submissionKeyUsed[submissionKey];
-        } catch {
-            return false;
-        }
-    }
-
-    /// @notice Preview the resolved category and canonical submission key for a future reveal.
-    function previewSubmissionKey(string calldata url, uint256 categoryId)
-        external
-        view
-        returns (uint256 resolvedCategoryId, bytes32 submissionKey)
-    {
-        require(bytes(url).length > 0, "URL required");
-        require(bytes(url).length <= MAX_URL_LENGTH, "URL too long");
-        require(_isValidSubmissionUrl(url), "Invalid URL");
-        require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
-        (resolvedCategoryId, submissionKey) =
-            SUBMISSION_CANONICALIZER.resolveCategoryAndSubmissionKey(categoryRegistry, url, categoryId);
-    }
-
-    /// @notice Resolve the canonical submission key for a URL using the configured CategoryRegistry.
-    function resolveSubmissionKey(string calldata url) external view returns (bytes32 submissionKey) {
-        require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
-        return SUBMISSION_CANONICALIZER.resolveSubmissionKey(categoryRegistry, url, 0);
+    /// @notice Preview the resolved category and question-level submission key for a future multi-media reveal.
+    function previewQuestionSubmissionKey(
+        string calldata contextUrl,
+        string[] calldata imageUrls,
+        string calldata videoUrl,
+        string calldata title,
+        string calldata description,
+        string calldata tags,
+        uint256 categoryId
+    ) external view returns (uint256 resolvedCategoryId, bytes32 submissionKey) {
+        SubmissionMetadata memory metadata = _validatedContextSubmissionMetadata(
+            contextUrl, imageUrls, videoUrl, title, description, tags, categoryId
+        );
+        resolvedCategoryId = _resolveQuestionSubmissionCategory(metadata);
+        submissionKey = _deriveQuestionMediaSubmissionKey(metadata, resolvedCategoryId);
     }
 
     function _computeRevealCommitment(
         bytes32 submissionKey,
+        bytes32 mediaHash,
         string memory title,
         string memory description,
         string memory tags,
         uint256 categoryId,
         bytes32 salt,
-        address submitter
+        address submitter,
+        SubmissionRewardTerms memory rewardTerms,
+        RoundLib.RoundConfig memory roundConfig,
+        QuestionSpecCommitment memory spec
     ) internal pure returns (bytes32) {
-        return keccak256(abi.encode(submissionKey, title, description, tags, categoryId, salt, submitter));
+        return keccak256(
+            abi.encode(
+                "curyo-question-reveal-v3",
+                submissionKey,
+                mediaHash,
+                keccak256(abi.encode(title, description, tags)),
+                categoryId,
+                salt,
+                submitter,
+                keccak256(
+                    abi.encode(
+                        rewardTerms.asset,
+                        rewardTerms.amount,
+                        rewardTerms.requiredVoters,
+                        rewardTerms.requiredSettledRounds,
+                        rewardTerms.bountyClosesAt,
+                        rewardTerms.feedbackClosesAt
+                    )
+                ),
+                keccak256(
+                    abi.encode(
+                        roundConfig.epochDuration, roundConfig.maxDuration, roundConfig.minVoters, roundConfig.maxVoters
+                    )
+                ),
+                spec.questionMetadataHash,
+                spec.resultSpecHash
+            )
+        );
     }
 
-    function _refundReservedSubmission(PendingSubmission memory pending, address recipient)
+    function _computeQuestionBundleHash(
+        SubmissionMetadata[] memory metadataList,
+        bytes32[] memory mediaHashes,
+        uint256[] memory resolvedCategoryIds,
+        BundleQuestionInput[] calldata questions
+    ) internal pure returns (bytes32) {
+        bytes32[] memory questionHashes = new bytes32[](metadataList.length);
+        for (uint256 i = 0; i < metadataList.length; i++) {
+            questionHashes[i] = keccak256(
+                abi.encode(
+                    "curyo-question-bundle-item-v2",
+                    metadataList[i].url,
+                    mediaHashes[i],
+                    metadataList[i].title,
+                    metadataList[i].description,
+                    metadataList[i].tags,
+                    resolvedCategoryIds[i],
+                    questions[i].salt,
+                    i,
+                    questions[i].spec.questionMetadataHash,
+                    questions[i].spec.resultSpecHash
+                )
+            );
+        }
+        return keccak256(abi.encode("curyo-question-bundle-v2", questionHashes));
+    }
+
+    function _computeBundleRevealCommitment(
+        bytes32 bundleHash,
+        address submitter,
+        SubmissionRewardTerms memory rewardTerms,
+        RoundLib.RoundConfig memory roundConfig
+    ) internal pure returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                "curyo-question-bundle-reveal-v3",
+                bundleHash,
+                submitter,
+                rewardTerms.asset,
+                rewardTerms.amount,
+                rewardTerms.requiredVoters,
+                rewardTerms.requiredSettledRounds,
+                rewardTerms.bountyClosesAt,
+                rewardTerms.feedbackClosesAt,
+                roundConfig.epochDuration,
+                roundConfig.maxDuration,
+                roundConfig.minVoters,
+                roundConfig.maxVoters
+            )
+        );
+    }
+
+    function _validateSubmissionReward(SubmissionRewardTerms memory rewardTerms) internal view {
+        require(
+            rewardTerms.asset == SUBMISSION_REWARD_ASSET_HREP || rewardTerms.asset == SUBMISSION_REWARD_ASSET_USDC,
+            "Invalid reward asset"
+        );
+        require(rewardTerms.amount >= _minimumSubmissionReward(rewardTerms.asset), "Reward below minimum");
+        require(rewardTerms.requiredVoters >= MIN_SUBMISSION_REWARD_REQUIRED_VOTERS, "Too few voters");
+        require(rewardTerms.requiredSettledRounds >= MIN_SUBMISSION_REWARD_SETTLED_ROUNDS, "Too few rounds");
+        require(rewardTerms.requiredSettledRounds <= MAX_SUBMISSION_REWARD_SETTLED_ROUNDS, "Too many rounds");
+        require(
+            rewardTerms.amount >= rewardTerms.requiredSettledRounds * rewardTerms.requiredVoters, "Reward too small"
+        );
+        require(rewardTerms.bountyClosesAt == 0 || rewardTerms.bountyClosesAt > block.timestamp, "Bad close");
+        require(
+            rewardTerms.feedbackClosesAt == 0 || rewardTerms.feedbackClosesAt > block.timestamp, "Bad feedback close"
+        );
+        require(
+            rewardTerms.bountyClosesAt == 0 || rewardTerms.feedbackClosesAt == 0
+                || rewardTerms.feedbackClosesAt <= rewardTerms.bountyClosesAt,
+            "Feedback after bounty"
+        );
+    }
+
+    function _minimumSubmissionReward(uint8 rewardAsset) internal view returns (uint256 minimum) {
+        if (address(protocolConfig) != address(0)) {
+            minimum = rewardAsset == SUBMISSION_REWARD_ASSET_HREP
+                ? protocolConfig.minSubmissionHrepPool()
+                : protocolConfig.minSubmissionUsdcPool();
+        }
+        return minimum == 0 ? DEFAULT_MIN_SUBMISSION_REWARD_POOL : minimum;
+    }
+
+    function _defaultRoundConfig() internal view returns (RoundLib.RoundConfig memory cfg) {
+        if (address(protocolConfig) != address(0)) {
+            (cfg.epochDuration, cfg.maxDuration, cfg.minVoters, cfg.maxVoters) = protocolConfig.config();
+            return cfg;
+        }
+        cfg = RoundLib.RoundConfig({
+            epochDuration: uint32(20 minutes),
+            maxDuration: uint32(7 days),
+            minVoters: uint16(3),
+            maxVoters: uint16(1000)
+        });
+    }
+
+    function _validatedRoundConfig(RoundLib.RoundConfig memory roundConfig)
         internal
-        returns (uint256 refund)
+        view
+        returns (RoundLib.RoundConfig memory cfg)
     {
-        uint256 reservedStake = pending.reservedStake;
-        if (reservedStake == 0) return 0;
-
-        uint256 fee = reservedStake >= CANCELLATION_FEE ? CANCELLATION_FEE : reservedStake;
-        refund = reservedStake - fee;
-
-        if (fee > 0) {
-            address feeSink = bonusPool != address(0) ? bonusPool : treasury;
-            require(feeSink != address(0), "Fee sink not set");
-            crepToken.safeTransfer(feeSink, fee);
-        }
-        if (refund > 0) {
-            crepToken.safeTransfer(recipient, refund);
-        }
+        require(address(protocolConfig) != address(0), "Config not set");
+        cfg = protocolConfig.validateRoundConfig(
+            roundConfig.epochDuration, roundConfig.maxDuration, roundConfig.minVoters, roundConfig.maxVoters
+        );
     }
 
     function _resolveSubmitterIdentity(address submitter) internal view returns (address) {
         if (submitter == address(0)) return address(0);
-        if (address(voterIdNFT) != address(0)) {
-            address resolved = voterIdNFT.resolveHolder(submitter);
-            if (resolved != address(0)) {
-                return resolved;
+        require(address(voterIdNFT) != address(0), "VoterIdNFT not set");
+        address resolved = voterIdNFT.resolveHolder(submitter);
+        require(resolved != address(0), "Voter ID required");
+        return resolved;
+    }
+
+    function _resolveOptionalSubmitterIdentity(address submitter) internal view returns (address) {
+        if (submitter == address(0) || address(voterIdNFT) == address(0)) return submitter;
+        address resolved = voterIdNFT.resolveHolder(submitter);
+        return resolved == address(0) ? submitter : resolved;
+    }
+
+    function _snapshotSubmitterIdentity(address submitter, bool requireVoterId)
+        internal
+        view
+        returns (address submitterIdentity, uint256 submitterNullifier)
+    {
+        if (submitter == address(0)) return (address(0), 0);
+        if (requireVoterId) {
+            submitterIdentity = _resolveSubmitterIdentity(submitter);
+        } else if (address(voterIdNFT) != address(0)) {
+            submitterIdentity = voterIdNFT.resolveHolder(submitter);
+            if (submitterIdentity == address(0)) {
+                submitterIdentity = submitter;
             }
+        } else {
+            submitterIdentity = submitter;
         }
-        return submitter;
+
+        if (address(voterIdNFT) == address(0) || submitterIdentity == address(0)) {
+            return (submitterIdentity, 0);
+        }
+        uint256 voterId = voterIdNFT.getTokenId(submitterIdentity);
+        submitterNullifier = voterId == 0 ? 0 : voterIdNFT.getNullifier(voterId);
     }
 
     function _getDormancyAnchor(uint256 contentId) internal view returns (uint256) {
@@ -1086,11 +1427,19 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             return slashConfig;
         }
 
-        (slashConfig.slashThresholdBps, slashConfig.minSlashSettledRounds, slashConfig.minSlashLowDuration, slashConfig.minSlashEvidence) =
-            protocolConfig.slashConfig();
+        (
+            slashConfig.slashThresholdBps,
+            slashConfig.minSlashSettledRounds,
+            slashConfig.minSlashLowDuration,
+            slashConfig.minSlashEvidence
+        ) = protocolConfig.slashConfig();
     }
 
-    function _getSlashConfigForContent(uint256 contentId) internal view returns (RatingLib.SlashConfig memory slashConfig) {
+    function _getSlashConfigForContent(uint256 contentId)
+        internal
+        view
+        returns (RatingLib.SlashConfig memory slashConfig)
+    {
         slashConfig = contentSlashConfigSnapshot[contentId];
         if (slashConfig.slashThresholdBps == 0) {
             return _getCurrentSlashConfig();

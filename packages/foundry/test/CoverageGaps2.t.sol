@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import { Test } from "forge-std/Test.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { HumanReputation } from "../contracts/HumanReputation.sol";
 import { HumanFaucet } from "../contracts/HumanFaucet.sol";
 import { MockIdentityVerificationHub } from "../contracts/mocks/MockIdentityVerificationHub.sol";
 import { ISelfVerificationRoot } from "@selfxyz/contracts/contracts/interfaces/ISelfVerificationRoot.sol";
@@ -75,7 +75,7 @@ contract MockVotingEngineForFR2 is IRoundVotingEngine {
 
 contract FrontendRegistryBranchTest is Test {
     FrontendRegistry public reg;
-    CuryoReputation public crep;
+    HumanReputation public hrep;
     MockVotingEngineForFR2 public engine;
     MockVoterIdNFT public voterNFT;
 
@@ -88,8 +88,8 @@ contract FrontendRegistryBranchTest is Test {
 
     function setUp() public {
         vm.startPrank(admin);
-        crep = new CuryoReputation(admin, admin);
-        crep.grantRole(crep.MINTER_ROLE(), admin);
+        hrep = new HumanReputation(admin, admin);
+        hrep.grantRole(hrep.MINTER_ROLE(), admin);
         engine = new MockVotingEngineForFR2();
         voterNFT = new MockVoterIdNFT();
 
@@ -97,16 +97,19 @@ contract FrontendRegistryBranchTest is Test {
         reg = FrontendRegistry(
             address(
                 new ERC1967Proxy(
-                    address(impl), abi.encodeCall(FrontendRegistry.initialize, (admin, admin, address(crep)))
+                    address(impl), abi.encodeCall(FrontendRegistry.initialize, (admin, admin, address(hrep)))
                 )
             )
         );
         reg.setVotingEngine(address(engine));
         reg.addFeeCreditor(creditor);
+        reg.setVoterIdNFT(address(voterNFT));
 
-        crep.mint(frontend1, 200_000e6);
-        crep.mint(frontend2, 200_000e6);
-        crep.mint(address(reg), 1_000_000e6);
+        hrep.mint(frontend1, 200_000e6);
+        hrep.mint(frontend2, 200_000e6);
+        hrep.mint(address(reg), 1_000_000e6);
+        voterNFT.setHolder(frontend1);
+        voterNFT.setHolder(frontend2);
         vm.stopPrank();
     }
 
@@ -132,7 +135,7 @@ contract FrontendRegistryBranchTest is Test {
         assertFalse(reg.isEligible(frontend1));
 
         vm.startPrank(frontend1);
-        crep.approve(address(reg), 500e6);
+        hrep.approve(address(reg), 500e6);
         reg.topUpStake(500e6);
         vm.stopPrank();
 
@@ -153,7 +156,7 @@ contract FrontendRegistryBranchTest is Test {
 
         // Re-register should succeed
         vm.startPrank(frontend1);
-        crep.approve(address(reg), STAKE);
+        hrep.approve(address(reg), STAKE);
         reg.register();
         vm.stopPrank();
 
@@ -170,9 +173,9 @@ contract FrontendRegistryBranchTest is Test {
 
         vm.prank(frontend1);
         reg.requestDeregister();
-        uint256 balBefore = crep.balanceOf(frontend1);
+        uint256 balBefore = hrep.balanceOf(frontend1);
         _completeDeregister(frontend1);
-        uint256 balAfter = crep.balanceOf(frontend1);
+        uint256 balAfter = hrep.balanceOf(frontend1);
 
         // Should get stake + fees
         assertEq(balAfter - balBefore, STAKE + 500e6);
@@ -214,10 +217,10 @@ contract FrontendRegistryBranchTest is Test {
         vm.prank(creditor);
         reg.creditFees(frontend1, 500e6);
 
-        uint256 balBefore = crep.balanceOf(frontend1);
+        uint256 balBefore = hrep.balanceOf(frontend1);
         vm.prank(frontend1);
         reg.claimFees();
-        assertEq(crep.balanceOf(frontend1) - balBefore, 500e6);
+        assertEq(hrep.balanceOf(frontend1) - balBefore, 500e6);
         assertEq(reg.getAccumulatedFees(frontend1), 0);
     }
 
@@ -296,13 +299,13 @@ contract FrontendRegistryBranchTest is Test {
     function test_InitializeZeroAdminReverts() public {
         FrontendRegistry impl = new FrontendRegistry();
         vm.expectRevert("Invalid admin");
-        new ERC1967Proxy(address(impl), abi.encodeCall(FrontendRegistry.initialize, (address(0), admin, address(crep))));
+        new ERC1967Proxy(address(impl), abi.encodeCall(FrontendRegistry.initialize, (address(0), admin, address(hrep))));
     }
 
     function test_InitializeZeroGovernanceReverts() public {
         FrontendRegistry impl = new FrontendRegistry();
         vm.expectRevert("Invalid governance");
-        new ERC1967Proxy(address(impl), abi.encodeCall(FrontendRegistry.initialize, (admin, address(0), address(crep))));
+        new ERC1967Proxy(address(impl), abi.encodeCall(FrontendRegistry.initialize, (admin, address(0), address(hrep))));
     }
 
     function test_InitializeZeroTokenReverts() public {
@@ -320,8 +323,9 @@ contract FrontendRegistryBranchTest is Test {
     }
 
     function _registerFrontend(address fe) internal {
+        voterNFT.setHolder(fe);
         vm.startPrank(fe);
-        crep.approve(address(reg), STAKE);
+        hrep.approve(address(reg), STAKE);
         reg.register();
         vm.stopPrank();
     }
@@ -340,7 +344,7 @@ contract FrontendRegistryBranchTest is Test {
 contract HumanFaucetBranchTest is Test {
     HumanFaucet public faucet;
     MockIdentityVerificationHub public mockHub;
-    CuryoReputation public crep;
+    HumanReputation public hrep;
     MockVoterIdNFT public voterNFT;
 
     address public admin = address(0xA);
@@ -351,12 +355,12 @@ contract HumanFaucetBranchTest is Test {
 
     function setUp() public {
         vm.startPrank(admin);
-        crep = new CuryoReputation(admin, admin);
-        crep.grantRole(crep.MINTER_ROLE(), admin);
+        hrep = new HumanReputation(admin, admin);
+        hrep.grantRole(hrep.MINTER_ROLE(), admin);
         mockHub = new MockIdentityVerificationHub();
         voterNFT = new MockVoterIdNFT();
-        faucet = new HumanFaucet(address(crep), address(mockHub), governance);
-        crep.mint(address(faucet), 52_000_000e6);
+        faucet = new HumanFaucet(address(hrep), address(mockHub), governance);
+        hrep.mint(address(faucet), 52_000_000e6);
         faucet.setConfigId(mockHub.MOCK_CONFIG_ID());
         vm.stopPrank();
     }
@@ -374,7 +378,7 @@ contract HumanFaucetBranchTest is Test {
         mockHub.simulateVerificationWithUserData(address(faucet), user2, userData);
 
         // user2 should get base amount (no referral bonus)
-        assertEq(crep.balanceOf(user2), 10_000e6);
+        assertEq(hrep.balanceOf(user2), 10_000e6);
     }
 
     // --- Referrer has not yet claimed ---
@@ -386,7 +390,7 @@ contract HumanFaucetBranchTest is Test {
         mockHub.simulateVerificationWithUserData(address(faucet), user2, userData);
 
         // Should get base amount only
-        assertEq(crep.balanceOf(user2), 10_000e6);
+        assertEq(hrep.balanceOf(user2), 10_000e6);
     }
 
     // --- Tier 0 boundary (exact 10th claim triggers tier change) ---
@@ -529,7 +533,7 @@ contract HumanFaucetBranchTest is Test {
     // --- getRemainingClaims when zero ---
 
     function test_GetRemainingClaimsWhenEmpty() public {
-        _drainFaucet(crep.balanceOf(address(faucet)));
+        _drainFaucet(hrep.balanceOf(address(faucet)));
         assertEq(faucet.getRemainingClaims(), 0);
     }
 
@@ -537,9 +541,12 @@ contract HumanFaucetBranchTest is Test {
 
     function test_WithdrawRemainingToZeroAddressReverts() public {
         vm.prank(admin);
+        faucet.transferOwnership(governance);
+
+        vm.prank(governance);
         faucet.pause();
 
-        vm.prank(admin);
+        vm.prank(governance);
         vm.expectRevert("Invalid address");
         faucet.withdrawRemaining(address(0), 100);
     }
@@ -591,12 +598,12 @@ contract HumanFaucetBranchTest is Test {
     }
 
     function _setTotalClaimants(uint256 value) internal {
-        vm.store(address(faucet), bytes32(uint256(6)), bytes32(value));
+        vm.store(address(faucet), bytes32(uint256(8)), bytes32(value));
     }
 
     function _drainFaucet(uint256 amount) internal {
         vm.prank(address(faucet));
-        crep.transfer(admin, amount);
+        hrep.transfer(admin, amount);
     }
 }
 
@@ -617,7 +624,7 @@ contract ContentRegistryCoverageTest is VotingTestBase {
     );
 
     ContentRegistry public registry;
-    CuryoReputation public crep;
+    HumanReputation public hrep;
     MockVoterIdNFT public voterNFT;
 
     address public admin = address(0xA);
@@ -629,15 +636,16 @@ contract ContentRegistryCoverageTest is VotingTestBase {
 
     function setUp() public {
         vm.startPrank(admin);
-        crep = new CuryoReputation(admin, admin);
-        crep.grantRole(crep.MINTER_ROLE(), admin);
+        hrep = new HumanReputation(admin, admin);
+        hrep.grantRole(hrep.MINTER_ROLE(), admin);
         voterNFT = new MockVoterIdNFT();
 
         ContentRegistry impl = new ContentRegistry();
         registry = ContentRegistry(
             address(
                 new ERC1967Proxy(
-                    address(impl), abi.encodeCall(ContentRegistry.initialize, (admin, admin, address(crep)))
+                    address(impl),
+                    abi.encodeCall(ContentRegistry.initializeWithTreasury, (admin, admin, admin, address(hrep)))
                 )
             )
         );
@@ -648,8 +656,8 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         mockCategoryRegistry.seedDefaultTestCategories();
         registry.setCategoryRegistry(address(mockCategoryRegistry));
 
-        crep.mint(submitter, 100_000e6);
-        crep.mint(other, 100_000e6);
+        hrep.mint(submitter, 100_000e6);
+        hrep.mint(other, 100_000e6);
         vm.stopPrank();
     }
 
@@ -657,46 +665,56 @@ contract ContentRegistryCoverageTest is VotingTestBase {
 
     function test_SubmitContentSuccess() public {
         vm.startPrank(submitter);
-        crep.approve(address(registry), 10e6);
+        hrep.approve(address(registry), 10e6);
         uint256 id = _submitContentWithReservation(registry, "https://example.com/test", "goal", "goal", "tag1", 0);
         vm.stopPrank();
 
         assertEq(id, 1);
-        (
-            ,,
-            address storedSubmitter,
-            uint256 submitterStake,,,
-            ContentRegistry.ContentStatus status,,,,
-            uint256 rating,
-        ) = registry.contents(1);
+        (,, address storedSubmitter,,, ContentRegistry.ContentStatus status,,, uint256 rating,) = registry.contents(1);
         assertEq(storedSubmitter, submitter);
         assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Active));
         assertEq(rating, 50);
-        assertEq(submitterStake, 10e6);
     }
 
     function test_SubmitContentSplitMetadataSuccess() public {
         string memory url = "https://example.com/split";
+        string memory contextUrl = "https://example.com/context";
+        string memory imageUrl = _submissionImageUrl(url);
+        string[] memory imageUrls = _singleImageUrls(imageUrl);
         string memory title = "Ethereum reference client";
         string memory description = "Official Go implementation of Ethereum.";
         string memory tags = "tag1";
-        bytes32 expectedHash = keccak256(abi.encode(url, title, description, tags));
+        bytes32 expectedHash = keccak256(
+            abi.encode(
+                "curyo-question-context-v2",
+                contextUrl,
+                imageUrls,
+                "",
+                title,
+                description,
+                tags,
+                uint256(1),
+                DEFAULT_QUESTION_METADATA_HASH,
+                DEFAULT_RESULT_SPEC_HASH
+            )
+        );
         bytes32 salt = keccak256("split-metadata");
 
         vm.startPrank(submitter);
-        crep.approve(address(registry), 10e6);
-        (, bytes32 submissionKey) = registry.previewSubmissionKey(url, 0);
-        bytes32 revealCommitment =
-            keccak256(abi.encode(submissionKey, title, description, tags, uint256(0), salt, submitter));
-        registry.reserveSubmission(revealCommitment);
+        hrep.approve(address(registry), 10e6);
+        _reserveQuestionMediaSubmission(
+            registry, contextUrl, imageUrls, "", title, description, tags, 1, salt, submitter
+        );
         vm.warp(block.timestamp + 1);
         vm.expectEmit(true, true, false, true);
-        emit ContentSubmitted(1, submitter, expectedHash, url, title, description, tags, 0);
-        uint256 id = registry.submitContent(url, title, description, tags, 0, salt);
+        emit ContentSubmitted(1, submitter, expectedHash, contextUrl, title, description, tags, 1);
+        uint256 id = registry.submitQuestion(
+            contextUrl, imageUrls, "", title, description, tags, 1, salt, _defaultQuestionSpec()
+        );
         vm.stopPrank();
 
         assertEq(id, 1);
-        (, bytes32 contentHash,,,,,,,,,,) = registry.contents(id);
+        (, bytes32 contentHash,,,,,,,,) = registry.contents(id);
         assertEq(contentHash, expectedHash);
     }
 
@@ -704,9 +722,11 @@ contract ContentRegistryCoverageTest is VotingTestBase {
 
     function test_SubmitContentEmptyURLReverts() public {
         vm.startPrank(submitter);
-        crep.approve(address(registry), 10e6);
-        vm.expectRevert("URL required");
-        registry.submitContent("", "goal", "goal", "tag1", 0, bytes32(0));
+        hrep.approve(address(registry), 10e6);
+        vm.expectRevert("Invalid URL");
+        registry.submitQuestion(
+            "", _emptyImageUrls(), "", "goal", "goal", "tag1", 1, bytes32(0), _defaultQuestionSpec()
+        );
         vm.stopPrank();
     }
 
@@ -718,9 +738,19 @@ contract ContentRegistryCoverageTest is VotingTestBase {
             longUrl[i] = "a";
         }
         vm.startPrank(submitter);
-        crep.approve(address(registry), 10e6);
-        vm.expectRevert("URL too long");
-        registry.submitContent(string(longUrl), "goal", "goal", "tag1", 0, bytes32(0));
+        hrep.approve(address(registry), 10e6);
+        vm.expectRevert("Invalid URL");
+        registry.submitQuestion(
+            "https://example.com/context",
+            _singleImageUrls(string(longUrl)),
+            "",
+            "goal",
+            "goal",
+            "tag1",
+            1,
+            bytes32(0),
+            _defaultQuestionSpec()
+        );
         vm.stopPrank();
     }
 
@@ -728,65 +758,107 @@ contract ContentRegistryCoverageTest is VotingTestBase {
 
     function test_SubmitContentEmptyTitleReverts_LegacyShape() public {
         vm.startPrank(submitter);
-        crep.approve(address(registry), 10e6);
-        vm.expectRevert("Title required");
-        registry.submitContent("https://example.com/test", "", "", "tag1", 0, bytes32(0));
+        hrep.approve(address(registry), 10e6);
+        vm.expectRevert("Question required");
+        registry.submitQuestion(
+            "https://example.com/context",
+            _singleImageUrls("https://example.com/test.jpg"),
+            "",
+            "",
+            "",
+            "tag1",
+            1,
+            bytes32(0),
+            _defaultQuestionSpec()
+        );
         vm.stopPrank();
     }
 
-    // --- submitContent: title too long ---
+    // --- submitContent: question too long ---
 
     function test_SubmitContentTitleTooLongReverts_LegacyShape() public {
-        uint256 maxTitleLength = registry.MAX_TITLE_LENGTH() + 1;
-        bytes memory longGoal = new bytes(maxTitleLength);
-        for (uint256 i = 0; i < maxTitleLength; i++) {
+        uint256 maxQuestionLength = 121;
+        bytes memory longGoal = new bytes(maxQuestionLength);
+        for (uint256 i = 0; i < maxQuestionLength; i++) {
             longGoal[i] = "b";
         }
         vm.startPrank(submitter);
-        crep.approve(address(registry), 10e6);
-        vm.expectRevert("Title too long");
-        registry.submitContent("https://example.com/test", string(longGoal), string(longGoal), "tag1", 0, bytes32(0));
+        hrep.approve(address(registry), 10e6);
+        vm.expectRevert("Question too long");
+        registry.submitQuestion(
+            "https://example.com/context",
+            _singleImageUrls("https://example.com/test.jpg"),
+            "",
+            string(longGoal),
+            string(longGoal),
+            "tag1",
+            1,
+            bytes32(0),
+            _defaultQuestionSpec()
+        );
         vm.stopPrank();
     }
 
     function test_SubmitContentEmptyTitleReverts() public {
         vm.startPrank(submitter);
-        crep.approve(address(registry), 10e6);
-        vm.expectRevert("Title required");
-        registry.submitContent("https://example.com/test", "", "description", "tag1", 0, bytes32(0));
+        hrep.approve(address(registry), 10e6);
+        vm.expectRevert("Question required");
+        registry.submitQuestion(
+            "https://example.com/context",
+            _singleImageUrls("https://example.com/test.jpg"),
+            "",
+            "",
+            "description",
+            "tag1",
+            1,
+            bytes32(0),
+            _defaultQuestionSpec()
+        );
         vm.stopPrank();
     }
 
-    function test_SubmitContentEmptyDescriptionReverts() public {
+    function test_SubmitContentEmptyDescriptionAllowed() public {
         vm.startPrank(submitter);
-        crep.approve(address(registry), 10e6);
-        vm.expectRevert("Description required");
-        registry.submitContent("https://example.com/test", "title", "", "tag1", 0, bytes32(0));
+        hrep.approve(address(registry), 10e6);
+        uint256 id =
+            _submitContentWithReservation(registry, "https://example.com/empty-description", "title", "", "tag1", 1);
         vm.stopPrank();
+
+        assertEq(id, 1);
     }
 
     function test_SubmitContentTitleTooLongReverts() public {
-        uint256 maxTitleLength = registry.MAX_TITLE_LENGTH() + 1;
-        bytes memory longTitle = new bytes(maxTitleLength);
-        for (uint256 i = 0; i < maxTitleLength; i++) {
+        uint256 maxQuestionLength = 121;
+        bytes memory longTitle = new bytes(maxQuestionLength);
+        for (uint256 i = 0; i < maxQuestionLength; i++) {
             longTitle[i] = "b";
         }
         vm.startPrank(submitter);
-        crep.approve(address(registry), 10e6);
-        vm.expectRevert("Title too long");
-        registry.submitContent("https://example.com/test", string(longTitle), "description", "tag1", 0, bytes32(0));
+        hrep.approve(address(registry), 10e6);
+        vm.expectRevert("Question too long");
+        registry.submitQuestion(
+            "https://example.com/context",
+            _singleImageUrls("https://example.com/test.jpg"),
+            "",
+            string(longTitle),
+            "description",
+            "tag1",
+            1,
+            bytes32(0),
+            _defaultQuestionSpec()
+        );
         vm.stopPrank();
     }
 
     function test_SubmitContentTitleAtMaxLengthSucceeds() public {
-        uint256 maxTitleLength = registry.MAX_TITLE_LENGTH();
-        bytes memory title = new bytes(maxTitleLength);
-        for (uint256 i = 0; i < maxTitleLength; i++) {
+        uint256 maxQuestionLength = 120;
+        bytes memory title = new bytes(maxQuestionLength);
+        for (uint256 i = 0; i < maxQuestionLength; i++) {
             title[i] = "c";
         }
 
         vm.startPrank(submitter);
-        crep.approve(address(registry), 10e6);
+        hrep.approve(address(registry), 10e6);
         uint256 contentId = _submitContentWithReservation(
             registry, "https://example.com/exact-max-title", string(title), "description", "tag1", 0
         );
@@ -796,30 +868,38 @@ contract ContentRegistryCoverageTest is VotingTestBase {
     }
 
     function test_SubmitContentTitleLongerThanMaxByOneReverts() public {
-        uint256 maxTitleLength = registry.MAX_TITLE_LENGTH();
-        bytes memory title = new bytes(maxTitleLength + 1);
-        for (uint256 i = 0; i < maxTitleLength + 1; i++) {
+        uint256 maxQuestionLength = 120;
+        bytes memory title = new bytes(maxQuestionLength + 1);
+        for (uint256 i = 0; i < maxQuestionLength + 1; i++) {
             title[i] = "d";
         }
 
         vm.startPrank(submitter);
-        crep.approve(address(registry), 10e6);
-        vm.expectRevert("Title too long");
-        registry.submitContent(
-            "https://example.com/over-max-title", string(title), "description", "tag1", 0, bytes32(0)
+        hrep.approve(address(registry), 10e6);
+        vm.expectRevert("Question too long");
+        registry.submitQuestion(
+            "https://example.com/context",
+            _singleImageUrls("https://example.com/over-max-title.jpg"),
+            "",
+            string(title),
+            "description",
+            "tag1",
+            1,
+            bytes32(0),
+            _defaultQuestionSpec()
         );
         vm.stopPrank();
     }
 
     function test_SubmitContentDescriptionAtMaxLengthSucceeds() public {
-        uint256 maxDescriptionLength = registry.MAX_DESCRIPTION_LENGTH();
+        uint256 maxDescriptionLength = 280;
         bytes memory description = new bytes(maxDescriptionLength);
         for (uint256 i = 0; i < maxDescriptionLength; i++) {
             description[i] = "b";
         }
 
         vm.startPrank(submitter);
-        crep.approve(address(registry), 10e6);
+        hrep.approve(address(registry), 10e6);
         uint256 contentId = _submitContentWithReservation(
             registry, "https://example.com/exact-max-description", "title", string(description), "tag1", 0
         );
@@ -829,15 +909,25 @@ contract ContentRegistryCoverageTest is VotingTestBase {
     }
 
     function test_SubmitContentDescriptionTooLongReverts() public {
-        uint256 maxDescriptionLength = registry.MAX_DESCRIPTION_LENGTH() + 1;
+        uint256 maxDescriptionLength = 281;
         bytes memory longDescription = new bytes(maxDescriptionLength);
         for (uint256 i = 0; i < maxDescriptionLength; i++) {
             longDescription[i] = "b";
         }
         vm.startPrank(submitter);
-        crep.approve(address(registry), 10e6);
+        hrep.approve(address(registry), 10e6);
         vm.expectRevert("Description too long");
-        registry.submitContent("https://example.com/test", "title", string(longDescription), "tag1", 0, bytes32(0));
+        registry.submitQuestion(
+            "https://example.com/context",
+            _singleImageUrls("https://example.com/test.jpg"),
+            "",
+            "title",
+            string(longDescription),
+            "tag1",
+            1,
+            bytes32(0),
+            _defaultQuestionSpec()
+        );
         vm.stopPrank();
     }
 
@@ -845,9 +935,19 @@ contract ContentRegistryCoverageTest is VotingTestBase {
 
     function test_SubmitContentEmptyTagsReverts() public {
         vm.startPrank(submitter);
-        crep.approve(address(registry), 10e6);
+        hrep.approve(address(registry), 10e6);
         vm.expectRevert("Tags required");
-        registry.submitContent("https://example.com/test", "goal", "goal", "", 0, bytes32(0));
+        registry.submitQuestion(
+            "https://example.com/context",
+            _singleImageUrls("https://example.com/test.jpg"),
+            "",
+            "goal",
+            "goal",
+            "",
+            1,
+            bytes32(0),
+            _defaultQuestionSpec()
+        );
         vm.stopPrank();
     }
 
@@ -859,9 +959,19 @@ contract ContentRegistryCoverageTest is VotingTestBase {
             longTags[i] = "c";
         }
         vm.startPrank(submitter);
-        crep.approve(address(registry), 10e6);
+        hrep.approve(address(registry), 10e6);
         vm.expectRevert("Tags too long");
-        registry.submitContent("https://example.com/test", "goal", "goal", string(longTags), 0, bytes32(0));
+        registry.submitQuestion(
+            "https://example.com/context",
+            _singleImageUrls("https://example.com/test.jpg"),
+            "",
+            "goal",
+            "goal",
+            string(longTags),
+            1,
+            bytes32(0),
+            _defaultQuestionSpec()
+        );
         vm.stopPrank();
     }
 
@@ -869,23 +979,38 @@ contract ContentRegistryCoverageTest is VotingTestBase {
 
     function test_SubmitContentDuplicateURLReverts() public {
         vm.startPrank(submitter);
-        crep.approve(address(registry), 20e6);
+        hrep.approve(address(registry), 20e6);
         _submitContentWithReservation(registry, "https://example.com/dup", "goal", "goal", "tag1", 0);
-        vm.expectRevert("URL already submitted");
-        registry.submitContent("https://example.com/dup", "goal2", "goal2", "tag2", 0, bytes32(0));
+        vm.expectRevert("Question already submitted");
+        registry.submitQuestion(
+            "https://example.com/dup",
+            _emptyImageUrls(),
+            "",
+            "goal",
+            "goal",
+            "tag1",
+            1,
+            keccak256("dup-salt"),
+            _defaultQuestionSpec()
+        );
         vm.stopPrank();
     }
 
-    // --- submitContent: with VoterIdNFT required ---
+    // --- submitContent: VoterIdNFT gates canonical submitter identity ---
 
     function test_SubmitContentRequiresVoterIdWhenSet() public {
         vm.prank(admin);
         registry.setVoterIdNFT(address(voterNFT));
 
         vm.startPrank(submitter);
-        crep.approve(address(registry), 10e6);
+        hrep.approve(address(registry), 10e6);
+        NoMediaQuestionText memory question =
+            NoMediaQuestionText({ url: "https://example.com/nft", title: "goal", description: "goal", tags: "tag1" });
+        bytes32 salt = _contentSubmissionSalt(question.url, submitter);
+        _reserveNoMediaQuestionSubmission(registry, question, 1, salt, submitter);
+        vm.warp(block.timestamp + 1);
         vm.expectRevert("Voter ID required");
-        registry.submitContent("https://example.com/nft", "goal", "goal", "tag1", 0, bytes32(0));
+        _submitNoMediaQuestion(registry, question, 1, salt);
         vm.stopPrank();
     }
 
@@ -895,7 +1020,7 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         voterNFT.setHolder(submitter);
 
         vm.startPrank(submitter);
-        crep.approve(address(registry), 10e6);
+        hrep.approve(address(registry), 10e6);
         uint256 id = _submitContentWithReservation(registry, "https://example.com/nft2", "goal", "goal", "tag1", 0);
         vm.stopPrank();
         assertEq(id, 1);
@@ -905,9 +1030,19 @@ contract ContentRegistryCoverageTest is VotingTestBase {
 
     function test_SubmitContentCategoryMismatchReverts() public {
         vm.startPrank(submitter);
-        crep.approve(address(registry), 10e6);
-        vm.expectRevert("Category mismatch");
-        registry.submitContent("https://example.com/cat", "goal", "goal", "tag1", 2, bytes32(0));
+        hrep.approve(address(registry), 10e6);
+        vm.expectRevert("Category not registered");
+        registry.submitQuestion(
+            "https://example.com/context",
+            _singleImageUrls("https://example.com/cat.jpg"),
+            "",
+            "goal",
+            "goal",
+            "tag1",
+            999,
+            bytes32(0),
+            _defaultQuestionSpec()
+        );
         vm.stopPrank();
     }
 
@@ -915,23 +1050,23 @@ contract ContentRegistryCoverageTest is VotingTestBase {
 
     function test_CancelContentSuccess() public {
         uint256 id = _submitContent(submitter, "https://example.com/cancel");
-        uint256 balBefore = crep.balanceOf(submitter);
+        uint256 balBefore = hrep.balanceOf(submitter);
 
         vm.prank(submitter);
         registry.cancelContent(id);
 
-        (,,,,,, ContentRegistry.ContentStatus status,,,,,) = registry.contents(id);
+        (,,,,, ContentRegistry.ContentStatus status,,,,) = registry.contents(id);
         assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Cancelled));
 
-        // Gets refund minus 1 cREP cancellation fee
-        uint256 balAfter = crep.balanceOf(submitter);
-        assertEq(balAfter - balBefore, 9e6); // 10 - 1 = 9
+        uint256 balAfter = hrep.balanceOf(submitter);
+        assertEq(balAfter - balBefore, 0);
     }
 
     // --- cancelContent: not submitter ---
 
     function test_CancelContentNotSubmitterReverts() public {
         uint256 id = _submitContent(submitter, "https://example.com/nocancel");
+        MockVoterIdNFT(address(registry.voterIdNFT())).setHolder(other);
         vm.prank(other);
         vm.expectRevert("Not submitter");
         registry.cancelContent(id);
@@ -959,7 +1094,7 @@ contract ContentRegistryCoverageTest is VotingTestBase {
 
         // URL should be reusable
         vm.startPrank(submitter);
-        crep.approve(address(registry), 10e6);
+        hrep.approve(address(registry), 10e6);
         uint256 id2 =
             _submitContentWithReservation(registry, "https://example.com/reuse", "new goal", "new goal", "tag", 0);
         vm.stopPrank();
@@ -974,7 +1109,8 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         ContentRegistry reg2 = ContentRegistry(
             address(
                 new ERC1967Proxy(
-                    address(impl), abi.encodeCall(ContentRegistry.initialize, (admin, admin, address(crep)))
+                    address(impl),
+                    abi.encodeCall(ContentRegistry.initializeWithTreasury, (admin, admin, admin, address(hrep)))
                 )
             )
         );
@@ -990,13 +1126,13 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         uint256 id = _submitContent(submitter, "https://example.com/dormant2");
         vm.warp(block.timestamp + 31 days);
 
-        uint256 balBefore = crep.balanceOf(submitter);
+        uint256 balBefore = hrep.balanceOf(submitter);
         registry.markDormant(id);
-        uint256 balAfter = crep.balanceOf(submitter);
+        uint256 balAfter = hrep.balanceOf(submitter);
 
-        (,,,,,, ContentRegistry.ContentStatus status,,,,,) = registry.contents(id);
+        (,,,,, ContentRegistry.ContentStatus status,,,,) = registry.contents(id);
         assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Dormant));
-        assertEq(balAfter - balBefore, 10e6); // Full stake return
+        assertEq(balAfter - balBefore, 0);
     }
 
     // --- markDormant: too early ---
@@ -1017,11 +1153,11 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         registry.markDormant(id);
 
         vm.startPrank(submitter);
-        crep.approve(address(registry), 5e6);
+        hrep.approve(address(registry), 5e6);
         registry.reviveContent(id);
         vm.stopPrank();
 
-        (,,,,,, ContentRegistry.ContentStatus status, uint8 dormantCount, address reviver,,,) = registry.contents(id);
+        (,,,,, ContentRegistry.ContentStatus status, uint8 dormantCount, address reviver,,) = registry.contents(id);
         assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Active));
         assertEq(dormantCount, 1);
         assertEq(reviver, submitter);
@@ -1031,8 +1167,9 @@ contract ContentRegistryCoverageTest is VotingTestBase {
 
     function test_ReviveContentNotDormantReverts() public {
         uint256 id = _submitContent(submitter, "https://example.com/revive2");
+        MockVoterIdNFT(address(registry.voterIdNFT())).setHolder(other);
         vm.startPrank(other);
-        crep.approve(address(registry), 5e6);
+        hrep.approve(address(registry), 5e6);
         vm.expectRevert("Not dormant");
         registry.reviveContent(id);
         vm.stopPrank();
@@ -1049,7 +1186,7 @@ contract ContentRegistryCoverageTest is VotingTestBase {
             vm.warp(t);
             registry.markDormant(id);
             vm.startPrank(submitter);
-            crep.approve(address(registry), 5e6);
+            hrep.approve(address(registry), 5e6);
             registry.reviveContent(id);
             vm.stopPrank();
             // reviveContent resets both lastActivityAt and the dormancy anchor, so next dormancy starts from t
@@ -1060,75 +1197,10 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         vm.warp(t);
         registry.markDormant(id);
         vm.startPrank(submitter);
-        crep.approve(address(registry), 5e6);
+        hrep.approve(address(registry), 5e6);
         vm.expectRevert("Max revivals reached");
         registry.reviveContent(id);
         vm.stopPrank();
-    }
-
-    // --- updateRatingDirect: capped at 100 ---
-
-    function test_UpdateRatingDirectCappedAt100() public {
-        uint256 id = _submitContent(submitter, "https://example.com/rating");
-
-        // Set up voting engine to call updateRatingDirect
-        vm.prank(admin);
-        registry.setVotingEngine(address(this));
-
-        // Content starts at rating 50. Set to 150 (should cap at 100)
-        registry.updateRatingDirect(id, 150);
-        (,,,,,,,,,, uint256 rating,) = registry.contents(id);
-        assertEq(rating, 100);
-    }
-
-    // --- updateRatingDirect: set to 0 ---
-
-    function test_UpdateRatingDirectSetToZero() public {
-        uint256 id = _submitContent(submitter, "https://example.com/rating0");
-
-        vm.prank(admin);
-        registry.setVotingEngine(address(this));
-
-        // Content starts at rating 50. Set directly to 0
-        registry.updateRatingDirect(id, 0);
-        (,,,,,,,,,, uint256 rating,) = registry.contents(id);
-        assertEq(rating, 0);
-    }
-
-    // --- updateRatingDirect: same rating is no-op ---
-
-    function test_UpdateRatingDirectSameRating() public {
-        uint256 id = _submitContent(submitter, "https://example.com/noop");
-
-        vm.prank(admin);
-        registry.setVotingEngine(address(this));
-
-        // Set to same rating (50) — should be a no-op
-        registry.updateRatingDirect(id, 50);
-        (,,,,,,,,,, uint256 rating,) = registry.contents(id);
-        assertEq(rating, 50);
-    }
-
-    // --- updateRatingDirect: set higher ---
-
-    function test_UpdateRatingDirectSetHigher() public {
-        uint256 id = _submitContent(submitter, "https://example.com/up");
-        vm.prank(admin);
-        registry.setVotingEngine(address(this));
-        registry.updateRatingDirect(id, 55);
-        (,,,,,,,,,, uint256 rating,) = registry.contents(id);
-        assertEq(rating, 55);
-    }
-
-    // --- updateRatingDirect: set lower ---
-
-    function test_UpdateRatingDirectSetLower() public {
-        uint256 id = _submitContent(submitter, "https://example.com/down");
-        vm.prank(admin);
-        registry.setVotingEngine(address(this));
-        registry.updateRatingDirect(id, 45);
-        (,,,,,,,,,, uint256 rating,) = registry.contents(id);
-        assertEq(rating, 45);
     }
 
     // --- updateActivity: only voting engine ---
@@ -1140,145 +1212,32 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         registry.updateActivity(id);
     }
 
-    // --- returnSubmitterStakeWithRewardRate: only voting engine ---
-
-    function test_ReturnSubmitterStakeWithRewardRateOnlyVotingEngine() public {
-        uint256 id = _submitContent(submitter, "https://example.com/return");
-        vm.prank(other);
-        vm.expectRevert("Only VotingEngine");
-        registry.returnSubmitterStakeWithRewardRate(id, 0);
-    }
-
-    // --- returnSubmitterStakeWithRewardRate: already returned ---
-
-    function test_ReturnSubmitterStakeWithRewardRateAlreadyReturnedReverts() public {
-        uint256 id = _submitContent(submitter, "https://example.com/double");
-        vm.prank(admin);
-        registry.setVotingEngine(address(this));
-
-        registry.returnSubmitterStakeWithRewardRate(id, 0);
-        vm.expectRevert("Already returned");
-        registry.returnSubmitterStakeWithRewardRate(id, 0);
-    }
-
-    // --- slashSubmitterStake: success ---
-
-    function test_SlashSubmitterStakeSuccess() public {
-        uint256 id = _submitContent(submitter, "https://example.com/slash");
-        vm.prank(admin);
-        registry.setVotingEngine(address(this));
-        vm.warp(block.timestamp + 8 days);
-
-        registry.updateRatingState(
-            id,
-            1,
-            5_000,
-            RatingLib.RatingState({
-                ratingLogitX18: int128(-1e18),
-                confidenceMass: uint128(400e6),
-                effectiveEvidence: uint128(250e6),
-                settledRounds: 2,
-                ratingBps: 1_500,
-                conservativeRatingBps: 1_200,
-                lastUpdatedAt: uint48(block.timestamp),
-                lowSince: uint48(block.timestamp - 7 days - 1)
-            })
-        );
-        assertTrue(registry.isSubmitterStakeSlashable(id), "seeded rating state should unlock the slash path");
-
-        uint256 treasuryBefore = crep.balanceOf(treasury);
-        uint256 slashed = registry.slashSubmitterStake(id);
-
-        assertEq(slashed, 10e6);
-        assertEq(crep.balanceOf(treasury) - treasuryBefore, 10e6);
-    }
-
-    // --- slashSubmitterStake: already returned ---
-
-    function test_SlashSubmitterStakeAlreadyReturnedReverts() public {
-        uint256 id = _submitContent(submitter, "https://example.com/slashret");
-        vm.prank(admin);
-        registry.setVotingEngine(address(this));
-
-        registry.returnSubmitterStakeWithRewardRate(id, 0);
-        vm.expectRevert("Already returned");
-        registry.slashSubmitterStake(id);
-    }
-
-    // --- slashSubmitterStake: initialized treasury authority receives slash ---
-
-    function test_SlashSubmitterStakeUsesInitializedTreasury() public {
-        vm.startPrank(admin);
-        ContentRegistry impl = new ContentRegistry();
-        ContentRegistry reg2 = ContentRegistry(
-            address(
-                new ERC1967Proxy(
-                    address(impl), abi.encodeCall(ContentRegistry.initialize, (admin, admin, address(crep)))
-                )
-            )
-        );
-        MockCategoryRegistry mockCategoryRegistry2 = new MockCategoryRegistry();
-        mockCategoryRegistry2.seedDefaultTestCategories();
-        reg2.setCategoryRegistry(address(mockCategoryRegistry2));
-        reg2.setVotingEngine(address(this));
-        crep.mint(submitter, 100_000e6);
-        vm.stopPrank();
-
-        vm.startPrank(submitter);
-        crep.approve(address(reg2), 10e6);
-        uint256 id = _submitContentWithReservation(reg2, "https://example.com/notreasury", "goal", "goal", "tag1", 0);
-        vm.stopPrank();
-
-        vm.warp(block.timestamp + 8 days);
-        reg2.updateRatingState(
-            id,
-            1,
-            5_000,
-            RatingLib.RatingState({
-                ratingLogitX18: int128(-1e18),
-                confidenceMass: uint128(400e6),
-                effectiveEvidence: uint128(250e6),
-                settledRounds: 2,
-                ratingBps: 1_500,
-                conservativeRatingBps: 1_200,
-                lastUpdatedAt: uint48(block.timestamp),
-                lowSince: uint48(block.timestamp - 7 days - 1)
-            })
-        );
-
-        uint256 treasuryBefore = crep.balanceOf(admin);
-        uint256 slashed = reg2.slashSubmitterStake(id);
-
-        assertEq(slashed, 10e6);
-        assertEq(crep.balanceOf(admin) - treasuryBefore, 10e6);
-    }
-
     // --- View functions ---
 
     function test_IsActive() public {
         uint256 id = _submitContent(submitter, "https://example.com/active");
-        (uint256 existingId,,,,,, ContentRegistry.ContentStatus status,,,,,) = registry.contents(id);
+        (uint256 existingId,,,,, ContentRegistry.ContentStatus status,,,,) = registry.contents(id);
         assertTrue(existingId != 0 && status == ContentRegistry.ContentStatus.Active);
-        (uint256 missingId,,,,,, ContentRegistry.ContentStatus missingStatus,,,,,) = registry.contents(999);
+        (uint256 missingId,,,,, ContentRegistry.ContentStatus missingStatus,,,,) = registry.contents(999);
         assertFalse(missingId != 0 && missingStatus == ContentRegistry.ContentStatus.Active); // Non-existent
     }
 
     function test_GetSubmitter() public {
         uint256 id = _submitContent(submitter, "https://example.com/getsub");
-        (,, address storedSubmitter,,,,,,,,,) = registry.contents(id);
+        (,, address storedSubmitter,,,,,,,) = registry.contents(id);
         assertEq(storedSubmitter, submitter);
     }
 
     function test_GetCreatedAt() public {
         vm.warp(1000);
         uint256 id = _submitContent(submitter, "https://example.com/created");
-        (,,,, uint256 createdAt,,,,,,,) = registry.contents(id);
+        (,,, uint256 createdAt,,,,,,) = registry.contents(id);
         assertEq(createdAt, 1001);
     }
 
     function test_GetCategoryId() public {
         uint256 id = _submitContent(submitter, "https://example.com/catid");
-        (,,,,,,,,,,, uint256 categoryId) = registry.contents(id);
+        (,,,,,,,,, uint256 categoryId) = registry.contents(id);
         assertEq(categoryId, 1);
     }
 
@@ -1289,9 +1248,19 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         registry.pause();
 
         vm.startPrank(submitter);
-        crep.approve(address(registry), 10e6);
+        hrep.approve(address(registry), 10e6);
         vm.expectRevert();
-        registry.submitContent("https://example.com/paused", "goal", "goal", "tag1", 0, bytes32(0));
+        registry.submitQuestion(
+            "https://example.com/context",
+            _singleImageUrls("https://example.com/paused.jpg"),
+            "",
+            "goal",
+            "goal",
+            "tag1",
+            1,
+            bytes32(0),
+            _defaultQuestionSpec()
+        );
         vm.stopPrank();
     }
 
@@ -1315,12 +1284,6 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         registry.setVoterIdNFT(address(0));
     }
 
-    function test_SetParticipationPoolZeroReverts() public {
-        vm.prank(admin);
-        vm.expectRevert("Invalid address");
-        registry.setParticipationPool(address(0));
-    }
-
     function test_SetBonusPoolZeroReverts() public {
         vm.prank(admin);
         vm.expectRevert("Invalid address");
@@ -1338,24 +1301,32 @@ contract ContentRegistryCoverageTest is VotingTestBase {
     function test_InitializeZeroAdminReverts() public {
         ContentRegistry impl = new ContentRegistry();
         vm.expectRevert("Invalid admin");
-        new ERC1967Proxy(address(impl), abi.encodeCall(ContentRegistry.initialize, (address(0), admin, address(crep))));
+        new ERC1967Proxy(
+            address(impl),
+            abi.encodeCall(ContentRegistry.initializeWithTreasury, (address(0), admin, admin, address(hrep)))
+        );
     }
 
     function test_InitializeZeroGovernanceReverts() public {
         ContentRegistry impl = new ContentRegistry();
         vm.expectRevert("Invalid governance");
-        new ERC1967Proxy(address(impl), abi.encodeCall(ContentRegistry.initialize, (admin, address(0), address(crep))));
+        new ERC1967Proxy(
+            address(impl),
+            abi.encodeCall(ContentRegistry.initializeWithTreasury, (admin, address(0), address(0), address(hrep)))
+        );
     }
 
     function test_InitializeZeroTokenReverts() public {
         ContentRegistry impl = new ContentRegistry();
-        vm.expectRevert("Invalid cREP token");
-        new ERC1967Proxy(address(impl), abi.encodeCall(ContentRegistry.initialize, (admin, admin, address(0))));
+        vm.expectRevert("Invalid HREP token");
+        new ERC1967Proxy(
+            address(impl), abi.encodeCall(ContentRegistry.initializeWithTreasury, (admin, admin, admin, address(0)))
+        );
     }
 
     function _submitContent(address who, string memory url) internal returns (uint256) {
         vm.startPrank(who);
-        crep.approve(address(registry), 10e6);
+        hrep.approve(address(registry), 10e6);
         uint256 id = _submitContentWithReservation(registry, url, "goal", "goal", "tag1", 0);
         vm.stopPrank();
         return id;
@@ -1363,11 +1334,11 @@ contract ContentRegistryCoverageTest is VotingTestBase {
 }
 
 // =========================================================================
-// CuryoReputation Coverage Tests (77% → target 90%+)
+// HumanReputation Coverage Tests (77% → target 90%+)
 // =========================================================================
 
-contract CuryoReputationCoverageTest is Test {
-    CuryoReputation public crep;
+contract HumanReputationCoverageTest is Test {
+    HumanReputation public hrep;
 
     address public admin = address(0xA);
     address public governance = address(0xB);
@@ -1379,11 +1350,11 @@ contract CuryoReputationCoverageTest is Test {
 
     function setUp() public {
         vm.startPrank(admin);
-        crep = new CuryoReputation(admin, governance);
-        crep.setGovernor(governor);
-        crep.setContentVotingContracts(votingEngine, contentRegistry);
-        crep.mint(user1, 10_000e6);
-        crep.mint(user2, 10_000e6);
+        hrep = new HumanReputation(admin, governance);
+        hrep.setGovernor(governor);
+        hrep.setContentVotingContracts(votingEngine, contentRegistry);
+        hrep.mint(user1, 10_000e6);
+        hrep.mint(user2, 10_000e6);
         vm.stopPrank();
     }
 
@@ -1391,87 +1362,88 @@ contract CuryoReputationCoverageTest is Test {
 
     function test_GovernanceLockFresh() public {
         vm.prank(governor);
-        crep.lockForGovernance(user1, 1_000e6);
+        hrep.lockForGovernance(user1, 1_000e6);
 
-        assertEq(crep.getLockedBalance(user1), 1_000e6);
-        assertTrue(crep.isLocked(user1));
-        assertEq(crep.getTransferableBalance(user1), 9_000e6);
+        assertEq(hrep.getLockedBalance(user1), 1_000e6);
+        assertTrue(hrep.isLocked(user1));
+        assertEq(hrep.getTransferableBalance(user1), 9_000e6);
     }
 
     // --- Governance lock: accumulation when active ---
 
     function test_GovernanceLockAccumulation() public {
         vm.prank(governor);
-        crep.lockForGovernance(user1, 1_000e6);
+        hrep.lockForGovernance(user1, 1_000e6);
 
         vm.prank(governor);
-        crep.lockForGovernance(user1, 500e6);
+        hrep.lockForGovernance(user1, 500e6);
 
-        assertEq(crep.getLockedBalance(user1), 1_500e6);
+        assertEq(hrep.getLockedBalance(user1), 1_500e6);
     }
 
     // --- Governance lock: fresh lock after expiry ---
 
     function test_GovernanceLockFreshAfterExpiry() public {
         vm.prank(governor);
-        crep.lockForGovernance(user1, 1_000e6);
+        hrep.lockForGovernance(user1, 1_000e6);
 
         // Wait for lock to expire
         vm.warp(block.timestamp + 7 days + 1);
-        assertEq(crep.getLockedBalance(user1), 0);
-        assertFalse(crep.isLocked(user1));
+        assertEq(hrep.getLockedBalance(user1), 0);
+        assertFalse(hrep.isLocked(user1));
 
         // New lock should be fresh (not accumulate)
         vm.prank(governor);
-        crep.lockForGovernance(user1, 500e6);
+        hrep.lockForGovernance(user1, 500e6);
 
-        assertEq(crep.getLockedBalance(user1), 500e6);
+        assertEq(hrep.getLockedBalance(user1), 500e6);
     }
 
     // --- Transfer blocked when governance locked ---
 
     function test_TransferBlockedWhenLocked() public {
         vm.prank(governor);
-        crep.lockForGovernance(user1, 10_000e6);
+        hrep.lockForGovernance(user1, 10_000e6);
 
         vm.prank(user1);
         vm.expectRevert("Exceeds transferable balance (governance locked)");
-        crep.transfer(user2, 1);
+        hrep.transfer(user2, 1);
     }
 
     // --- Partial transfer: only transferable amount ---
 
     function test_PartialTransferWhenLocked() public {
         vm.prank(governor);
-        crep.lockForGovernance(user1, 5_000e6);
+        hrep.lockForGovernance(user1, 5_000e6);
 
         // Can transfer up to 5,000 (10,000 - 5,000)
         vm.prank(user1);
-        crep.transfer(user2, 5_000e6);
-        assertEq(crep.balanceOf(user1), 5_000e6);
+        hrep.transfer(user2, 5_000e6);
+        assertEq(hrep.balanceOf(user1), 5_000e6);
     }
 
-    // --- Transfer to votingEngine allowed while locked ---
+    // --- Transfer to votingEngine blocked while locked ---
 
     function test_TransferToVotingEngineWhileLocked() public {
         vm.prank(governor);
-        crep.lockForGovernance(user1, 10_000e6);
+        hrep.lockForGovernance(user1, 10_000e6);
 
-        // Transfer to voting engine should be allowed despite full lock
         vm.prank(user1);
-        crep.transfer(votingEngine, 5_000e6);
-        assertEq(crep.balanceOf(votingEngine), 5_000e6);
+        vm.expectRevert("Exceeds transferable balance (governance locked)");
+        hrep.transfer(votingEngine, 5_000e6);
+        assertEq(hrep.balanceOf(votingEngine), 0);
     }
 
-    // --- Transfer to contentRegistry allowed while locked ---
+    // --- Transfer to contentRegistry blocked while locked ---
 
     function test_TransferToContentRegistryWhileLocked() public {
         vm.prank(governor);
-        crep.lockForGovernance(user1, 10_000e6);
+        hrep.lockForGovernance(user1, 10_000e6);
 
         vm.prank(user1);
-        crep.transfer(contentRegistry, 5_000e6);
-        assertEq(crep.balanceOf(contentRegistry), 5_000e6);
+        vm.expectRevert("Exceeds transferable balance (governance locked)");
+        hrep.transfer(contentRegistry, 5_000e6);
+        assertEq(hrep.balanceOf(contentRegistry), 0);
     }
 
     // --- Third-party transferFrom to content-voting contracts blocked while locked ---
@@ -1480,18 +1452,18 @@ contract CuryoReputationCoverageTest is Test {
         address thirdPartySpender = address(0x66);
 
         vm.prank(governor);
-        crep.lockForGovernance(user1, 10_000e6);
+        hrep.lockForGovernance(user1, 10_000e6);
 
         vm.prank(user1);
-        crep.approve(thirdPartySpender, 5_000e6);
+        hrep.approve(thirdPartySpender, 5_000e6);
 
         vm.prank(thirdPartySpender);
         vm.expectRevert("Exceeds transferable balance (governance locked)");
-        crep.transferFrom(user1, votingEngine, 5_000e6);
+        hrep.transferFrom(user1, votingEngine, 5_000e6);
 
         vm.prank(thirdPartySpender);
         vm.expectRevert("Exceeds transferable balance (governance locked)");
-        crep.transferFrom(user1, contentRegistry, 5_000e6);
+        hrep.transferFrom(user1, contentRegistry, 5_000e6);
     }
 
     // --- Self-delegation enforcement ---
@@ -1499,7 +1471,7 @@ contract CuryoReputationCoverageTest is Test {
     function test_DelegateToOtherReverts() public {
         vm.prank(user1);
         vm.expectRevert("Only self-delegation allowed");
-        crep.delegate(user2);
+        hrep.delegate(user2);
     }
 
     // --- Auto-delegation on first receipt ---
@@ -1507,28 +1479,28 @@ contract CuryoReputationCoverageTest is Test {
     function test_AutoDelegationOnReceipt() public {
         address newUser = address(0x99);
         vm.prank(admin);
-        crep.mint(newUser, 1_000e6);
+        hrep.mint(newUser, 1_000e6);
 
         // After minting, user should be self-delegated
-        assertEq(crep.delegates(newUser), newUser);
+        assertEq(hrep.delegates(newUser), newUser);
     }
 
     // --- MAX_SUPPLY enforcement ---
 
     function test_MintExceedsMaxSupplyReverts() public {
-        uint256 remaining = crep.MAX_SUPPLY() - crep.totalSupply();
+        uint256 remaining = hrep.MAX_SUPPLY() - hrep.totalSupply();
         vm.prank(admin);
         vm.expectRevert("Exceeds max supply");
-        crep.mint(user1, remaining + 1);
+        hrep.mint(user1, remaining + 1);
     }
 
     // --- Mint up to MAX_SUPPLY ---
 
     function test_MintUpToMaxSupply() public {
-        uint256 remaining = crep.MAX_SUPPLY() - crep.totalSupply();
+        uint256 remaining = hrep.MAX_SUPPLY() - hrep.totalSupply();
         vm.prank(admin);
-        crep.mint(user1, remaining);
-        assertEq(crep.totalSupply(), crep.MAX_SUPPLY());
+        hrep.mint(user1, remaining);
+        assertEq(hrep.totalSupply(), hrep.MAX_SUPPLY());
     }
 
     // --- lockForGovernance: only governor ---
@@ -1536,7 +1508,7 @@ contract CuryoReputationCoverageTest is Test {
     function test_LockForGovernanceOnlyGovernor() public {
         vm.prank(user1);
         vm.expectRevert("Only governor");
-        crep.lockForGovernance(user1, 1_000e6);
+        hrep.lockForGovernance(user1, 1_000e6);
     }
 
     // --- lockForGovernance: zero amount ---
@@ -1544,17 +1516,17 @@ contract CuryoReputationCoverageTest is Test {
     function test_LockForGovernanceZeroAmountReverts() public {
         vm.prank(governor);
         vm.expectRevert("Amount must be > 0");
-        crep.lockForGovernance(user1, 0);
+        hrep.lockForGovernance(user1, 0);
     }
 
     // --- getGovernanceLock: expired ---
 
     function test_GetGovernanceLockExpired() public {
         vm.prank(governor);
-        crep.lockForGovernance(user1, 1_000e6);
+        hrep.lockForGovernance(user1, 1_000e6);
 
         vm.warp(block.timestamp + 7 days + 1);
-        (uint256 amount, uint256 unlockTime) = crep.getGovernanceLock(user1);
+        (uint256 amount, uint256 unlockTime) = hrep.getGovernanceLock(user1);
         assertEq(amount, 0);
         assertGt(unlockTime, 0); // unlockTime is still stored
     }
@@ -1563,9 +1535,9 @@ contract CuryoReputationCoverageTest is Test {
 
     function test_GetGovernanceLockActive() public {
         vm.prank(governor);
-        crep.lockForGovernance(user1, 1_000e6);
+        hrep.lockForGovernance(user1, 1_000e6);
 
-        (uint256 amount, uint256 unlockTime) = crep.getGovernanceLock(user1);
+        (uint256 amount, uint256 unlockTime) = hrep.getGovernanceLock(user1);
         assertEq(amount, 1_000e6);
         assertEq(unlockTime, block.timestamp + 7 days);
     }
@@ -1573,28 +1545,22 @@ contract CuryoReputationCoverageTest is Test {
     // --- getTransferableBalance: no lock ---
 
     function test_GetTransferableBalanceNoLock() public view {
-        assertEq(crep.getTransferableBalance(user1), 10_000e6);
+        assertEq(hrep.getTransferableBalance(user1), 10_000e6);
     }
 
-    // --- getTransferableBalance: locked more than balance ---
+    // --- getTransferableBalance: fully locked balance ---
 
-    function test_GetTransferableBalanceLockedMoreThanBalance() public {
-        // Lock 10,000, transfer some away, locked > balance
+    function test_GetTransferableBalanceFullyLocked() public {
         vm.prank(governor);
-        crep.lockForGovernance(user1, 10_000e6);
+        hrep.lockForGovernance(user1, 10_000e6);
 
-        // Transfer to voting engine (allowed)
-        vm.prank(user1);
-        crep.transfer(votingEngine, 5_000e6);
-
-        // Now balance is 5,000 but locked is 10,000 → transferable = 0
-        assertEq(crep.getTransferableBalance(user1), 0);
+        assertEq(hrep.getTransferableBalance(user1), 0);
     }
 
     // --- decimals ---
 
     function test_Decimals() public view {
-        assertEq(crep.decimals(), 6);
+        assertEq(hrep.decimals(), 6);
     }
 
     // --- setGovernor zero address ---
@@ -1602,7 +1568,7 @@ contract CuryoReputationCoverageTest is Test {
     function test_SetGovernorZeroReverts() public {
         vm.prank(admin);
         vm.expectRevert("Invalid address");
-        crep.setGovernor(address(0));
+        hrep.setGovernor(address(0));
     }
 
     // --- setContentVotingContracts zero addresses ---
@@ -1610,20 +1576,20 @@ contract CuryoReputationCoverageTest is Test {
     function test_SetContentVotingContractsZeroEngine() public {
         vm.prank(admin);
         vm.expectRevert("Invalid address");
-        crep.setContentVotingContracts(address(0), contentRegistry);
+        hrep.setContentVotingContracts(address(0), contentRegistry);
     }
 
     function test_SetContentVotingContractsZeroRegistry() public {
         vm.prank(admin);
         vm.expectRevert("Invalid address");
-        crep.setContentVotingContracts(votingEngine, address(0));
+        hrep.setContentVotingContracts(votingEngine, address(0));
     }
 
     // --- constructor zero governance ---
 
     function test_ConstructorZeroGovernanceReverts() public {
         vm.expectRevert("Invalid governance");
-        new CuryoReputation(admin, address(0));
+        new HumanReputation(admin, address(0));
     }
 }
 
@@ -1632,7 +1598,7 @@ contract CuryoReputationCoverageTest is Test {
 // =========================================================================
 
 contract RoundSettlementBranchTest is VotingTestBase {
-    CuryoReputation public crep;
+    HumanReputation public hrep;
     ContentRegistry public registry;
     RoundVotingEngine public engine;
     RoundRewardDistributor public distributor;
@@ -1653,14 +1619,15 @@ contract RoundSettlementBranchTest is VotingTestBase {
         vm.warp(1000);
         vm.startPrank(owner);
 
-        crep = new CuryoReputation(owner, owner);
-        crep.grantRole(crep.MINTER_ROLE(), owner);
+        hrep = new HumanReputation(owner, owner);
+        hrep.grantRole(hrep.MINTER_ROLE(), owner);
 
         ContentRegistry regImpl = new ContentRegistry();
         registry = ContentRegistry(
             address(
                 new ERC1967Proxy(
-                    address(regImpl), abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(crep)))
+                    address(regImpl),
+                    abi.encodeCall(ContentRegistry.initializeWithTreasury, (owner, owner, owner, address(hrep)))
                 )
             )
         );
@@ -1672,7 +1639,7 @@ contract RoundSettlementBranchTest is VotingTestBase {
                     address(engImpl),
                     abi.encodeCall(
                         RoundVotingEngine.initialize,
-                        (owner, address(crep), address(registry), address(_deployProtocolConfig(owner)))
+                        (owner, address(hrep), address(registry), address(_deployProtocolConfig(owner)))
                     )
                 )
             )
@@ -1684,7 +1651,7 @@ contract RoundSettlementBranchTest is VotingTestBase {
                 new ERC1967Proxy(
                     address(distImpl),
                     abi.encodeCall(
-                        RoundRewardDistributor.initialize, (owner, address(crep), address(engine), address(registry))
+                        RoundRewardDistributor.initialize, (owner, address(hrep), address(engine), address(registry))
                     )
                 )
             )
@@ -1701,15 +1668,15 @@ contract RoundSettlementBranchTest is VotingTestBase {
         ProtocolConfig(address(engine.protocolConfig())).setTreasury(treasury);
         _setTlockRoundConfig(ProtocolConfig(address(engine.protocolConfig())), 5 minutes, 7 days, 2, 200);
 
-        crep.mint(owner, 2_000_000e6);
-        crep.approve(address(engine), 2_000_000e6);
+        hrep.mint(owner, 2_000_000e6);
+        hrep.approve(address(engine), 2_000_000e6);
         engine.addToConsensusReserve(1_000_000e6);
 
         address[3] memory voters = [voter1, voter2, voter3];
         for (uint256 i = 0; i < voters.length; i++) {
-            crep.mint(voters[i], 100_000e6);
+            hrep.mint(voters[i], 100_000e6);
         }
-        crep.mint(submitter, 100_000e6);
+        hrep.mint(submitter, 100_000e6);
 
         vm.stopPrank();
     }
@@ -1736,13 +1703,13 @@ contract RoundSettlementBranchTest is VotingTestBase {
         _revealAndSettle(contentId, roundId, ck1, true, s1, ck2, false, s2);
 
         // Claim refund
-        uint256 balBefore = crep.balanceOf(voter1);
+        uint256 balBefore = hrep.balanceOf(voter1);
         vm.prank(voter1);
         engine.claimCancelledRoundRefund(contentId, roundId);
-        assertEq(crep.balanceOf(voter1) - balBefore, STAKE);
+        assertEq(hrep.balanceOf(voter1) - balBefore, STAKE);
     }
 
-    // --- Settlement with min stake boundary (1 cREP) ---
+    // --- Settlement with min stake boundary (1 HREP) ---
 
     function test_SettlementMinStake() public {
         uint256 contentId = _submitContent();
@@ -1754,7 +1721,7 @@ contract RoundSettlementBranchTest is VotingTestBase {
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Tied)); // Equal stakes -> tie
     }
 
-    // --- Settlement with max stake (100 cREP) ---
+    // --- Settlement with max stake (100 HREP) ---
 
     function test_SettlementMaxStake() public {
         uint256 contentId = _submitContent();
@@ -1777,15 +1744,15 @@ contract RoundSettlementBranchTest is VotingTestBase {
         _revealAndSettle(contentId, roundId, ck1, true, s1, ck2, false, s2);
 
         // Both voters get refund on tied round
-        uint256 bal1Before = crep.balanceOf(voter1);
+        uint256 bal1Before = hrep.balanceOf(voter1);
         vm.prank(voter1);
         engine.claimCancelledRoundRefund(contentId, roundId);
-        assertEq(crep.balanceOf(voter1) - bal1Before, STAKE);
+        assertEq(hrep.balanceOf(voter1) - bal1Before, STAKE);
 
-        uint256 bal2Before = crep.balanceOf(voter2);
+        uint256 bal2Before = hrep.balanceOf(voter2);
         vm.prank(voter2);
         engine.claimCancelledRoundRefund(contentId, roundId);
-        assertEq(crep.balanceOf(voter2) - bal2Before, STAKE);
+        assertEq(hrep.balanceOf(voter2) - bal2Before, STAKE);
     }
 
     // --- Settlement not possible before epoch ends ---
@@ -1814,8 +1781,19 @@ contract RoundSettlementBranchTest is VotingTestBase {
         bytes32 commitHash = _commitHash(true, salt, contentId);
         bytes memory ciphertext = abi.encodePacked(uint8(1), salt, contentId);
         vm.startPrank(voter1);
+        uint256 cachedRoundContext1 =
+            _roundContext(engine.previewCommitRoundId(contentId), _defaultRatingReferenceBps());
         vm.expectRevert(RoundVotingEngine.InvalidStake.selector);
-        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, 0, address(0));
+        engine.commitVote(
+            contentId,
+            cachedRoundContext1,
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            commitHash,
+            ciphertext,
+            0,
+            address(0)
+        );
         vm.stopPrank();
     }
 
@@ -1837,12 +1815,12 @@ contract RoundSettlementBranchTest is VotingTestBase {
     function test_WinnerClaimFromDistributor() public {
         (uint256 contentId, uint256 roundId) = _createAndSettleAsymmetricRound();
 
-        uint256 balBefore = crep.balanceOf(voter1);
+        uint256 balBefore = hrep.balanceOf(voter1);
         vm.prank(voter1);
         distributor.claimReward(contentId, roundId);
 
         // Winner gets stake + reward
-        uint256 balAfter = crep.balanceOf(voter1);
+        uint256 balAfter = hrep.balanceOf(voter1);
         assertGt(balAfter, balBefore);
     }
 
@@ -1857,29 +1835,6 @@ contract RoundSettlementBranchTest is VotingTestBase {
         vm.prank(voter1);
         vm.expectRevert("Already claimed");
         distributor.claimReward(contentId, roundId);
-    }
-
-    // --- Submitter claim from distributor ---
-
-    function test_SubmitterClaimFromDistributor() public {
-        (uint256 contentId, uint256 roundId) = _createAndSettleAsymmetricRound();
-
-        uint256 balBefore = crep.balanceOf(submitter);
-        vm.prank(submitter);
-        distributor.claimSubmitterReward(contentId, roundId);
-        uint256 balAfter = crep.balanceOf(submitter);
-
-        assertGt(balAfter, balBefore);
-    }
-
-    // --- Non-submitter claiming submitter reward ---
-
-    function test_NonSubmitterClaimReverts() public {
-        (uint256 contentId, uint256 roundId) = _createAndSettleAsymmetricRound();
-
-        vm.prank(voter1);
-        vm.expectRevert("Not submitter");
-        distributor.claimSubmitterReward(contentId, roundId);
     }
 
     // --- Cooldown passes after 24 hours ---
@@ -1923,14 +1878,14 @@ contract RoundSettlementBranchTest is VotingTestBase {
         new ERC1967Proxy(
             address(impl),
             abi.encodeCall(
-                RoundRewardDistributor.initialize, (address(0), address(crep), address(engine), address(registry))
+                RoundRewardDistributor.initialize, (address(0), address(hrep), address(engine), address(registry))
             )
         );
     }
 
     function test_DistributorInitializeZeroToken() public {
         RoundRewardDistributor impl = new RoundRewardDistributor();
-        vm.expectRevert("Invalid cREP token");
+        vm.expectRevert("Invalid HREP token");
         new ERC1967Proxy(
             address(impl),
             abi.encodeCall(RoundRewardDistributor.initialize, (owner, address(0), address(engine), address(registry)))
@@ -1942,7 +1897,7 @@ contract RoundSettlementBranchTest is VotingTestBase {
         vm.expectRevert("Invalid voting engine");
         new ERC1967Proxy(
             address(impl),
-            abi.encodeCall(RoundRewardDistributor.initialize, (owner, address(crep), address(0), address(registry)))
+            abi.encodeCall(RoundRewardDistributor.initialize, (owner, address(hrep), address(0), address(registry)))
         );
     }
 
@@ -1951,7 +1906,7 @@ contract RoundSettlementBranchTest is VotingTestBase {
         vm.expectRevert("Invalid registry");
         new ERC1967Proxy(
             address(impl),
-            abi.encodeCall(RoundRewardDistributor.initialize, (owner, address(crep), address(engine), address(0)))
+            abi.encodeCall(RoundRewardDistributor.initialize, (owner, address(hrep), address(engine), address(0)))
         );
     }
 
@@ -1984,7 +1939,7 @@ contract RoundSettlementBranchTest is VotingTestBase {
     function _submitContent() internal returns (uint256 contentId) {
         contentId = registry.nextContentId();
         vm.startPrank(submitter);
-        crep.approve(address(registry), 10e6);
+        hrep.approve(address(registry), 10e6);
         _submitContentWithReservation(
             registry,
             string(abi.encodePacked("https://example.com/test-", vm.toString(contentId))),
@@ -2002,11 +1957,31 @@ contract RoundSettlementBranchTest is VotingTestBase {
     {
         salt = keccak256(abi.encodePacked(voter, block.timestamp, contentId));
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
-        bytes32 commitHash = _commitHash(isUp, salt, contentId, ciphertext);
+        uint16 referenceRatingBps = _currentRatingReferenceBps(contentId);
+        bytes32 commitHash = _commitHash(
+            isUp,
+            salt,
+            voter,
+            contentId,
+            referenceRatingBps,
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            ciphertext
+        );
         vm.prank(voter);
-        crep.approve(address(engine), amount);
+        hrep.approve(address(engine), amount);
+        uint256 cachedRoundContext2 = _roundContext(engine.previewCommitRoundId(contentId), referenceRatingBps);
         vm.prank(voter);
-        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, amount, address(0));
+        engine.commitVote(
+            contentId,
+            cachedRoundContext2,
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            commitHash,
+            ciphertext,
+            amount,
+            address(0)
+        );
         commitKey = keccak256(abi.encodePacked(voter, commitHash));
     }
 
@@ -2022,7 +1997,7 @@ contract RoundSettlementBranchTest is VotingTestBase {
         bytes32 s2
     ) internal {
         RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(r.startTime + 5 minutes + 1);
+        _warpPastTlockRevealTime(uint256(r.startTime) + 5 minutes);
         engine.revealVoteByCommitKey(contentId, roundId, ck1, isUp1, s1);
         engine.revealVoteByCommitKey(contentId, roundId, ck2, isUp2, s2);
         RoundLib.Round memory r2 = RoundEngineReadHelpers.round(engine, contentId, roundId);

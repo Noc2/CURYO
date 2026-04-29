@@ -25,7 +25,7 @@ import scaffoldConfig from "~~/scaffold.config";
 import { notification } from "~~/utils/scaffold-eth";
 import { ZERO_ADDRESS } from "~~/utils/scaffold-eth/common";
 
-const STAKE_AMOUNT = 1000; // Fixed 1,000 cREP stake
+const STAKE_AMOUNT = 1000; // Fixed 1,000 HREP stake
 
 function truncateAddress(address: string) {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -86,10 +86,10 @@ export function FrontendRegistration() {
 
   // Contract info
   const { data: frontendRegistryInfo } = useDeployedContractInfo({ contractName: "FrontendRegistry" });
-  const { data: crepInfo } = useDeployedContractInfo({ contractName: "CuryoReputation" });
+  const { data: hrepInfo } = useDeployedContractInfo({ contractName: "HumanReputation" });
   const { data: rewardDistributorInfo } = useDeployedContractInfo({ contractName: "RoundRewardDistributor" });
   const frontendRegistryAddress = frontendRegistryInfo?.address as `0x${string}` | undefined;
-  const crepAddress = crepInfo?.address as `0x${string}` | undefined;
+  const hrepAddress = hrepInfo?.address as `0x${string}` | undefined;
   const rewardDistributorAddress = rewardDistributorInfo?.address as `0x${string}` | undefined;
   const { writeContractAsync: writeRewardDistributor } = useScaffoldWriteContract({
     contractName: "RoundRewardDistributor",
@@ -134,15 +134,15 @@ export function FrontendRegistration() {
     query: { enabled: !!address && requiresVoterId },
   });
 
-  // Read cREP balance
-  const { data: crepBalance, refetch: refetchCuryo } = useScaffoldReadContract({
-    contractName: "CuryoReputation",
+  // Read HREP balance
+  const { data: hrepBalance, refetch: refetchCuryo } = useScaffoldReadContract({
+    contractName: "HumanReputation",
     functionName: "balanceOf",
     args: [address],
   });
 
   // Write contracts
-  const { writeContractAsync: writeCRep } = useScaffoldWriteContract({ contractName: "CuryoReputation" });
+  const { writeContractAsync: writeHrep } = useScaffoldWriteContract({ contractName: "HumanReputation" });
   const { writeContractAsync: writeFrontendRegistry } = useScaffoldWriteContract({ contractName: "FrontendRegistry" });
   // Separate hook with simulation disabled for register (follows an approve tx,
   // so the simulation may run against stale state before the approve is reflected).
@@ -164,12 +164,12 @@ export function FrontendRegistration() {
     !requiresVoterId ||
     (hasVoterId === true && !!address && resolvedVoterIdHolder?.toLowerCase() === address.toLowerCase());
 
-  // Parse fees (cREP only)
-  const curyoFees = accumulatedFees ? Number(accumulatedFees) / 1e6 : 0;
-  const hasFees = curyoFees > 0;
+  // Parse fees (HREP only)
+  const hrepFees = accumulatedFees ? Number(accumulatedFees) / 1e6 : 0;
+  const hasFees = hrepFees > 0;
 
-  // cREP balance
-  const crepFormatted = crepBalance ? Number(crepBalance) / 1e6 : 0;
+  // HREP balance
+  const hrepFormatted = hrepBalance ? Number(hrepBalance) / 1e6 : 0;
   const {
     items: claimableRoundFees,
     totalClaimable: totalClaimableRoundFees,
@@ -230,8 +230,8 @@ export function FrontendRegistration() {
       return;
     }
 
-    if (crepFormatted < STAKE_AMOUNT) {
-      notification.error("Insufficient cREP balance");
+    if (hrepFormatted < STAKE_AMOUNT) {
+      notification.error("Insufficient HREP balance");
       return;
     }
 
@@ -239,12 +239,12 @@ export function FrontendRegistration() {
     try {
       const amountWei = BigInt(STAKE_AMOUNT * 1e6);
 
-      if (canUseSponsoredSubmitCalls && crepInfo && crepAddress) {
+      if (canUseSponsoredSubmitCalls && hrepInfo && hrepAddress) {
         await executeSponsoredCalls(
           [
             {
-              abi: crepInfo.abi,
-              address: crepAddress,
+              abi: hrepInfo.abi,
+              address: hrepAddress,
               args: [frontendRegistryAddress, amountWei],
               functionName: "approve",
             },
@@ -257,7 +257,7 @@ export function FrontendRegistration() {
           { atomicRequired: true },
         );
       } else {
-        await writeCRep({
+        await writeHrep({
           functionName: "approve",
           args: [frontendRegistryAddress, amountWei],
         });
@@ -369,7 +369,7 @@ export function FrontendRegistration() {
         });
       }
 
-      notification.success(`Claimed ${curyoFees.toFixed(2)} cREP!`);
+      notification.success(`Claimed ${hrepFees.toFixed(2)} HREP!`);
       refetchFees();
     } catch (e: any) {
       console.error("Claim failed:", e);
@@ -402,7 +402,7 @@ export function FrontendRegistration() {
         });
       }
 
-      notification.success(`Credited ${(Number(BigInt(claimableFee)) / 1e6).toFixed(2)} cREP from round ${roundId}.`);
+      notification.success(`Credited ${(Number(BigInt(claimableFee)) / 1e6).toFixed(2)} HREP from round ${roundId}.`);
       await Promise.all([refetchClaimableRoundFees(), refetchFees()]);
     } catch (e: any) {
       console.error("Frontend round fee claim failed:", e);
@@ -483,11 +483,11 @@ export function FrontendRegistration() {
     <div className="surface-card rounded-2xl p-6 space-y-5">
       <div className="flex items-center gap-2">
         <h2 className={surfaceSectionHeadingClassName}>Frontend Registration</h2>
-        <InfoTooltip text="Stake 1,000 cREP to earn frontend fees from votes through your interface." />
+        <InfoTooltip text="Stake 1,000 HREP to earn frontend fees from votes through your interface." />
       </div>
 
       <p className="text-base text-base-content/60">
-        Stake 1,000 cREP and earn frontend fees.{" "}
+        Stake 1,000 HREP and earn frontend fees.{" "}
         <Link href="/docs/frontend-codes" className="link link-primary">
           Learn about frontend integrations →
         </Link>
@@ -546,7 +546,7 @@ export function FrontendRegistration() {
                 </p>
               </div>
               <div className="text-right">
-                <span className="text-xl font-bold text-base-content">{STAKE_AMOUNT.toLocaleString()} cREP</span>
+                <span className="text-xl font-bold text-base-content">{STAKE_AMOUNT.toLocaleString()} HREP</span>
               </div>
             </div>
           </div>
@@ -558,7 +558,7 @@ export function FrontendRegistration() {
               isRegistering ||
               isAwaitingSponsoredSubmitCalls ||
               isMissingGasBalance ||
-              crepFormatted < STAKE_AMOUNT ||
+              hrepFormatted < STAKE_AMOUNT ||
               !canRegisterWithCurrentAddress
             }
           >
@@ -586,7 +586,7 @@ export function FrontendRegistration() {
             </div>
             <div className="text-right">
               <p className="text-base text-base-content/60">Staked</p>
-              <p className="text-lg font-bold">{stakedAmount.toLocaleString()} cREP</p>
+              <p className="text-lg font-bold">{stakedAmount.toLocaleString()} HREP</p>
             </div>
           </div>
 
@@ -600,7 +600,7 @@ export function FrontendRegistration() {
               </div>
               <div className="text-right">
                 <p className="text-base text-base-content/60">Claimable</p>
-                <p className="text-lg font-bold text-secondary">{totalClaimableRoundFeesFormatted.toFixed(2)} cREP</p>
+                <p className="text-lg font-bold text-secondary">{totalClaimableRoundFeesFormatted.toFixed(2)} HREP</p>
               </div>
             </div>
 
@@ -655,12 +655,12 @@ export function FrontendRegistration() {
                           </div>
                           <div className="text-right shrink-0">
                             <p className="text-sm text-base-content/60">Claimable</p>
-                            <p className="font-semibold">{(Number(BigInt(item.claimableFee)) / 1e6).toFixed(2)} cREP</p>
+                            <p className="font-semibold">{(Number(BigInt(item.claimableFee)) / 1e6).toFixed(2)} HREP</p>
                           </div>
                         </div>
                         <div className="mt-3 flex items-center justify-between gap-3">
                           <p className="text-xs text-base-content/50 truncate">
-                            Pool {(Number(BigInt(item.totalFrontendPool)) / 1e6).toFixed(2)} cREP
+                            Pool {(Number(BigInt(item.totalFrontendPool)) / 1e6).toFixed(2)} HREP
                           </p>
                           <button
                             className="btn btn-outline btn-primary btn-sm"
@@ -706,8 +706,8 @@ export function FrontendRegistration() {
             <p className="font-medium mb-3">Accumulated Fees</p>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-base text-base-content/60">cREP</p>
-                <p className="text-lg font-bold text-primary">{curyoFees.toFixed(2)}</p>
+                <p className="text-base text-base-content/60">HREP</p>
+                <p className="text-lg font-bold text-primary">{hrepFees.toFixed(2)}</p>
               </div>
               <button
                 className="btn btn-submit btn-sm"
@@ -747,7 +747,7 @@ export function FrontendRegistration() {
                   </button>
                   <p className="text-sm text-base-content/50 mt-1">
                     Exit requested. Complete it after the unbonding period to withdraw your{" "}
-                    {stakedAmount.toLocaleString()} cREP stake and any pending fees.
+                    {stakedAmount.toLocaleString()} HREP stake and any pending fees.
                     {exitAvailableAtLabel ? ` Available after ${exitAvailableAtLabel}.` : ""}
                   </p>
                 </>
@@ -762,7 +762,7 @@ export function FrontendRegistration() {
                   </button>
                   <p className="text-sm text-base-content/50 mt-1">
                     Starts a 14-day unbonding period. After that, you can complete deregistration to withdraw your{" "}
-                    {stakedAmount.toLocaleString()} cREP stake and any pending fees.
+                    {stakedAmount.toLocaleString()} HREP stake and any pending fees.
                   </p>
                 </>
               )}

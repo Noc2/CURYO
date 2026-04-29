@@ -4,11 +4,20 @@ import { db } from "ponder:api";
 import {
   category,
   content,
+  feedbackBonusAward,
+  feedbackBonusPool,
   frontend,
   globalStats,
+  questionBundleClaim,
+  questionBundleQuestion,
+  questionBundleRound,
+  questionBundleRoundSet,
+  questionBundleReward,
+  questionRewardPool,
+  questionRewardPoolClaim,
+  questionRewardPoolRound,
   rewardClaim,
   round,
-  submitterRewardClaim,
   tokenTransfer,
   vote,
   voterCategoryStats,
@@ -18,7 +27,12 @@ import {
   voterStreak,
 } from "ponder:schema";
 import type { ApiApp } from "../shared.js";
-import { AVATAR_CATEGORY_WINDOW_SECONDS, jsonBig, parseAddressList, parseBigIntList } from "../shared.js";
+import {
+  AVATAR_CATEGORY_WINDOW_SECONDS,
+  jsonBig,
+  parseAddressList,
+  parseBigIntList,
+} from "../shared.js";
 import { isValidAddress, safeBigInt, safeLimit, safeOffset } from "../utils.js";
 import { deriveEffectiveVoterStreak } from "../../streak-utils.js";
 
@@ -31,9 +45,174 @@ const STREAK_MILESTONES = [
 ];
 
 export function registerDataRoutes(app: ApiApp) {
+  app.get("/question-bundles/:id", async (c) => {
+    const bundleId = safeBigInt(c.req.param("id"));
+    if (bundleId === null) return c.json({ error: "Invalid bundle id" }, 400);
+
+    const [bundle] = await db
+      .select()
+      .from(questionBundleReward)
+      .where(eq(questionBundleReward.id, bundleId))
+      .limit(1);
+
+    if (!bundle) {
+      return c.json({ error: "Bundle not found" }, 404);
+    }
+
+    const questions = await db
+      .select({
+        id: questionBundleQuestion.id,
+        bundleId: questionBundleQuestion.bundleId,
+        contentId: questionBundleQuestion.contentId,
+        bundleIndex: questionBundleQuestion.bundleIndex,
+        updatedAt: questionBundleQuestion.updatedAt,
+        title: content.title,
+        description: content.description,
+        url: content.url,
+        submitter: content.submitter,
+        categoryId: content.categoryId,
+        status: content.status,
+        rating: content.rating,
+        ratingBps: content.ratingBps,
+        createdAt: content.createdAt,
+      })
+      .from(questionBundleQuestion)
+      .leftJoin(content, eq(questionBundleQuestion.contentId, content.id))
+      .where(eq(questionBundleQuestion.bundleId, bundleId))
+      .orderBy(asc(questionBundleQuestion.bundleIndex));
+
+    const rounds = await db
+      .select()
+      .from(questionBundleRound)
+      .where(eq(questionBundleRound.bundleId, bundleId))
+      .orderBy(
+        asc(questionBundleRound.roundSetIndex),
+        asc(questionBundleRound.bundleIndex),
+      );
+
+    const roundSets = await db
+      .select()
+      .from(questionBundleRoundSet)
+      .where(eq(questionBundleRoundSet.bundleId, bundleId))
+      .orderBy(asc(questionBundleRoundSet.roundSetIndex));
+
+    return jsonBig(c, { bundle, questions, rounds, roundSets });
+  });
+
+  app.get("/question-bundle-claim-candidates", async (c) => {
+    const voterRaw = c.req.query("voter");
+    const limit = safeLimit(c.req.query("limit"), 100, 200);
+    const offset = safeOffset(c.req.query("offset"));
+    if (Number.isNaN(offset)) return c.json({ error: "Invalid offset" }, 400);
+
+    if (!voterRaw) {
+      return c.json({ error: "voter parameter required" }, 400);
+    }
+    const voterAddrs = parseAddressList(voterRaw);
+    if (voterAddrs.length === 0) {
+      return c.json({ error: "Invalid voter address" }, 400);
+    }
+
+    const items = await db
+      .select({
+        bundleId: questionBundleReward.id,
+        roundSetIndex: questionBundleRoundSet.roundSetIndex,
+        asset: questionBundleReward.asset,
+        fundedAmount: questionBundleReward.fundedAmount,
+        claimedAmount: questionBundleReward.claimedAmount,
+        allocation: questionBundleRoundSet.allocation,
+        roundSetClaimedAmount: questionBundleRoundSet.claimedAmount,
+        requiredCompleters: questionBundleReward.requiredCompleters,
+        requiredSettledRounds: questionBundleReward.requiredSettledRounds,
+        questionCount: questionBundleReward.questionCount,
+        completedRoundSetCount: questionBundleReward.completedRoundSetCount,
+        totalRecordedQuestionRounds:
+          questionBundleReward.totalRecordedQuestionRounds,
+        claimedCount: questionBundleReward.claimedCount,
+        roundSetClaimedCount: questionBundleRoundSet.claimedCount,
+        bountyClosesAt: questionBundleReward.bountyClosesAt,
+        feedbackClosesAt: questionBundleReward.feedbackClosesAt,
+        expiresAt: questionBundleReward.expiresAt,
+        updatedAt: questionBundleRoundSet.updatedAt,
+      })
+      .from(questionBundleRoundSet)
+      .innerJoin(
+        questionBundleReward,
+        eq(questionBundleRoundSet.bundleId, questionBundleReward.id),
+      )
+      .innerJoin(
+        questionBundleRound,
+        and(
+          eq(questionBundleRound.bundleId, questionBundleRoundSet.bundleId),
+          eq(
+            questionBundleRound.roundSetIndex,
+            questionBundleRoundSet.roundSetIndex,
+          ),
+        ),
+      )
+      .innerJoin(
+        vote,
+        and(
+          eq(vote.contentId, questionBundleRound.contentId),
+          eq(vote.roundId, questionBundleRound.roundId),
+          inArray(vote.voter, voterAddrs),
+          eq(vote.revealed, true),
+        ),
+      )
+      .where(
+        and(
+          eq(questionBundleReward.failed, false),
+          eq(questionBundleReward.refunded, false),
+          sql`${questionBundleRoundSet.claimedCount} < ${questionBundleReward.requiredCompleters}`,
+        ),
+      )
+      .groupBy(
+        questionBundleReward.id,
+        questionBundleRoundSet.roundSetIndex,
+        questionBundleReward.asset,
+        questionBundleReward.fundedAmount,
+        questionBundleReward.claimedAmount,
+        questionBundleRoundSet.allocation,
+        questionBundleRoundSet.claimedAmount,
+        questionBundleReward.requiredCompleters,
+        questionBundleReward.requiredSettledRounds,
+        questionBundleReward.questionCount,
+        questionBundleReward.completedRoundSetCount,
+        questionBundleReward.totalRecordedQuestionRounds,
+        questionBundleReward.claimedCount,
+        questionBundleRoundSet.claimedCount,
+        questionBundleReward.bountyClosesAt,
+        questionBundleReward.feedbackClosesAt,
+        questionBundleReward.expiresAt,
+        questionBundleRoundSet.updatedAt,
+      )
+      .having(
+        sql`count(distinct ${questionBundleRound.bundleIndex}) >= ${questionBundleReward.questionCount}`,
+      )
+      .orderBy(
+        desc(questionBundleRoundSet.updatedAt),
+        desc(questionBundleReward.id),
+        desc(questionBundleRoundSet.roundSetIndex),
+      )
+      .limit(limit)
+      .offset(offset);
+
+    return jsonBig(c, {
+      items: items.map((item) => ({
+        ...item,
+        currency: item.asset === 0 ? "HREP" : "USDC",
+        displayCurrency: item.asset === 0 ? "HREP" : "USD",
+        decimals: 6,
+      })),
+      limit,
+      offset,
+    });
+  });
+
   app.get("/voter-accuracy/:address", async (c) => {
     const address = c.req.param("address").toLowerCase() as `0x${string}`;
-    if (!isValidAddress(address)) return c.json({ error: "Invalid address" }, 400);
+    if (!isValidAddress(address))
+      return c.json({ error: "Invalid address" }, 400);
 
     const [stats] = await db
       .select()
@@ -60,13 +239,17 @@ export function registerDataRoutes(app: ApiApp) {
     const statsWithRate = stats
       ? {
           ...stats,
-          winRate: stats.totalSettledVotes > 0 ? stats.totalWins / stats.totalSettledVotes : 0,
+          winRate:
+            stats.totalSettledVotes > 0
+              ? stats.totalWins / stats.totalSettledVotes
+              : 0,
         }
       : null;
 
-    const categories = categoryRows.map(row => ({
+    const categories = categoryRows.map((row) => ({
       ...row,
-      winRate: row.totalSettledVotes > 0 ? row.totalWins / row.totalSettledVotes : 0,
+      winRate:
+        row.totalSettledVotes > 0 ? row.totalWins / row.totalSettledVotes : 0,
     }));
 
     return jsonBig(c, { stats: statsWithRate, categories });
@@ -74,7 +257,8 @@ export function registerDataRoutes(app: ApiApp) {
 
   app.get("/avatar/:address", async (c) => {
     const address = c.req.param("address").toLowerCase() as `0x${string}`;
-    if (!isValidAddress(address)) return c.json({ error: "Invalid address" }, 400);
+    if (!isValidAddress(address))
+      return c.json({ error: "Invalid address" }, 400);
 
     const [stats, streak, streakActivity, voterIdRecord] = await Promise.all([
       db
@@ -82,13 +266,13 @@ export function registerDataRoutes(app: ApiApp) {
         .from(voterStats)
         .where(eq(voterStats.voter, address))
         .limit(1)
-        .then(rows => rows[0] ?? null),
+        .then((rows) => rows[0] ?? null),
       db
         .select()
         .from(voterStreak)
         .where(eq(voterStreak.voter, address))
         .limit(1)
-        .then(rows => rows[0] ?? null),
+        .then((rows) => rows[0] ?? null),
       db
         .select({
           date: dailyVoteActivity.date,
@@ -104,10 +288,15 @@ export function registerDataRoutes(app: ApiApp) {
         .from(voterId)
         .where(and(eq(voterId.holder, address), eq(voterId.revoked, false)))
         .limit(1)
-        .then(rows => rows[0] ?? null),
+        .then((rows) => rows[0] ?? null),
     ]);
 
-    const categoryCutoff = BigInt(Math.max(0, Math.floor(Date.now() / 1000) - AVATAR_CATEGORY_WINDOW_SECONDS));
+    const categoryCutoff = BigInt(
+      Math.max(
+        0,
+        Math.floor(Date.now() / 1000) - AVATAR_CATEGORY_WINDOW_SECONDS,
+      ),
+    );
     const categoryRows = await db
       .select({
         categoryId: content.categoryId,
@@ -122,7 +311,10 @@ export function registerDataRoutes(app: ApiApp) {
       .from(vote)
       .innerJoin(
         round,
-        and(eq(vote.contentId, round.contentId), eq(vote.roundId, round.roundId)),
+        and(
+          eq(vote.contentId, round.contentId),
+          eq(vote.roundId, round.roundId),
+        ),
       )
       .innerJoin(content, eq(vote.contentId, content.id))
       .leftJoin(category, eq(content.categoryId, category.id))
@@ -139,14 +331,23 @@ export function registerDataRoutes(app: ApiApp) {
     const statsWithRate = stats
       ? {
           ...stats,
-          winRate: stats.totalSettledVotes > 0 ? stats.totalWins / stats.totalSettledVotes : 0,
+          winRate:
+            stats.totalSettledVotes > 0
+              ? stats.totalWins / stats.totalSettledVotes
+              : 0,
         }
       : null;
 
     const categories90d = categoryRows
       .map((row) => {
-        const stakeWon = typeof row.stakeWon90d === "bigint" ? row.stakeWon90d : BigInt(row.stakeWon90d ?? 0);
-        const stakeLost = typeof row.stakeLost90d === "bigint" ? row.stakeLost90d : BigInt(row.stakeLost90d ?? 0);
+        const stakeWon =
+          typeof row.stakeWon90d === "bigint"
+            ? row.stakeWon90d
+            : BigInt(row.stakeWon90d ?? 0);
+        const stakeLost =
+          typeof row.stakeLost90d === "bigint"
+            ? row.stakeLost90d
+            : BigInt(row.stakeLost90d ?? 0);
         const settledVotes = Number(row.settledVotes90d);
         const wins = Number(row.wins90d);
         const losses = Number(row.losses90d);
@@ -164,14 +365,15 @@ export function registerDataRoutes(app: ApiApp) {
         };
       })
       .sort((a, b) => {
-        if (b.settledVotes90d !== a.settledVotes90d) return b.settledVotes90d - a.settledVotes90d;
+        if (b.settledVotes90d !== a.settledVotes90d)
+          return b.settledVotes90d - a.settledVotes90d;
         if (a.categoryId < b.categoryId) return -1;
         if (a.categoryId > b.categoryId) return 1;
         return 0;
       });
 
     const effectiveStreak = deriveEffectiveVoterStreak(
-      streakActivity.map(row => row.date),
+      streakActivity.map((row) => row.date),
       streak,
     );
 
@@ -209,7 +411,10 @@ export function registerDataRoutes(app: ApiApp) {
     for (const item of items) {
       statsMap[item.voter.toLowerCase()] = {
         ...item,
-        winRate: item.totalSettledVotes > 0 ? item.totalWins / item.totalSettledVotes : 0,
+        winRate:
+          item.totalSettledVotes > 0
+            ? item.totalWins / item.totalSettledVotes
+            : 0,
       };
     }
 
@@ -227,7 +432,8 @@ export function registerDataRoutes(app: ApiApp) {
 
     const conditions = [];
     if (voterRaw) {
-      if (!isValidAddress(voterRaw)) return c.json({ error: "Invalid voter address" }, 400);
+      if (!isValidAddress(voterRaw))
+        return c.json({ error: "Invalid voter address" }, 400);
       conditions.push(eq(vote.voter, voterRaw.toLowerCase() as `0x${string}`));
     }
     if (contentId) {
@@ -264,13 +470,20 @@ export function registerDataRoutes(app: ApiApp) {
         committedAt: vote.committedAt,
         revealedAt: vote.revealedAt,
         roundStartTime: round.startTime,
+        roundEpochDuration: round.epochDuration,
+        roundMaxDuration: round.maxDuration,
+        roundMinVoters: round.minVoters,
+        roundMaxVoters: round.maxVoters,
         roundState: round.state,
         roundUpWins: round.upWins,
       })
       .from(vote)
       .leftJoin(
         round,
-        and(eq(vote.contentId, round.contentId), eq(vote.roundId, round.roundId)),
+        and(
+          eq(vote.contentId, round.contentId),
+          eq(vote.roundId, round.roundId),
+        ),
       )
       .where(where)
       .orderBy(desc(vote.committedAt))
@@ -285,7 +498,10 @@ export function registerDataRoutes(app: ApiApp) {
       .from(vote)
       .leftJoin(
         round,
-        and(eq(vote.contentId, round.contentId), eq(vote.roundId, round.roundId)),
+        and(
+          eq(vote.contentId, round.contentId),
+          eq(vote.roundId, round.roundId),
+        ),
       )
       .where(where);
 
@@ -309,7 +525,9 @@ export function registerDataRoutes(app: ApiApp) {
       return c.json({ error: "contentIds parameter required" }, 400);
     }
 
-    const activeCooldownCutoff = BigInt(Math.max(0, Math.floor(Date.now() / 1000) - VOTE_COOLDOWN_SECONDS));
+    const activeCooldownCutoff = BigInt(
+      Math.max(0, Math.floor(Date.now() / 1000) - VOTE_COOLDOWN_SECONDS),
+    );
     const items = await db
       .select({
         contentId: vote.contentId,
@@ -326,10 +544,87 @@ export function registerDataRoutes(app: ApiApp) {
       .groupBy(vote.contentId);
 
     return jsonBig(c, {
-      items: items.map(item => ({
+      items: items.map((item) => ({
         ...item,
         cooldownEndsAt: item.latestCommittedAt + BigInt(VOTE_COOLDOWN_SECONDS),
       })),
+    });
+  });
+
+  app.get("/question-reward-claim-candidates", async (c) => {
+    const voterRaw = c.req.query("voter");
+    const limit = safeLimit(c.req.query("limit"), 100, 200);
+    const offset = safeOffset(c.req.query("offset"));
+    if (Number.isNaN(offset)) return c.json({ error: "Invalid offset" }, 400);
+
+    if (!voterRaw) {
+      return c.json({ error: "voter parameter required" }, 400);
+    }
+    const voterAddrs = parseAddressList(voterRaw);
+    if (voterAddrs.length === 0) {
+      return c.json({ error: "Invalid voter address" }, 400);
+    }
+    const items = await db
+      .select({
+        rewardPoolId: questionRewardPool.id,
+        contentId: questionRewardPool.contentId,
+        asset: questionRewardPool.asset,
+        roundId: vote.roundId,
+        title: content.title,
+        allocation: questionRewardPoolRound.allocation,
+        eligibleVoters: questionRewardPoolRound.eligibleVoters,
+        qualified: sql<boolean>`${questionRewardPoolRound.rewardPoolId} is not null`,
+      })
+      .from(vote)
+      .innerJoin(
+        round,
+        and(
+          eq(vote.contentId, round.contentId),
+          eq(vote.roundId, round.roundId),
+        ),
+      )
+      .innerJoin(
+        questionRewardPool,
+        eq(vote.contentId, questionRewardPool.contentId),
+      )
+      .innerJoin(content, eq(vote.contentId, content.id))
+      .leftJoin(
+        questionRewardPoolRound,
+        and(
+          eq(questionRewardPoolRound.rewardPoolId, questionRewardPool.id),
+          eq(questionRewardPoolRound.roundId, vote.roundId),
+        ),
+      )
+      .where(
+        and(
+          inArray(vote.voter, voterAddrs),
+          eq(vote.revealed, true),
+          eq(round.state, ROUND_STATE.Settled),
+          sql`${vote.roundId} >= ${questionRewardPool.startRoundId}`,
+          or(
+            sql`${questionRewardPoolRound.rewardPoolId} is not null`,
+            and(
+              eq(questionRewardPool.refunded, false),
+              sql`${questionRewardPool.qualifiedRounds} < ${questionRewardPool.requiredSettledRounds}`,
+              sql`${round.revealedCount} >= ${questionRewardPool.requiredVoters}`,
+              sql`(${questionRewardPool.bountyClosesAt} = 0 or ${round.settledAt} <= ${questionRewardPool.bountyClosesAt})`,
+            ),
+          ),
+        ),
+      )
+      .orderBy(desc(round.settledAt), desc(questionRewardPool.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    return jsonBig(c, {
+      items: items.map((item) => ({
+        ...item,
+        currency: item.asset === 0 ? "HREP" : "USDC",
+        displayCurrency: item.asset === 0 ? "HREP" : "USD",
+        decimals: 6,
+      })),
+      limit,
+      offset,
     });
   });
 
@@ -354,27 +649,6 @@ export function registerDataRoutes(app: ApiApp) {
     return jsonBig(c, { items });
   });
 
-  app.get("/submitter-rewards", async (c) => {
-    const submitter = c.req.query("submitter");
-    const limit = safeLimit(c.req.query("limit"), 50, 200);
-
-    if (!submitter) {
-      return c.json({ error: "submitter parameter required" }, 400);
-    }
-    if (!isValidAddress(submitter)) {
-      return c.json({ error: "Invalid submitter address" }, 400);
-    }
-
-    const items = await db
-      .select()
-      .from(submitterRewardClaim)
-      .where(eq(submitterRewardClaim.submitter, submitter.toLowerCase() as `0x${string}`))
-      .orderBy(desc(submitterRewardClaim.claimedAt))
-      .limit(limit);
-
-    return jsonBig(c, { items });
-  });
-
   app.get("/balance-history", async (c) => {
     const address = c.req.query("address");
     if (!address) {
@@ -390,7 +664,12 @@ export function registerDataRoutes(app: ApiApp) {
     const transfers = await db
       .select()
       .from(tokenTransfer)
-      .where(or(eq(tokenTransfer.from, normalizedAddress), eq(tokenTransfer.to, normalizedAddress)))
+      .where(
+        or(
+          eq(tokenTransfer.from, normalizedAddress),
+          eq(tokenTransfer.to, normalizedAddress),
+        ),
+      )
       .orderBy(asc(tokenTransfer.blockNumber))
       .limit(limit);
 
@@ -398,23 +677,80 @@ export function registerDataRoutes(app: ApiApp) {
   });
 
   app.get("/stats", async (c) => {
-    const [stats] = await db
-      .select()
-      .from(globalStats)
-      .where(eq(globalStats.id, "global"))
-      .limit(1);
+    const [
+      [stats],
+      [rewardPoolStats],
+      [bundleRewardStats],
+      [feedbackBonusAwardStats],
+      [feedbackBonusPoolStats],
+    ] = await Promise.all([
+      db
+        .select()
+        .from(globalStats)
+        .where(eq(globalStats.id, "global"))
+        .limit(1),
+      db
+        .select({
+          totalQuestionRewardsPaid: sql<bigint>`coalesce(sum(${questionRewardPoolClaim.grossAmount}), 0)`,
+          totalQuestionRewardsPaidToVoters: sql<bigint>`coalesce(sum(${questionRewardPoolClaim.amount}), 0)`,
+          totalQuestionRewardsPaidToFrontends: sql<bigint>`coalesce(sum(${questionRewardPoolClaim.frontendFee}), 0)`,
+        })
+        .from(questionRewardPoolClaim),
+      db
+        .select({
+          totalQuestionBundleRewardsPaid: sql<bigint>`coalesce(sum(${questionBundleClaim.grossAmount}), 0)`,
+          totalQuestionBundleRewardsPaidToVoters: sql<bigint>`coalesce(sum(${questionBundleClaim.amount}), 0)`,
+          totalQuestionBundleRewardsPaidToFrontends: sql<bigint>`coalesce(sum(${questionBundleClaim.frontendFee}), 0)`,
+        })
+        .from(questionBundleClaim),
+      db
+        .select({
+          totalFeedbackBonusesPaid: sql<bigint>`coalesce(sum(${feedbackBonusAward.grossAmount}), 0)`,
+          totalFeedbackBonusesPaidToVoters: sql<bigint>`coalesce(sum(${feedbackBonusAward.recipientAmount}), 0)`,
+          totalFeedbackBonusesPaidToFrontends: sql<bigint>`coalesce(sum(${feedbackBonusAward.frontendFee}), 0)`,
+        })
+        .from(feedbackBonusAward),
+      db
+        .select({
+          totalFeedbackBonusesFunded: sql<bigint>`coalesce(sum(${feedbackBonusPool.fundedAmount}), 0)`,
+          totalFeedbackBonusesForfeited: sql<bigint>`coalesce(sum(${feedbackBonusPool.forfeitedAmount}), 0)`,
+        })
+        .from(feedbackBonusPool),
+    ]);
 
-    return jsonBig(
-      c,
-      stats ?? {
-        totalContent: 0,
-        totalVotes: 0,
-        totalRoundsSettled: 0,
-        totalRewardsClaimed: "0",
-        totalProfiles: 0,
-        totalVoterIds: 0,
-      },
-    );
+    const fallbackStats = {
+      totalContent: 0,
+      totalVotes: 0,
+      totalRoundsSettled: 0,
+      totalRewardsClaimed: "0",
+      totalProfiles: 0,
+      totalVoterIds: 0,
+    };
+
+    return jsonBig(c, {
+      ...(stats ?? fallbackStats),
+      totalQuestionRewardsPaid: rewardPoolStats?.totalQuestionRewardsPaid ?? 0n,
+      totalQuestionRewardsPaidToVoters:
+        rewardPoolStats?.totalQuestionRewardsPaidToVoters ?? 0n,
+      totalQuestionRewardsPaidToFrontends:
+        rewardPoolStats?.totalQuestionRewardsPaidToFrontends ?? 0n,
+      totalQuestionBundleRewardsPaid:
+        bundleRewardStats?.totalQuestionBundleRewardsPaid ?? 0n,
+      totalQuestionBundleRewardsPaidToVoters:
+        bundleRewardStats?.totalQuestionBundleRewardsPaidToVoters ?? 0n,
+      totalQuestionBundleRewardsPaidToFrontends:
+        bundleRewardStats?.totalQuestionBundleRewardsPaidToFrontends ?? 0n,
+      totalFeedbackBonusesFunded:
+        feedbackBonusPoolStats?.totalFeedbackBonusesFunded ?? 0n,
+      totalFeedbackBonusesPaid:
+        feedbackBonusAwardStats?.totalFeedbackBonusesPaid ?? 0n,
+      totalFeedbackBonusesPaidToVoters:
+        feedbackBonusAwardStats?.totalFeedbackBonusesPaidToVoters ?? 0n,
+      totalFeedbackBonusesPaidToFrontends:
+        feedbackBonusAwardStats?.totalFeedbackBonusesPaidToFrontends ?? 0n,
+      totalFeedbackBonusesForfeited:
+        feedbackBonusPoolStats?.totalFeedbackBonusesForfeited ?? 0n,
+    });
   });
 
   app.get("/frontends", async (c) => {
@@ -428,7 +764,11 @@ export function registerDataRoutes(app: ApiApp) {
     } else if (statusFilter === "exiting") {
       where = sql`${frontend.exitAvailableAt} is not null`;
     } else if (statusFilter === "inactive" || statusFilter === "pending") {
-      where = and(eq(frontend.eligible, false), eq(frontend.slashed, false), sql`${frontend.exitAvailableAt} is null`);
+      where = and(
+        eq(frontend.eligible, false),
+        eq(frontend.slashed, false),
+        sql`${frontend.exitAvailableAt} is null`,
+      );
     }
     const offset = safeOffset(c.req.query("offset"));
     if (Number.isNaN(offset)) return c.json({ error: "Invalid offset" }, 400);
@@ -445,7 +785,8 @@ export function registerDataRoutes(app: ApiApp) {
 
   app.get("/frontend/:address", async (c) => {
     const address = c.req.param("address").toLowerCase() as `0x${string}`;
-    if (!isValidAddress(address)) return c.json({ error: "Invalid address" }, 400);
+    if (!isValidAddress(address))
+      return c.json({ error: "Invalid address" }, 400);
 
     const [item] = await db
       .select()
@@ -466,7 +807,8 @@ export function registerDataRoutes(app: ApiApp) {
 
     let where;
     if (holder) {
-      if (!isValidAddress(holder)) return c.json({ error: "Invalid holder address" }, 400);
+      if (!isValidAddress(holder))
+        return c.json({ error: "Invalid holder address" }, 400);
       where = eq(voterId.holder, holder.toLowerCase() as `0x${string}`);
     }
 
@@ -492,7 +834,7 @@ export function registerDataRoutes(app: ApiApp) {
         .from(voterStreak)
         .where(eq(voterStreak.voter, voterAddr))
         .limit(1)
-        .then(rows => rows[0] ?? null),
+        .then((rows) => rows[0] ?? null),
       db
         .select({
           date: dailyVoteActivity.date,
@@ -503,10 +845,12 @@ export function registerDataRoutes(app: ApiApp) {
     ]);
 
     const effectiveStreak = deriveEffectiveVoterStreak(
-      streakActivity.map(row => row.date),
+      streakActivity.map((row) => row.date),
       streak,
     );
-    const nextMilestone = STREAK_MILESTONES.find(milestone => milestone.days > effectiveStreak.currentDailyStreak);
+    const nextMilestone = STREAK_MILESTONES.find(
+      (milestone) => milestone.days > effectiveStreak.currentDailyStreak,
+    );
 
     return jsonBig(c, {
       currentDailyStreak: effectiveStreak.currentDailyStreak,

@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import styles from "./LandingPageActions.module.css";
 import { useAccount } from "wagmi";
 import { ChevronRightIcon } from "@heroicons/react/20/solid";
+import { ASK_AGENT_ROUTE, GOVERNANCE_ROUTE, RATE_ROUTE } from "~~/constants/routes";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import { shouldAutoRedirectFromLanding } from "~~/lib/home/landingRedirect";
 
@@ -57,22 +58,22 @@ export function LandingPageActions() {
       return;
     }
 
-    router.replace(hasVoterId ? "/vote" : "/governance");
+    router.replace(hasVoterId ? RATE_ROUTE : GOVERNANCE_ROUTE);
     redirectedAddressRef.current = addressKey;
   }, [address, connector?.id, hasVoterId, isConnected, router, voterIdResolved]);
 
   return (
     <div className="mt-6 flex flex-wrap justify-center gap-3 lg:justify-start">
-      <Link href="/vote" className={`btn btn-primary ${styles.cta} ${styles.primary}`}>
-        <span>Discover</span>
+      <Link href={RATE_ROUTE} className={`btn btn-primary ${styles.cta} ${styles.primary}`}>
+        <span>Earn USDC</span>
         <span className={styles.arrow} aria-hidden="true">
-          <ChevronRightIcon className="h-5 w-5 text-primary-content" />
+          <ChevronRightIcon className="h-5 w-5 text-current" />
         </span>
       </Link>
-      <Link href="/docs" className={`btn whitespace-nowrap ${styles.cta} ${styles.secondary}`}>
-        <span>Learn More</span>
+      <Link href={ASK_AGENT_ROUTE} className={`btn whitespace-nowrap ${styles.cta} ${styles.secondary}`}>
+        <span>For Agents</span>
         <span className={styles.arrow} aria-hidden="true">
-          <ChevronRightIcon className="h-5 w-5 text-primary-content" />
+          <ChevronRightIcon className="h-5 w-5 text-current" />
         </span>
       </Link>
     </div>

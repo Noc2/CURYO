@@ -8,6 +8,8 @@ contract MockVoterIdNFT is IVoterIdNFT {
     mapping(address => bool) public holders;
     mapping(address => uint256) public tokenIds;
     mapping(uint256 => address) public tokenHolders;
+    mapping(uint256 => uint256) public tokenNullifiers;
+    mapping(uint256 => uint256) public nullifierTokenIds;
     mapping(uint256 => bool) public usedNullifiers;
     uint256 private nextTokenId = 1;
     mapping(bytes32 => uint256) public stakes;
@@ -19,6 +21,10 @@ contract MockVoterIdNFT is IVoterIdNFT {
         if (tokenIds[holder] == 0) {
             tokenIds[holder] = nextTokenId;
             tokenHolders[nextTokenId] = holder;
+            uint256 nullifier = uint256(uint160(holder));
+            tokenNullifiers[nextTokenId] = nullifier;
+            nullifierTokenIds[nullifier] = nextTokenId;
+            usedNullifiers[nullifier] = true;
             nextTokenId++;
         }
     }
@@ -33,6 +39,8 @@ contract MockVoterIdNFT is IVoterIdNFT {
         uint256 id = nextTokenId++;
         tokenIds[to] = id;
         tokenHolders[id] = to;
+        tokenNullifiers[id] = nullifier;
+        nullifierTokenIds[nullifier] = id;
         return id;
     }
 
@@ -68,14 +76,30 @@ contract MockVoterIdNFT is IVoterIdNFT {
         return usedNullifiers[nullifier];
     }
 
+    function getNullifier(uint256 tokenId) external view returns (uint256) {
+        return tokenNullifiers[tokenId];
+    }
+
+    function getTokenIdForNullifier(uint256 nullifier) external view returns (uint256 tokenId) {
+        tokenId = nullifierTokenIds[nullifier];
+        return tokenHolders[tokenId] == address(0) ? 0 : tokenId;
+    }
+
     function revokeVoterId(address holder) external {
+        uint256 tokenId = tokenIds[holder];
         holders[holder] = false;
+        delete tokenIds[holder];
+        if (tokenId != 0) {
+            delete tokenHolders[tokenId];
+        }
     }
 
     function setDelegate(address delegate) external {
         holderToDelegate[msg.sender] = delegate;
         delegateToHolder[delegate] = msg.sender;
     }
+
+    function acceptDelegate() external { }
 
     function removeDelegate() external {
         address delegate = holderToDelegate[msg.sender];
@@ -96,6 +120,14 @@ contract MockVoterIdNFT is IVoterIdNFT {
 
     function delegateOf(address delegate) external view returns (address) {
         return delegateToHolder[delegate];
+    }
+
+    function pendingDelegateTo(address) external pure returns (address) {
+        return address(0);
+    }
+
+    function pendingDelegateOf(address) external pure returns (address) {
+        return address(0);
     }
 
     function resetNullifier(uint256 nullifier) external {

@@ -30,7 +30,6 @@ export type ContentItem = {
   rating: string;
   totalVotes: string;
   submitter: string;
-  submitterStakeReturned: boolean;
   createdAt: number;
   updatedAt: number;
 };
@@ -117,9 +116,14 @@ export async function getVotes(
 /**
  * Fetch global stats.
  */
-export async function getStats(
-  baseURL = PONDER_URL,
-): Promise<{ totalContent: number; totalVotes: number; totalRoundsSettled: number }> {
+export async function getStats(baseURL = PONDER_URL): Promise<{
+  totalContent: number;
+  totalVotes: number;
+  totalRoundsSettled: number;
+  totalQuestionRewardsPaid: string;
+  totalQuestionRewardsPaidToVoters: string;
+  totalQuestionRewardsPaidToFrontends: string;
+}> {
   const res = await fetchWithRetry(`${baseURL}/stats`);
   if (!res.ok) throw new Error(`GET /stats returned ${res.status}`);
   return res.json();
@@ -141,23 +145,14 @@ export async function ponderGet(path: string, baseURL = PONDER_URL): Promise<any
 export type CategoryItem = {
   id: string;
   name: string;
-  domain: string;
-  status: number; // 0=Pending, 1=Approved, 2=Rejected
-  submitter: string;
-  proposalId: string | null;
+  slug: string;
   totalVotes: number;
   totalContent: number;
   createdAt: string;
 };
 
-/**
- * Fetch categories, optionally filtered by status.
- * Status: 0=Pending, 1=Approved (default), 2=Rejected, "all" for all.
- */
-export async function getCategories(status?: string, baseURL = PONDER_URL): Promise<{ items: CategoryItem[] }> {
-  const params = new URLSearchParams();
-  if (status !== undefined) params.set("status", status);
-  const res = await fetchWithRetry(`${baseURL}/categories?${params}`);
+export async function getCategories(baseURL = PONDER_URL): Promise<{ items: CategoryItem[] }> {
+  const res = await fetchWithRetry(`${baseURL}/categories`);
   if (!res.ok) throw new Error(`GET /categories returned ${res.status}`);
   return res.json();
 }
@@ -183,31 +178,6 @@ export type FrontendItem = {
 export async function getFrontend(address: string, baseURL = PONDER_URL): Promise<{ frontend: FrontendItem }> {
   const res = await fetchWithRetry(`${baseURL}/frontend/${address}`);
   if (!res.ok) throw new Error(`GET /frontend/${address} returned ${res.status}`);
-  return res.json();
-}
-
-// ============================================================
-// SUBMITTER REWARDS
-// ============================================================
-
-export type SubmitterRewardItem = {
-  id: string;
-  contentId: string;
-  roundId: string;
-  submitter: string;
-  crepAmount: string;
-  claimedAt: string;
-};
-
-/**
- * Fetch submitter reward claims by submitter address.
- */
-export async function getSubmitterRewards(
-  submitter: string,
-  baseURL = PONDER_URL,
-): Promise<{ items: SubmitterRewardItem[] }> {
-  const res = await fetchWithRetry(`${baseURL}/submitter-rewards?submitter=${submitter}`);
-  if (!res.ok) throw new Error(`GET /submitter-rewards returned ${res.status}`);
   return res.json();
 }
 

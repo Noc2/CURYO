@@ -10,10 +10,10 @@ test.describe("Documentation pages", () => {
     "/docs/how-it-works",
     "/docs/tokenomics",
     "/docs/governance",
-    "/docs/ai",
     "/docs/sdk",
     "/docs/smart-contracts",
     "/docs/frontend-codes",
+    "/docs/ai",
     "/docs/whitepaper",
   ];
   const legalPages = ["/legal", "/legal/terms", "/legal/privacy", "/legal/imprint"];
@@ -25,30 +25,6 @@ test.describe("Documentation pages", () => {
       await expect(h1.first(), `${path} should expose a visible h1 heading`).toBeVisible({ timeout: 20_000 });
     });
   }
-
-  test("blind voting docs redirect to how it works", async ({ page }) => {
-    await page.goto("/docs/blind-voting");
-    await page.waitForURL(/\/docs\/how-it-works#blind-voting$/);
-    await expect(page.locator("h1").first()).toBeVisible({ timeout: 10_000 });
-  });
-
-  test("transaction costs docs redirect to how it works", async ({ page }) => {
-    await page.goto("/docs/funding-wallet");
-    await page.waitForURL(/\/docs\/how-it-works#transaction-costs$/);
-    await expect(page.locator("h1").first()).toBeVisible({ timeout: 10_000 });
-  });
-
-  test("legacy AI agents docs redirect to the canonical AI page", async ({ page }) => {
-    await page.goto("/docs/ai-agents");
-    await page.waitForURL(/\/docs\/ai$/);
-    await expect(page.getByRole("heading", { name: /^AI & MCP$/i }).first()).toBeVisible({ timeout: 10_000 });
-  });
-
-  test("legacy Curyo and AI docs redirect to the canonical AI page", async ({ page }) => {
-    await page.goto("/docs/curyo-and-ai");
-    await page.waitForURL(/\/docs\/ai$/);
-    await expect(page.getByRole("heading", { name: /^AI & MCP$/i }).first()).toBeVisible({ timeout: 10_000 });
-  });
 
   test("docs sidebar navigation works", async ({ page }) => {
     await page.goto("/docs");
@@ -83,19 +59,17 @@ test.describe("Documentation pages", () => {
     await page.waitForURL(/\/docs$/);
     await expect(page.getByRole("heading", { name: /^Introduction$/i }).first()).toBeVisible({ timeout: 10_000 });
 
-    const conceptsLink = page.getByRole("link", { name: /^Concepts$/i });
-    await expect(conceptsLink).toBeVisible({ timeout: 10_000 });
-    await conceptsLink.click();
+    const protocolLink = page.getByRole("link", { name: /^Protocol$/i });
+    await expect(protocolLink).toBeVisible({ timeout: 10_000 });
+    await protocolLink.click();
     await page.waitForURL(/\/docs\/tokenomics$/);
     await expect(page.getByRole("heading", { name: /^Tokenomics$/i }).first()).toBeVisible({ timeout: 10_000 });
 
-    const technicalLink = page.getByRole("link", { name: /^Technical$/i });
-    await expect(technicalLink).toBeVisible({ timeout: 10_000 });
-    await technicalLink.click();
-    await page.waitForURL(/\/docs\/smart-contracts$/);
-    await expect(page.getByRole("heading", { name: /^Smart Contracts$/i }).first()).toBeVisible({
-      timeout: 10_000,
-    });
+    const buildLink = page.getByRole("link", { name: /^Build$/i });
+    await expect(buildLink).toBeVisible({ timeout: 10_000 });
+    await buildLink.click();
+    await page.waitForURL(/\/docs\/sdk$/);
+    await expect(page.getByRole("heading", { name: /^SDK$/i }).first()).toBeVisible({ timeout: 10_000 });
   });
 
   for (const path of legalPages) {

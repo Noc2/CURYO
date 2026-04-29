@@ -1,7 +1,9 @@
 "use client";
 
 import { parseTags } from "~~/constants/categories";
+import { type ContentMediaItem, buildFallbackMediaItems } from "~~/lib/contentMedia";
 import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
+import { DEFAULT_VOTING_CONFIG, type VotingConfig } from "~~/lib/contracts/roundVotingEngine";
 import { isContentItemBlocked } from "~~/utils/contentFilter";
 
 export const MIN_CONTENT_SEARCH_QUERY_LENGTH = 3;
@@ -25,17 +27,25 @@ export interface ContentOpenRoundSummary {
   settledRounds?: number;
   lowSince?: bigint;
   startTime: bigint | null;
+  epochDuration?: number;
+  maxDuration?: number;
+  minVoters?: number;
+  maxVoters?: number;
   estimatedSettlementTime: bigint | null;
 }
 
 export interface ContentItem {
   id: bigint;
   url: string;
+  media: ContentMediaItem[];
+  question?: string;
   title: string;
   description: string;
   tags: string[];
   submitter: string;
   contentHash: string;
+  questionMetadataHash?: string | null;
+  resultSpecHash?: string | null;
   isOwnContent: boolean;
   categoryId: bigint;
   rating: number;
@@ -45,13 +55,67 @@ export interface ContentItem {
   lastActivityAt: string | null;
   totalVotes: number;
   totalRounds: number;
+  bundleId?: bigint | null;
+  bundleIndex?: number | null;
+  bundle?: {
+    id: bigint;
+    questionCount: number;
+    requiredCompleters: number;
+    requiredSettledRounds: number;
+    completedRoundSetCount: number;
+    totalRecordedQuestionRounds: number;
+    claimedCount: number;
+    fundedAmount: bigint;
+    unallocatedAmount: bigint;
+    allocatedAmount: bigint;
+    claimedAmount: bigint;
+    refundedAmount: bigint;
+    bountyClosesAt?: bigint;
+    feedbackClosesAt?: bigint;
+    expiresAt?: bigint;
+    failed: boolean;
+    refunded: boolean;
+  } | null;
+  roundConfig?: VotingConfig | null;
   openRound: ContentOpenRoundSummary | null;
   isValidUrl: boolean | null;
   thumbnailUrl: string | null;
   contentMetadata?: ContentMetadataResult;
+  rewardPoolSummary?: {
+    totalFunded: bigint;
+    totalAvailable: bigint;
+    totalClaimed?: bigint;
+    totalVoterClaimed?: bigint;
+    totalFrontendClaimed?: bigint;
+    activeRewardPoolCount: number;
+    expiredRewardPoolCount?: number;
+    hasActiveBounty?: boolean;
+    nextBountyClosesAt?: bigint | null;
+    nextFeedbackClosesAt?: bigint | null;
+  } | null;
+  feedbackBonusSummary?: {
+    totalFunded: bigint;
+    totalRemaining: bigint;
+    totalAwarded: bigint;
+    totalVoterAwarded?: bigint;
+    totalFrontendAwarded?: bigint;
+    totalForfeited?: bigint;
+    activePoolCount: number;
+    expiredPoolCount?: number;
+    awardCount: number;
+    hasActiveFeedbackBonus?: boolean;
+    nextFeedbackClosesAt?: bigint | null;
+  } | null;
 }
 
-export type FeedSort = "newest" | "oldest" | "highest_rated" | "lowest_rated" | "most_votes" | "relevance";
+export type FeedSort =
+  | "newest"
+  | "oldest"
+  | "highest_rewards"
+  | "highest_rated"
+  | "lowest_rated"
+  | "most_votes"
+  | "relevance";
 
 export interface UseContentFeedOptions {
   categoryId?: bigint;
@@ -82,15 +146,31 @@ function buildNormalizedAddressSet(addresses: readonly string[] | undefined, fal
   return values;
 }
 
+function numberOrDefault(value: string | number | null | undefined, fallback: number): number {
+  const parsed = typeof value === "number" ? value : typeof value === "string" ? Number(value) : fallback;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
 export function mapContentItem(
   item: {
     id: string;
-    url: string;
+    url?: string | null;
+    media?: Array<{
+      index?: number;
+      mediaIndex?: number;
+      mediaType?: "image" | "video";
+      url?: string | null;
+      canonicalUrl?: string | null;
+      urlHost?: string | null;
+    }> | null;
+    question?: string | null;
     title: string;
     description: string;
     tags: string;
     submitter: string;
     contentHash: string;
+    questionMetadataHash?: string | null;
+    resultSpecHash?: string | null;
     categoryId: string;
     rating: number;
     ratingBps?: number;
@@ -99,6 +179,31 @@ export function mapContentItem(
     lastActivityAt?: string | null;
     totalVotes?: number;
     totalRounds?: number;
+    bundleId?: string | number | null;
+    bundleIndex?: number | null;
+    bundle?: {
+      id?: string | number | null;
+      questionCount?: number | null;
+      requiredCompleters?: number | null;
+      requiredSettledRounds?: number | null;
+      completedRoundSetCount?: number | null;
+      totalRecordedQuestionRounds?: number | null;
+      claimedCount?: number | null;
+      fundedAmount?: string | number | bigint | null;
+      unallocatedAmount?: string | number | bigint | null;
+      allocatedAmount?: string | number | bigint | null;
+      claimedAmount?: string | number | bigint | null;
+      refundedAmount?: string | number | bigint | null;
+      bountyClosesAt?: string | number | bigint | null;
+      feedbackClosesAt?: string | number | bigint | null;
+      expiresAt?: string | number | bigint | null;
+      failed?: boolean | null;
+      refunded?: boolean | null;
+    } | null;
+    roundEpochDuration?: string | number | null;
+    roundMaxDuration?: string | number | null;
+    roundMinVoters?: string | number | null;
+    roundMaxVoters?: string | number | null;
     openRound?: {
       roundId: string;
       voteCount: number;
@@ -116,13 +221,54 @@ export function mapContentItem(
       settledRounds?: number;
       lowSince?: string;
       startTime: string | null;
+      epochDuration?: number;
+      maxDuration?: number;
+      minVoters?: number;
+      maxVoters?: number;
       estimatedSettlementTime: string | null;
+    } | null;
+    rewardPoolSummary?: {
+      totalFunded?: string | number | bigint | null;
+      totalFundedAmount?: string | number | bigint | null;
+      totalAvailable?: string | number | bigint | null;
+      currentRewardPoolAmount?: string | number | bigint | null;
+      totalClaimedAmount?: string | number | bigint | null;
+      totalVoterClaimedAmount?: string | number | bigint | null;
+      totalFrontendClaimedAmount?: string | number | bigint | null;
+      activeRewardPoolCount?: number | null;
+      expiredRewardPoolCount?: number | null;
+      hasActiveBounty?: boolean | null;
+      nextBountyClosesAt?: string | number | bigint | null;
+      nextFeedbackClosesAt?: string | number | bigint | null;
+    } | null;
+    feedbackBonusSummary?: {
+      totalFunded?: string | number | bigint | null;
+      totalFundedAmount?: string | number | bigint | null;
+      totalRemaining?: string | number | bigint | null;
+      totalRemainingAmount?: string | number | bigint | null;
+      activeRemainingAmount?: string | number | bigint | null;
+      totalAwarded?: string | number | bigint | null;
+      totalAwardedAmount?: string | number | bigint | null;
+      totalVoterAwardedAmount?: string | number | bigint | null;
+      totalFrontendAwardedAmount?: string | number | bigint | null;
+      totalForfeitedAmount?: string | number | bigint | null;
+      activePoolCount?: number | null;
+      expiredPoolCount?: number | null;
+      awardCount?: number | null;
+      hasActiveFeedbackBonus?: boolean | null;
+      nextFeedbackClosesAt?: string | number | bigint | null;
     } | null;
   },
   voterAddress?: string,
   ownSubmitterAddresses?: readonly string[],
 ): ContentItem {
   const ownSubmitterAddressSet = buildNormalizedAddressSet(ownSubmitterAddresses, voterAddress);
+  const roundConfig = {
+    epochDuration: numberOrDefault(item.roundEpochDuration, DEFAULT_VOTING_CONFIG.epochDuration),
+    maxDuration: numberOrDefault(item.roundMaxDuration, DEFAULT_VOTING_CONFIG.maxDuration),
+    minVoters: numberOrDefault(item.roundMinVoters, DEFAULT_VOTING_CONFIG.minVoters),
+    maxVoters: numberOrDefault(item.roundMaxVoters, DEFAULT_VOTING_CONFIG.maxVoters),
+  };
   const mappedOpenRound = item.openRound
     ? {
         roundId: BigInt(item.openRound.roundId),
@@ -144,6 +290,10 @@ export function mapContentItem(
         settledRounds: item.openRound.settledRounds,
         lowSince: item.openRound.lowSince !== undefined ? BigInt(item.openRound.lowSince) : undefined,
         startTime: item.openRound.startTime ? BigInt(item.openRound.startTime) : null,
+        epochDuration: numberOrDefault(item.openRound.epochDuration, roundConfig.epochDuration),
+        maxDuration: numberOrDefault(item.openRound.maxDuration, roundConfig.maxDuration),
+        minVoters: numberOrDefault(item.openRound.minVoters, roundConfig.minVoters),
+        maxVoters: numberOrDefault(item.openRound.maxVoters, roundConfig.maxVoters),
         estimatedSettlementTime: item.openRound.estimatedSettlementTime
           ? BigInt(item.openRound.estimatedSettlementTime)
           : null,
@@ -154,15 +304,29 @@ export function mapContentItem(
     item.conservativeRatingBps !== undefined ? BigInt(item.conservativeRatingBps) : undefined;
   const displayedRating =
     mappedOpenRound?.referenceRatingBps !== undefined ? Number(mappedOpenRound.referenceRatingBps) / 100 : item.rating;
+  const url = item.url ?? "";
+  const media = (item.media ?? [])
+    .filter(mediaItem => mediaItem.url)
+    .map((mediaItem, index) => ({
+      mediaIndex: mediaItem.mediaIndex ?? mediaItem.index ?? index,
+      mediaType: mediaItem.mediaType ?? "image",
+      url: mediaItem.url ?? "",
+      canonicalUrl: mediaItem.canonicalUrl ?? mediaItem.url ?? "",
+      urlHost: mediaItem.urlHost ?? null,
+    }));
 
   return {
     id: BigInt(item.id),
-    url: item.url,
+    url,
+    media: media.length > 0 ? media : buildFallbackMediaItems(url),
+    question: item.question?.trim() || item.title,
     title: item.title,
     description: item.description,
     tags: parseTags(item.tags),
     submitter: item.submitter,
     contentHash: item.contentHash,
+    questionMetadataHash: item.questionMetadataHash ?? null,
+    resultSpecHash: item.resultSpecHash ?? null,
     isOwnContent: ownSubmitterAddressSet.has(item.submitter.toLowerCase()),
     categoryId: BigInt(item.categoryId),
     rating: displayedRating,
@@ -172,9 +336,88 @@ export function mapContentItem(
     lastActivityAt: item.lastActivityAt ?? null,
     totalVotes: item.totalVotes ?? 0,
     totalRounds: item.totalRounds ?? 0,
+    bundleId: item.bundleId !== undefined && item.bundleId !== null ? BigInt(item.bundleId) : null,
+    bundleIndex: item.bundleIndex ?? null,
+    bundle:
+      item.bundle && item.bundle.id !== undefined && item.bundle.id !== null
+        ? {
+            id: BigInt(item.bundle.id),
+            questionCount: item.bundle.questionCount ?? 0,
+            requiredCompleters: item.bundle.requiredCompleters ?? 0,
+            requiredSettledRounds: item.bundle.requiredSettledRounds ?? 1,
+            completedRoundSetCount: item.bundle.completedRoundSetCount ?? 0,
+            totalRecordedQuestionRounds: item.bundle.totalRecordedQuestionRounds ?? 0,
+            claimedCount: item.bundle.claimedCount ?? 0,
+            fundedAmount: BigInt(item.bundle.fundedAmount ?? 0),
+            unallocatedAmount: BigInt(item.bundle.unallocatedAmount ?? 0),
+            allocatedAmount: BigInt(item.bundle.allocatedAmount ?? 0),
+            claimedAmount: BigInt(item.bundle.claimedAmount ?? 0),
+            refundedAmount: BigInt(item.bundle.refundedAmount ?? 0),
+            bountyClosesAt: BigInt(item.bundle.bountyClosesAt ?? 0),
+            feedbackClosesAt: BigInt(item.bundle.feedbackClosesAt ?? 0),
+            expiresAt: BigInt(item.bundle.expiresAt ?? 0),
+            failed: item.bundle.failed ?? false,
+            refunded: item.bundle.refunded ?? false,
+          }
+        : null,
+    roundConfig,
     openRound: mappedOpenRound,
     isValidUrl: null,
     thumbnailUrl: null,
+    rewardPoolSummary: item.rewardPoolSummary
+      ? {
+          totalFunded: BigInt(item.rewardPoolSummary.totalFunded ?? item.rewardPoolSummary.totalFundedAmount ?? 0),
+          totalAvailable: BigInt(
+            item.rewardPoolSummary.totalAvailable ?? item.rewardPoolSummary.currentRewardPoolAmount ?? 0,
+          ),
+          totalClaimed: BigInt(item.rewardPoolSummary.totalClaimedAmount ?? 0),
+          totalVoterClaimed: BigInt(item.rewardPoolSummary.totalVoterClaimedAmount ?? 0),
+          totalFrontendClaimed: BigInt(item.rewardPoolSummary.totalFrontendClaimedAmount ?? 0),
+          activeRewardPoolCount: item.rewardPoolSummary.activeRewardPoolCount ?? 0,
+          expiredRewardPoolCount: item.rewardPoolSummary.expiredRewardPoolCount ?? 0,
+          hasActiveBounty:
+            item.rewardPoolSummary.hasActiveBounty ?? (item.rewardPoolSummary.activeRewardPoolCount ?? 0) > 0,
+          nextBountyClosesAt:
+            item.rewardPoolSummary.nextBountyClosesAt === null ||
+            item.rewardPoolSummary.nextBountyClosesAt === undefined
+              ? null
+              : BigInt(item.rewardPoolSummary.nextBountyClosesAt),
+          nextFeedbackClosesAt:
+            item.rewardPoolSummary.nextFeedbackClosesAt === null ||
+            item.rewardPoolSummary.nextFeedbackClosesAt === undefined
+              ? null
+              : BigInt(item.rewardPoolSummary.nextFeedbackClosesAt),
+        }
+      : null,
+    feedbackBonusSummary: item.feedbackBonusSummary
+      ? {
+          totalFunded: BigInt(
+            item.feedbackBonusSummary.totalFunded ?? item.feedbackBonusSummary.totalFundedAmount ?? 0,
+          ),
+          totalRemaining: BigInt(
+            item.feedbackBonusSummary.totalRemaining ??
+              item.feedbackBonusSummary.activeRemainingAmount ??
+              item.feedbackBonusSummary.totalRemainingAmount ??
+              0,
+          ),
+          totalAwarded: BigInt(
+            item.feedbackBonusSummary.totalAwarded ?? item.feedbackBonusSummary.totalAwardedAmount ?? 0,
+          ),
+          totalVoterAwarded: BigInt(item.feedbackBonusSummary.totalVoterAwardedAmount ?? 0),
+          totalFrontendAwarded: BigInt(item.feedbackBonusSummary.totalFrontendAwardedAmount ?? 0),
+          totalForfeited: BigInt(item.feedbackBonusSummary.totalForfeitedAmount ?? 0),
+          activePoolCount: item.feedbackBonusSummary.activePoolCount ?? 0,
+          expiredPoolCount: item.feedbackBonusSummary.expiredPoolCount ?? 0,
+          awardCount: item.feedbackBonusSummary.awardCount ?? 0,
+          hasActiveFeedbackBonus:
+            item.feedbackBonusSummary.hasActiveFeedbackBonus ?? (item.feedbackBonusSummary.activePoolCount ?? 0) > 0,
+          nextFeedbackClosesAt:
+            item.feedbackBonusSummary.nextFeedbackClosesAt === null ||
+            item.feedbackBonusSummary.nextFeedbackClosesAt === undefined
+              ? null
+              : BigInt(item.feedbackBonusSummary.nextFeedbackClosesAt),
+        }
+      : null,
   };
 }
 
@@ -184,6 +427,10 @@ export function mergeContentFeedMetadata(
   validationMap: Record<string, boolean | null>,
 ): ContentItem[] {
   return feed.map(item => {
+    if (!item.url) {
+      return item;
+    }
+
     const contentMetadata = metadataMap[item.url] ?? item.contentMetadata;
 
     return {
@@ -197,6 +444,13 @@ export function mergeContentFeedMetadata(
 
 export function filterModeratedContentItems(feed: ContentItem[]): ContentItem[] {
   return feed.filter(item => !isContentItemBlocked(item));
+}
+
+function getRewardPoolAmount(item: ContentItem) {
+  return (
+    (item.rewardPoolSummary?.totalAvailable ?? item.rewardPoolSummary?.totalFunded ?? 0n) +
+    (item.feedbackBonusSummary?.totalRemaining ?? 0n)
+  );
 }
 
 function getSearchTokens(value: string): string[] {
@@ -312,6 +566,16 @@ export function sortRpcFeed(feed: ContentItem[], sortBy: FeedSort, searchQuery?:
       });
       break;
     }
+    case "highest_rewards":
+      items.sort((a, b) => {
+        const aAmount = getRewardPoolAmount(a);
+        const bAmount = getRewardPoolAmount(b);
+        if (aAmount !== bAmount) {
+          return aAmount > bAmount ? -1 : 1;
+        }
+        return Number(b.id - a.id);
+      });
+      break;
     case "newest":
     case "highest_rated":
     case "lowest_rated":

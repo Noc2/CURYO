@@ -9,9 +9,10 @@ optimizer = true
 optimizer_runs = 100
 build_info = true
 extra_output = ['abi', 'evm.bytecode', 'evm.deployedBytecode']
+ignored_warnings_from = ['lib/self']
 
 [profile.deploy]
-optimizer_runs = 1
+optimizer_runs = 0
 revert_strings = "strip"
 bytecode_hash = "none"
 cbor_metadata = false
@@ -66,6 +67,9 @@ tab_width = 4
 quote_style = "double"
 bracket_spacing = true
 int_types = "long"
+
+[lint]
+lint_on_build = false
 
 
 

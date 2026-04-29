@@ -6,13 +6,12 @@ import { TimelockController } from "@openzeppelin/contracts/governance/TimelockC
 import { IVotes } from "@openzeppelin/contracts/governance/utils/IVotes.sol";
 import { IGovernor } from "@openzeppelin/contracts/governance/IGovernor.sol";
 
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { HumanReputation } from "../contracts/HumanReputation.sol";
 import { CuryoGovernor } from "../contracts/governance/CuryoGovernor.sol";
 import { VoterIdNFT } from "../contracts/VoterIdNFT.sol";
-import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
 
 contract GovernanceTest is Test {
-    CuryoReputation public token;
+    HumanReputation public token;
     TimelockController public timelock;
     CuryoGovernor public governor;
 
@@ -29,7 +28,7 @@ contract GovernanceTest is Test {
     address public mockTreasury = address(14);
     address public mockContentRegistry = address(15);
     address public mockFrontendRegistry = address(16);
-    MockCategoryRegistry public mockCategoryRegistry;
+    address public mockQuestionRewardEscrow = address(17);
 
     // Protocol-controlled balances excluded from quorum
     uint256 public constant FAUCET_BALANCE = 30_000_000 * 1e6;
@@ -39,19 +38,19 @@ contract GovernanceTest is Test {
     uint256 public constant TREASURY_BALANCE = 10_000_000 * 1e6;
     uint256 public constant CONTENT_REGISTRY_BALANCE = 20_000 * 1e6;
     uint256 public constant FRONTEND_REGISTRY_BALANCE = 10_000 * 1e6;
-    uint256 public constant CATEGORY_REGISTRY_BALANCE = 500 * 1e6;
+    uint256 public constant QUESTION_REWARD_ESCROW_BALANCE = 1_000_000 * 1e6;
 
-    // Voter balances — circulating supply is 6M after excluded protocol balances are removed.
+    // Voter balances plus user-funded reward escrow are circulating supply for quorum.
     uint256 public constant VOTER_BALANCE = 2_000_000 * 1e6; // 2M tokens each
     uint256 public constant TOTAL_MINTED = FAUCET_BALANCE + PARTICIPATION_BALANCE + REWARD_BALANCE + ENGINE_BALANCE
-        + TREASURY_BALANCE + CONTENT_REGISTRY_BALANCE + FRONTEND_REGISTRY_BALANCE + CATEGORY_REGISTRY_BALANCE
+        + TREASURY_BALANCE + CONTENT_REGISTRY_BALANCE + FRONTEND_REGISTRY_BALANCE + QUESTION_REWARD_ESCROW_BALANCE
         + 6_000_000 * 1e6;
 
     function setUp() public {
         vm.startPrank(deployer);
 
-        // Deploy cREP token (now has native ERC20Votes)
-        token = new CuryoReputation(deployer, deployer);
+        // Deploy HREP token (now has native ERC20Votes)
+        token = new HumanReputation(deployer, deployer);
 
         // Grant MINTER_ROLE to deployer for testing
         token.grantRole(token.MINTER_ROLE(), deployer);
@@ -64,13 +63,8 @@ contract GovernanceTest is Test {
 
         timelock = new TimelockController(2 days, proposers, executors, deployer);
 
-        // Deploy Governor with cREP directly (no wrapper needed)
+        // Deploy Governor with HREP directly (no wrapper needed)
         governor = new CuryoGovernor(IVotes(address(token)), timelock);
-        mockCategoryRegistry = new MockCategoryRegistry();
-        mockCategoryRegistry.setDomain(7, "pending-category.test");
-        mockCategoryRegistry.setCreatedBlock(7, block.number);
-        mockCategoryRegistry.setApprovalDigest(7, keccak256("pending-category-7"));
-        governor.setCategoryRegistry(address(mockCategoryRegistry));
 
         // Initialize protocol-controlled holders excluded from dynamic quorum
         governor.initializePools(_excludedHolders());
@@ -90,7 +84,7 @@ contract GovernanceTest is Test {
         token.mint(mockTreasury, TREASURY_BALANCE);
         token.mint(mockContentRegistry, CONTENT_REGISTRY_BALANCE);
         token.mint(mockFrontendRegistry, FRONTEND_REGISTRY_BALANCE);
-        token.mint(address(mockCategoryRegistry), CATEGORY_REGISTRY_BALANCE);
+        token.mint(mockQuestionRewardEscrow, QUESTION_REWARD_ESCROW_BALANCE);
 
         // Mint tokens to voters (circulating supply)
         token.mint(voter1, VOTER_BALANCE);
@@ -154,7 +148,7 @@ contract GovernanceTest is Test {
         token.transfer(address(0x123), VOTER_BALANCE);
     }
 
-    function test_GovernanceLocking_ProposeRevertsIfThresholdTransferredAwayAfterSnapshot() public {
+    function test_GovernanceLocking_ProposeRejectsPostSnapshotTransfer() public {
         vm.roll(block.number + 1);
 
         vm.prank(voter1);
@@ -166,11 +160,11 @@ contract GovernanceTest is Test {
         bytes[] memory calldatas = new bytes[](1);
 
         vm.prank(voter1);
-        vm.expectRevert("Insufficient current balance for governance lock");
+        vm.expectRevert("Insufficient balance for governance lock");
         governor.propose(targets, values, calldatas, "Transferred away threshold");
     }
 
-    function test_GovernanceLocking_VoteRevertsIfVotingPowerTransferredAwayAfterSnapshot() public {
+    function test_GovernanceLocking_VoteRejectsPostSnapshotTransfer() public {
         vm.roll(block.number + 1);
 
         address[] memory targets = new address[](1);
@@ -187,7 +181,7 @@ contract GovernanceTest is Test {
         token.transfer(address(0x123), VOTER_BALANCE - 1);
 
         vm.prank(voter2);
-        vm.expectRevert("Insufficient current balance for governance lock");
+        vm.expectRevert("Insufficient balance for governance lock");
         governor.castVote(proposalId, 1);
     }
 
@@ -251,44 +245,50 @@ contract GovernanceTest is Test {
     }
 
     function test_GovernorProposalThreshold() public view {
-        // Bootstrap proposal threshold should be 10K cREP
-        assertEq(governor.proposalThreshold(), 10_000e6);
-    }
-
-    function test_CategoryProposalThreshold() public view {
-        assertEq(governor.categoryProposalThreshold(), 500e6);
+        // Bootstrap proposal threshold should be 1K HREP
+        assertEq(governor.proposalThreshold(), 1_000e6);
     }
 
     function test_GovernorVotingPeriod() public view {
-        // Voting period should be ~1 week (50400 blocks)
-        assertEq(governor.votingPeriod(), 50400);
+        // Voting period should be ~1 week on Celo's 1s block clock.
+        assertEq(governor.votingPeriod(), 604_800);
     }
 
     function test_GovernorVotingDelay() public view {
-        // Voting delay should be ~1 day (7200 blocks)
-        assertEq(governor.votingDelay(), 7200);
+        // Voting delay should be ~1 day on Celo's 1s block clock.
+        assertEq(governor.votingDelay(), 86_400);
     }
 
     function test_GovernorQuorum() public {
-        // Quorum is 4% of circulating supply after excluding all configured protocol-controlled holders.
+        // Quorum is 4% of circulating supply after excluding only protocol-controlled holders.
         vm.roll(block.number + 1);
 
         uint256 circulatingSupply = TOTAL_MINTED - FAUCET_BALANCE - PARTICIPATION_BALANCE - REWARD_BALANCE
-            - ENGINE_BALANCE - TREASURY_BALANCE - CONTENT_REGISTRY_BALANCE - FRONTEND_REGISTRY_BALANCE
-            - CATEGORY_REGISTRY_BALANCE;
-        uint256 expectedDynamicQuorum = (circulatingSupply * 4) / 100; // 4% of 6M = 240K
-        assertEq(expectedDynamicQuorum, 240_000 * 1e6);
-        assertEq(governor.quorum(block.number - 1), expectedDynamicQuorum);
+            - ENGINE_BALANCE - TREASURY_BALANCE - CONTENT_REGISTRY_BALANCE - FRONTEND_REGISTRY_BALANCE;
+        uint256 expectedDynamicQuorum = (circulatingSupply * 4) / 100; // 4% of 7M = 280K
+        assertEq(expectedDynamicQuorum, 280_000 * 1e6);
+        assertEq(governor.quorum(block.number - 1), 1_000_000 * 1e6);
     }
 
     function test_GovernorQuorum_ExcludesEngineAndTreasuryBalances() public {
         vm.roll(block.number + 1);
 
-        uint256 expectedQuorum = 240_000 * 1e6;
-        uint256 brokenQuorum = ((6_000_000 * 1e6 + ENGINE_BALANCE + TREASURY_BALANCE) * 4) / 100;
+        uint256 expectedQuorum = 1_000_000 * 1e6;
+        uint256 brokenQuorum = ((7_000_000 * 1e6 + ENGINE_BALANCE + TREASURY_BALANCE) * 4) / 100;
 
         assertEq(governor.quorum(block.number - 1), expectedQuorum);
-        assertEq(brokenQuorum - expectedQuorum, 564_000 * 1e6);
+        assertEq(expectedQuorum - brokenQuorum, 156_000 * 1e6);
+    }
+
+    function test_GovernorQuorum_IncludesQuestionRewardEscrowBalance() public {
+        vm.roll(block.number + 1);
+
+        uint256 expectedQuorum = 1_000_000 * 1e6;
+        uint256 brokenQuorum = ((7_000_000 * 1e6 - QUESTION_REWARD_ESCROW_BALANCE) * 4) / 100;
+
+        assertEq(governor.quorum(block.number - 1), expectedQuorum);
+        assertFalse(governor.isExcludedHolder(mockQuestionRewardEscrow));
+        assertEq(expectedQuorum - brokenQuorum, 760_000 * 1e6);
     }
 
     function test_GovernorQuorumMinimumFloor() public {
@@ -297,7 +297,7 @@ contract GovernanceTest is Test {
 
         // Deploy a fresh governor with almost all tokens locked
         vm.startPrank(deployer);
-        CuryoReputation smallToken = new CuryoReputation(deployer, deployer);
+        HumanReputation smallToken = new HumanReputation(deployer, deployer);
         smallToken.grantRole(smallToken.MINTER_ROLE(), deployer);
 
         TimelockController smallTimelock = new TimelockController(2 days, new address[](0), new address[](0), deployer);
@@ -309,60 +309,13 @@ contract GovernanceTest is Test {
         holders[2] = address(102);
         smallGovernor.initializePools(holders);
 
-        // Mint 1M to pool, 100K to a user -> circulating = 100K, 4% = 4K < 100K floor
+        // Mint 1M to pool, 100K to a user -> circulating = 100K, 4% = 4K < 1M floor
         smallToken.mint(holders[0], 1_000_000 * 1e6);
         smallToken.mint(address(200), 100_000 * 1e6);
         vm.stopPrank();
 
         vm.roll(block.number + 1);
-        assertEq(smallGovernor.quorum(block.number - 1), 100_000 * 1e6); // bootstrap floor
-    }
-
-    function test_CategoryApprovalProposal_UsesLowerThresholdAndLocksThreshold() public {
-        vm.startPrank(deployer);
-        CuryoReputation smallToken = new CuryoReputation(deployer, deployer);
-        smallToken.grantRole(smallToken.MINTER_ROLE(), deployer);
-
-        TimelockController smallTimelock = new TimelockController(2 days, new address[](0), new address[](0), deployer);
-        CuryoGovernor smallGovernor = new CuryoGovernor(IVotes(address(smallToken)), smallTimelock);
-        smallGovernor.setCategoryRegistry(address(mockCategoryRegistry));
-
-        address[] memory holders = new address[](1);
-        holders[0] = address(100);
-        smallGovernor.initializePools(holders);
-        smallToken.setGovernor(address(smallGovernor));
-        smallToken.mint(address(200), 500e6);
-        vm.stopPrank();
-
-        vm.roll(block.number + 1);
-
-        address[] memory targets = new address[](1);
-        targets[0] = address(smallTimelock);
-        uint256[] memory values = new uint256[](1);
-        bytes[] memory calldatas = new bytes[](1);
-
-        vm.prank(address(200));
-        vm.expectRevert();
-        smallGovernor.propose(targets, values, calldatas, "Generic proposal");
-
-        vm.prank(address(200));
-        uint256 proposalId = smallGovernor.proposeCategoryApproval(7);
-
-        assertTrue(proposalId != 0);
-        assertEq(uint256(smallGovernor.state(proposalId)), uint256(IGovernor.ProposalState.Pending));
-        assertEq(smallToken.getLockedBalance(address(200)), 500e6);
-    }
-
-    function test_CategoryApprovalProposal_RevertsInSubmissionBlock() public {
-        vm.roll(block.number + 1);
-
-        mockCategoryRegistry.setDomain(8, "same-block-category.test");
-        mockCategoryRegistry.setCreatedBlock(8, block.number);
-        mockCategoryRegistry.setApprovalDigest(8, keccak256("same-block-category-8"));
-
-        vm.prank(voter1);
-        vm.expectRevert("Category proposal too early");
-        governor.proposeCategoryApproval(8);
+        assertEq(smallGovernor.quorum(block.number - 1), 1_000_000 * 1e6); // bootstrap floor
     }
 
     function test_GovernorQuorumGrowsAsPoolsDrain() public {
@@ -371,17 +324,17 @@ contract GovernanceTest is Test {
         uint256 transferBlock = vm.getBlockNumber();
         uint256 beforeSnapshotBlock = transferBlock - 1;
         uint256 quorumBefore = governor.quorum(beforeSnapshotBlock);
-        assertEq(quorumBefore, 240_000 * 1e6);
+        assertEq(quorumBefore, 1_000_000 * 1e6);
 
         // Simulate faucet distributing enough tokens to move past the bootstrap floor.
         vm.prank(mockFaucet);
-        token.transfer(address(50), 10_000_000 * 1e6);
+        token.transfer(address(50), 20_000_000 * 1e6);
 
         vm.roll(transferBlock + 1);
         uint256 quorumAfter = governor.quorum(transferBlock);
 
-        // Circulating supply rises from 6M to 16M, so 4% becomes 640K and beats the floor.
-        assertEq(quorumAfter, 640_000 * 1e6);
+        // Circulating supply rises from 7M to 27M, so 4% becomes 1.08M and beats the floor.
+        assertEq(quorumAfter, 1_080_000 * 1e6);
         assertGt(quorumAfter, quorumBefore);
     }
 
@@ -480,14 +433,12 @@ contract GovernanceTest is Test {
         holders[1] = address(101);
         holders[2] = address(102);
 
-        address[] memory targets = new address[](2);
+        address[] memory targets = new address[](1);
         targets[0] = address(freshGovernor);
-        targets[1] = address(freshGovernor);
 
-        uint256[] memory values = new uint256[](2);
-        bytes[] memory calldatas = new bytes[](2);
+        uint256[] memory values = new uint256[](1);
+        bytes[] memory calldatas = new bytes[](1);
         calldatas[0] = abi.encodeCall(CuryoGovernor.initializePools, (holders));
-        calldatas[1] = abi.encodeCall(CuryoGovernor.setCategoryRegistry, (address(mockCategoryRegistry)));
 
         string memory description = "Recover bootstrap";
         vm.prank(voter1);
@@ -509,7 +460,6 @@ contract GovernanceTest is Test {
         freshGovernor.execute(targets, values, calldatas, descriptionHash);
 
         assertTrue(freshGovernor.poolsInitialized());
-        assertEq(freshGovernor.categoryRegistry(), address(mockCategoryRegistry));
         assertTrue(freshGovernor.isExcludedHolder(address(100)));
         assertTrue(freshGovernor.isExcludedHolder(address(101)));
         assertTrue(freshGovernor.isExcludedHolder(address(102)));
@@ -517,7 +467,7 @@ contract GovernanceTest is Test {
 
     function test_GovernorGetExcludedHolders() public view {
         address[] memory holders = governor.getExcludedHolders();
-        assertEq(holders.length, 8);
+        assertEq(holders.length, 7);
         assertEq(holders[0], mockFaucet);
         assertEq(holders[1], mockParticipationPool);
         assertEq(holders[2], mockRewardDistributor);
@@ -525,28 +475,118 @@ contract GovernanceTest is Test {
         assertEq(holders[4], mockTreasury);
         assertEq(holders[5], mockContentRegistry);
         assertEq(holders[6], mockFrontendRegistry);
-        assertEq(holders[7], address(mockCategoryRegistry));
     }
 
-    function test_GovernorRejectsLegacyExcludedHolderReplacementSelector() public {
-        address replacement = address(new MockCategoryRegistry());
+    function test_GovernorExcludedHolderCannotPropose() public {
+        vm.roll(block.number + 1);
 
-        (bool success,) =
-            address(governor).call(abi.encodeWithSignature("replaceExcludedHolder(address,address)", mockFaucet, replacement));
+        address[] memory targets = new address[](1);
+        targets[0] = address(timelock);
 
-        assertFalse(success);
-        assertTrue(governor.isExcludedHolder(mockFaucet));
-        assertFalse(governor.isExcludedHolder(replacement));
+        uint256[] memory values = new uint256[](1);
+        bytes[] memory calldatas = new bytes[](1);
+
+        vm.prank(mockTreasury);
+        vm.expectRevert(abi.encodeWithSelector(CuryoGovernor.ExcludedHolderCannotGovern.selector, mockTreasury));
+        governor.propose(targets, values, calldatas, "Excluded treasury proposal");
+    }
+
+    function test_GovernorExcludedHolderCannotVote() public {
+        vm.roll(block.number + 1);
+
+        address[] memory targets = new address[](1);
+        targets[0] = address(timelock);
+
+        uint256[] memory values = new uint256[](1);
+        bytes[] memory calldatas = new bytes[](1);
+
+        vm.prank(voter1);
+        uint256 proposalId = governor.propose(targets, values, calldatas, "User proposal");
+
+        vm.roll(block.number + governor.votingDelay() + 1);
+
+        vm.prank(mockTreasury);
+        vm.expectRevert(abi.encodeWithSelector(CuryoGovernor.ExcludedHolderCannotGovern.selector, mockTreasury));
+        governor.castVote(proposalId, 1);
+    }
+
+    function test_GovernorCanReplaceDrainedExcludedHolder() public {
+        address replacement = address(99);
+
+        vm.prank(mockFrontendRegistry);
+        token.transfer(voter1, FRONTEND_REGISTRY_BALANCE);
+
+        _executeSingleCallProposal(
+            address(governor),
+            abi.encodeWithSignature("replaceExcludedHolder(address,address)", mockFrontendRegistry, replacement),
+            "Replace drained excluded holder",
+            false
+        );
+
+        address[] memory holders = governor.getExcludedHolders();
+        assertTrue(governor.isExcludedHolder(mockFrontendRegistry));
+        assertTrue(governor.isExcludedHolder(replacement));
+        assertEq(holders[6], mockFrontendRegistry);
+        assertEq(holders[7], replacement);
+        assertEq(governor.excludedHolderEffectiveBlock(mockFrontendRegistry), 0);
+        assertEq(governor.excludedHolderEffectiveBlock(replacement), vm.getBlockNumber());
+
+        vm.roll(block.number + 1);
+        uint256 quorumBeforeMint = governor.quorum(block.number - 1);
+        vm.prank(deployer);
+        token.mint(replacement, 1_000_000e6);
+        vm.roll(block.number + 1);
+        assertEq(governor.quorum(block.number - 1), quorumBeforeMint);
+    }
+
+    function test_GovernorReplacementPreservesHistoricalQuorum() public {
+        address replacement = address(99);
+
+        vm.prank(mockFaucet);
+        token.transfer(replacement, 20_000_000e6);
+        vm.roll(block.number + 1);
+        uint256 snapshotBlock = vm.getBlockNumber() - 1;
+        uint256 snapshotQuorum = governor.quorum(snapshotBlock);
+        assertEq(snapshotQuorum, 1_080_000e6);
+
+        _executeSingleCallProposal(
+            address(governor),
+            abi.encodeWithSignature("replaceExcludedHolder(address,address)", mockFrontendRegistry, replacement),
+            "Snapshot-safe excluded holder replacement",
+            false
+        );
+
+        assertEq(governor.quorum(snapshotBlock), snapshotQuorum);
+        uint256 effectiveBlock = governor.excludedHolderEffectiveBlock(replacement);
+        assertGt(effectiveBlock, snapshotBlock);
+        vm.roll(effectiveBlock + 2);
+        assertEq(governor.quorum(effectiveBlock + 1), 1_000_000e6);
+    }
+
+    function test_GovernorReplacementIgnoresDustVotes() public {
+        address replacement = address(99);
+
+        vm.prank(deployer);
+        token.mint(replacement, 1);
+
+        _executeSingleCallProposal(
+            address(governor),
+            abi.encodeWithSignature("replaceExcludedHolder(address,address)", mockFrontendRegistry, replacement),
+            "Dust-resistant excluded holder replacement",
+            false
+        );
+
+        assertTrue(governor.isExcludedHolder(mockFrontendRegistry));
+        assertTrue(governor.isExcludedHolder(replacement));
     }
 
     function test_GovernorExcludedHoldersRemainFixedAcrossGovernanceActions() public {
         address[] memory beforeHolders = governor.getExcludedHolders();
-        address replacementCategoryRegistry = address(new MockCategoryRegistry());
 
         _executeSingleCallProposal(
             address(governor),
-            abi.encodeCall(CuryoGovernor.setCategoryRegistry, (replacementCategoryRegistry)),
-            "Update category registry",
+            abi.encodeWithSignature("setProposalThreshold(uint256)", 10_001e6),
+            "Update proposal threshold",
             false
         );
 
@@ -555,6 +595,65 @@ contract GovernanceTest is Test {
         for (uint256 i = 0; i < beforeHolders.length; i++) {
             assertEq(afterHolders[i], beforeHolders[i]);
         }
+    }
+
+    function test_GovernorRejectsZeroProposalThreshold() public {
+        uint256 thresholdBefore = governor.proposalThreshold();
+
+        _executeSingleCallProposal(
+            address(governor),
+            abi.encodeWithSignature("setProposalThreshold(uint256)", 0),
+            "Reject zero proposal threshold",
+            true
+        );
+
+        assertEq(governor.proposalThreshold(), thresholdBefore);
+    }
+
+    function test_GovernorRejectsTooHighProposalThreshold() public {
+        uint256 thresholdBefore = governor.proposalThreshold();
+
+        _executeSingleCallProposal(
+            address(governor),
+            abi.encodeWithSignature("setProposalThreshold(uint256)", governor.MAX_PROPOSAL_THRESHOLD() + 1),
+            "Reject too high proposal threshold",
+            true
+        );
+
+        assertEq(governor.proposalThreshold(), thresholdBefore);
+    }
+
+    function test_GovernorRejectsTooHighVotingDelay() public {
+        uint256 delayBefore = governor.votingDelay();
+
+        _executeSingleCallProposal(
+            address(governor),
+            abi.encodeWithSignature("setVotingDelay(uint48)", uint48(governor.MAX_VOTING_DELAY_BLOCKS() + 1)),
+            "Reject too high voting delay",
+            true
+        );
+
+        assertEq(governor.votingDelay(), delayBefore);
+    }
+
+    function test_GovernorRejectsOutOfBoundsVotingPeriod() public {
+        uint256 periodBefore = governor.votingPeriod();
+
+        _executeSingleCallProposal(
+            address(governor),
+            abi.encodeWithSignature("setVotingPeriod(uint32)", uint32(governor.MIN_VOTING_PERIOD_BLOCKS() - 1)),
+            "Reject too short voting period",
+            true
+        );
+        assertEq(governor.votingPeriod(), periodBefore);
+
+        _executeSingleCallProposal(
+            address(governor),
+            abi.encodeWithSignature("setVotingPeriod(uint32)", uint32(governor.MAX_VOTING_PERIOD_BLOCKS() + 1)),
+            "Reject too long voting period",
+            true
+        );
+        assertEq(governor.votingPeriod(), periodBefore);
     }
 
     function test_GovernorAllowsProposalsBeforePoolsInitialization() public {
@@ -576,7 +675,7 @@ contract GovernanceTest is Test {
     }
 
     function _excludedHolders() internal view returns (address[] memory holders) {
-        holders = new address[](8);
+        holders = new address[](7);
         holders[0] = mockFaucet;
         holders[1] = mockParticipationPool;
         holders[2] = mockRewardDistributor;
@@ -584,12 +683,14 @@ contract GovernanceTest is Test {
         holders[4] = mockTreasury;
         holders[5] = mockContentRegistry;
         holders[6] = mockFrontendRegistry;
-        holders[7] = address(mockCategoryRegistry);
     }
 
-    function _executeSingleCallProposal(address target, bytes memory callData, string memory description, bool expectRevert_)
-        internal
-    {
+    function _executeSingleCallProposal(
+        address target,
+        bytes memory callData,
+        string memory description,
+        bool expectRevert_
+    ) internal {
         vm.roll(block.number + 1);
 
         address[] memory targets = new address[](1);
@@ -646,6 +747,35 @@ contract GovernanceTest is Test {
 
         assertTrue(proposalId != 0);
         assertEq(uint256(governor.state(proposalId)), uint256(IGovernor.ProposalState.Pending));
+        assertEq(governor.nextProposalBlock(voter1), block.number + governor.PROPOSAL_COOLDOWN_BLOCKS());
+    }
+
+    function test_ProposerCooldownBlocksRapidRepeat() public {
+        vm.roll(block.number + 1);
+
+        address[] memory targets = new address[](1);
+        targets[0] = address(timelock);
+
+        uint256[] memory values = new uint256[](1);
+        values[0] = 0;
+
+        bytes[] memory calldatas = new bytes[](1);
+        calldatas[0] = "";
+
+        vm.prank(voter1);
+        governor.propose(targets, values, calldatas, "Cooldown proposal #1");
+
+        uint256 nextBlock = governor.nextProposalBlock(voter1);
+        vm.prank(voter1);
+        vm.expectRevert(abi.encodeWithSelector(CuryoGovernor.ProposalCooldownActive.selector, voter1, nextBlock));
+        governor.propose(targets, values, calldatas, "Cooldown proposal #2");
+
+        vm.roll(nextBlock);
+
+        vm.prank(voter1);
+        uint256 proposalId = governor.propose(targets, values, calldatas, "Cooldown proposal #2");
+
+        assertTrue(proposalId != 0);
     }
 
     function test_VoteOnProposal() public {
@@ -704,7 +834,7 @@ contract GovernanceTest is Test {
         address governance = address(0xB);
 
         vm.prank(admin);
-        CuryoReputation separateToken = new CuryoReputation(admin, governance);
+        HumanReputation separateToken = new HumanReputation(admin, governance);
 
         // Cache role hashes to avoid nested external calls consuming vm.prank
         bytes32 defaultAdminRole = separateToken.DEFAULT_ADMIN_ROLE();
@@ -731,7 +861,7 @@ contract GovernanceTest is Test {
         address governance = address(0xB);
 
         vm.prank(admin);
-        CuryoReputation separateToken = new CuryoReputation(admin, governance);
+        HumanReputation separateToken = new HumanReputation(admin, governance);
 
         // Admin has only the temporary setup roles.
         assertFalse(separateToken.hasRole(separateToken.DEFAULT_ADMIN_ROLE(), admin));

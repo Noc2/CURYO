@@ -1,6 +1,6 @@
 "use client";
 
-import { type MouseEventHandler, type ReactNode, createContext, useContext } from "react";
+import React, { type MouseEventHandler, type ReactNode, createContext, useContext } from "react";
 import { sanitizeExternalUrl } from "~~/utils/externalUrl";
 
 const ExternalLinkBehaviorContext = createContext({ disableNavigation: false });
@@ -59,7 +59,7 @@ export function SafeExternalLink({
     return (
       <button
         type="button"
-        className={`appearance-none border-0 bg-transparent p-0 font-inherit text-left text-inherit focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${
+        className={`appearance-none border-0 bg-transparent p-0 font-inherit text-left text-inherit focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/80 ${
           className ?? ""
         }`.trim()}
         title={title}

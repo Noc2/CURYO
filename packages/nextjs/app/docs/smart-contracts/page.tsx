@@ -21,10 +21,6 @@ const SmartContracts: NextPage = () => {
         non-upgradeable.
       </p>
       <p>
-        The current production surface also includes one stateless helper contract, <code>SubmissionCanonicalizer</code>
-        , plus the protocol libraries used by the registries and voting engine.
-      </p>
-      <p>
         The Solidity sources live in{" "}
         <a href={contractsSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
           packages/foundry/contracts
@@ -50,8 +46,8 @@ const SmartContracts: NextPage = () => {
           </thead>
           <tbody>
             <tr>
-              <td className="font-mono text-primary">CuryoReputation</td>
-              <td>ERC-20 token (cREP) with governance voting power, ERC-1363 hooks, and governance locks</td>
+              <td className="font-mono text-primary">HumanReputation</td>
+              <td>ERC-20 token (HREP) with governance voting power, ERC-1363 hooks, and governance locks</td>
               <td>No</td>
             </tr>
             <tr>
@@ -86,27 +82,32 @@ const SmartContracts: NextPage = () => {
             </tr>
             <tr>
               <td className="font-mono text-primary">CategoryRegistry</td>
-              <td>Category/platform management via governance proposals</td>
+              <td>Seeded discovery category metadata</td>
               <td>No</td>
             </tr>
             <tr>
               <td className="font-mono text-primary">ParticipationPool</td>
-              <td>Halving-tier participation rewards used by submitter and voter reward claims</td>
+              <td>Halving-tier HREP Bootstrap Pool rewards used by voter reward claims</td>
               <td>No</td>
             </tr>
             <tr>
+              <td className="font-mono text-primary">QuestionRewardPoolEscrow</td>
+              <td>Question-scoped HREP or USDC custody, voter rewards, and the frontend-operator reward share</td>
+              <td>No</td>
+            </tr>
+            <tr>
+              <td className="font-mono text-primary">FeedbackBonusEscrow</td>
+              <td>Question-scoped USDC bonuses for awarded voter feedback hashes</td>
+              <td>Transparent</td>
+            </tr>
+            <tr>
               <td className="font-mono text-primary">ProfileRegistry</td>
-              <td>On-chain user profiles with unique names, images, and public rating strategy text</td>
+              <td>On-chain user profiles with unique names, images, and public self-reported audience context</td>
               <td>Transparent</td>
             </tr>
             <tr>
               <td className="font-mono text-primary">HumanFaucet</td>
-              <td>Sybil-resistant token distribution via Self.xyz passport or biometric ID verification</td>
-              <td>No</td>
-            </tr>
-            <tr>
-              <td className="font-mono text-primary">SubmissionCanonicalizer</td>
-              <td>Stateless URL/domain canonicalization helper used by ContentRegistry submissions</td>
+              <td>Sybil-resistant token distribution via Self.xyz age, document, and sanctions verification</td>
               <td>No</td>
             </tr>
             <tr>
@@ -121,17 +122,7 @@ const SmartContracts: NextPage = () => {
             </tr>
             <tr>
               <td className="font-mono text-primary">RewardMath</td>
-              <td>Library: pool split (82/5/10/2/1) and reward calculations</td>
-              <td>&mdash;</td>
-            </tr>
-            <tr>
-              <td className="font-mono text-primary">CategoryFeeLib</td>
-              <td>Library: category-fee routing for settled rounds</td>
-              <td>&mdash;</td>
-            </tr>
-            <tr>
-              <td className="font-mono text-primary">SubmitterStakeLib</td>
-              <td>Library: submitter stake return/slash policy helpers</td>
+              <td>Library: pool split (90/5/4/1) and reward calculations</td>
               <td>&mdash;</td>
             </tr>
             <tr>
@@ -145,7 +136,7 @@ const SmartContracts: NextPage = () => {
 
       <hr />
 
-      <h2>CuryoReputation</h2>
+      <h2>HumanReputation</h2>
       <p>
         ERC-20 token with ERC20Votes for governance, ERC20Permit for scoped approvals, and ERC-1363 transfer hooks for
         one-transaction voting. Fixed supply of 100M with 6 decimals.
@@ -161,13 +152,13 @@ const SmartContracts: NextPage = () => {
         </li>
         <li>
           <strong>Snapshot-based governance:</strong> ERC20Votes provides historical voting-power snapshots for
-          governance, while cREP transfer locks apply after proposing or voting.
+          governance, while HREP transfer locks apply after proposing or voting.
         </li>
         <li>
           <strong>Minting:</strong> Only <code>MINTER_ROLE</code> (HumanFaucet) can mint, up to <code>MAX_SUPPLY</code>.
         </li>
         <li>
-          <strong>Single-tx voting:</strong> The production UI now uses <code>transferAndCall()</code> so cREP transfer
+          <strong>Single-tx voting:</strong> The production UI now uses <code>transferAndCall()</code> so HREP transfer
           and vote commit happen atomically in one wallet transaction.
         </li>
       </ul>
@@ -184,7 +175,7 @@ const SmartContracts: NextPage = () => {
         </li>
         <li>
           <code>transferAndCall(votingEngine, amount, payload)</code> &mdash; Default vote path used by the app. Sends
-          cREP stake to the voting engine and atomically commits the encrypted vote payload.
+          HREP stake to the voting engine and atomically commits the encrypted vote payload.
         </li>
       </ul>
 
@@ -193,13 +184,15 @@ const SmartContracts: NextPage = () => {
       <h2>VoterIdNFT</h2>
       <p>
         Soulbound (non-transferable) ERC-721 representing a verified human identity. Minted by HumanFaucet upon
-        successful Self.xyz passport or biometric ID verification. Token ID 0 is reserved (indicates no Voter ID).
+        successful Self.xyz passport or biometric ID verification for an eligible 18+ claimant. Token ID 0 is reserved
+        (indicates no Voter ID).
       </p>
       <h3>Sybil Resistance</h3>
       <p>
-        VoterIdNFT is required by most contracts to perform actions: submitting content, voting, registering frontends,
-        creating profiles, and submitting categories. It also enforces a per-Voter-ID stake cap of{" "}
-        <strong>100 cREP per content per round</strong>, preventing a single identity from dominating any vote.
+        VoterIdNFT is required for voting, registering frontends, creating profiles, and creating categories.
+        USDC-funded question submission is permissionless and does not require a Voter ID; HREP-funded identity paths
+        stay gated where the contracts require them. VoterIdNFT also enforces a per-Voter-ID stake cap of{" "}
+        <strong>100 HREP per content per round</strong>, preventing a single identity from dominating any vote.
       </p>
       <h3>Key Functions</h3>
       <ul>
@@ -245,8 +238,10 @@ const SmartContracts: NextPage = () => {
         emitted via events.
       </p>
       <p>
-        Submission canonicalization is delegated to <code>SubmissionCanonicalizer</code>, which normalizes supported
-        platform URLs into a deterministic submission key before duplicate checks are applied.
+        ContentRegistry validates submitted media links against CategoryRegistry before deriving the question submission
+        key from the submitted metadata. The docs now describe the question-first flow: a required context URL with
+        optional image or YouTube preview media, plus a mandatory non-refundable bounty attached at submission in HREP
+        or USDC.
       </p>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
         <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_.badge]:text-base [&_th]:bg-base-300">
@@ -276,7 +271,7 @@ const SmartContracts: NextPage = () => {
               <td>
                 <span className="badge badge-secondary badge-sm">Cancelled</span>
               </td>
-              <td>Voluntarily removed by the submitter (1 cREP cancellation fee).</td>
+              <td>Voluntarily removed by the submitter (1 HREP cancellation fee).</td>
             </tr>
           </tbody>
         </table>
@@ -285,13 +280,28 @@ const SmartContracts: NextPage = () => {
       <ul>
         <li>
           <code>reserveSubmission(revealCommitment)</code>, then{" "}
-          <code>submitContent(url, title, description, tags, categoryId, salt)</code> &mdash; Reserve a hidden content
-          submission, then reveal it with a 10 cREP stake. Requires Voter ID. Duplicate URLs are rejected, and the title
-          plus description are emitted in the canonical <code>ContentSubmitted</code> event for indexers and alternate
-          frontends.
+          <code>submitQuestionWithRewardAndRoundConfig(..., rewardTerms, roundConfig, spec)</code> &mdash; Reserve a
+          hidden question, then reveal it with the exact attached bounty terms, creator-selected round config, and two
+          non-zero metadata hashes: <code>questionMetadataHash</code> and <code>resultSpecHash</code>. Question text is
+          capped at 120 characters, the context/media submission key is checked for duplicates, and the question plus
+          description are emitted in the canonical <code>ContentSubmitted</code> event for indexers and alternate
+          frontends. The subjective template, rationale, and interpretation data stays off-chain; the contract only
+          commits to its hashes and emits <code>QuestionSpecAnchored</code>. Agent asks use the same function after the
+          user or scoped agent wallet executes the returned funding and submission calls.
         </li>
         <li>
-          <code>cancelContent(contentId)</code> &mdash; Cancel own content (1 cREP fee to the configured
+          <code>submitQuestionBundleWithRewardAndRoundConfig(..., rewardTerms, roundConfig)</code> &mdash; Submit a
+          ranked-option bundle with one bounty shared across sibling questions. <code>requiredSettledRounds</code> now
+          applies to bundle round sets, where each set is complete only after every bundled question has one settled
+          round.
+        </li>
+        <li>
+          <code>getContentRoundConfig(contentId)</code> &mdash; Returns the blind phase, maximum duration, settlement
+          voters, and voter cap selected for that question. Existing submit functions without an explicit round config
+          still use the governed default.
+        </li>
+        <li>
+          <code>cancelContent(contentId)</code> &mdash; Cancel own content (1 HREP fee to the configured
           cancellation-fee sink, treasury by default).
         </li>
         <li>
@@ -299,36 +309,20 @@ const SmartContracts: NextPage = () => {
           reverts if content has an active open round.
         </li>
         <li>
-          <code>reviveContent(contentId)</code> &mdash; Revive dormant content (5 cREP, max 2 times). Only the original
+          <code>reviveContent(contentId)</code> &mdash; Revive dormant content (5 HREP, max 2 times). Only the original
           submitter identity can do this, and only during the 1-day exclusive revival window.
         </li>
         <li>
-          <code>updateRatingDirect(contentId, newRating)</code> &mdash; Called by RoundVotingEngine after settlement
-          with the new rating data. In the planned redeploy, this becomes a richer score-relative update path fed by the
-          round&apos;s snapshotted reference score, epoch-weighted revealed evidence, and conservative rating bound.
+          <code>updateRatingState(contentId, roundId, referenceRatingBps, nextState)</code> &mdash; Called by
+          RoundVotingEngine after settlement with the score-relative update derived from the round&apos;s snapshotted
+          reference score, epoch-weighted revealed evidence, and conservative rating bound.
         </li>
       </ul>
-      <h3>Submitter Stake</h3>
-      <ul>
-        <li>
-          <strong>Grace period:</strong> 24 hours. No slash possible during this time.
-        </li>
-        <li>
-          <strong>Slash:</strong> In the redesigned redeploy, submitter stake only becomes slashable once a conservative
-          low-rating bound stays below the governed threshold after grace period and the content has accumulated enough
-          evidence, enough settled rounds, and enough time below threshold.
-        </li>
-        <li>
-          <strong>Auto-return:</strong> After ~4 days once a settled round confirms the conservative rating bound is
-          healthy again and no later round remains open. If no round ever settles, the stake resolves when the content
-          reaches dormancy after all open rounds have been closed.
-        </li>
-        <li>
-          <strong>Submitter participation reward:</strong> Healthy submitter rewards are snapshotted when the stake
-          returns. If the ParticipationPool is temporarily depleted, the remaining amount stays claimable later instead
-          of being lost.
-        </li>
-      </ul>
+      <h3>Submission Economics</h3>
+      <p>
+        Question submissions no longer carry refundable creator deposits or creator-side bootstrap rewards. The attached
+        bounty is non-refundable and routes to eligible voters plus the eligible frontend operator.
+      </p>
 
       <hr />
 
@@ -351,33 +345,33 @@ const SmartContracts: NextPage = () => {
           <tbody>
             <tr>
               <td className="font-mono">MIN_STAKE</td>
-              <td>1 cREP</td>
+              <td>1 HREP</td>
               <td>Minimum vote stake</td>
             </tr>
             <tr>
               <td className="font-mono">MAX_STAKE</td>
-              <td>100 cREP</td>
+              <td>100 HREP</td>
               <td>Maximum vote stake per Voter ID per round</td>
             </tr>
             <tr>
               <td className="font-mono">epochDuration</td>
               <td>{protocolDocFacts.blindPhaseDurationLabel}</td>
-              <td>Duration of each reward tier</td>
+              <td>Default duration of each reward tier; question creators can select within governance bounds.</td>
             </tr>
             <tr>
               <td className="font-mono">maxDuration</td>
               <td>{protocolDocFacts.maxRoundDurationLabel}</td>
-              <td>Maximum round lifetime &mdash; expired rounds can be cancelled</td>
+              <td>Default maximum round lifetime; question creators can select within governance bounds.</td>
             </tr>
             <tr>
               <td className="font-mono">minVoters</td>
               <td>{protocolDocFacts.minVotersLabel}</td>
-              <td>Minimum revealed votes required before settlement is allowed</td>
+              <td>Default minimum revealed votes required before settlement is allowed.</td>
             </tr>
             <tr>
               <td className="font-mono">maxVotersPerRound</td>
               <td>{protocolDocFacts.maxVotersLabel}</td>
-              <td>Cap on voters per content per round (O(1) settlement)</td>
+              <td>Default cap on voters per content per round and upper bound for bounty voter requirements.</td>
             </tr>
             <tr>
               <td className="font-mono">revealGracePeriod</td>
@@ -396,11 +390,11 @@ const SmartContracts: NextPage = () => {
       <ul>
         <li>
           <code>
-            CuryoReputation.transferAndCall(votingEngine, stakeAmount, abi.encode(contentId, roundReferenceRatingBps,
+            HumanReputation.transferAndCall(votingEngine, stakeAmount, abi.encode(contentId, roundReferenceRatingBps,
             commitHash, ciphertext, frontend, targetRound, drandChainHash))
           </code>{" "}
-          &mdash; Default one-transaction vote flow. Transfers cREP and records the tlock-encrypted commit atomically.
-          Direction is hidden until the epoch ends. Requires Voter ID and enforces the same 1&ndash;100 cREP stake
+          &mdash; Default one-transaction vote flow. Transfers HREP and records the tlock-encrypted commit atomically.
+          Direction is hidden until the epoch ends. Requires Voter ID and enforces the same 1&ndash;100 HREP stake
           bounds. The redeployed contract rejects malformed or non-armored ciphertexts, binds the canonical round
           reference score into the vote payload, and binds the reveal-target metadata on-chain.
         </li>
@@ -411,8 +405,9 @@ const SmartContracts: NextPage = () => {
         <li>
           <strong>VoteCommitted event:</strong> emits the commit hash, <code>targetRound</code>, and{" "}
           <code>drandChainHash</code> so indexers can observe the exact reveal metadata attached to each vote. The
-          planned redeploy also snapshots <code>roundReferenceRatingBps</code> per round so every frontend can recover
-          the exact score anchor users voted against.
+          redeployed engine also snapshots <code>roundReferenceRatingBps</code> and emits{" "}
+          <code>RoundConfigSnapshotted</code> per round so every frontend can recover the exact score anchor and round
+          settings users voted against.
         </li>
         <li>
           <code>revealVoteByCommitKey(contentId, roundId, commitKey, isUp, salt)</code> &mdash; Reveal a previously
@@ -426,10 +421,10 @@ const SmartContracts: NextPage = () => {
         </li>
         <li>
           <code>settleRound(contentId, roundId)</code> &mdash; Settle the current round once at least{" "}
-          <code>minVoters</code> votes are revealed and all past-epoch votes have been revealed (or their{" "}
-          {protocolDocFacts.revealGracePeriodLabel} reveal grace period has expired). Determines winners based on
-          epoch-weighted stakes, splits reward pools, and updates content rating from the round reference score using
-          the governed score-relative rating model.
+          <code>minVoters</code> votes from the round snapshot are revealed and all past-epoch votes have been revealed
+          (or their {protocolDocFacts.revealGracePeriodLabel} reveal grace period has expired). Determines winners based
+          on epoch-weighted stakes, splits bounties, and updates content rating from the round reference score using the
+          governed score-relative rating model.
         </li>
         <li>
           <code>RoundRewardDistributor.claimFrontendFee(contentId, roundId, frontend)</code> &mdash; Frontend operators
@@ -438,13 +433,27 @@ const SmartContracts: NextPage = () => {
           claim time, governance can route the claim to the protocol instead of accruing it to the operator.
         </li>
         <li>
-          <code>RoundRewardDistributor.claimParticipationReward(contentId, roundId)</code> &mdash; Voters claim
-          participation rewards (rate snapshotted at settlement time for fairness). Pull-based.
+          <code>QuestionRewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId)</code> &mdash; Claim the USDC-backed
+          bounty for a revealed voter. New bounties default to a 3% frontend-operator share, attributed from the vote
+          commit; unpayable frontend shares remain with the voter claim.
         </li>
         <li>
-          <code>ContentRegistry.claimSubmitterParticipationReward(contentId)</code> &mdash; Claim the snapshotted
-          submitter participation reward after a healthy stake return. Any amount the pool could already fund is
-          reserved up front for that claim instead of depending entirely on future pool authorization state.
+          <code>QuestionRewardPoolEscrow.claimQuestionBundleReward(bundleId, roundSetIndex)</code> &mdash; Claim a
+          bundle bounty round set after the voter revealed on every bundled question in that set. Multi-round bundles
+          create one claimable allocation per completed round set.
+        </li>
+        <li>
+          <code>FeedbackBonusEscrow.awardFeedbackBonus(poolId, recipient, feedbackHash, grossAmount)</code> &mdash; Pay
+          an awarded feedback hash directly to a revealed, independent voter. The awarder pays this transaction, the
+          recipient receives USDC immediately, and an eligible vote-attributed frontend receives the 3% share.
+        </li>
+        <li>
+          <code>FeedbackBonusEscrow.forfeitExpiredFeedbackBonus(poolId)</code> &mdash; Send expired unawarded Feedback
+          Bonus USDC to treasury.
+        </li>
+        <li>
+          <code>RoundRewardDistributor.claimParticipationReward(contentId, roundId)</code> &mdash; Voters claim
+          bootstrap rewards (rate snapshotted at settlement time for fairness). Pull-based.
         </li>
         <li>
           <code>cancelExpiredRound(contentId, roundId)</code> &mdash; Cancel a round that exceeded maxDuration (
@@ -466,14 +475,19 @@ const SmartContracts: NextPage = () => {
 
       <h2>ProtocolConfig</h2>
       <p>
-        Governance-controlled address book and parameter store for <code>RoundVotingEngine</code>. The engine snapshots
-        round config and reveal grace period at round creation so mid-round governance changes do not change an already
-        open round.
+        Governance-controlled address book and parameter store for <code>RoundVotingEngine</code>. Governance sets the
+        default round config and creator bounds; each question then stores its selected config, and the engine snapshots
+        that config plus reveal grace at round creation so mid-round governance changes do not change an already open
+        round.
       </p>
       <ul>
         <li>
           <code>setConfig(epochDuration, maxDuration, minVoters, maxVoters)</code> &mdash; Update round parameters for
-          future rounds.
+          future questions that use the default config.
+        </li>
+        <li>
+          <code>setRoundConfigBounds(...)</code> and <code>validateRoundConfig(...)</code> &mdash; Define and enforce
+          the allowed creator-selected range for blind phase, max duration, settlement voters, and voter cap.
         </li>
         <li>
           <code>setRevealGracePeriod(seconds)</code> &mdash; Update the grace period used for future round snapshots.
@@ -497,10 +511,11 @@ const SmartContracts: NextPage = () => {
           plus winnings; revealed losers receive a fixed {protocolDocFacts.revealedLoserRefundPercentLabel} rebate.
         </li>
         <li>
-          <code>claimSubmitterReward(contentId, roundId)</code> &mdash; Claim submitter&apos;s 10% share.
+          <code>claimParticipationReward(contentId, roundId)</code> &mdash; Claim the HREP bootstrap reward for eligible
+          winning revealed voters, using the rate snapshotted at settlement.
         </li>
         <li>
-          <code>sweepStrandedCrepToTreasury()</code> &mdash; Governance-only recovery path for any cREP mistakenly sent
+          <code>sweepStrandedHrepToTreasury()</code> &mdash; Governance-only recovery path for any HREP mistakenly sent
           directly to the distributor.
         </li>
       </ul>
@@ -509,20 +524,20 @@ const SmartContracts: NextPage = () => {
 
       <h2>FrontendRegistry</h2>
       <p>
-        Manages frontend operator registration and fee distribution. Frontend operators stake a fixed 1,000 cREP and
+        Manages frontend operator registration and fee distribution. Frontend operators stake a fixed 1,000 HREP and
         receive {protocolDocFacts.frontendShareLabel} for each settled two-sided round they facilitated votes in.
       </p>
       <h3>Key Functions</h3>
       <ul>
         <li>
-          <code>register()</code> &mdash; Register as frontend operator (fixed 1,000 cREP stake). Requires Voter ID.
+          <code>register()</code> &mdash; Register as frontend operator (fixed 1,000 HREP stake). Requires Voter ID.
         </li>
         <li>
           <code>requestDeregister()</code> / <code>completeDeregister()</code> &mdash; Start voluntary exit, then
           withdraw stake + pending fees after the unbonding window elapses.
         </li>
         <li>
-          <code>topUpStake(amount)</code> &mdash; Restore the fixed 1,000 cREP bond after a partial slash so the
+          <code>topUpStake(amount)</code> &mdash; Restore the fixed 1,000 HREP bond after a partial slash so the
           frontend becomes fee-eligible again.
         </li>
         <li>
@@ -538,39 +553,13 @@ const SmartContracts: NextPage = () => {
 
       <h2>CategoryRegistry</h2>
       <p>
-        Manages content categories. New categories require a governance proposal and on-chain vote for approval. Each
-        category maps to a domain and includes subcategories that help voters interpret the type of content being rated.
+        Stores simple seeded discovery categories. Categories are metadata used to help people find and interpret
+        content; they do not require user staking or governance approval proposals.
       </p>
       <h3>Key Functions</h3>
       <ul>
         <li>
-          <code>submitCategory(name, domain, subcategories)</code> &mdash; Submit category for governance sponsorship
-          (500 cREP stake). Requires Voter ID.
-        </li>
-        <li>
-          <code>linkApprovalProposal(categoryId, descriptionHash)</code> &mdash; Link the separately created governor
-          approval proposal to the pending category. Submitter only, and only for proposals created after that
-          submission.
-        </li>
-        <li>
-          <code>clearApprovalProposal(categoryId)</code> &mdash; Clear a linked approval proposal after it was canceled
-          or expired, or after it stayed succeeded but unqueued past the timeout, so the submitter can retry or cancel.
-        </li>
-        <li>
-          <code>cancelUnlinkedCategory(categoryId)</code> &mdash; Reclaim stake after 7 days if no approval proposal was
-          linked.
-        </li>
-        <li>
-          <code>approveCategory(categoryId, descriptionHash, approvalDigest)</code> &mdash; Approve after successful
-          governance vote for the exact linked proposal and current submission binding (timelock only).
-        </li>
-        <li>
-          <code>rejectCategory(categoryId)</code> &mdash; Reject after a defeated vote (permissionless, checks proposal
-          state).
-        </li>
-        <li>
-          <code>addApprovedCategory(name, domain, subcategories)</code> &mdash; Add category directly (ADMIN_ROLE, for
-          bootstrapping).
+          <code>addCategory(name, slug, subcategories)</code> &mdash; Add seeded category metadata (ADMIN_ROLE).
         </li>
       </ul>
 
@@ -578,17 +567,17 @@ const SmartContracts: NextPage = () => {
 
       <h2>ProfileRegistry</h2>
       <p>
-        On-chain user profiles with unique names (3&ndash;20 characters) and an optional public rating strategy. Profile
-        settings also support an on-chain generated avatar color override. Requires Voter ID.
+        On-chain user profiles with unique names (3&ndash;20 characters) and optional public self-reported audience
+        context. Profile settings also support an on-chain generated avatar color override. Requires Voter ID.
       </p>
       <h3>Key Functions</h3>
       <ul>
         <li>
-          <code>setProfile(name, strategy)</code> &mdash; Create or update profile. Names are case-insensitive unique,
-          and <code>strategy</code> stores a short public note about how the user rates on Curyo.
+          <code>setProfile(name, selfReport)</code> &mdash; Create or update profile. Names are case-insensitive unique,
+          and <code>selfReport</code> stores public, self-reported, unverified audience context.
         </li>
         <li>
-          <code>getProfile(address)</code> &mdash; Get profile (name, strategy, createdAt, updatedAt).
+          <code>getProfile(address)</code> &mdash; Get profile (name, selfReport, createdAt, updatedAt).
         </li>
         <li>
           <code>getAddressByName(name)</code> &mdash; Reverse lookup: name to owner address.
@@ -608,9 +597,11 @@ const SmartContracts: NextPage = () => {
       <h2>HumanFaucet</h2>
       <p>
         Sybil-resistant token distribution using Self.xyz zero-knowledge passport or biometric ID-card verification.
-        Five tiers run from Genesis (10,000 cREP for the first 10 users) down to Settler (1 cREP), with claim sizes
-        stepping down 10x at claimant thresholds 10 / 1,000 / 10,000 / 1,000,000. Referral bonuses are 50% of the claim
-        amount for both claimant and referrer.
+        Claims require a supported credential, proof that the claimant is 18 or older, OFAC sanctions clearance, and the
+        configured sanctioned-country exclusion check, currently covering Cuba, Iran, North Korea, and Syria. Five tiers
+        run from Genesis (10,000 HREP for the first 10 users) down to Settler (1 HREP), with claim sizes stepping down
+        10x at claimant thresholds 10 / 1,000 / 10,000 / 1,000,000. Referral bonuses are 50% of the claim amount for
+        both claimant and referrer.
       </p>
       <p>
         On a successful claim, HumanFaucet attempts to mint a <strong>VoterIdNFT</strong> for the claimant, enabling
@@ -622,7 +613,7 @@ const SmartContracts: NextPage = () => {
 
       <h2>CuryoGovernor</h2>
       <p>
-        OpenZeppelin Governor with timelock control. Uses cREP voting power (ERC20Votes). Tokens are locked for 7 days
+        OpenZeppelin Governor with timelock control. Uses HREP voting power (ERC20Votes). Tokens are locked for 7 days
         when proposing or casting votes.
       </p>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
@@ -662,15 +653,13 @@ const SmartContracts: NextPage = () => {
 
       <h2>ParticipationPool</h2>
       <p>
-        Distributes participation rewards to both voters and content submitters. Voter rewards are claimed after round
-        settlement using the rate snapshotted at settlement time. Submitter rewards are snapshotted only when a healthy
-        submitter stake return resolves after a settled round. Funded with 34M cREP. Uses a halving schedule: starting
-        at 90% reward rate, halving each time a tier threshold is reached (2M, 6M, 14M, 30M cumulative), with a 1% floor
-        rate.
+        Implements the user-facing Bootstrap Pool for voters. Voter rewards are claimed after round settlement using the
+        rate snapshotted at settlement time. Funded with 12M HREP. Uses a halving schedule: starting at 90% reward rate,
+        halving each time a tier threshold is reached (1.5M, 4.5M, 10.5M, 22.5M cumulative), with a 1% floor rate.
       </p>
       <p>
-        Privileged sweeps of accounted participation rewards are disabled; only reward accounting and surplus recovery
-        move funds.
+        Privileged sweeps of accounted bootstrap rewards are disabled; only reward accounting and surplus recovery move
+        funds.
       </p>
 
       <hr />
@@ -680,8 +669,7 @@ const SmartContracts: NextPage = () => {
       <ul>
         <li>
           <code>splitPoolAfterLoserRefund(losingPool)</code> &mdash; Reserve a 5% rebate for revealed losers, then split
-          the remaining pool into 80% voters / 5% consensus subsidy / 10% submitter / 4% platform (3% frontend + 1%
-          category) / 1% treasury.
+          the remaining pool into 90% voters / 5% consensus subsidy / 4% frontend / 1% treasury.
         </li>
         <li>
           <code>calculateVoterReward(shares, totalWinningShares, voterPool)</code> &mdash; Share-proportional reward
@@ -714,11 +702,12 @@ const SmartContracts: NextPage = () => {
         </li>
         <li>
           <strong>Snapshot-based governance:</strong> CuryoGovernor uses ERC20Votes snapshots for proposal voting power,
-          and governance participation also applies a 7-day cREP transfer lock.
+          and governance participation also applies a 7-day HREP transfer lock.
         </li>
         <li>
-          <strong>Sybil Resistance:</strong> VoterIdNFT (soulbound) required for all user actions. Per-identity stake
-          cap of 100 cREP per content per round.
+          <strong>Sybil Resistance:</strong> VoterIdNFT (soulbound) remains required for voting and other identity-gated
+          actions. Per-identity stake cap of 100 HREP per content per round, plus question-first submission guardrails
+          and claim gating. Question submission is the same for humans, bots, and delegated agents.
         </li>
         <li>
           <strong>Governance Lock:</strong> Tokens are transfer-locked for 7 days when proposing or voting on
@@ -731,7 +720,7 @@ const SmartContracts: NextPage = () => {
         </li>
         <li>
           <strong>Governance-owned access control:</strong> The governor/timelock owns upgrade, config, and treasury
-          roles from launch. The initial 10M treasury allocation also sits there, while the deployer receives only
+          roles from launch. The initial 32M treasury allocation also sits there, while the deployer receives only
           temporary setup roles and renounces them after deployment.
         </li>
       </ul>

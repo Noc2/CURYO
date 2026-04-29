@@ -1,6 +1,6 @@
 # Curyo — Ponder (Indexer & API)
 
-On-chain event indexer built with [Ponder](https://ponder.sh/). Listens to smart contract events, stores processed data, and exposes a REST API on port 42069 for consumption by the frontend and bot.
+On-chain event indexer built with [Ponder](https://ponder.sh/). Listens to smart contract events, stores processed data, and exposes a REST API on port 42069 for consumption by the frontend, bot, and AI/MCP adapters.
 
 ## Quick Start
 
@@ -18,36 +18,39 @@ Requires a running chain (local via `yarn chain` or a configured testnet RPC).
 
 ## Scripts
 
-| Command | Description |
-|---|---|
-| `yarn ponder:dev` | Development mode with crash recovery and terminal UI disabled |
-| `yarn ponder:start` | Production mode |
-| `yarn ponder:codegen` | Generate types from `ponder.schema.ts` |
+| Command               | Description                                                   |
+| --------------------- | ------------------------------------------------------------- |
+| `yarn ponder:dev`     | Development mode with crash recovery and terminal UI disabled |
+| `yarn ponder:start`   | Production mode                                               |
+| `yarn ponder:codegen` | Generate types from `ponder.schema.ts`                        |
 
 Within the package directory, additional scripts are available:
 
-| Command | Description |
-|---|---|
+| Command        | Description                                                     |
+| -------------- | --------------------------------------------------------------- |
 | `yarn dev:raw` | Development mode without recovery wrapper, terminal UI disabled |
-| `yarn dev:ui` | Development mode with Ponder's live terminal UI enabled |
-| `yarn serve` | Run API only (no indexing) |
+| `yarn dev:ui`  | Development mode with Ponder's live terminal UI enabled         |
+| `yarn serve`   | Run API only (no indexing)                                      |
 
 ## Configuration
 
-| Variable | Description |
-|---|---|
-| `PONDER_NETWORK` | Active network: `hardhat`, `celoSepolia`, or `celo` |
-| `PONDER_RPC_URL_31337` | RPC URL for local Hardhat/Anvil chain |
-| `PONDER_RPC_URL_11142220` | RPC URL for Celo Sepolia |
-| `PONDER_RPC_URL_42220` | RPC URL for Celo mainnet |
-| `PONDER_CONTENT_REGISTRY_ADDRESS` etc. | Optional fallback addresses when the active chain has no shared deployment in `@curyo/contracts` |
-| `PONDER_CONTENT_REGISTRY_START_BLOCK` etc. | Optional fallback start blocks when the active chain has no shared deployment metadata |
-| `CORS_ORIGIN` | Allowed origins (comma-separated; required in production) |
-| `RATE_LIMIT_TRUSTED_IP_HEADERS` | Comma-separated proxy IP headers to trust for API rate limiting in production |
+| Variable                                   | Description                                                                                      |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| `PONDER_NETWORK`                           | Active network: `hardhat`, `celoSepolia`, or `celo`                                              |
+| `PONDER_RPC_URL_31337`                     | RPC URL for local Hardhat/Anvil chain                                                            |
+| `PONDER_RPC_URL_11142220`                  | RPC URL for Celo Sepolia                                                                         |
+| `PONDER_RPC_URL_42220`                     | RPC URL for Celo mainnet                                                                         |
+| `PONDER_CONTENT_REGISTRY_ADDRESS` etc.     | Local Hardhat address overrides; fallback addresses when the active chain has no shared deployment in `@curyo/contracts` |
+| `PONDER_CONTENT_REGISTRY_START_BLOCK` etc. | Optional fallback start blocks when the active chain has no shared deployment metadata           |
+| `CORS_ORIGIN`                              | Allowed origins (comma-separated; required in production)                                        |
+| `RATE_LIMIT_TRUSTED_IP_HEADERS`            | Comma-separated proxy IP headers to trust for API rate limiting in production                    |
 
-For supported chains, Ponder treats `@curyo/contracts` as the source of truth and ignores stale address/start-block env values.
-After `yarn deploy --network celoSepolia --keystore <name>`, the Foundry deployment script refreshes
-`packages/ponder/.env.local` to match those shared deployment values.
+For live supported chains, Ponder treats `@curyo/contracts` as the source of truth and ignores stale address/start-block env values.
+For local Hardhat/Anvil, Ponder prefers the address env values generated into `packages/ponder/.env.local` so a fresh
+`yarn deploy` does not need machine-specific addresses committed to the shared deployment artifact. After `yarn deploy`,
+the Foundry deployment script refreshes `packages/ponder/.env.local` to match the deployment target. Local deploys set
+`PONDER_NETWORK=hardhat`; live deploys such as
+`yarn deploy --network celoSepolia --keystore <name>` set the matching live network.
 
 ## Project Structure
 
@@ -59,11 +62,13 @@ src/
 ├── ContentRegistry.ts        # Content submission & lifecycle events
 ├── RoundVotingEngine.ts      # Commit, reveal, settle, cancel events
 ├── RoundRewardDistributor.ts # Reward distribution events
-├── CategoryRegistry.ts       # Category registration events
+├── QuestionRewardPoolEscrow.ts # Bounty funding, voter claims, and frontend shares
+├── FeedbackBonusEscrow.ts    # Feedback bonus pools, awards, and forfeits
+├── CategoryRegistry.ts       # Seeded discovery category metadata
 ├── ProfileRegistry.ts       # Profile update events
 ├── FrontendRegistry.ts       # Frontend fee events
 ├── VoterIdNFT.ts             # NFT minting events
-├── CuryoReputation.ts        # Token transfer events
+├── HumanReputation.ts        # Token transfer events
 └── api/
     └── index.ts              # REST API routes (Hono)
 
@@ -77,14 +82,18 @@ ABIs come from `@curyo/contracts/abis`; the indexer imports the shared package d
 
 The REST API is built with Hono. Key routes:
 
-| Endpoint | Description |
-|---|---|
-| `GET /content` | List content with filters and pagination |
-| `GET /content/:id` | Single content item |
-| `GET /content/by-url?url=...` | Look up a single content item by URL |
-| `GET /votes` | List votes with filters |
-| `GET /profile/:address` | User profile and reputation |
-| `GET /categories` | List content categories |
+| Endpoint                                | Description                                             |
+| --------------------------------------- | ------------------------------------------------------- |
+| `GET /content`                          | List content with filters and pagination                |
+| `GET /content/:id`                      | Single content item                                     |
+| `GET /content/by-url?url=...`           | Look up a single content item by URL                    |
+| `GET /votes`                            | List votes with filters                                 |
+| `GET /question-reward-claim-candidates` | Claimable USDC bounty rounds for a revealed voter       |
+| `GET /question-bundle-claim-candidates` | Claimable bundle bounty round sets for a revealed voter |
+| `GET /profile/:address`                 | User profile and reputation                             |
+| `GET /categories`                       | List content categories                                 |
+
+Bounty tables track gross funding, voter payouts, and the default eligible frontend-operator share separately so API consumers can display both voter rewards and operator fees. Bundle bounties are indexed as round sets: each set records one settled round per bundled question, its allocation, and per-voter claims. Feedback Bonus tables stay separate: they index USDC pools, awarded feedback hashes, direct voter payments, frontend shares, and treasury forfeits. Content submission events now revolve around the required context URL plus optional preview media, so indexers and clients can treat the source link as the canonical entry point for discovery and previews.
 
 Routes `/health` and `/status` are reserved by Ponder.
 

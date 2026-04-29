@@ -1,4 +1,15 @@
-import { bigint, boolean, index, integer, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import {
+  bigint,
+  boolean,
+  index,
+  integer,
+  numeric,
+  pgTable,
+  serial,
+  text,
+  timestamp,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 
 export const signedActionChallenges = pgTable(
   "signed_action_challenges",
@@ -70,6 +81,37 @@ export const watchedContent = pgTable(
     walletCreatedAtIdx: index("watched_content_wallet_created_at_idx").on(table.walletAddress, table.createdAt),
   }),
 );
+
+export const contentFeedback = pgTable(
+  "content_feedback",
+  {
+    id: serial("id").primaryKey(),
+    contentId: text("content_id").notNull(),
+    roundId: text("round_id"),
+    chainId: integer("chain_id"),
+    authorAddress: text("author_address").notNull(),
+    feedbackType: text("feedback_type").notNull(),
+    body: text("body").notNull(),
+    sourceUrl: text("source_url"),
+    feedbackHash: text("feedback_hash"),
+    clientNonce: text("client_nonce"),
+    payloadSignature: text("payload_signature"),
+    moderationStatus: text("moderation_status").notNull().default("approved"),
+    visibilityStatus: text("visibility_status").notNull().default("hidden_until_settlement"),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).notNull(),
+    deletedAt: timestamp("deleted_at", { mode: "date", withTimezone: true }),
+  },
+  table => ({
+    contentCreatedAtIdx: index("content_feedback_content_created_at_idx").on(table.contentId, table.createdAt),
+    contentRoundIdx: index("content_feedback_content_round_idx").on(table.contentId, table.roundId),
+    authorCreatedAtIdx: index("content_feedback_author_created_at_idx").on(table.authorAddress, table.createdAt),
+    feedbackHashUnique: uniqueIndex("content_feedback_feedback_hash_unique").on(table.feedbackHash),
+  }),
+);
+
+export type ContentFeedback = typeof contentFeedback.$inferSelect;
+export type NewContentFeedback = typeof contentFeedback.$inferInsert;
 
 export const profileFollows = pgTable(
   "profile_follows",
@@ -152,34 +194,6 @@ export const notificationEmailDeliveryLeases = pgTable("notification_email_deliv
 export type NotificationEmailDelivery = typeof notificationEmailDeliveries.$inferSelect;
 export type NewNotificationEmailDelivery = typeof notificationEmailDeliveries.$inferInsert;
 
-export const urlValidations = pgTable("url_validations", {
-  id: serial("id").primaryKey(),
-  url: text("url").notNull().unique(),
-  isValid: boolean("is_valid").notNull(),
-  platform: text("platform").notNull(),
-  checkedAt: timestamp("checked_at", { mode: "date", withTimezone: true }).notNull(),
-});
-
-export type UrlValidation = typeof urlValidations.$inferSelect;
-
-export const contentMetadata = pgTable("content_metadata", {
-  id: serial("id").primaryKey(),
-  url: text("url").notNull().unique(),
-  thumbnailUrl: text("thumbnail_url"),
-  title: text("title"),
-  description: text("description"),
-  imageUrl: text("image_url"),
-  authors: text("authors"),
-  releaseYear: text("release_year"),
-  symbol: text("symbol"),
-  stars: integer("stars"),
-  forks: integer("forks"),
-  language: text("language"),
-  fetchedAt: timestamp("fetched_at", { mode: "date", withTimezone: true }).notNull(),
-});
-
-export type ContentMetadata = typeof contentMetadata.$inferSelect;
-
 export const apiRateLimits = pgTable(
   "api_rate_limits",
   {
@@ -261,3 +275,238 @@ export const freeTransactionReservations = pgTable(
 
 export type FreeTransactionReservation = typeof freeTransactionReservations.$inferSelect;
 export type NewFreeTransactionReservation = typeof freeTransactionReservations.$inferInsert;
+
+export const x402QuestionSubmissions = pgTable(
+  "x402_question_submissions",
+  {
+    operationKey: text("operation_key").primaryKey(),
+    clientRequestId: text("client_request_id").notNull(),
+    payloadHash: text("payload_hash").notNull(),
+    chainId: integer("chain_id").notNull(),
+    payerAddress: text("payer_address"),
+    paymentAsset: text("payment_asset").notNull(),
+    paymentAmount: text("payment_amount").notNull(),
+    bountyAmount: text("bounty_amount").notNull(),
+    status: text("status").notNull(),
+    bundleId: text("bundle_id"),
+    contentId: text("content_id"),
+    contentIds: text("content_ids"),
+    questionCount: integer("question_count").notNull().default(1),
+    rewardPoolId: text("reward_pool_id"),
+    transactionHashes: text("transaction_hashes"),
+    paymentReceipt: text("payment_receipt"),
+    error: text("error"),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).notNull(),
+    submittedAt: timestamp("submitted_at", { mode: "date", withTimezone: true }),
+  },
+  table => ({
+    clientRequestUnique: uniqueIndex("x402_question_submissions_client_request_unique").on(
+      table.chainId,
+      table.clientRequestId,
+    ),
+    statusUpdatedIdx: index("x402_question_submissions_status_updated_idx").on(table.status, table.updatedAt),
+  }),
+);
+
+export type X402QuestionSubmission = typeof x402QuestionSubmissions.$inferSelect;
+export type NewX402QuestionSubmission = typeof x402QuestionSubmissions.$inferInsert;
+
+export const mcpAgentBudgetReservations = pgTable(
+  "mcp_agent_budget_reservations",
+  {
+    operationKey: text("operation_key").primaryKey(),
+    agentId: text("agent_id").notNull(),
+    clientRequestId: text("client_request_id").notNull(),
+    payloadHash: text("payload_hash").notNull(),
+    chainId: integer("chain_id").notNull(),
+    categoryId: text("category_id").notNull(),
+    paymentAmount: text("payment_amount").notNull(),
+    status: text("status").notNull(),
+    contentId: text("content_id"),
+    error: text("error"),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).notNull(),
+  },
+  table => ({
+    agentClientRequestUnique: uniqueIndex("mcp_agent_budget_reservations_client_request_unique").on(
+      table.agentId,
+      table.chainId,
+      table.clientRequestId,
+    ),
+    agentStatusCreatedIdx: index("mcp_agent_budget_reservations_agent_status_created_idx").on(
+      table.agentId,
+      table.status,
+      table.createdAt,
+    ),
+  }),
+);
+
+export type McpAgentBudgetReservation = typeof mcpAgentBudgetReservations.$inferSelect;
+export type NewMcpAgentBudgetReservation = typeof mcpAgentBudgetReservations.$inferInsert;
+
+export const mcpAgentAskAuditRecords = pgTable(
+  "mcp_agent_ask_audit_records",
+  {
+    id: serial("id").primaryKey(),
+    operationKey: text("operation_key").notNull(),
+    agentId: text("agent_id").notNull(),
+    clientRequestId: text("client_request_id").notNull(),
+    payloadHash: text("payload_hash").notNull(),
+    chainId: integer("chain_id").notNull(),
+    categoryId: text("category_id").notNull(),
+    paymentAmount: text("payment_amount").notNull(),
+    eventType: text("event_type").notNull(),
+    status: text("status").notNull(),
+    contentId: text("content_id"),
+    error: text("error"),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
+  },
+  table => ({
+    agentCreatedIdx: index("mcp_agent_ask_audit_records_agent_created_idx").on(table.agentId, table.createdAt),
+    operationCreatedIdx: index("mcp_agent_ask_audit_records_operation_created_idx").on(
+      table.operationKey,
+      table.createdAt,
+    ),
+  }),
+);
+
+export type McpAgentAskAuditRecord = typeof mcpAgentAskAuditRecords.$inferSelect;
+export type NewMcpAgentAskAuditRecord = typeof mcpAgentAskAuditRecords.$inferInsert;
+
+export const mcpAgentDailyBudgetUsage = pgTable(
+  "mcp_agent_daily_budget_usage",
+  {
+    budgetKey: text("budget_key").primaryKey(),
+    agentId: text("agent_id").notNull(),
+    budgetDate: text("budget_date").notNull(),
+    reservedAmount: numeric("reserved_amount", { precision: 78, scale: 0 }).default("0").notNull(),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).notNull(),
+  },
+  table => ({
+    agentDayIdx: index("mcp_agent_daily_budget_usage_agent_day_idx").on(table.agentId, table.budgetDate),
+  }),
+);
+
+export type McpAgentDailyBudgetUsage = typeof mcpAgentDailyBudgetUsage.$inferSelect;
+export type NewMcpAgentDailyBudgetUsage = typeof mcpAgentDailyBudgetUsage.$inferInsert;
+
+export const agentWalletPolicies = pgTable(
+  "agent_wallet_policies",
+  {
+    id: text("id").primaryKey(),
+    ownerWalletAddress: text("owner_wallet_address").notNull(),
+    agentId: text("agent_id").notNull(),
+    agentWalletAddress: text("agent_wallet_address").notNull(),
+    status: text("status").notNull(),
+    scopes: text("scopes").notNull(),
+    categories: text("categories"),
+    dailyBudgetAtomic: text("daily_budget_atomic").notNull(),
+    perAskLimitAtomic: text("per_ask_limit_atomic").notNull(),
+    tokenHash: text("token_hash"),
+    tokenIssuedAt: timestamp("token_issued_at", { mode: "date", withTimezone: true }),
+    tokenRevokedAt: timestamp("token_revoked_at", { mode: "date", withTimezone: true }),
+    expiresAt: timestamp("expires_at", { mode: "date", withTimezone: true }),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).notNull(),
+    revokedAt: timestamp("revoked_at", { mode: "date", withTimezone: true }),
+  },
+  table => ({
+    ownerAgentUnique: uniqueIndex("agent_wallet_policies_owner_agent_unique").on(
+      table.ownerWalletAddress,
+      table.agentId,
+    ),
+    ownerStatusIdx: index("agent_wallet_policies_owner_status_idx").on(
+      table.ownerWalletAddress,
+      table.status,
+      table.updatedAt,
+    ),
+    agentWalletIdx: index("agent_wallet_policies_agent_wallet_idx").on(table.agentWalletAddress, table.status),
+    tokenHashUnique: uniqueIndex("agent_wallet_policies_token_hash_unique").on(table.tokenHash),
+  }),
+);
+
+export type AgentWalletPolicy = typeof agentWalletPolicies.$inferSelect;
+export type NewAgentWalletPolicy = typeof agentWalletPolicies.$inferInsert;
+
+export const agentWalletPolicyAuditRecords = pgTable(
+  "agent_wallet_policy_audit_records",
+  {
+    id: serial("id").primaryKey(),
+    policyId: text("policy_id").notNull(),
+    ownerWalletAddress: text("owner_wallet_address").notNull(),
+    agentId: text("agent_id").notNull(),
+    agentWalletAddress: text("agent_wallet_address").notNull(),
+    eventType: text("event_type").notNull(),
+    status: text("status").notNull(),
+    details: text("details"),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
+  },
+  table => ({
+    policyCreatedIdx: index("agent_wallet_policy_audit_policy_created_idx").on(table.policyId, table.createdAt),
+    ownerCreatedIdx: index("agent_wallet_policy_audit_owner_created_idx").on(table.ownerWalletAddress, table.createdAt),
+  }),
+);
+
+export type AgentWalletPolicyAuditRecord = typeof agentWalletPolicyAuditRecords.$inferSelect;
+export type NewAgentWalletPolicyAuditRecord = typeof agentWalletPolicyAuditRecords.$inferInsert;
+
+export const agentCallbackSubscriptions = pgTable(
+  "agent_callback_subscriptions",
+  {
+    id: text("id").primaryKey(),
+    agentId: text("agent_id").notNull(),
+    callbackUrl: text("callback_url").notNull(),
+    secret: text("secret").notNull(),
+    eventTypes: text("event_types").notNull(),
+    status: text("status").notNull(),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).notNull(),
+  },
+  table => ({
+    agentUrlUnique: uniqueIndex("agent_callback_subscriptions_agent_url_unique").on(table.agentId, table.callbackUrl),
+    agentStatusIdx: index("agent_callback_subscriptions_agent_status_idx").on(table.agentId, table.status),
+  }),
+);
+
+export type AgentCallbackSubscription = typeof agentCallbackSubscriptions.$inferSelect;
+export type NewAgentCallbackSubscription = typeof agentCallbackSubscriptions.$inferInsert;
+
+export const agentCallbackEvents = pgTable(
+  "agent_callback_events",
+  {
+    id: serial("id").primaryKey(),
+    eventKey: text("event_key").notNull(),
+    eventId: text("event_id").notNull(),
+    subscriptionId: text("subscription_id").notNull(),
+    agentId: text("agent_id").notNull(),
+    eventType: text("event_type").notNull(),
+    callbackUrl: text("callback_url").notNull(),
+    secret: text("secret").notNull(),
+    payload: text("payload").notNull(),
+    status: text("status").notNull().default("pending"),
+    attemptCount: integer("attempt_count").notNull().default(0),
+    nextAttemptAt: timestamp("next_attempt_at", { mode: "date", withTimezone: true }).notNull(),
+    leaseOwner: text("lease_owner"),
+    leaseExpiresAt: timestamp("lease_expires_at", { mode: "date", withTimezone: true }),
+    lastAttemptAt: timestamp("last_attempt_at", { mode: "date", withTimezone: true }),
+    deliveredAt: timestamp("delivered_at", { mode: "date", withTimezone: true }),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).notNull(),
+  },
+  table => ({
+    eventKeyUnique: uniqueIndex("agent_callback_events_event_key_unique").on(table.eventKey),
+    subscriptionEventUnique: uniqueIndex("agent_callback_events_subscription_event_unique").on(
+      table.subscriptionId,
+      table.eventId,
+    ),
+    statusNextAttemptIdx: index("agent_callback_events_status_next_attempt_idx").on(table.status, table.nextAttemptAt),
+    leaseExpiresIdx: index("agent_callback_events_lease_expires_idx").on(table.leaseExpiresAt),
+    agentEventIdx: index("agent_callback_events_agent_event_idx").on(table.agentId, table.eventType),
+  }),
+);
+
+export type AgentCallbackEvent = typeof agentCallbackEvents.$inferSelect;
+export type NewAgentCallbackEvent = typeof agentCallbackEvents.$inferInsert;

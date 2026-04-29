@@ -30,7 +30,7 @@ export function AccuracyLeaderboard() {
     requestReadAccess,
     isPending: isFollowPending,
   } = useFollowedProfiles(connectedAddress, {
-    autoRead: false,
+    autoRead: true,
   });
 
   const [items, setItems] = useState<PonderAccuracyLeaderboardItem[]>([]);
@@ -80,7 +80,7 @@ export function AccuracyLeaderboard() {
     return num.toLocaleString(undefined, { maximumFractionDigits: 0 });
   };
 
-  const approvedCategories = categories.filter(c => c.status === 1);
+  const approvedCategories = categories;
   const showStreakColumn = window === "all" && !categoryId;
   const visibleItems = useMemo(() => {
     return items.flatMap((entry, index) => {
@@ -136,7 +136,7 @@ export function AccuracyLeaderboard() {
         }
 
         if (result.reason !== "rejected") {
-          notification.error(result.error || "Failed to unlock your follow list");
+          notification.error(result.error || "Failed to load your follow list");
         }
         return;
       }
