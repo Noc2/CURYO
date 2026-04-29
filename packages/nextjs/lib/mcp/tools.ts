@@ -1136,7 +1136,8 @@ type AgentToolErrorCode =
   | "invalid_media"
   | "max_payment_exceeded"
   | "service_unavailable"
-  | "unsupported_template";
+  | "unsupported_template"
+  | "wallet_address_required";
 
 function classifyToolError(error: unknown): {
   code: AgentToolErrorCode;
@@ -1189,6 +1190,9 @@ function classifyToolError(error: unknown): {
   }
 
   if (error instanceof McpToolError) {
+    if (message.includes("walletaddress")) {
+      return { code: "wallet_address_required", recoverWith: "include_walletAddress", retryable: false };
+    }
     if (message.includes("quoted payment exceeds") || message.includes("maxpaymentamount")) {
       return { code: "max_payment_exceeded", recoverWith: "increase_maxPaymentAmount_or_requote", retryable: false };
     }

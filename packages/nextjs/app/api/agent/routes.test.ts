@@ -606,6 +606,7 @@ test("agent asks route requires walletAddress for tokenless asks", async () => {
   const body = (await response.json()) as Record<string, unknown>;
 
   assert.equal(response.status, 400);
+  assert.equal(body.code, "wallet_address_required");
   assert.match(String(body.message), /walletAddress is required/i);
 });
 
