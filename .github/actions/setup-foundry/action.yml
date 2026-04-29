@@ -9,7 +9,28 @@ runs:
       run: |
         cd packages/foundry/lib/self
         git submodule update --init contracts/lib/openzeppelin-foundry-upgrades contracts/lib/forge-std
-    - name: Install Foundry
-      uses: foundry-rs/foundry-toolchain@8789b3e21e6c11b2697f5eb56eddae542f746c10 # v1
-      with:
-        version: v1.5.1
+    - name: Install Foundry v1.5.1
+      shell: bash
+      env:
+        FOUNDRY_VERSION: v1.5.1
+        FOUNDRY_ARCHIVE: foundry_v1.5.1_linux_amd64.tar.gz
+        FOUNDRY_SHA256: 73640b01bd9ed29fdb4965085099371f8cf0dbbec3e2086cf54564efc4dcfe88
+      run: |
+        if [ "$(uname -s)" != "Linux" ] || [ "$(uname -m)" != "x86_64" ]; then
+          echo "::error::Pinned Foundry install currently supports Linux x86_64 runners only"
+          exit 1
+        fi
+
+        ARCHIVE_URL="https://github.com/foundry-rs/foundry/releases/download/${FOUNDRY_VERSION}/${FOUNDRY_ARCHIVE}"
+        ARCHIVE_PATH="$RUNNER_TEMP/${FOUNDRY_ARCHIVE}"
+
+        curl --proto '=https' --tlsv1.2 -LsSf "$ARCHIVE_URL" -o "$ARCHIVE_PATH"
+        echo "${FOUNDRY_SHA256}  ${ARCHIVE_PATH}" | sha256sum -c -
+
+        mkdir -p "$HOME/.foundry/bin"
+        tar -xzf "$ARCHIVE_PATH" -C "$HOME/.foundry/bin"
+        chmod +x "$HOME/.foundry/bin/forge" "$HOME/.foundry/bin/cast" "$HOME/.foundry/bin/anvil" "$HOME/.foundry/bin/chisel"
+        echo "$HOME/.foundry/bin" >> "$GITHUB_PATH"
+    - name: Verify Foundry version
+      shell: bash
+      run: forge --version

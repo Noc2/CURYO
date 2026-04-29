@@ -66,21 +66,13 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           submodules: true
-      - name: Init nested submodules (skip unavailable mobile-sdk-native)
-        run: |
-          cd packages/foundry/lib/self
-          git submodule update --init contracts/lib/openzeppelin-foundry-upgrades contracts/lib/forge-std
+      - uses: ./.github/actions/setup-foundry
 
       - name: Setup Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "24"
           cache: yarn
-
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@8789b3e21e6c11b2697f5eb56eddae542f746c10 # v1
-        with:
-          version: v1.5.1
 
       - name: Install dependencies
         run: yarn install --immutable
@@ -219,21 +211,13 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           submodules: true
-      - name: Init nested submodules (skip unavailable mobile-sdk-native)
-        run: |
-          cd packages/foundry/lib/self
-          git submodule update --init contracts/lib/openzeppelin-foundry-upgrades contracts/lib/forge-std
+      - uses: ./.github/actions/setup-foundry
 
       - name: Setup Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "24"
           cache: yarn
-
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@8789b3e21e6c11b2697f5eb56eddae542f746c10 # v1
-        with:
-          version: v1.5.1
 
       - name: Install dependencies
         run: yarn install --immutable

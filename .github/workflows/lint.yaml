@@ -23,10 +23,7 @@ jobs:
         with:
           submodules: true
 
-      - name: Init nested submodules (skip unavailable mobile-sdk-native)
-        run: |
-          cd packages/foundry/lib/self
-          git submodule update --init contracts/lib/openzeppelin-foundry-upgrades contracts/lib/forge-std
+      - uses: ./.github/actions/setup-foundry
 
       - name: Setup node env
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -37,11 +34,6 @@ jobs:
       - name: Install dependencies
         run: yarn install --immutable
       
-      - name: Install foundry-toolchain
-        uses: foundry-rs/foundry-toolchain@8789b3e21e6c11b2697f5eb56eddae542f746c10 # v1
-        with:
-          version: v1.5.1
-
       - name: Run foundry node, deploy contracts (& generate contracts typescript output)
         env:
           ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
