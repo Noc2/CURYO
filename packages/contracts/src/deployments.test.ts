@@ -5,15 +5,28 @@ import { CuryoGovernorAbi } from "./abis";
 import deployedContracts from "./deployedContracts";
 import { getSharedChainStartBlock, getSharedDeploymentAddress, getSharedDeploymentStartBlock } from "./deployments";
 
-const localChain = (deployedContracts as Record<number, Record<string, { address: `0x${string}`; deployedOnBlock?: number }>>)[
-  31337
-];
-const expectedLocalStartBlock = Math.min(
-  ...Object.values(localChain)
+type DeploymentContract = { address: `0x${string}`; deployedOnBlock?: number };
+type DeploymentChain = Record<string, DeploymentContract>;
+
+const deploymentsByChain = deployedContracts as Record<number, DeploymentChain>;
+const localChain = deploymentsByChain[31337];
+
+function isValidStartBlock(value: number | undefined): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0;
+}
+
+function getExpectedChainStartBlock(chain: DeploymentChain): number | undefined {
+  const startBlocks = Object.values(chain)
     .map(contract => contract.deployedOnBlock)
-    .filter((value): value is number => typeof value === "number" && Number.isInteger(value) && value >= 0),
-);
-const expectedContentRegistryStartBlock = localChain.ContentRegistry.deployedOnBlock ?? expectedLocalStartBlock;
+    .filter(isValidStartBlock);
+  return startBlocks.length > 0 ? Math.min(...startBlocks) : undefined;
+}
+
+function getChainWithStartBlocks(): [number, DeploymentChain] {
+  const entry = Object.entries(deploymentsByChain).find(([, chain]) => getExpectedChainStartBlock(chain) !== undefined);
+  assert.ok(entry, "expected at least one generated deployment chain with start block metadata");
+  return [Number(entry[0]), entry[1]];
+}
 
 test("shared deployment helpers return local-chain addresses", () => {
   assert.equal(getSharedDeploymentAddress(31337, "ContentRegistry"), localChain.ContentRegistry.address);
@@ -23,8 +36,14 @@ test("shared deployment helpers return local-chain addresses", () => {
 });
 
 test("shared deployment helpers expose the chain start block and prefer contract-specific blocks when present", () => {
-  assert.equal(getSharedChainStartBlock(31337), expectedLocalStartBlock);
-  assert.equal(getSharedDeploymentStartBlock(31337, "ContentRegistry"), expectedContentRegistryStartBlock);
+  const [chainId, chain] = getChainWithStartBlocks();
+  const expectedChainStartBlock = getExpectedChainStartBlock(chain);
+  const contractEntry = Object.entries(chain).find(([, contract]) => isValidStartBlock(contract.deployedOnBlock));
+  assert.ok(contractEntry, "expected selected chain to include a contract-specific start block");
+
+  const [contractName, contract] = contractEntry;
+  assert.equal(getSharedChainStartBlock(chainId), expectedChainStartBlock);
+  assert.equal(getSharedDeploymentStartBlock(chainId, contractName), contract.deployedOnBlock);
 });
 
 test("shared deployment helpers return undefined for unknown chains", () => {
