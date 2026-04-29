@@ -939,7 +939,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         ProtocolConfig(protocolConfigAddress).setRewardDistributor(address(0));
     }
 
-    function test_SetRewardDistributorSecondCallRevokesSameEngineAuthorization() public {
+    function test_SetRewardDistributorSecondCallRejectsSameEngineReplacement() public {
         address originalDistributor = ProtocolConfig(protocolConfigAddress).rewardDistributor();
         RoundRewardDistributor replacementDistributor = RoundRewardDistributor(
             address(
@@ -955,16 +955,17 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         assertTrue(ProtocolConfig(protocolConfigAddress).isRewardDistributor(originalDistributor));
 
         vm.prank(owner);
+        vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
         ProtocolConfig(protocolConfigAddress).setRewardDistributor(address(replacementDistributor));
-        assertEq(ProtocolConfig(protocolConfigAddress).rewardDistributor(), address(replacementDistributor));
-        assertFalse(ProtocolConfig(protocolConfigAddress).isRewardDistributor(originalDistributor));
-        assertTrue(ProtocolConfig(protocolConfigAddress).isRewardDistributor(address(replacementDistributor)));
+        assertEq(ProtocolConfig(protocolConfigAddress).rewardDistributor(), originalDistributor);
+        assertTrue(ProtocolConfig(protocolConfigAddress).isRewardDistributor(originalDistributor));
+        assertFalse(ProtocolConfig(protocolConfigAddress).isRewardDistributor(address(replacementDistributor)));
 
         uint256 balanceBefore = hrep.balanceOf(voter1);
-        vm.prank(originalDistributor);
+        vm.prank(address(replacementDistributor));
         vm.expectRevert(RoundVotingEngine.Unauthorized.selector);
         engine.transferReward(voter1, transferAmount);
-        vm.prank(address(replacementDistributor));
+        vm.prank(originalDistributor);
         engine.transferReward(voter1, transferAmount);
         assertEq(hrep.balanceOf(voter1), balanceBefore + transferAmount);
     }

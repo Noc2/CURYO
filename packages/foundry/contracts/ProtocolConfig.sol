@@ -322,10 +322,7 @@ contract ProtocolConfig is Initializable, AccessControlUpgradeable {
         address engine = _readRewardDistributorVotingEngine(value);
         if (engine != address(0)) {
             address previousForEngine = rewardDistributorForVotingEngine[engine];
-            if (previousForEngine != address(0) && previousForEngine != value && rewardDistributorAuthorized[previousForEngine]) {
-                rewardDistributorAuthorized[previousForEngine] = false;
-                emit RewardDistributorAuthorizationUpdated(previousForEngine, false);
-            }
+            if (previousForEngine != address(0) && previousForEngine != value) revert InvalidConfig();
             rewardDistributorVotingEngine[value] = engine;
             rewardDistributorForVotingEngine[engine] = value;
         }

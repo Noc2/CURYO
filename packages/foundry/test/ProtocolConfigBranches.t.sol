@@ -106,7 +106,7 @@ contract ProtocolConfigBranchesTest is Test {
         assertEq(config.drandPeriod(), nextPeriod);
     }
 
-    function test_SetRewardDistributor_RotatesAndRevokesPreviousForSameEngine() public {
+    function test_SetRewardDistributor_RejectsReplacementForSameEngine() public {
         ProtocolConfig config = deployInitializedProtocolConfig(address(this));
 
         address engine = address(0xE641);
@@ -120,19 +120,15 @@ contract ProtocolConfigBranchesTest is Test {
         config.setRewardDistributor(firstDistributor);
         assertEq(config.rewardDistributor(), firstDistributor);
         assertTrue(config.isRewardDistributor(firstDistributor));
+        assertTrue(config.isRewardDistributorForEngine(firstDistributor, engine));
 
-        vm.expectEmit(false, false, false, true);
-        emit RewardDistributorAuthorizationUpdated(firstDistributor, false);
-        vm.expectEmit(false, false, false, true);
-        emit RewardDistributorAuthorizationUpdated(replacementDistributor, true);
-        vm.expectEmit(false, false, false, true);
-        emit RewardDistributorUpdated(replacementDistributor);
+        vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
         config.setRewardDistributor(replacementDistributor);
-        assertEq(config.rewardDistributor(), replacementDistributor);
-        assertFalse(config.isRewardDistributor(firstDistributor));
-        assertTrue(config.isRewardDistributor(replacementDistributor));
-        assertFalse(config.isRewardDistributorForEngine(firstDistributor, engine));
-        assertTrue(config.isRewardDistributorForEngine(replacementDistributor, engine));
+        assertEq(config.rewardDistributor(), firstDistributor);
+        assertTrue(config.isRewardDistributor(firstDistributor));
+        assertFalse(config.isRewardDistributor(replacementDistributor));
+        assertTrue(config.isRewardDistributorForEngine(firstDistributor, engine));
+        assertFalse(config.isRewardDistributorForEngine(replacementDistributor, engine));
     }
 
     function test_SetRewardDistributor_KeepsPreviousEngineAuthorized() public {
