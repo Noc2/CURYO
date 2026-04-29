@@ -407,6 +407,25 @@ contract SecurityTransferAndCallTest is SecurityHarnessBase {
         );
         assertEq(hrepToken.balanceOf(address(votingEngine)), 1_000_000e6 + STAKE, "tokens transferred without vote");
     }
+
+    function test_TransferAndCall_GovernanceCanRecoverPlainTransferSurplus() public {
+        _submitContent();
+
+        vm.prank(voter);
+        hrepToken.transfer(address(votingEngine), STAKE);
+
+        uint256 treasuryBalanceBefore = hrepToken.balanceOf(treasury);
+        uint256 ownerBalanceBefore = hrepToken.balanceOf(owner);
+        vm.prank(owner);
+        votingEngine.recoverSurplusHrep();
+
+        assertEq(hrepToken.balanceOf(treasury), treasuryBalanceBefore, "treasury unchanged");
+        assertEq(hrepToken.balanceOf(owner), ownerBalanceBefore + STAKE, "admin receives surplus");
+        assertEq(hrepToken.balanceOf(address(votingEngine)), votingEngine.accountedHrepBalance(), "engine remains balanced");
+
+        vm.prank(owner);
+        votingEngine.recoverSurplusHrep();
+    }
 }
 
 // ============================================================================

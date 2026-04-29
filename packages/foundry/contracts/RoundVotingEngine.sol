@@ -59,7 +59,6 @@ contract RoundVotingEngine is
     // --- Custom Errors ---
     error InvalidAddress();
     error InvalidStake();
-    error ZeroAmount();
     error Unauthorized();
     error VoterIdRequired();
     error SelfVote();
@@ -202,7 +201,6 @@ contract RoundVotingEngine is
     event TreasuryFeeDistributed(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
     event ConsensusReserveFunded(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
     event ConsensusSubsidyDistributed(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
-
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -234,6 +232,12 @@ contract RoundVotingEngine is
         _pullHrepFromSender(amount);
         accountedHrepBalance += amount;
         consensusReserve += amount;
+    }
+
+    /// @notice Recover HREP sent directly to this contract outside accounted protocol flows.
+    function recoverSurplusHrep() external {
+        if (!hasRole(bytes32(0), msg.sender)) revert Unauthorized();
+        hrepToken.safeTransfer(msg.sender, hrepToken.balanceOf(address(this)) - accountedHrepBalance);
     }
 
     /// @notice Transfer HREP reward tokens to a recipient. Only callable by RewardDistributor.
@@ -939,7 +943,7 @@ contract RoundVotingEngine is
     // =========================================================================
 
     function _pullHrepFromSender(uint256 amount) internal {
-        if (amount == 0) revert ZeroAmount();
+        if (amount == 0) revert InvalidStake();
         hrepToken.safeTransferFrom(msg.sender, address(this), amount);
     }
 

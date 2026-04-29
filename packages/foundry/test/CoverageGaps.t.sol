@@ -646,12 +646,12 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
 
     function test_FundConsensusReserveZeroReverts() public {
         vm.prank(owner);
-        vm.expectRevert(RoundVotingEngine.ZeroAmount.selector);
+        vm.expectRevert(RoundVotingEngine.InvalidStake.selector);
         engine.addToConsensusReserve(0);
     }
 
     function test_AddToConsensusReserveZeroReverts() public {
-        vm.expectRevert(RoundVotingEngine.ZeroAmount.selector);
+        vm.expectRevert(RoundVotingEngine.InvalidStake.selector);
         engine.addToConsensusReserve(0);
     }
 
