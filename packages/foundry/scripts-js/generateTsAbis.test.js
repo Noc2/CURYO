@@ -100,4 +100,45 @@ describe("assertFreshTargetDeployment", () => {
       )
     );
   });
+
+  test("rejects direct non-local broadcast data without a complete deployment export", () => {
+    delete process.env.DEPLOY_TARGET_NETWORK;
+
+    assert.throws(
+      () =>
+        assertFreshTargetDeployment(
+          { 42220: { ContentRegistry: { address: "0ximplementation" } } },
+          {},
+          {},
+          { 42220: 200 }
+        ),
+      /chainId 42220 is not marked complete/
+    );
+  });
+
+  test("accepts direct non-local broadcast data with a complete deployment export", () => {
+    delete process.env.DEPLOY_TARGET_NETWORK;
+
+    assert.doesNotThrow(() =>
+      assertFreshTargetDeployment(
+        { 42220: { ContentRegistry: { address: "0xproxy" } } },
+        {},
+        { 42220: REQUIRED_CELO_EXPORT },
+        { 42220: 200 }
+      )
+    );
+  });
+
+  test("allows direct local broadcast data without a deployment export", () => {
+    delete process.env.DEPLOY_TARGET_NETWORK;
+
+    assert.doesNotThrow(() =>
+      assertFreshTargetDeployment(
+        { 31337: { ContentRegistry: { address: "0xlocal" } } },
+        {},
+        {},
+        { 31337: 200 }
+      )
+    );
+  });
 });

@@ -316,6 +316,58 @@ function deploymentExportBlockNumber(chainDeployments) {
   return Number(BigInt(blockNumber));
 }
 
+function hasGeneratedContracts(generatedContracts) {
+  return (
+    typeof generatedContracts === "object" &&
+    generatedContracts !== null &&
+    Object.keys(generatedContracts).length > 0
+  );
+}
+
+function isNonLocalDeploymentChain(chainId) {
+  const numericChainId = Number(chainId);
+  return (
+    numericChainId !== DEPLOY_TARGET_TO_CHAIN_ID.localhost &&
+    Object.values(DEPLOY_TARGET_TO_CHAIN_ID).includes(numericChainId)
+  );
+}
+
+function assertCompleteNonLocalDeploymentExport(
+  chainDeployments,
+  latestBroadcastBlockNumber,
+  targetLabel
+) {
+  if (!isCompleteDeploymentExport(chainDeployments)) {
+    throw new Error(
+      `Fresh deployment export for ${targetLabel} is not marked complete. Refusing to use raw broadcast data for target-chain artifacts.`
+    );
+  }
+
+  const exportedContractNames = deploymentExportContractNames(chainDeployments);
+  const missingContracts = REQUIRED_NON_LOCAL_DEPLOYMENT_EXPORT_CONTRACTS.filter(
+    (contractName) => !exportedContractNames.has(contractName)
+  );
+  if (missingContracts.length > 0) {
+    throw new Error(
+      `Fresh deployment export for ${targetLabel} is missing required contracts: ${missingContracts.join(
+        ", "
+      )}. Refusing to use raw broadcast data for target-chain artifacts.`
+    );
+  }
+
+  const exportBlockNumber = deploymentExportBlockNumber(chainDeployments);
+  if (latestBroadcastBlockNumber === 0) {
+    throw new Error(
+      `No broadcast run data found for ${targetLabel}. Refusing to publish target-chain deployment artifacts.`
+    );
+  }
+  if (exportBlockNumber < latestBroadcastBlockNumber) {
+    throw new Error(
+      `Deployment export for ${targetLabel} is older than the latest broadcast deployment. Refusing to publish stale or partial target-chain artifacts.`
+    );
+  }
+}
+
 export function assertFreshTargetDeployment(
   allGeneratedContracts,
   existingContracts,
@@ -323,59 +375,41 @@ export function assertFreshTargetDeployment(
   latestBroadcastBlockNumbers = {}
 ) {
   const deployTarget = process.env.DEPLOY_TARGET_NETWORK;
-  if (!deployTarget) return;
+  if (!deployTarget) {
+    for (const [chainId, generatedContracts] of Object.entries(
+      allGeneratedContracts
+    )) {
+      if (
+        !isNonLocalDeploymentChain(chainId) ||
+        !hasGeneratedContracts(generatedContracts)
+      ) {
+        continue;
+      }
+
+      assertCompleteNonLocalDeploymentExport(
+        deployments[chainId],
+        latestBroadcastBlockNumbers[chainId] || 0,
+        `chainId ${chainId}`
+      );
+    }
+    return;
+  }
 
   const targetChainId = DEPLOY_TARGET_TO_CHAIN_ID[deployTarget];
   if (!targetChainId) return;
 
   if (deployTarget !== "localhost") {
     const chainId = String(targetChainId);
-    const targetDeploymentExport = deployments[chainId];
-    if (!isCompleteDeploymentExport(targetDeploymentExport)) {
-      throw new Error(
-        `Fresh deployment export for DEPLOY_TARGET_NETWORK='${deployTarget}' (chainId ${targetChainId}) is not marked complete. Refusing to use raw broadcast data for target-chain artifacts.`
-      );
-    }
-
-    const exportedContractNames = deploymentExportContractNames(
-      targetDeploymentExport
+    assertCompleteNonLocalDeploymentExport(
+      deployments[chainId],
+      latestBroadcastBlockNumbers[chainId] || 0,
+      `DEPLOY_TARGET_NETWORK='${deployTarget}' (chainId ${targetChainId})`
     );
-    const missingContracts =
-      REQUIRED_NON_LOCAL_DEPLOYMENT_EXPORT_CONTRACTS.filter(
-        (contractName) => !exportedContractNames.has(contractName)
-      );
-    if (missingContracts.length > 0) {
-      throw new Error(
-        `Fresh deployment export for DEPLOY_TARGET_NETWORK='${deployTarget}' (chainId ${targetChainId}) is missing required contracts: ${missingContracts.join(
-          ", "
-        )}. Refusing to use raw broadcast data for target-chain artifacts.`
-      );
-    }
-
-    const exportBlockNumber = deploymentExportBlockNumber(
-      targetDeploymentExport
-    );
-    const latestBroadcastBlockNumber =
-      latestBroadcastBlockNumbers[chainId] || 0;
-    if (latestBroadcastBlockNumber === 0) {
-      throw new Error(
-        `No broadcast run data found for DEPLOY_TARGET_NETWORK='${deployTarget}' (chainId ${targetChainId}). Refusing to publish target-chain deployment artifacts.`
-      );
-    }
-    if (exportBlockNumber < latestBroadcastBlockNumber) {
-      throw new Error(
-        `Deployment export for DEPLOY_TARGET_NETWORK='${deployTarget}' (chainId ${targetChainId}) is older than the latest broadcast deployment. Refusing to publish stale or partial target-chain artifacts.`
-      );
-    }
-
     return;
   }
 
   const generatedTargetContracts = allGeneratedContracts[String(targetChainId)];
-  if (
-    generatedTargetContracts &&
-    Object.keys(generatedTargetContracts).length > 0
-  ) {
+  if (hasGeneratedContracts(generatedTargetContracts)) {
     return;
   }
 
