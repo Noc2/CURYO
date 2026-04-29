@@ -648,11 +648,12 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
             _buildTestCommitArtifacts(address(votingEngine), voter, true, salt, contentId);
         vm.startPrank(voter);
         hrepToken.approve(address(votingEngine), STAKE);
+        uint256 cachedRoundContext1 =
+            _roundContext(votingEngine.previewCommitRoundId(contentId), artifacts.roundReferenceRatingBps);
         vm.expectRevert(RoundVotingEngine.SelfVote.selector);
         votingEngine.commitVote(
             contentId,
-            votingEngine.previewCommitRoundId(contentId),
-            artifacts.roundReferenceRatingBps,
+            cachedRoundContext1,
             artifacts.targetRound,
             artifacts.drandChainHash,
             artifacts.commitHash,

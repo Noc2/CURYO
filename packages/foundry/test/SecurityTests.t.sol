@@ -187,16 +187,10 @@ contract SecurityReentrancyTest is SecurityHarnessBase {
         bytes32 commitHash = _commitHash(isUp, salt, voter, contentId, targetRound, drandChainHash, ciphertext);
         vm.startPrank(voter);
         hrepToken.approve(address(votingEngine), STAKE);
+        uint256 cachedRoundContext1 =
+            _roundContext(votingEngine.previewCommitRoundId(contentId), _defaultRatingReferenceBps());
         votingEngine.commitVote(
-            contentId,
-            votingEngine.previewCommitRoundId(contentId),
-            _defaultRatingReferenceBps(),
-            targetRound,
-            drandChainHash,
-            commitHash,
-            ciphertext,
-            STAKE,
-            address(0)
+            contentId, cachedRoundContext1, targetRound, drandChainHash, commitHash, ciphertext, STAKE, address(0)
         );
         vm.stopPrank();
         return keccak256(abi.encodePacked(voter, commitHash));
@@ -352,6 +346,7 @@ contract SecurityTransferAndCallTest is SecurityHarnessBase {
         );
         payload = abi.encode(
             contentId,
+            _roundContext(votingEngine.previewCommitRoundId(contentId), _defaultRatingReferenceBps()),
             artifacts.commitHash,
             artifacts.ciphertext,
             address(0),
@@ -490,16 +485,10 @@ contract SecuritySettlementTimingTest is SecurityHarnessBase {
         bytes32 commitHash = _commitHash(isUp, salt, voter, contentId, targetRound, drandChainHash, ciphertext);
         vm.startPrank(voter);
         hrepToken.approve(address(votingEngine), STAKE);
+        uint256 cachedRoundContext2 =
+            _roundContext(votingEngine.previewCommitRoundId(contentId), _defaultRatingReferenceBps());
         votingEngine.commitVote(
-            contentId,
-            votingEngine.previewCommitRoundId(contentId),
-            _defaultRatingReferenceBps(),
-            targetRound,
-            drandChainHash,
-            commitHash,
-            ciphertext,
-            STAKE,
-            address(0)
+            contentId, cachedRoundContext2, targetRound, drandChainHash, commitHash, ciphertext, STAKE, address(0)
         );
         vm.stopPrank();
         return keccak256(abi.encodePacked(voter, commitHash));

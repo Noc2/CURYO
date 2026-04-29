@@ -71,8 +71,7 @@ library RoundEngineReadHelpers {
             c.revealed,
             c.isUp,
             c.epochIndex
-        ) =
-            engine.commits(contentId, roundId, commitKey);
+        ) = engine.commits(contentId, roundId, commitKey);
     }
 
     function roundConfig(RoundVotingEngine engine, uint256 contentId, uint256 roundId)
@@ -97,7 +96,7 @@ library RoundEngineReadHelpers {
         uint256 count = r.voteCount;
         keys = new bytes32[](count);
         for (uint256 i = 0; i < count; i++) {
-            keys[i] = engine.roundCommitHashes(contentId, roundId, i);
+            keys[i] = engine.getRoundCommitKey(contentId, roundId, i);
         }
     }
 }

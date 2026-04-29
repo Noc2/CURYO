@@ -216,10 +216,11 @@ contract FrontendRegistrySnapshotTest is VotingTestBase {
 
         vm.startPrank(voter);
         hrepToken.approve(address(votingEngine), STAKE);
+        uint256 cachedRoundContext1 =
+            _roundContext(votingEngine.previewCommitRoundId(contentId), _defaultRatingReferenceBps());
         votingEngine.commitVote(
             contentId,
-            votingEngine.previewCommitRoundId(contentId),
-            _defaultRatingReferenceBps(),
+            cachedRoundContext1,
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
             commitHash,

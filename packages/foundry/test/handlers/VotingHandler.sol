@@ -121,10 +121,11 @@ contract VotingHandler is VotingTestBase {
 
         vm.startPrank(voter);
         hrepToken.approve(address(engine), stakeAmount);
+        uint256 cachedRoundContext1 =
+            _roundContext(engine.previewCommitRoundId(contentId), _defaultRatingReferenceBps());
         try engine.commitVote(
             contentId,
-            engine.previewCommitRoundId(contentId),
-            _defaultRatingReferenceBps(),
+            cachedRoundContext1,
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
             commitHash,

@@ -938,11 +938,12 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         bytes memory ciphertext = abi.encodePacked(uint8(1), salt, contentId);
         vm.startPrank(voter1);
         hrep.approve(address(engine), 100e6);
+        uint256 cachedRoundContext1 =
+            _roundContext(engine.previewCommitRoundId(contentId), _defaultRatingReferenceBps());
         vm.expectRevert(RoundVotingEngine.InvalidStake.selector);
         engine.commitVote(
             contentId,
-            engine.previewCommitRoundId(contentId),
-            _defaultRatingReferenceBps(),
+            cachedRoundContext1,
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
             commitHash,
@@ -962,11 +963,11 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         uint16 referenceRatingBps = 0;
         vm.startPrank(voter1);
         hrep.approve(address(engine), STAKE);
+        uint256 cachedRoundContext2 = _roundContext(engine.previewCommitRoundId(999), referenceRatingBps);
         vm.expectRevert(RoundVotingEngine.ContentNotActive.selector);
         engine.commitVote(
             999,
-            engine.previewCommitRoundId(999),
-            referenceRatingBps,
+            cachedRoundContext2,
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
             commitHash,
@@ -1156,11 +1157,12 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         bytes memory ciphertext = abi.encodePacked(uint8(1), salt, contentId);
         vm.startPrank(voter1);
         hrep.approve(address(engine), STAKE);
+        uint256 cachedRoundContext3 =
+            _roundContext(engine.previewCommitRoundId(contentId), _defaultRatingReferenceBps());
         vm.expectRevert(RoundVotingEngine.VoterIdRequired.selector);
         engine.commitVote(
             contentId,
-            engine.previewCommitRoundId(contentId),
-            _defaultRatingReferenceBps(),
+            cachedRoundContext3,
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
             commitHash,
@@ -1237,11 +1239,11 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         );
         vm.prank(voter);
         hrep.approve(address(engine), stake);
+        uint256 cachedRoundContext4 = _roundContext(engine.previewCommitRoundId(contentId), referenceRatingBps);
         vm.prank(voter);
         engine.commitVote(
             contentId,
-            engine.previewCommitRoundId(contentId),
-            referenceRatingBps,
+            cachedRoundContext4,
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
             commitHash,

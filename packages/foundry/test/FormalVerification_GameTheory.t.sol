@@ -131,11 +131,11 @@ contract FormalVerification_GameTheoryTest is VotingTestBase {
         bytes32 commitHash = _commitHash(up, salt, voter, cid, ciphertext);
         vm.prank(voter);
         hrepToken.approve(address(engine), stake);
+        uint256 cachedRoundContext1 = _roundContext(engine.previewCommitRoundId(cid), _defaultRatingReferenceBps());
         vm.prank(voter);
         engine.commitVote(
             cid,
-            engine.previewCommitRoundId(cid),
-            _defaultRatingReferenceBps(),
+            cachedRoundContext1,
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
             commitHash,

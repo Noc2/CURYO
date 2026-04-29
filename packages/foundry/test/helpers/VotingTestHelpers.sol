@@ -750,8 +750,7 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         request.engine
             .commitVote(
                 request.contentId,
-                artifacts.roundId,
-                artifacts.roundReferenceRatingBps,
+                _roundContext(artifacts.roundId, artifacts.roundReferenceRatingBps),
                 artifacts.targetRound,
                 artifacts.drandChainHash,
                 artifacts.commitHash,
@@ -773,8 +772,7 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         );
         bytes memory payload = abi.encode(
             request.contentId,
-            artifacts.roundId,
-            artifacts.roundReferenceRatingBps,
+            _roundContext(artifacts.roundId, artifacts.roundReferenceRatingBps),
             artifacts.commitHash,
             artifacts.ciphertext,
             request.frontend,
@@ -973,6 +971,10 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
 
     function _defaultRatingReferenceBps() internal pure returns (uint16) {
         return RatingLib.DEFAULT_RATING_BPS;
+    }
+
+    function _roundContext(uint256 roundId, uint16 referenceRatingBps) internal pure returns (uint256) {
+        return (roundId << 16) | uint256(referenceRatingBps);
     }
 
     function _decodeTestCiphertext(bytes memory ciphertext) internal pure returns (bool isUp, bytes32 salt) {

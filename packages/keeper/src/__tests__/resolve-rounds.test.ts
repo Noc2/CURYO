@@ -255,7 +255,7 @@ function makeHarness(options: {
           );
         case "getRoundCommitCount":
           return BigInt(commitKeys.length);
-        case "roundCommitHashes":
+        case "getRoundCommitKey":
           return commitKeys[Number(args[2])] ?? zeroHash;
         case "commits":
           return tupleResults

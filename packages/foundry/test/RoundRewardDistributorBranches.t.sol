@@ -108,17 +108,11 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
         bytes memory ct = _testCiphertext(isUp, salt, contentId);
         vm.prank(voter);
         hrepToken.approve(address(votingEngine), stake);
+        uint256 cachedRoundContext1 =
+            _roundContext(votingEngine.previewCommitRoundId(contentId), _defaultRatingReferenceBps());
         vm.prank(voter);
         votingEngine.commitVote(
-            contentId,
-            votingEngine.previewCommitRoundId(contentId),
-            _defaultRatingReferenceBps(),
-            _tlockCommitTargetRound(),
-            _tlockDrandChainHash(),
-            ch,
-            ct,
-            stake,
-            address(0)
+            contentId, cachedRoundContext1, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch, ct, stake, address(0)
         );
         ck = _commitKey(voter, ch);
     }

@@ -9563,14 +9563,9 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "uint256",
             },
             {
-              name: "expectedRoundId",
+              name: "roundContext",
               type: "uint256",
               internalType: "uint256",
-            },
-            {
-              name: "roundReferenceRatingBps",
-              type: "uint16",
-              internalType: "uint16",
             },
             {
               name: "targetRound",
@@ -10174,35 +10169,6 @@ const deployedContracts: GenericContractsDeclaration = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "roundCommitHashes",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
         },
         {
           type: "function",

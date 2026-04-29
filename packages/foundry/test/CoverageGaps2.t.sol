@@ -1781,11 +1781,12 @@ contract RoundSettlementBranchTest is VotingTestBase {
         bytes32 commitHash = _commitHash(true, salt, contentId);
         bytes memory ciphertext = abi.encodePacked(uint8(1), salt, contentId);
         vm.startPrank(voter1);
+        uint256 cachedRoundContext1 =
+            _roundContext(engine.previewCommitRoundId(contentId), _defaultRatingReferenceBps());
         vm.expectRevert(RoundVotingEngine.InvalidStake.selector);
         engine.commitVote(
             contentId,
-            engine.previewCommitRoundId(contentId),
-            _defaultRatingReferenceBps(),
+            cachedRoundContext1,
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
             commitHash,
@@ -1969,11 +1970,11 @@ contract RoundSettlementBranchTest is VotingTestBase {
         );
         vm.prank(voter);
         hrep.approve(address(engine), amount);
+        uint256 cachedRoundContext2 = _roundContext(engine.previewCommitRoundId(contentId), referenceRatingBps);
         vm.prank(voter);
         engine.commitVote(
             contentId,
-            engine.previewCommitRoundId(contentId),
-            referenceRatingBps,
+            cachedRoundContext2,
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
             commitHash,

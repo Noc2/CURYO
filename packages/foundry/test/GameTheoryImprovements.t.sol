@@ -139,16 +139,10 @@ contract GameTheoryImprovementsTest is VotingTestBase {
 
         vm.startPrank(voter);
         hrepToken.approve(address(engine), stake);
+        uint256 cachedRoundContext1 =
+            _roundContext(engine.previewCommitRoundId(contentId), _defaultRatingReferenceBps());
         engine.commitVote(
-            contentId,
-            engine.previewCommitRoundId(contentId),
-            _defaultRatingReferenceBps(),
-            _tlockCommitTargetRound(),
-            _tlockDrandChainHash(),
-            ch,
-            ct,
-            stake,
-            address(0)
+            contentId, cachedRoundContext1, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch, ct, stake, address(0)
         );
         vm.stopPrank();
     }

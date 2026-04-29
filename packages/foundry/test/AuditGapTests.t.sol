@@ -164,10 +164,11 @@ contract AuditGapTests is VotingTestBase {
         bytes32 hash = _commitHash(isUp, salt, voter, contentId, ciphertext);
         vm.startPrank(voter);
         hrepToken.approve(address(votingEngine), stakeAmt);
+        uint256 cachedRoundContext1 =
+            _roundContext(votingEngine.previewCommitRoundId(contentId), _defaultRatingReferenceBps());
         votingEngine.commitVote(
             contentId,
-            votingEngine.previewCommitRoundId(contentId),
-            _defaultRatingReferenceBps(),
+            cachedRoundContext1,
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
             hash,
@@ -200,11 +201,12 @@ contract AuditGapTests is VotingTestBase {
 
         vm.startPrank(voter1);
         hrepToken.approve(address(votingEngine), STAKE);
+        uint256 cachedRoundContext2 =
+            _roundContext(votingEngine.previewCommitRoundId(contentId), _defaultRatingReferenceBps());
         vm.expectRevert(); // EnforcedPause
         votingEngine.commitVote(
             contentId,
-            votingEngine.previewCommitRoundId(contentId),
-            _defaultRatingReferenceBps(),
+            cachedRoundContext2,
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
             hash,
@@ -540,11 +542,12 @@ contract AuditGapTests is VotingTestBase {
         bytes32 hash = _commitHash(true, salt, voter1, contentId, ct);
         vm.startPrank(voter1);
         hrepToken.approve(address(votingEngine), STAKE);
+        uint256 cachedRoundContext3 =
+            _roundContext(votingEngine.previewCommitRoundId(contentId), _defaultRatingReferenceBps());
         vm.expectRevert(RoundVotingEngine.CooldownActive.selector);
         votingEngine.commitVote(
             contentId,
-            votingEngine.previewCommitRoundId(contentId),
-            _defaultRatingReferenceBps(),
+            cachedRoundContext3,
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
             hash,

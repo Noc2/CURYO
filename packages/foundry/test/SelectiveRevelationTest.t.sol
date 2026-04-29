@@ -139,10 +139,11 @@ contract SelectiveRevelationTest is VotingTestBase {
         CommitArtifacts memory artifacts = _buildCommitArtifacts(voter, contentId, isUp, salt);
         vm.startPrank(voter);
         hrepToken.approve(address(engine), stake);
+        uint256 cachedRoundContext1 =
+            _roundContext(engine.previewCommitRoundId(contentId), _defaultRatingReferenceBps());
         engine.commitVote(
             contentId,
-            engine.previewCommitRoundId(contentId),
-            _defaultRatingReferenceBps(),
+            cachedRoundContext1,
             artifacts.targetRound,
             artifacts.drandChainHash,
             artifacts.commitHash,

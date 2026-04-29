@@ -121,7 +121,7 @@ contract RoundVotingEngine is
     mapping(uint256 => mapping(uint256 => mapping(bytes32 => RoundLib.Commit))) public commits;
 
     // Track commit keys per round for iteration (reveal/settlement)
-    mapping(uint256 => mapping(uint256 => bytes32[])) public roundCommitHashes;
+    mapping(uint256 => mapping(uint256 => bytes32[])) internal roundCommitHashes;
 
     // Time-based cooldown: contentId => voter => timestamp of last vote
     mapping(uint256 => mapping(address => uint256)) internal lastVoteTimestamp;
@@ -274,8 +274,7 @@ contract RoundVotingEngine is
 
     /// @notice Commit a blind vote on content. Direction is hidden via tlock encryption.
     /// @param contentId The content being voted on.
-    /// @param expectedRoundId Round ID used when constructing the commit hash.
-    /// @param roundReferenceRatingBps Canonical round score the voter is judging against.
+    /// @param roundContext Packed expected round ID and reference score: `(roundId << 16) | ratingBps`.
     /// @param targetRound drand round targeted by the ciphertext.
     /// @param drandChainHash drand chain hash bound into the commitment.
     /// @param commitHash keccak256(abi.encodePacked(isUp, salt, voter, contentId, roundId, roundReferenceRatingBps, targetRound, drandChainHash, keccak256(ciphertext))).
@@ -284,8 +283,7 @@ contract RoundVotingEngine is
     /// @param frontend Address of frontend operator for fee distribution.
     function commitVote(
         uint256 contentId,
-        uint256 expectedRoundId,
-        uint16 roundReferenceRatingBps,
+        uint256 roundContext,
         uint64 targetRound,
         bytes32 drandChainHash,
         bytes32 commitHash,
@@ -296,8 +294,7 @@ contract RoundVotingEngine is
         _commitVote(
             msg.sender,
             contentId,
-            expectedRoundId,
-            roundReferenceRatingBps,
+            roundContext,
             targetRound,
             drandChainHash,
             commitHash,
@@ -319,8 +316,7 @@ contract RoundVotingEngine is
 
         (
             uint256 contentId,
-            uint256 expectedRoundId,
-            uint16 roundReferenceRatingBps,
+            uint256 roundContext,
             bytes32 commitHash,
             bytes memory ciphertext,
             uint64 targetRound,
@@ -329,17 +325,7 @@ contract RoundVotingEngine is
         ) = TlockVoteLib.decodeCommitPayload(data);
 
         _commitVote(
-            from,
-            contentId,
-            expectedRoundId,
-            roundReferenceRatingBps,
-            targetRound,
-            drandChainHash,
-            commitHash,
-            ciphertext,
-            value,
-            frontend,
-            true
+            from, contentId, roundContext, targetRound, drandChainHash, commitHash, ciphertext, value, frontend, true
         );
         return IERC1363Receiver.onTransferReceived.selector;
     }
@@ -347,8 +333,7 @@ contract RoundVotingEngine is
     function _commitVote(
         address voter,
         uint256 contentId,
-        uint256 expectedRoundId,
-        uint16 roundReferenceRatingBps,
+        uint256 roundContext,
         uint64 targetRound,
         bytes32 drandChainHash,
         bytes32 commitHash,
@@ -377,9 +362,11 @@ contract RoundVotingEngine is
         }
 
         uint256 roundId = _getOrCreateRound(contentId);
+        uint256 expectedRoundId = roundContext >> 16;
         if (roundId != expectedRoundId) revert UnexpectedRoundId();
         RoundLib.Round storage round = rounds[contentId][roundId];
         RoundLib.RoundConfig memory roundCfg = _getRoundConfig(contentId, roundId);
+        uint16 roundReferenceRatingBps = uint16(roundContext);
         uint16 expectedReferenceRatingBps = _getRoundReferenceRatingBps(contentId, roundId);
         if (roundReferenceRatingBps != expectedReferenceRatingBps) revert ReferenceRatingMismatch();
 

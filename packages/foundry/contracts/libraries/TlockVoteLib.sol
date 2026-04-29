@@ -26,8 +26,7 @@ library TlockVoteLib {
         pure
         returns (
             uint256 contentId,
-            uint256 expectedRoundId,
-            uint16 roundReferenceRatingBps,
+            uint256 roundContext,
             bytes32 commitHash,
             bytes memory ciphertext,
             uint64 targetRound,
@@ -35,17 +34,9 @@ library TlockVoteLib {
             address frontend
         )
     {
-        if (data.length < 256) revert InvalidCiphertext();
-        (
-            contentId,
-            expectedRoundId,
-            roundReferenceRatingBps,
-            commitHash,
-            ciphertext,
-            frontend,
-            targetRound,
-            drandChainHash
-        ) = abi.decode(data, (uint256, uint256, uint16, bytes32, bytes, address, uint64, bytes32));
+        if (data.length < 224) revert InvalidCiphertext();
+        (contentId, roundContext, commitHash, ciphertext, frontend, targetRound, drandChainHash) =
+            abi.decode(data, (uint256, uint256, bytes32, bytes, address, uint64, bytes32));
     }
 
     function validateCommitData(

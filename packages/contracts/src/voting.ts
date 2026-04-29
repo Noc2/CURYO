@@ -56,8 +56,7 @@ export type VoteTlockRuntime = {
 
 const voteTransferPayloadParams = [
   { name: "contentId", type: "uint256" },
-  { name: "roundId", type: "uint256" },
-  { name: "roundReferenceRatingBps", type: "uint16" },
+  { name: "roundContext", type: "uint256" },
   { name: "commitHash", type: "bytes32" },
   { name: "ciphertext", type: "bytes" },
   { name: "frontend", type: "address" },
@@ -76,6 +75,25 @@ const UNPADDED_BASE64_LINE = /^[A-Za-z0-9+/]+$/;
 const AGE_MAC_LENGTH = 32;
 const MIN_TLOCK_STANZA_BODY_LENGTH = 80;
 const MIN_ENCRYPTED_BODY_LENGTH = 65;
+const ROUND_REFERENCE_RATING_MASK = 0xffffn;
+
+export function packVoteRoundContext(roundId: bigint, roundReferenceRatingBps: number): bigint {
+  if (roundId <= 0n) {
+    throw new Error("roundId must be positive");
+  }
+  if (!Number.isInteger(roundReferenceRatingBps) || roundReferenceRatingBps < 0 || roundReferenceRatingBps > 65_535) {
+    throw new Error("roundReferenceRatingBps must fit uint16");
+  }
+
+  return (roundId << 16n) | BigInt(roundReferenceRatingBps);
+}
+
+export function unpackVoteRoundContext(roundContext: bigint): { roundId: bigint; roundReferenceRatingBps: number } {
+  return {
+    roundId: roundContext >> 16n,
+    roundReferenceRatingBps: Number(roundContext & ROUND_REFERENCE_RATING_MASK),
+  };
+}
 
 async function loadTlockModule(): Promise<TlockModule> {
   tlockModulePromise ??= import("tlock-js").then(module => ({
@@ -167,10 +185,10 @@ export function buildCommitKey(voter: Address, commitHash: `0x${string}`): `0x${
 }
 
 export function encodeVoteTransferPayload(payload: VoteTransferPayload): `0x${string}` {
+  const roundContext = packVoteRoundContext(payload.roundId, payload.roundReferenceRatingBps);
   return encodeAbiParameters(voteTransferPayloadParams, [
     payload.contentId,
-    payload.roundId,
-    payload.roundReferenceRatingBps,
+    roundContext,
     payload.commitHash,
     payload.ciphertext,
     payload.frontend,
@@ -181,15 +199,14 @@ export function encodeVoteTransferPayload(payload: VoteTransferPayload): `0x${st
 
 export function decodeVoteTransferPayload(data: `0x${string}`): VoteTransferPayload {
   try {
-    const [contentId, roundId, roundReferenceRatingBps, commitHash, ciphertext, frontend, targetRound, drandChainHash] =
-      decodeAbiParameters(
+    const [contentId, roundContext, commitHash, ciphertext, frontend, targetRound, drandChainHash] = decodeAbiParameters(
       voteTransferPayloadParams,
       data,
     );
+    const { roundId, roundReferenceRatingBps } = unpackVoteRoundContext(roundContext);
     const reencoded = encodeAbiParameters(voteTransferPayloadParams, [
       contentId,
-      roundId,
-      roundReferenceRatingBps,
+      roundContext,
       commitHash,
       ciphertext,
       frontend,

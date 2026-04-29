@@ -166,10 +166,9 @@ contract UserTransactionGasEstimatesTest is RoundIntegrationTest {
             voter1,
             address(votingEngine),
             abi.encodeWithSelector(
-                bytes4(keccak256("commitVote(uint256,uint256,uint16,uint64,bytes32,bytes32,bytes,uint256,address)")),
+                bytes4(keccak256("commitVote(uint256,uint256,uint64,bytes32,bytes32,bytes,uint256,address)")),
                 contentId,
-                votingEngine.previewCommitRoundId(contentId),
-                roundReferenceRatingBps,
+                _roundContext(votingEngine.previewCommitRoundId(contentId), roundReferenceRatingBps),
                 _tlockCommitTargetRound(),
                 _tlockDrandChainHash(),
                 commitHash,

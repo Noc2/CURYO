@@ -106,11 +106,12 @@ contract RoundVotingEngineDormancyTest is VotingTestBase {
         vm.warp(T0 + 31 days);
         vm.startPrank(voter4);
         hrepToken.approve(address(engine), STAKE);
+        uint256 cachedRoundContext1 =
+            _roundContext(engine.previewCommitRoundId(contentId), _defaultRatingReferenceBps());
         vm.expectRevert(RoundVotingEngine.DormancyWindowElapsed.selector);
         engine.commitVote(
             contentId,
-            engine.previewCommitRoundId(contentId),
-            _defaultRatingReferenceBps(),
+            cachedRoundContext1,
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
             commitHash,
@@ -140,10 +141,11 @@ contract RoundVotingEngineDormancyTest is VotingTestBase {
         bytes32 commitHash = _commitHash(isUp, salt, contentId, ciphertext);
         vm.startPrank(voter);
         hrepToken.approve(address(engine), STAKE);
+        uint256 cachedRoundContext2 =
+            _roundContext(engine.previewCommitRoundId(contentId), _defaultRatingReferenceBps());
         engine.commitVote(
             contentId,
-            engine.previewCommitRoundId(contentId),
-            _defaultRatingReferenceBps(),
+            cachedRoundContext2,
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
             commitHash,

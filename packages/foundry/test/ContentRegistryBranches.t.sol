@@ -187,10 +187,10 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         );
         vm.startPrank(voter);
         hrepToken.approve(address(votingEngine), stake);
+        uint256 cachedRoundContext1 = _roundContext(votingEngine.previewCommitRoundId(contentId), referenceRatingBps);
         votingEngine.commitVote(
             contentId,
-            votingEngine.previewCommitRoundId(contentId),
-            referenceRatingBps,
+            cachedRoundContext1,
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
             commitHash,
@@ -1388,11 +1388,11 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(delegate);
         hrepToken.approve(address(votingEngine), STAKE);
+        uint256 cachedRoundContext2 = _roundContext(votingEngine.previewCommitRoundId(1), referenceRatingBps);
         vm.expectRevert(RoundVotingEngine.SelfVote.selector);
         votingEngine.commitVote(
             1,
-            votingEngine.previewCommitRoundId(1),
-            referenceRatingBps,
+            cachedRoundContext2,
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
             commitHash,
@@ -2124,11 +2124,11 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(voter2);
         hrepToken.approve(address(votingEngine), STAKE);
+        uint256 cachedRoundContext3 = _roundContext(votingEngine.previewCommitRoundId(1), _defaultRatingReferenceBps());
         vm.expectRevert(RoundVotingEngine.DormancyWindowElapsed.selector);
         votingEngine.commitVote(
             1,
-            votingEngine.previewCommitRoundId(1),
-            _defaultRatingReferenceBps(),
+            cachedRoundContext3,
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
             commitHash,

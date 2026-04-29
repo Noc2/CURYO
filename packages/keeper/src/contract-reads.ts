@@ -337,7 +337,7 @@ export async function readRoundCommitKeys(
         publicClient.readContract({
           address: engineAddr,
           abi: RoundVotingEngineAbi,
-          functionName: "roundCommitHashes",
+          functionName: "getRoundCommitKey",
           args: [contentId, roundId, BigInt(offset + i)],
         }) as Promise<`0x${string}`>,
       ),

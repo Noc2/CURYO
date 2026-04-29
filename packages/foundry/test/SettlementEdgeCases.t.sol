@@ -156,11 +156,11 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         );
         vm.prank(voter);
         hrepToken.approve(address(engine), stakeAmt);
+        uint256 cachedRoundContext1 = _roundContext(engine.previewCommitRoundId(contentId), referenceRatingBps);
         vm.prank(voter);
         engine.commitVote(
             contentId,
-            engine.previewCommitRoundId(contentId),
-            referenceRatingBps,
+            cachedRoundContext1,
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
             commitHash,
@@ -209,17 +209,10 @@ contract SettlementEdgeCasesTest is VotingTestBase {
             _commitHash(isUp, salt, voter, contentId, referenceRatingBps, targetRound, drandChainHash, ciphertext);
         vm.prank(voter);
         token.approve(address(votingEngine), stakeAmt);
+        uint256 cachedRoundContext2 = _roundContext(votingEngine.previewCommitRoundId(contentId), referenceRatingBps);
         vm.prank(voter);
         votingEngine.commitVote(
-            contentId,
-            votingEngine.previewCommitRoundId(contentId),
-            referenceRatingBps,
-            targetRound,
-            drandChainHash,
-            commitHash,
-            ciphertext,
-            stakeAmt,
-            address(0)
+            contentId, cachedRoundContext2, targetRound, drandChainHash, commitHash, ciphertext, stakeAmt, address(0)
         );
         commitKey = keccak256(abi.encodePacked(voter, commitHash));
     }

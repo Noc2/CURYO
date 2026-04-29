@@ -146,7 +146,7 @@ test.describe("Keeper-backed settlement lifecycle", () => {
       const commitKey = await publicClient.readContract({
         address: VOTING_ENGINE,
         abi: RoundVotingEngineAbi,
-        functionName: "roundCommitHashes",
+        functionName: "getRoundCommitKey",
         args: [BigInt(contentId!), roundId, i],
       });
       const commit = await publicClient.readContract({
