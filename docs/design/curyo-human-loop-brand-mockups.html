@@ -3,26 +3,19 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Curyo Human Loop Brand Mockups</title>
+    <title>Curyo Abstract Human Loop Mockups</title>
     <style>
       :root {
         color-scheme: dark;
         --bg: #070507;
         --panel: #121014;
         --panel-2: #19151b;
-        --ink: #171316;
-        --paper: #fff4f0;
-        --paper-2: #f8ebe6;
-        --line: #0e0c0f;
         --text: #f7efe9;
         --muted: #b9aca5;
         --muted-2: #8f8580;
         --coral: #f47a42;
-        --rose: #ec817b;
         --violet: #8a4de8;
         --cyan: #55bad0;
-        --gold: #ffc071;
-        --green: #7adfbe;
         --border: rgb(247 239 233 / 0.14);
       }
 
@@ -34,8 +27,8 @@
         margin: 0;
         min-height: 100vh;
         background:
-          linear-gradient(180deg, rgb(244 122 66 / 0.09), transparent 320px),
-          radial-gradient(circle at 76% 16%, rgb(85 186 208 / 0.1), transparent 28rem),
+          linear-gradient(180deg, rgb(244 122 66 / 0.08), transparent 330px),
+          radial-gradient(circle at 76% 14%, rgb(85 186 208 / 0.1), transparent 27rem),
           var(--bg);
         color: var(--text);
         font-family:
@@ -55,29 +48,33 @@
 
       .intro {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(320px, 0.66fr);
+        grid-template-columns: minmax(0, 1fr) minmax(320px, 0.64fr);
         gap: 28px;
         align-items: end;
         margin-bottom: 30px;
       }
 
-      .eyebrow {
+      .eyebrow,
+      .option-kicker {
         color: var(--coral);
-        font-size: 0.82rem;
+        font-size: 0.78rem;
         font-weight: 800;
         letter-spacing: 0.16em;
         text-transform: uppercase;
       }
 
+      .option-kicker {
+        color: var(--muted-2);
+      }
+
       h1,
       h2,
-      h3,
       p {
         margin: 0;
       }
 
       h1 {
-        max-width: 780px;
+        max-width: 820px;
         margin-top: 10px;
         font-size: clamp(2.45rem, 6vw, 5.5rem);
         line-height: 0.9;
@@ -86,18 +83,22 @@
       }
 
       .intro p {
-        max-width: 680px;
+        max-width: 690px;
         margin-top: 18px;
         color: var(--muted);
         font-size: 1.12rem;
         line-height: 1.55;
       }
 
-      .decision {
+      .decision,
+      .source-box {
         border: 1px solid var(--border);
         border-radius: 8px;
         background: rgb(18 16 20 / 0.86);
         padding: 18px;
+      }
+
+      .decision {
         box-shadow: 0 22px 60px rgb(0 0 0 / 0.38);
       }
 
@@ -105,141 +106,38 @@
         color: var(--text);
       }
 
-      .decision p {
-        margin-top: 8px;
-        color: var(--muted);
-        font-size: 0.98rem;
-        line-height: 1.45;
-      }
-
-      .principles {
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 12px;
-        margin: 28px 0;
-      }
-
-      .principle {
-        min-height: 112px;
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        background: rgb(25 21 27 / 0.72);
-        padding: 16px;
-      }
-
-      .principle b {
-        display: block;
-        color: var(--text);
-        font-size: 0.98rem;
-      }
-
-      .principle span {
-        display: block;
-        margin-top: 8px;
-        color: var(--muted);
-        font-size: 0.92rem;
-        line-height: 1.4;
-      }
-
-      .generated-options {
-        display: grid;
-        gap: 22px;
-        margin-top: 28px;
-      }
-
-      .generated-card {
-        overflow: hidden;
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        background: var(--panel);
-        box-shadow: 0 28px 80px rgb(0 0 0 / 0.42);
-      }
-
-      .generated-card.featured {
-        border-color: rgb(244 122 66 / 0.4);
-      }
-
-      .generated-head {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        gap: 18px;
-        align-items: center;
-        border-bottom: 1px solid var(--border);
-        padding: 20px 22px;
-      }
-
-      .generated-head h2 {
-        margin-top: 5px;
-        font-size: clamp(1.7rem, 3vw, 2.45rem);
-        line-height: 1.02;
-      }
-
-      .generated-body {
-        display: grid;
-        grid-template-columns: minmax(0, 1.36fr) minmax(250px, 0.64fr);
-        gap: 0;
-      }
-
-      .generated-figure {
-        margin: 0;
-        background: #000000;
-      }
-
-      .generated-figure img {
-        display: block;
-        width: 100%;
-        height: auto;
-      }
-
-      .generated-notes {
-        border-left: 1px solid var(--border);
-        padding: 22px;
-        background: rgb(25 21 27 / 0.78);
-      }
-
-      .generated-notes p {
-        color: var(--muted);
-        font-size: 0.98rem;
-        line-height: 1.5;
-      }
-
-      .generated-notes ul {
-        margin: 16px 0 0;
-        padding-left: 18px;
+      .decision p,
+      .source-box p,
+      .source-box li {
         color: var(--muted);
         font-size: 0.95rem;
         line-height: 1.45;
       }
 
-      .research-strip {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-        gap: 16px;
-        margin-top: 22px;
+      .decision p,
+      .source-box p {
+        margin-top: 10px;
       }
 
-      .research-strip .source-box {
-        margin: 0;
-      }
-
-      .legacy-vector-board {
-        display: none;
-      }
-
-      .options {
+      .mockups {
         display: grid;
         gap: 22px;
+        margin-top: 28px;
       }
 
-      .option {
+      .mockup-card {
+        overflow: hidden;
         border: 1px solid var(--border);
         border-radius: 8px;
-        overflow: hidden;
         background: var(--panel);
         box-shadow: 0 28px 80px rgb(0 0 0 / 0.42);
       }
 
-      .option-head {
+      .mockup-card.featured {
+        border-color: rgb(244 122 66 / 0.44);
+      }
+
+      .mockup-head {
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
         gap: 18px;
@@ -248,15 +146,7 @@
         padding: 20px 22px;
       }
 
-      .option-kicker {
-        color: var(--muted-2);
-        font-size: 0.78rem;
-        font-weight: 800;
-        letter-spacing: 0.14em;
-        text-transform: uppercase;
-      }
-
-      .option h2 {
+      .mockup-head h2 {
         margin-top: 5px;
         font-size: clamp(1.7rem, 3vw, 2.45rem);
         line-height: 1.02;
@@ -273,294 +163,72 @@
         white-space: nowrap;
       }
 
-      .option-grid {
+      .mockup-body {
         display: grid;
-        grid-template-columns: minmax(230px, 0.72fr) minmax(0, 1.28fr);
-        gap: 0;
+        grid-template-columns: minmax(0, 1.36fr) minmax(250px, 0.64fr);
       }
 
-      .logo-panel {
-        border-right: 1px solid var(--border);
-        background: var(--panel-2);
-        padding: 22px;
+      .mockup-figure {
+        margin: 0;
+        background: #000000;
       }
 
-      .logo-stage {
-        display: flex;
-        min-height: 230px;
-        align-items: center;
-        justify-content: center;
-        border: 1px solid rgb(247 239 233 / 0.1);
-        border-radius: 8px;
-        background: #080608;
-      }
-
-      .logo-stage svg {
-        width: min(84%, 250px);
-        height: auto;
-      }
-
-      .notes {
-        margin-top: 18px;
-        display: grid;
-        gap: 12px;
-      }
-
-      .note {
-        border-top: 1px solid rgb(247 239 233 / 0.12);
-        padding-top: 12px;
-      }
-
-      .note b {
-        display: block;
-        color: var(--text);
-        font-size: 0.84rem;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-      }
-
-      .note span {
-        display: block;
-        margin-top: 6px;
-        color: var(--muted);
-        font-size: 0.94rem;
-        line-height: 1.42;
-      }
-
-      .hero-panel {
-        padding: 22px;
-        background: #0b090d;
-      }
-
-      .browser {
-        overflow: hidden;
-        border: 1px solid rgb(247 239 233 / 0.14);
-        border-radius: 8px;
-        background: #000;
-      }
-
-      .browser-bar {
-        display: flex;
-        align-items: center;
-        gap: 7px;
-        height: 34px;
-        border-bottom: 1px solid rgb(247 239 233 / 0.12);
-        padding: 0 13px;
-        background: #151217;
-      }
-
-      .dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: rgb(247 239 233 / 0.32);
-      }
-
-      .mock-hero {
-        display: grid;
-        grid-template-columns: minmax(230px, 0.82fr) minmax(300px, 1.18fr);
-        gap: 18px;
-        min-height: 390px;
-        align-items: center;
-        padding: 28px;
-        background:
-          linear-gradient(90deg, rgb(0 0 0 / 0.94), rgb(0 0 0 / 0.82)),
-          #000;
-      }
-
-      .mock-hero.copy-right {
-        grid-template-columns: minmax(300px, 1.08fr) minmax(250px, 0.92fr);
-      }
-
-      .hero-copy h3 {
-        max-width: 8.6ch;
-        color: var(--text);
-        font-size: clamp(2.15rem, 3.65vw, 3.75rem);
-        line-height: 0.88;
-        letter-spacing: 0;
-        text-transform: uppercase;
-        overflow-wrap: break-word;
-      }
-
-      .hero-copy p {
-        max-width: 390px;
-        margin-top: 14px;
-        color: var(--muted);
-        font-size: 1.05rem;
-        line-height: 1.48;
-      }
-
-      .button-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin-top: 18px;
-      }
-
-      .button {
-        border: 1px solid transparent;
-        border-radius: 8px;
-        padding: 11px 16px;
-        font-size: 0.94rem;
-        font-weight: 800;
-      }
-
-      .button.primary {
-        background: var(--coral);
-        color: #070507;
-      }
-
-      .button.secondary {
-        border-color: rgb(247 239 233 / 0.18);
-        color: var(--text);
-        background: rgb(247 239 233 / 0.08);
-      }
-
-      .art-wrap {
-        min-width: 0;
-      }
-
-      .art-wrap svg {
+      .mockup-figure img {
         display: block;
         width: 100%;
         height: auto;
       }
 
-      .svg-paper {
-        fill: var(--paper);
+      .mockup-notes {
+        border-left: 1px solid var(--border);
+        padding: 22px;
+        background: rgb(25 21 27 / 0.78);
       }
 
-      .svg-paper-2 {
-        fill: var(--paper-2);
+      .mockup-notes p {
+        color: var(--muted);
+        font-size: 0.98rem;
+        line-height: 1.5;
       }
 
-      .svg-line {
-        fill: none;
-        stroke: var(--line);
-        stroke-width: 8;
-        stroke-linecap: round;
-        stroke-linejoin: round;
+      .mockup-notes ul,
+      .source-box ul {
+        margin: 16px 0 0;
+        padding-left: 18px;
+        color: var(--muted);
+        font-size: 0.95rem;
+        line-height: 1.45;
       }
 
-      .svg-line-thin {
-        fill: none;
-        stroke: var(--line);
-        stroke-width: 5.5;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-      }
-
-      .svg-ink {
-        fill: var(--line);
-      }
-
-      .svg-coral {
-        fill: var(--rose);
-      }
-
-      .svg-gold {
-        fill: var(--gold);
-      }
-
-      .svg-green {
-        fill: var(--green);
-      }
-
-      .desk-loop-art .desk-bg {
-        fill: #000000;
-      }
-
-      .desk-loop-art .desk-panel {
-        fill: #000000;
-        stroke: var(--text);
-      }
-
-      .desk-loop-art .svg-line,
-      .desk-loop-art .svg-line-thin {
-        stroke: var(--text);
-      }
-
-      .desk-loop-art .svg-ink {
-        fill: var(--text);
-      }
-
-      .desk-loop-art .svg-coral {
-        stroke: var(--text);
-      }
-
-      .desk-loop-art .svg-orange {
-        fill: var(--coral);
-        stroke: var(--text);
-      }
-
-      .desk-loop-art .human-hair {
-        fill: none;
-        stroke: var(--text);
-        stroke-width: 8;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-      }
-
+      .prompt-grid,
       .sources {
         display: grid;
         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
         gap: 16px;
-        margin-top: 28px;
-      }
-
-      .source-box {
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        background: rgb(18 16 20 / 0.82);
-        padding: 18px;
+        margin-top: 22px;
       }
 
       .source-box h2 {
         font-size: 1.05rem;
       }
 
-      .source-box p,
-      .source-box li {
-        color: var(--muted);
-        font-size: 0.95rem;
-        line-height: 1.45;
-      }
-
-      .source-box p {
-        margin-top: 10px;
-      }
-
-      .source-box ul {
-        margin: 10px 0 0;
-        padding-left: 18px;
+      code {
+        color: #ffd8c2;
       }
 
       @media (max-width: 920px) {
         .intro,
-        .principles,
-        .sources,
-        .generated-body,
-        .research-strip,
-        .option-grid,
-        .mock-hero,
-        .mock-hero.copy-right {
+        .mockup-body,
+        .prompt-grid,
+        .sources {
           grid-template-columns: 1fr;
         }
 
-        .logo-panel {
-          border-right: 0;
-          border-bottom: 1px solid var(--border);
-        }
-
-        .option-head {
+        .mockup-head {
           grid-template-columns: 1fr;
         }
 
-        .generated-head {
-          grid-template-columns: 1fr;
-        }
-
-        .generated-notes {
+        .mockup-notes {
           border-left: 0;
           border-top: 1px solid var(--border);
         }
@@ -576,16 +244,8 @@
           padding-top: 26px;
         }
 
-        .principles {
-          gap: 10px;
-        }
-
-        .option-head,
-        .generated-head,
-        .generated-notes,
-        .logo-panel,
-        .hero-panel,
-        .mock-hero {
+        .mockup-head,
+        .mockup-notes {
           padding: 16px;
         }
       }
@@ -596,532 +256,128 @@
       <section class="intro" aria-labelledby="page-title">
         <div>
           <div class="eyebrow">Brand exploration</div>
-          <h1 id="page-title">Human loop visuals for Curyo</h1>
+          <h1 id="page-title">Abstract human loop visuals for Curyo</h1>
           <p>
-            Fresh generated image mockups for replacing the abstract orb with a clearer human + AI collaboration scene.
-            Each option keeps the black Curyo shell, warm orb colors, a shared desktop computer, and an orange coffee
-            mug so the hero explains the product at a glance.
+            A cleaner direction for replacing the literal robot coworker with more abstract human + AI collaboration
+            imagery. Each option keeps the black Curyo field, desktop computer, orange coffee mug, and orbit colors, but
+            reduces anatomy and robot details so the image feels more brand-ownable.
           </p>
         </div>
         <aside class="decision">
-          <strong>Recommended path: generated Concept B, then refine from there.</strong>
+          <strong>Recommended path: Abstract Concept A.</strong>
           <p>
-            The strongest direction is image-led rather than hand-built SVG: generate the whole human/AI/computer scene
-            at once, then iterate with narrow prompts for composition, anatomy, and brand colors.
+            The first option keeps the product story readable while turning the AI into a luminous partner form instead
+            of a mascot. It should be the strongest base for landing hero crops and later logo experiments.
           </p>
         </aside>
       </section>
 
-      <section class="generated-options" aria-label="Generated image mockups">
-        <article class="generated-card featured">
-          <header class="generated-head">
+      <section class="mockups" aria-label="Abstract generated image mockups">
+        <article class="mockup-card featured">
+          <header class="mockup-head">
             <div>
-              <div class="option-kicker">Generated Concept B</div>
-              <h2>Shared Desktop Review</h2>
+              <div class="option-kicker">Abstract Concept A</div>
+              <h2>Loop Partner</h2>
             </div>
             <div class="badge">Recommended</div>
           </header>
-          <div class="generated-body">
-            <figure class="generated-figure">
+          <div class="mockup-body">
+            <figure class="mockup-figure">
               <img
-                src="assets/human-ai-computer-mug-concept-b.png"
-                alt="Human reviewer and friendly robot collaborating at a desktop computer on a black background"
+                src="assets/abstract-loop-partner.png"
+                alt="Abstract human collaborator and luminous AI loop partner working at a desktop computer with an orange mug"
               />
             </figure>
-            <aside class="generated-notes">
+            <aside class="mockup-notes">
               <p>
-                This is the cleanest first-read hero: human, AI helper, desktop monitor, orange mug, and Curyo-colored
-                orbit accents all land without needing explanation.
+                Best overall balance: the human is reduced to clean contour lines, the AI reads as an intelligent orbit
+                form, and the desktop plus mug keep the story grounded.
               </p>
               <ul>
-                <li>Best balance of friendly and polished.</li>
-                <li>Computer is clearly a desktop monitor.</li>
-                <li>Leaves enough negative space to crop into the current landing hero.</li>
+                <li>Most abstract without losing the collaboration read.</li>
+                <li>AI feels closer to the current Curyo orb language.</li>
+                <li>Cleanest foundation for a future animated hero.</li>
               </ul>
             </aside>
           </div>
         </article>
 
-        <article class="generated-card">
-          <header class="generated-head">
+        <article class="mockup-card">
+          <header class="mockup-head">
             <div>
-              <div class="option-kicker">Generated Concept A</div>
-              <h2>Warm Co-Worker Scene</h2>
+              <div class="option-kicker">Abstract Concept B</div>
+              <h2>Signal Co-Worker</h2>
             </div>
-            <div class="badge">Friendly</div>
+            <div class="badge">Friendliest</div>
           </header>
-          <div class="generated-body">
-            <figure class="generated-figure">
+          <div class="mockup-body">
+            <figure class="mockup-figure">
               <img
-                src="assets/human-ai-computer-mug-concept-a.png"
-                alt="Human and robot working together around a desktop computer with an orange coffee mug"
+                src="assets/abstract-signal-collab.png"
+                alt="Simplified human and abstract AI signal form collaborating at a desktop computer with an orange mug"
               />
             </figure>
-            <aside class="generated-notes">
+            <aside class="mockup-notes">
               <p>
-                A more narrative option with the human and robot in a shared workspace. It is approachable, but slightly
-                busier and less hero-crop friendly than Concept B.
+                Friendlier and more character-like. The AI is still abstracted by loops and glow, but this version keeps
+                a clearer assistant personality.
               </p>
               <ul>
-                <li>Strongest emotional warmth.</li>
-                <li>Readable human and robot expressions.</li>
-                <li>May need cleanup to remove tiny decorative sparks.</li>
+                <li>Most immediately approachable.</li>
+                <li>Good if the brand should feel warmer and less mysterious.</li>
+                <li>Slightly more literal than Concept A.</li>
               </ul>
             </aside>
           </div>
         </article>
 
-        <article class="generated-card">
-          <header class="generated-head">
+        <article class="mockup-card">
+          <header class="mockup-head">
             <div>
-              <div class="option-kicker">Generated Concept C</div>
-              <h2>Agent Beside Reviewer</h2>
+              <div class="option-kicker">Abstract Concept C</div>
+              <h2>Orbit Review</h2>
             </div>
-            <div class="badge">Most dramatic</div>
+            <div class="badge">Most abstract</div>
           </header>
-          <div class="generated-body">
-            <figure class="generated-figure">
+          <div class="mockup-body">
+            <figure class="mockup-figure">
               <img
-                src="assets/human-ai-computer-mug-concept-c.png"
-                alt="Human reviewer and robot beside a desktop monitor with Curyo-colored AI orbit accents"
+                src="assets/abstract-orbit-review.png"
+                alt="Faceless human contour and abstract AI orbit cloud collaborating at a desktop computer with an orange mug"
               />
             </figure>
-            <aside class="generated-notes">
+            <aside class="mockup-notes">
               <p>
-                This has the strongest glow and brand drama. It is useful as inspiration, though the composition is a
-                bit more centered and could compete with the landing headline.
+                Strongest abstraction. The human has almost no facial detail, and the AI is mostly a glowing network
+                cloud. It may need a little compositional tightening, but the style is distinctive.
               </p>
               <ul>
-                <li>High visual impact.</li>
-                <li>Strong orb-color continuity.</li>
-                <li>Needs a quieter crop if used on the homepage.</li>
+                <li>Best answer to the anatomy and hair concerns.</li>
+                <li>Most premium and least cartoon-like.</li>
+                <li>AI orbit form is large enough to become a brand motif.</li>
               </ul>
             </aside>
           </div>
         </article>
       </section>
 
-      <section class="research-strip" aria-label="Research and generation notes">
+      <section class="prompt-grid" aria-label="Prompt direction">
         <div class="source-box">
-          <h2>Generation Recipe</h2>
+          <h2>Prompt Direction</h2>
           <p>
-            Generate the whole scene as one image, not separate vector parts. Lock the must-have objects: one human, one
-            friendly robot, shared desktop monitor with stand, orange mug, black background, no text, no laptop.
+            Generate the full scene as one image, but avoid literal character design. Ask for a partial human contour,
+            hands at the work surface, a desktop monitor with stand, an orange mug, and an AI presence made from an
+            orbital capsule, nodes, and soft glow.
           </p>
         </div>
         <div class="source-box">
-          <h2>Research Cues</h2>
+          <h2>Useful Constraints</h2>
           <p>
-            Human-centered AI guidance consistently points to agency, feedback, control, and clear handoffs, so the
-            image should show a shared work surface rather than an isolated AI mascot. The source links below informed
-            the prompt structure.
+            The key negative prompts are <code>no laptop</code>, <code>no literal robot body</code>,
+            <code>no detailed face</code>, <code>no oversized hair</code>, <code>no text</code>, and
+            <code>black background</code>.
           </p>
         </div>
-      </section>
-
-      <section class="principles legacy-vector-board" aria-label="Design principles">
-        <div class="principle">
-          <b>Make the loop explicit</b>
-          <span>Show a handoff from AI to human and a return signal back to the agent.</span>
-        </div>
-        <div class="principle">
-          <b>Keep humans central</b>
-          <span>The person is not decoration. Their review, stake, and judgment are the product.</span>
-        </div>
-        <div class="principle">
-          <b>Retain Curyo equity</b>
-          <span>Use the existing coral warmth, dark shell, and luminous loop as a bridge from the orb.</span>
-        </div>
-        <div class="principle">
-          <b>Avoid cartoon overload</b>
-          <span>Friendly line work, but enough product specificity to avoid looking like generic AI SaaS.</span>
-        </div>
-      </section>
-
-      <section class="options legacy-vector-board" aria-label="Mockup concepts">
-        <article class="option">
-          <header class="option-head">
-            <div>
-              <div class="option-kicker">Concept A</div>
-              <h2>Desk Loop</h2>
-            </div>
-            <div class="badge">Preferred direction</div>
-          </header>
-          <div class="option-grid">
-            <aside class="logo-panel">
-              <div class="logo-stage" aria-label="Desk Loop logo concept">
-                <svg class="desk-loop-art" viewBox="0 0 320 320" role="img" aria-label="Small AI face beside a human review loop">
-                  <defs>
-                    <linearGradient id="a-loop" x1="80" y1="88" x2="250" y2="238" gradientUnits="userSpaceOnUse">
-                      <stop stop-color="#AFC5D7" />
-                      <stop offset="0.2" stop-color="#FFF8F2" />
-                      <stop offset="0.42" stop-color="#F7B070" />
-                      <stop offset="0.64" stop-color="#F26426" />
-                      <stop offset="0.84" stop-color="#B23C3B" />
-                      <stop offset="1" stop-color="#6A345F" />
-                    </linearGradient>
-                  </defs>
-                  <rect class="desk-bg" x="44" y="48" width="232" height="232" rx="58" />
-                  <ellipse
-                    cx="190"
-                    cy="148"
-                    rx="64"
-                    ry="73"
-                    fill="none"
-                    stroke="url(#a-loop)"
-                    stroke-width="8"
-                    stroke-linecap="round"
-                    transform="rotate(-26 190 148)"
-                  />
-                  <ellipse
-                    cx="190"
-                    cy="148"
-                    rx="64"
-                    ry="73"
-                    fill="none"
-                    stroke="url(#a-loop)"
-                    stroke-width="8"
-                    stroke-linecap="round"
-                    opacity="0.78"
-                    transform="rotate(24 190 148)"
-                  />
-                  <path class="human-hair" d="M88 146c6-27 29-43 58-39 24 4 40 20 44 44M108 126c13 8 27 6 39-6 12 14 27 19 45 12" />
-                  <path class="svg-line" d="M109 144c-5 35 8 58 35 60 26 2 43-20 39-58" />
-                  <circle cx="132" cy="164" r="4.8" class="svg-ink" />
-                  <circle cx="158" cy="164" r="4.8" class="svg-ink" />
-                  <path class="svg-line-thin" d="M136 182c8 7 18 7 26 0" />
-                  <rect class="desk-panel" x="96" y="198" width="132" height="48" rx="10" stroke-width="8" />
-                  <path class="svg-line-thin" d="M154 246v22" />
-                  <path class="svg-line-thin" d="M126 268h72" />
-                  <rect class="desk-panel" x="146" y="112" width="92" height="56" rx="28" stroke-width="8" />
-                  <circle cx="176" cy="140" r="5.5" class="svg-ink" />
-                  <circle cx="208" cy="140" r="5.5" class="svg-ink" />
-                  <path class="svg-line-thin" d="M182 153c8 7 17 7 25 0" />
-                  <circle cx="242" cy="101" r="22" class="svg-coral" />
-                  <path class="svg-line-thin" d="M231 101l8 9 18-22" />
-                </svg>
-              </div>
-              <div class="notes">
-                <div class="note">
-                  <b>Logo idea</b>
-                  <span>AI helper face plus a small human approval check inside one shared loop.</span>
-                </div>
-                <div class="note">
-                  <b>Landing image</b>
-                  <span>Human and AI working at the same desk, echoing the explainer film without copying it.</span>
-                </div>
-                <div class="note">
-                  <b>Risk</b>
-                  <span>Very approachable, but it can read as generic "AI assistant" if the vote/result cues are too subtle.</span>
-                </div>
-              </div>
-            </aside>
-            <div class="hero-panel">
-              <div class="browser">
-                <div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
-                <div class="mock-hero">
-                  <div class="hero-copy">
-                    <h3>AI Asks, Humans Earn</h3>
-                    <p>Friendly hero art makes the agent and human reviewer relationship immediately legible.</p>
-                    <div class="button-row">
-                      <span class="button primary">Earn USDC</span>
-                      <span class="button secondary">For Agents</span>
-                    </div>
-                  </div>
-                  <div class="art-wrap">
-                    <svg class="desk-loop-art" viewBox="0 0 720 520" role="img" aria-label="Human and AI at a desk">
-                      <defs>
-                        <linearGradient id="a-hero-loop" x1="230" y1="110" x2="496" y2="360" gradientUnits="userSpaceOnUse">
-                          <stop stop-color="#AFC5D7" />
-                          <stop offset="0.2" stop-color="#FFF8F2" />
-                          <stop offset="0.42" stop-color="#F7B070" />
-                          <stop offset="0.64" stop-color="#F26426" />
-                          <stop offset="0.84" stop-color="#B23C3B" />
-                          <stop offset="1" stop-color="#6A345F" />
-                        </linearGradient>
-                      </defs>
-                      <rect class="desk-bg" x="8" y="18" width="704" height="484" rx="18" />
-                      <path class="svg-line-thin" d="M48 398h620" />
-                      <ellipse
-                        cx="434"
-                        cy="229"
-                        rx="82"
-                        ry="93"
-                        fill="none"
-                        stroke="url(#a-hero-loop)"
-                        stroke-width="8"
-                        stroke-linecap="round"
-                        transform="rotate(-27 434 229)"
-                      />
-                      <ellipse
-                        cx="434"
-                        cy="229"
-                        rx="82"
-                        ry="93"
-                        fill="none"
-                        stroke="url(#a-hero-loop)"
-                        stroke-width="8"
-                        stroke-linecap="round"
-                        opacity="0.78"
-                        transform="rotate(23 434 229)"
-                      />
-                      <rect class="desk-panel" x="378" y="202" width="112" height="62" rx="31" stroke-width="8" />
-                      <circle cx="410" cy="238" r="6" class="svg-ink" />
-                      <circle cx="447" cy="238" r="6" class="svg-ink" />
-                      <path class="svg-line-thin" d="M418 251c8 7 17 7 25 0" />
-                      <path class="human-hair" d="M152 164c7-43 43-70 88-60 30 7 51 30 58 65M178 128c17 10 35 7 51-8" />
-                      <path class="svg-line" d="M160 166c-10 56-10 93 9 117 18 22 54 21 70-1 14-19 14-59 11-113" />
-                      <circle cx="191" cy="209" r="5.5" class="svg-ink" />
-                      <circle cx="225" cy="209" r="5.5" class="svg-ink" />
-                      <path class="svg-line-thin" d="M188 236c12 13 31 13 44 0" />
-                      <path class="svg-line" d="M64 400c20-118 55-173 137-173 86 0 125 58 146 173" />
-                      <path class="svg-line" d="M130 282l-25 118" />
-                      <path class="svg-line" d="M283 282l25 118" />
-                      <rect class="desk-panel" x="318" y="300" width="280" height="126" rx="18" stroke-width="8" />
-                      <path class="desk-panel" d="M432 426h54v48h-54Z" stroke-width="8" stroke-linejoin="round" />
-                      <path class="desk-panel" d="M410 474h98v18h-98Z" stroke-width="8" stroke-linejoin="round" />
-                      <rect x="578" y="348" width="44" height="58" rx="8" class="svg-orange" stroke-width="7" />
-                      <path class="svg-line-thin" d="M622 368c22-3 28 13 14 26" />
-                      <path class="svg-line-thin" d="M590 332c-7-10-5-20 5-29" />
-                      <path class="svg-line-thin" d="M612 330c-8-12-5-24 7-34" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </article>
-
-        <article class="option">
-          <header class="option-head">
-            <div>
-              <div class="option-kicker">Concept B</div>
-              <h2>Judgment Relay</h2>
-            </div>
-            <div class="badge">Best product fit</div>
-          </header>
-          <div class="option-grid">
-            <aside class="logo-panel">
-              <div class="logo-stage" aria-label="Judgment Relay logo concept">
-                <svg viewBox="0 0 320 320" role="img" aria-label="AI question routed to verified human votes">
-                  <defs>
-                    <linearGradient id="b-loop" x1="73" y1="67" x2="256" y2="253" gradientUnits="userSpaceOnUse">
-                      <stop stop-color="#55bad0" />
-                      <stop offset="0.5" stop-color="#8a4de8" />
-                      <stop offset="1" stop-color="#f47a42" />
-                    </linearGradient>
-                  </defs>
-                  <rect x="44" y="48" width="232" height="232" rx="58" fill="#fff4f0" />
-                  <path
-                    d="M96 108c40-46 115-49 158-6M254 102c-26-7-50-4-72 11M244 216c-42 43-116 43-157-3M87 213c26 8 51 5 74-10"
-                    fill="none"
-                    stroke="url(#b-loop)"
-                    stroke-width="10"
-                    stroke-linecap="round"
-                  />
-                  <rect x="92" y="110" width="136" height="78" rx="20" fill="#fff4f0" stroke="#0e0c0f" stroke-width="8" />
-                  <path class="svg-line-thin" d="M116 136h72" />
-                  <path class="svg-line-thin" d="M116 160h96" />
-                  <path class="svg-line-thin" d="M206 188l24 24" />
-                  <circle cx="100" cy="220" r="30" fill="#ec817b" stroke="#0e0c0f" stroke-width="8" />
-                  <path class="svg-line-thin" d="M86 220l12 12 22-27" />
-                  <circle cx="220" cy="220" r="30" fill="#fff4f0" stroke="#0e0c0f" stroke-width="8" />
-                  <path class="svg-line-thin" d="M205 220h30" />
-                  <path class="svg-line-thin" d="M220 205v30" />
-                  <rect x="132" y="58" width="58" height="40" rx="20" fill="#fff4f0" stroke="#0e0c0f" stroke-width="7" />
-                  <circle cx="152" cy="78" r="4.4" class="svg-ink" />
-                  <circle cx="171" cy="78" r="4.4" class="svg-ink" />
-                  <path class="svg-line-thin" d="M153 89c6 4 12 4 18 0" />
-                </svg>
-              </div>
-              <div class="notes">
-                <div class="note">
-                  <b>Logo idea</b>
-                  <span>Question card in the center, AI above it, verified human outcomes below it.</span>
-                </div>
-                <div class="note">
-                  <b>Landing image</b>
-                  <span>Shows the Curyo loop as a relay: ask, review, stake, result.</span>
-                </div>
-                <div class="note">
-                  <b>Risk</b>
-                  <span>Slightly more abstract than Concept A, so the friendly face treatment matters.</span>
-                </div>
-              </div>
-            </aside>
-            <div class="hero-panel">
-              <div class="browser">
-                <div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
-                <div class="mock-hero copy-right">
-                  <div class="art-wrap">
-                    <svg viewBox="0 0 720 520" role="img" aria-label="AI sends a question to humans who vote">
-                      <defs>
-                        <linearGradient id="b-hero-loop" x1="150" y1="96" x2="590" y2="408" gradientUnits="userSpaceOnUse">
-                          <stop stop-color="#55bad0" />
-                          <stop offset="0.5" stop-color="#8a4de8" />
-                          <stop offset="1" stop-color="#f47a42" />
-                        </linearGradient>
-                      </defs>
-                      <rect x="8" y="18" width="704" height="484" rx="18" fill="#fff4f0" />
-                      <path class="svg-line-thin" d="M52 397h618" />
-                      <path
-                        d="M188 140c85-83 233-77 311 13M500 153c-43-11-82-6-118 17M528 345c-83 84-232 80-313-8M215 337c44 11 84 6 120-18"
-                        fill="none"
-                        stroke="url(#b-hero-loop)"
-                        stroke-width="8"
-                        stroke-linecap="round"
-                      />
-                      <rect x="248" y="162" width="224" height="164" rx="18" fill="#fff4f0" stroke="#0e0c0f" stroke-width="8" />
-                      <path class="svg-line-thin" d="M282 204h124" />
-                      <path class="svg-line-thin" d="M282 238h150" />
-                      <path class="svg-line-thin" d="M282 272h94" />
-                      <circle cx="428" cy="278" r="24" fill="#ffc071" stroke="#0e0c0f" stroke-width="7" />
-                      <path class="svg-line-thin" d="M417 278l9 9 18-22" />
-                      <rect x="315" y="86" width="94" height="54" rx="27" fill="#fff4f0" stroke="#0e0c0f" stroke-width="8" />
-                      <circle cx="347" cy="114" r="5.5" class="svg-ink" />
-                      <circle cx="379" cy="114" r="5.5" class="svg-ink" />
-                      <path class="svg-line-thin" d="M353 126c8 7 17 7 25 0" />
-                      <path class="svg-ink" d="M120 296c-4-44 32-76 77-68 34 6 58 33 61 69-40-16-78-16-118-1-8 3-14 3-20 0Z" />
-                      <path class="svg-line" d="M137 304c-3 44 13 70 48 70 34 0 51-25 48-70" />
-                      <circle cx="169" cy="328" r="5" class="svg-ink" />
-                      <circle cx="207" cy="328" r="5" class="svg-ink" />
-                      <path class="svg-line-thin" d="M174 351c10 8 22 8 32 0" />
-                      <path class="svg-line" d="M86 398c15-55 48-83 101-83 52 0 84 28 99 83" />
-                      <circle cx="584" cy="320" r="48" fill="#ec817b" stroke="#0e0c0f" stroke-width="8" />
-                      <path class="svg-line-thin" d="M563 320l14 15 32-39" />
-                      <circle cx="568" cy="406" r="30" fill="#fff4f0" stroke="#0e0c0f" stroke-width="7" />
-                      <path class="svg-line-thin" d="M554 405h28" />
-                      <path class="svg-line-thin" d="M568 391v28" />
-                      <rect x="82" y="150" width="72" height="84" rx="14" fill="#fff4f0" stroke="#0e0c0f" stroke-width="8" />
-                      <path class="svg-line-thin" d="M105 178h28" />
-                      <path class="svg-line-thin" d="M105 203h28" />
-                      <circle cx="154" cy="150" r="22" class="svg-coral" stroke="#0e0c0f" stroke-width="7" />
-                    </svg>
-                  </div>
-                  <div class="hero-copy">
-                    <h3>AI Asks, Humans Earn</h3>
-                    <p>More specific to Curyo: the first visual reads as question, verified human judgment, and reward.</p>
-                    <div class="button-row">
-                      <span class="button primary">Earn USDC</span>
-                      <span class="button secondary">For Agents</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </article>
-
-        <article class="option">
-          <header class="option-head">
-            <div>
-              <div class="option-kicker">Concept C</div>
-              <h2>Civic Signal</h2>
-            </div>
-            <div class="badge">Most protocol-native</div>
-          </header>
-          <div class="option-grid">
-            <aside class="logo-panel">
-              <div class="logo-stage" aria-label="Civic Signal logo concept">
-                <svg viewBox="0 0 320 320" role="img" aria-label="Network of human nodes around an AI question signal">
-                  <defs>
-                    <linearGradient id="c-loop" x1="74" y1="68" x2="250" y2="252" gradientUnits="userSpaceOnUse">
-                      <stop stop-color="#55bad0" />
-                      <stop offset="0.45" stop-color="#8a4de8" />
-                      <stop offset="1" stop-color="#f47a42" />
-                    </linearGradient>
-                  </defs>
-                  <rect x="44" y="48" width="232" height="232" rx="58" fill="#fff4f0" />
-                  <circle cx="160" cy="160" r="87" fill="none" stroke="url(#c-loop)" stroke-width="10" />
-                  <path class="svg-line-thin" d="M99 220l48-43" />
-                  <path class="svg-line-thin" d="M221 220l-48-43" />
-                  <path class="svg-line-thin" d="M160 90v52" />
-                  <rect x="116" y="126" width="88" height="58" rx="24" fill="#fff4f0" stroke="#0e0c0f" stroke-width="8" />
-                  <circle cx="146" cy="155" r="5" class="svg-ink" />
-                  <circle cx="175" cy="155" r="5" class="svg-ink" />
-                  <path class="svg-line-thin" d="M152 167c6 5 13 5 20 0" />
-                  <circle cx="160" cy="84" r="25" fill="#55bad0" stroke="#0e0c0f" stroke-width="7" />
-                  <path class="svg-line-thin" d="M148 84c7 8 17 8 24 0" />
-                  <circle cx="91" cy="226" r="25" fill="#ec817b" stroke="#0e0c0f" stroke-width="7" />
-                  <path class="svg-line-thin" d="M79 226l9 9 20-25" />
-                  <circle cx="229" cy="226" r="25" fill="#ffc071" stroke="#0e0c0f" stroke-width="7" />
-                  <path class="svg-line-thin" d="M215 226h28" />
-                  <path class="svg-line-thin" d="M229 212v28" />
-                </svg>
-              </div>
-              <div class="notes">
-                <div class="note">
-                  <b>Logo idea</b>
-                  <span>AI signal in the center, verified humans as nodes around the loop.</span>
-                </div>
-                <div class="note">
-                  <b>Landing image</b>
-                  <span>More infrastructure-oriented: agents, voters, on-chain settlement, reusable public result.</span>
-                </div>
-                <div class="note">
-                  <b>Risk</b>
-                  <span>Clearer for crypto-native audiences, but less emotionally warm than Concepts A and B.</span>
-                </div>
-              </div>
-            </aside>
-            <div class="hero-panel">
-              <div class="browser">
-                <div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
-                <div class="mock-hero">
-                  <div class="hero-copy">
-                    <h3>AI Asks, Humans Earn</h3>
-                    <p>Useful when the landing page needs to signal public protocol, not just assistant workflow.</p>
-                    <div class="button-row">
-                      <span class="button primary">Earn USDC</span>
-                      <span class="button secondary">For Agents</span>
-                    </div>
-                  </div>
-                  <div class="art-wrap">
-                    <svg viewBox="0 0 720 520" role="img" aria-label="Human network around AI and public result">
-                      <defs>
-                        <linearGradient id="c-hero-loop" x1="144" y1="95" x2="592" y2="414" gradientUnits="userSpaceOnUse">
-                          <stop stop-color="#55bad0" />
-                          <stop offset="0.48" stop-color="#8a4de8" />
-                          <stop offset="1" stop-color="#f47a42" />
-                        </linearGradient>
-                      </defs>
-                      <rect x="8" y="18" width="704" height="484" rx="18" fill="#fff4f0" />
-                      <path class="svg-line-thin" d="M52 398h618" />
-                      <ellipse cx="360" cy="260" rx="224" ry="151" fill="none" stroke="url(#c-hero-loop)" stroke-width="8" />
-                      <ellipse cx="360" cy="260" rx="151" ry="224" fill="none" stroke="url(#c-hero-loop)" stroke-width="8" opacity="0.82" />
-                      <path class="svg-line-thin" d="M248 260h224" />
-                      <path class="svg-line-thin" d="M360 148v224" />
-                      <rect x="296" y="216" width="128" height="80" rx="34" fill="#fff4f0" stroke="#0e0c0f" stroke-width="8" />
-                      <circle cx="340" cy="256" r="6" class="svg-ink" />
-                      <circle cx="382" cy="256" r="6" class="svg-ink" />
-                      <path class="svg-line-thin" d="M349 271c9 8 19 8 29 0" />
-                      <circle cx="360" cy="118" r="44" fill="#55bad0" stroke="#0e0c0f" stroke-width="8" />
-                      <path class="svg-line" d="M334 121c7 22 44 22 52 0" />
-                      <path class="svg-line-thin" d="M334 110c7-8 17-9 28-3" />
-                      <path class="svg-line-thin" d="M378 110c7-8 17-9 28-3" />
-                      <circle cx="176" cy="265" r="46" fill="#ec817b" stroke="#0e0c0f" stroke-width="8" />
-                      <path class="svg-line-thin" d="M154 265l15 16 35-43" />
-                      <circle cx="548" cy="265" r="46" fill="#ffc071" stroke="#0e0c0f" stroke-width="8" />
-                      <path class="svg-line-thin" d="M526 265h44" />
-                      <path class="svg-line-thin" d="M548 243v44" />
-                      <rect x="292" y="360" width="136" height="58" rx="14" fill="#fff4f0" stroke="#0e0c0f" stroke-width="8" />
-                      <path class="svg-line-thin" d="M320 388h80" />
-                      <path class="svg-line-thin" d="M196 398h328" />
-                      <circle cx="252" cy="398" r="16" fill="#7adfbe" stroke="#0e0c0f" stroke-width="6" />
-                      <circle cx="468" cy="398" r="16" fill="#7adfbe" stroke="#0e0c0f" stroke-width="6" />
-                      <rect x="88" y="117" width="98" height="68" rx="15" fill="#fff4f0" stroke="#0e0c0f" stroke-width="8" />
-                      <path class="svg-line-thin" d="M112 145h48" />
-                      <path class="svg-line-thin" d="M112 166h34" />
-                      <rect x="536" y="116" width="86" height="72" rx="15" fill="#fff4f0" stroke="#0e0c0f" stroke-width="8" />
-                      <path class="svg-line-thin" d="M558 144h42" />
-                      <path class="svg-line-thin" d="M558 166h26" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </article>
       </section>
 
       <section class="sources" aria-label="Research sources and next steps">
@@ -1143,16 +399,11 @@
           </ul>
         </div>
         <div class="source-box">
-          <h2>Next Prompt Iteration</h2>
+          <h2>Next Iteration</h2>
           <p>
-            Start from Concept B and make smaller edits: preserve the black background, desktop monitor, orange mug, and
-            Curyo-colored orbital lines, then ask for only one correction per pass.
+            Start from Concept A if the homepage needs a clear product story. Start from Concept C if the brand should
+            lean more premium and symbolic. In either case, edit one thing at a time: crop, AI shape, then hand position.
           </p>
-          <ul>
-            <li>Pass 1: tighten composition for the current landing hero crop.</li>
-            <li>Pass 2: simplify background details and remove tiny spark marks.</li>
-            <li>Pass 3: export header/logo crops after the hero direction is chosen.</li>
-          </ul>
         </div>
       </section>
     </main>
