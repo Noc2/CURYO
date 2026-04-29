@@ -45,11 +45,15 @@ fi
 magick -size 512x512 xc:"#000000" \
   -fill none \
   -stroke "#ffffff" \
-  -strokewidth 32 \
-  -draw "path 'M 342,158 C 258,92 106,120 106,256 C 106,392 258,420 342,354'" \
+  -strokewidth 20 \
+  -draw "path 'M 330.9,172.8 C 285,131.4 214.2,135.1 172.8,181.1 C 131.4,227 135.1,297.8 181.1,339.2 C 223.7,377.6 288.3,377.6 330.9,339.2'" \
+  -fill "#ffffff" \
+  -stroke none \
+  -draw "circle 330.9,172.8 340.9,172.8" \
+  -draw "circle 330.9,339.2 340.9,339.2" \
   -fill "#F26426" \
   -stroke none \
-  -draw "circle 256,256 334,256" \
+  -draw "circle 256,256 312,256" \
   "$PUBLIC_DIR/favicon.png"
 magick "$PUBLIC_DIR/favicon.png" -resize 92x92 "$LOGO_SOURCE"
 magick "$HERO_SOURCE" -resize 900x506 "$HERO_SOCIAL"

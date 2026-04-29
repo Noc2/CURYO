@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Curyo">
-  <rect width="512" height="512" rx="96" fill="#000000" />
+  <rect width="512" height="512" fill="#000000" />
   <path
-    d="M 342 158 C 258 92 106 120 106 256 C 106 392 258 420 342 354"
+    d="M 330.9 172.8 C 285 131.4 214.2 135.1 172.8 181.1 C 131.4 227 135.1 297.8 181.1 339.2 C 223.7 377.6 288.3 377.6 330.9 339.2"
     fill="none"
     stroke="#ffffff"
-    stroke-width="32"
+    stroke-width="20"
     stroke-linecap="round"
     stroke-linejoin="round"
   />
-  <circle cx="256" cy="256" r="78" fill="#F26426" />
+  <circle cx="256" cy="256" r="56" fill="#F26426" />
 </svg>
