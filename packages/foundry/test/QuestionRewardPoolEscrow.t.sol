@@ -1639,7 +1639,80 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         uint256 agentBalanceBefore = usdc.balanceOf(agentWallet);
         uint256 nextContentIdBefore = registry.nextContentId();
 
+        _reserveX402Question(agentWallet, question);
+        vm.warp(block.timestamp + 1);
+
         vm.expectRevert("Voter ID required");
+        x402QuestionSubmitter.submitQuestionWithX402Payment(
+            question.contextUrl,
+            question.imageUrls,
+            "",
+            question.title,
+            question.description,
+            question.tags,
+            CATEGORY_ID,
+            question.salt,
+            question.rewardTerms,
+            question.roundConfig,
+            question.spec,
+            authorization
+        );
+
+        assertFalse(usdc.authorizationState(agentWallet, authorization.nonce));
+        assertEq(registry.nextContentId(), nextContentIdBefore);
+        assertEq(usdc.balanceOf(address(rewardPoolEscrow)), escrowBalanceBefore);
+        assertEq(usdc.balanceOf(agentWallet), agentBalanceBefore);
+    }
+
+    function testX402QuestionSubmissionRequiresReservationBeforeUsdcAuthorization() public {
+        address agentWallet = address(0xA11CE);
+        X402TestQuestion memory question = _x402TestQuestion();
+        Eip3009Authorization memory authorization = _x402Authorization(agentWallet, question);
+
+        vm.prank(submitter);
+        voterIdNFT.setDelegate(agentWallet);
+        usdc.mint(agentWallet, question.rewardTerms.amount);
+        uint256 escrowBalanceBefore = usdc.balanceOf(address(rewardPoolEscrow));
+        uint256 agentBalanceBefore = usdc.balanceOf(agentWallet);
+        uint256 nextContentIdBefore = registry.nextContentId();
+
+        vm.expectRevert("Reservation not found");
+        x402QuestionSubmitter.submitQuestionWithX402Payment(
+            question.contextUrl,
+            question.imageUrls,
+            "",
+            question.title,
+            question.description,
+            question.tags,
+            CATEGORY_ID,
+            question.salt,
+            question.rewardTerms,
+            question.roundConfig,
+            question.spec,
+            authorization
+        );
+
+        assertFalse(usdc.authorizationState(agentWallet, authorization.nonce));
+        assertEq(registry.nextContentId(), nextContentIdBefore);
+        assertEq(usdc.balanceOf(address(rewardPoolEscrow)), escrowBalanceBefore);
+        assertEq(usdc.balanceOf(agentWallet), agentBalanceBefore);
+    }
+
+    function testX402QuestionSubmissionRejectsTooNewReservationBeforeUsdcAuthorization() public {
+        address agentWallet = address(0xA11CE);
+        X402TestQuestion memory question = _x402TestQuestion();
+        Eip3009Authorization memory authorization = _x402Authorization(agentWallet, question);
+
+        vm.prank(submitter);
+        voterIdNFT.setDelegate(agentWallet);
+        usdc.mint(agentWallet, question.rewardTerms.amount);
+        uint256 escrowBalanceBefore = usdc.balanceOf(address(rewardPoolEscrow));
+        uint256 agentBalanceBefore = usdc.balanceOf(agentWallet);
+        uint256 nextContentIdBefore = registry.nextContentId();
+
+        _reserveX402Question(agentWallet, question);
+
+        vm.expectRevert("Reservation too new");
         x402QuestionSubmitter.submitQuestionWithX402Payment(
             question.contextUrl,
             question.imageUrls,
@@ -1671,6 +1744,9 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         usdc.mint(agentWallet, question.rewardTerms.amount);
         uint256 escrowBalanceBefore = usdc.balanceOf(address(rewardPoolEscrow));
         uint256 agentBalanceBefore = usdc.balanceOf(agentWallet);
+
+        _reserveX402Question(agentWallet, question);
+        vm.warp(block.timestamp + 1);
 
         uint256 contentId = x402QuestionSubmitter.submitQuestionWithX402Payment(
             question.contextUrl,
@@ -1900,6 +1976,31 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
             questionMetadataHash: keccak256("x402-question-metadata"), resultSpecHash: keccak256("x402-result-spec")
         });
         question.salt = keccak256("x402-usdc-no-voter-id");
+    }
+
+    function _reserveX402Question(address agentWallet, X402TestQuestion memory question)
+        internal
+        returns (bytes32 revealCommitment)
+    {
+        (, bytes32 submissionKey) = registry.previewQuestionSubmissionKey(
+            question.contextUrl, question.imageUrls, "", question.title, question.description, question.tags, CATEGORY_ID
+        );
+        revealCommitment = _questionRevealCommitment(
+            submissionKey,
+            _submissionMediaHash(question.imageUrls, ""),
+            question.title,
+            question.description,
+            question.tags,
+            CATEGORY_ID,
+            question.salt,
+            agentWallet,
+            question.rewardTerms,
+            question.roundConfig,
+            question.spec
+        );
+
+        vm.prank(agentWallet);
+        registry.reserveSubmission(revealCommitment);
     }
 
     function _x402Authorization(address agentWallet, X402TestQuestion memory question)

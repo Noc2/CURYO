@@ -96,6 +96,7 @@ export type NativeX402QuestionSubmissionPlan = {
   payloadHash: string;
   questionCount: number;
   requiresOrderedExecution: true;
+  revealCommitment: Hex;
   roundConfig: ReturnType<typeof serializeQuestionRoundConfig>;
   submissionKey: Hex;
   walletAddress: Address;
@@ -986,6 +987,20 @@ export async function buildNativeX402QuestionSubmissionPlan(params: {
     ? [
         {
           data: encodeFunctionData({
+            abi: ContentRegistryAbi,
+            functionName: "reserveSubmission",
+            args: [context.revealCommitment],
+          }),
+          description: "Reserve the deterministic question commitment from the wallet signer",
+          functionName: "reserveSubmission",
+          id: "reserve-submission",
+          phase: "reserve_submission",
+          to: params.config.contentRegistryAddress,
+          value: "0",
+          waitAfterMs: RESERVED_SUBMISSION_WAIT_MS,
+        },
+        {
+          data: encodeFunctionData({
             abi: X402QuestionSubmitterAbi,
             functionName: "submitQuestionWithX402Payment",
             args: [
@@ -1037,6 +1052,7 @@ export async function buildNativeX402QuestionSubmissionPlan(params: {
     payloadHash: operation.payloadHash,
     questionCount: params.payload.questions.length,
     requiresOrderedExecution: true,
+    revealCommitment: context.revealCommitment,
     roundConfig: serializeQuestionRoundConfig(params.payload.roundConfig),
     submissionKey,
     walletAddress: params.walletAddress,
@@ -1225,6 +1241,7 @@ async function recordNativeX402SubmissionPlan(params: {
     mode: "native-x402-authorization",
     operationKey: params.operation.operationKey,
     preparedAt: now.toISOString(),
+    revealCommitment: params.plan.revealCommitment,
     walletAddress: params.plan.walletAddress,
   });
 

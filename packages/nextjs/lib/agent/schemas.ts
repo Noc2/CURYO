@@ -183,7 +183,7 @@ export const agentAskHumansInputSchema = {
     paymentMode: {
       default: "wallet_calls",
       description:
-        "wallet_calls returns approve/reserve/submit transactions. x402_authorization returns a native USDC authorization request, then a single submit transaction after signature.",
+        "wallet_calls returns approve/reserve/submit transactions. x402_authorization returns a native USDC authorization request, then ordered reserve/submit transactions after signature.",
       enum: ["wallet_calls", "x402_authorization"],
       type: "string",
     },

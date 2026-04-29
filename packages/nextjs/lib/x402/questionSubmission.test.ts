@@ -174,6 +174,15 @@ test("prepareNativeX402QuestionSubmissionRequest returns an authorization reques
         calls: signature
           ? [
               {
+                data: `0x${"a".repeat(8)}` as const,
+                description: "Reserve submission",
+                functionName: "reserveSubmission",
+                id: "reserve-submission",
+                phase: "reserve_submission",
+                to: TEST_CONFIG.contentRegistryAddress,
+                value: "0",
+              },
+              {
                 data: `0x${"b".repeat(8)}` as const,
                 description: "Submit x402 question",
                 functionName: "submitQuestionWithX402Payment",
@@ -197,6 +206,7 @@ test("prepareNativeX402QuestionSubmissionRequest returns an authorization reques
         payloadHash: `payload:${payload.clientRequestId}`,
         questionCount: payload.questions.length,
         requiresOrderedExecution: true,
+        revealCommitment: `0x${"9".repeat(64)}` as const,
         roundConfig: {
           epochDuration: payload.roundConfig.epochDuration.toString(),
           maxDuration: payload.roundConfig.maxDuration.toString(),
@@ -239,5 +249,5 @@ test("prepareNativeX402QuestionSubmissionRequest returns an authorization reques
     transactionPlan: { calls: unknown[] };
   };
   assert.equal(signedBody.nextAction, "submit_x402_transaction");
-  assert.equal(signedBody.transactionPlan.calls.length, 1);
+  assert.equal(signedBody.transactionPlan.calls.length, 2);
 });

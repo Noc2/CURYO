@@ -644,6 +644,20 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         require(salt != bytes32(0), "Salt required");
         _validateSubmissionReward(rewardTerms);
         require(rewardTerms.requiredVoters <= validatedRoundConfig.maxVoters, "Voters exceed max");
+        bytes32 revealCommitment = _computeRevealCommitment(
+            submissionKey,
+            _submissionMediaHash(imageUrls, videoUrl),
+            metadata.title,
+            metadata.description,
+            metadata.tags,
+            metadata.categoryId,
+            salt,
+            submitter,
+            rewardTerms,
+            validatedRoundConfig,
+            spec
+        );
+        _consumeReservedSubmission(revealCommitment, submitter);
         submissionKeyUsed[submissionKey] = true;
         contentId = _storeQuestionAndAttachReward(
             submissionKey,
@@ -791,14 +805,21 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             roundConfig,
             spec
         );
-        bytes32 reservationKey = _reservationKey(revealCommitment, msg.sender);
+        pending = _consumeReservedSubmission(revealCommitment, msg.sender);
+        submissionKeyUsed[submissionKey] = true;
+    }
+
+    function _consumeReservedSubmission(bytes32 revealCommitment, address submitter)
+        internal
+        returns (PendingSubmission memory pending)
+    {
+        bytes32 reservationKey = _reservationKey(revealCommitment, submitter);
         pending = pendingSubmissions[reservationKey];
-        require(pending.submitter == msg.sender, "Reservation not found");
+        require(pending.submitter == submitter, "Reservation not found");
         require(block.timestamp <= pending.expiresAt, "Reservation expired");
         require(block.timestamp >= pending.reservedAt + RESERVED_SUBMISSION_MIN_AGE, "Reservation too new");
 
         delete pendingSubmissions[reservationKey];
-        submissionKeyUsed[submissionKey] = true;
     }
 
     function _submissionMediaHash(string[] memory imageUrls, string memory videoUrl) internal pure returns (bytes32) {
