@@ -86,12 +86,30 @@ function makePost(url: string, body: unknown, headers: Record<string, string> = 
   });
 }
 
+function makePublicPost(url: string, body: unknown, headers: Record<string, string> = {}) {
+  return new NextRequest(url, {
+    body: JSON.stringify(body),
+    headers: new Headers({
+      "content-type": "application/json",
+      ...headers,
+    }),
+    method: "POST",
+  });
+}
+
 function makeGet(url: string, headers: Record<string, string> = {}) {
   return new NextRequest(url, {
     headers: new Headers({
       authorization: "Bearer secret-token",
       ...headers,
     }),
+    method: "GET",
+  });
+}
+
+function makePublicGet(url: string, headers: Record<string, string> = {}) {
+  return new NextRequest(url, {
+    headers: new Headers(headers),
     method: "GET",
   });
 }
@@ -337,6 +355,57 @@ function installAskOverrides() {
       },
       status: 202,
     }),
+    preparePermissionlessNativeX402QuestionSubmissionRequest: async params => ({
+      body: {
+        clientRequestId: params.payload.clientRequestId,
+        operationKey: OPERATION_KEY,
+        payment: {
+          amount: "1000000",
+          asset: "USDC",
+          bountyAmount: "1000000",
+          decimals: 6,
+          spender: "0x0000000000000000000000000000000000000002",
+          tokenAddress: "0x0000000000000000000000000000000000000001",
+        },
+        paymentMode: "x402_authorization",
+        status: "awaiting_wallet_signature",
+        transactionPlan: null,
+        wallet: { address: params.walletAddress, fundingMode: "x402_authorization" },
+        x402AuthorizationRequest: {
+          authorization: {
+            from: params.walletAddress,
+            nonce: `0x${"3".repeat(64)}`,
+            to: "0x0000000000000000000000000000000000000002",
+            validAfter: "0",
+            validBefore: "1762000000",
+            value: "1000000",
+          },
+          typedData: { primaryType: "ReceiveWithAuthorization" },
+        },
+      },
+      status: 202,
+    }),
+    preparePermissionlessWalletQuestionSubmissionRequest: async params => ({
+      body: {
+        clientRequestId: params.payload.clientRequestId,
+        operationKey: OPERATION_KEY,
+        payment: {
+          amount: "1000000",
+          asset: "USDC",
+          bountyAmount: "1000000",
+          decimals: 6,
+          spender: "0x0000000000000000000000000000000000000002",
+          tokenAddress: "0x0000000000000000000000000000000000000001",
+        },
+        status: "awaiting_wallet_signature",
+        transactionPlan: {
+          calls: [{ id: "approve-usdc", to: "0x0000000000000000000000000000000000000001" }],
+          requiresOrderedExecution: true,
+        },
+        wallet: { address: params.walletAddress, fundingMode: "permissionless_wallet" },
+      },
+      status: 202,
+    }),
     preflightX402QuestionSubmission: async () => ({
       operation: {
         canonicalPayload: {} as never,
@@ -452,6 +521,24 @@ test("agent quote route returns a direct authenticated quote response", async ()
   assert.equal((body.fastLane as Record<string, unknown>).pricingConfidence, "medium");
 });
 
+test("agent quote route returns a tokenless wallet quote response", async () => {
+  installQuoteOverrides();
+
+  const response = await quoteRoute.POST(
+    makePublicPost("https://curyo.xyz/api/agent/quote", {
+      ...questionPayload("quote-public"),
+      walletAddress: "0x00000000000000000000000000000000000000aa",
+    }),
+  );
+  const body = (await response.json()) as Record<string, unknown>;
+
+  assert.equal(response.status, 200);
+  assert.equal(body.clientRequestId, "quote-public");
+  assert.equal(body.operationKey, OPERATION_KEY);
+  assert.equal(body.walletPolicyRequired, false);
+  assert.equal((body.wallet as Record<string, unknown>).address, "0x00000000000000000000000000000000000000aa");
+});
+
 test("agent asks route returns the wallet transaction plan response", async () => {
   installAskOverrides();
 
@@ -467,6 +554,60 @@ test("agent asks route returns the wallet transaction plan response", async () =
   assert.equal(body.status, "awaiting_wallet_signature");
   assert.equal(body.operationKey, OPERATION_KEY);
   assert.equal((body.transactionPlan as { calls: unknown[] }).calls.length, 1);
+});
+
+test("agent asks route returns a tokenless wallet transaction plan response", async () => {
+  installAskOverrides();
+
+  const response = await asksRoute.POST(
+    makePublicPost("https://curyo.xyz/api/agent/asks", {
+      ...questionPayload("ask-public"),
+      maxPaymentAmount: "1500000",
+      walletAddress: "0x00000000000000000000000000000000000000aa",
+    }),
+  );
+  const body = (await response.json()) as Record<string, unknown>;
+
+  assert.equal(response.status, 200);
+  assert.equal(body.clientRequestId, "ask-public");
+  assert.equal(body.status, "awaiting_wallet_signature");
+  assert.equal(body.operationKey, OPERATION_KEY);
+  assert.equal(body.walletPolicyRequired, false);
+  assert.equal(body.managedBudget, null);
+  assert.equal((body.transactionPlan as { calls: unknown[] }).calls.length, 1);
+});
+
+test("agent asks route requires walletAddress for tokenless asks", async () => {
+  installAskOverrides();
+
+  const response = await asksRoute.POST(
+    makePublicPost("https://curyo.xyz/api/agent/asks", {
+      ...questionPayload("ask-public-missing-wallet"),
+      maxPaymentAmount: "1500000",
+    }),
+  );
+  const body = (await response.json()) as Record<string, unknown>;
+
+  assert.equal(response.status, 400);
+  assert.match(String(body.message), /walletAddress is required/i);
+});
+
+test("agent asks route keeps callbacks managed-only for tokenless asks", async () => {
+  installAskOverrides();
+
+  const response = await asksRoute.POST(
+    makePublicPost("https://curyo.xyz/api/agent/asks", {
+      ...questionPayload("ask-public-callback"),
+      maxPaymentAmount: "1500000",
+      walletAddress: "0x00000000000000000000000000000000000000aa",
+      webhookSecret: "secret",
+      webhookUrl: "https://agent.example/callback",
+    }),
+  );
+  const body = (await response.json()) as Record<string, unknown>;
+
+  assert.equal(response.status, 401);
+  assert.match(String(body.message), /managed agent token/i);
 });
 
 test("agent asks route returns the native x402 authorization response", async () => {
@@ -490,6 +631,26 @@ test("agent asks route returns the native x402 authorization response", async ()
     ((body.x402AuthorizationRequest as Record<string, unknown>).typedData as Record<string, unknown>).primaryType,
     "ReceiveWithAuthorization",
   );
+});
+
+test("agent asks route returns tokenless native x402 authorization response", async () => {
+  installAskOverrides();
+
+  const response = await asksRoute.POST(
+    makePublicPost("https://curyo.xyz/api/agent/asks", {
+      ...questionPayload("ask-public-x402"),
+      maxPaymentAmount: "1500000",
+      paymentMode: "x402_authorization",
+      walletAddress: "0x00000000000000000000000000000000000000aa",
+    }),
+  );
+  const body = (await response.json()) as Record<string, unknown>;
+
+  assert.equal(response.status, 200);
+  assert.equal(body.clientRequestId, "ask-public-x402");
+  assert.equal(body.paymentMode, "x402_authorization");
+  assert.equal(body.transactionPlan, null);
+  assert.equal(body.walletPolicyRequired, false);
 });
 
 test("agent asks route returns stable direct HTTP error payloads", async () => {
@@ -558,6 +719,35 @@ test("agent confirm route returns a submitted ask response", async () => {
   assert.equal(body.publicUrl, "http://localhost:3000/rate?content=42");
 });
 
+test("agent confirm route accepts tokenless operation confirmations", async () => {
+  mcpToolsModule.__setMcpToolTestOverridesForTests({
+    confirmAgentWalletQuestionSubmissionRequest: async () => ({
+      body: {
+        chainId: 42220,
+        clientRequestId: "ask-public",
+        contentId: "42",
+        contentIds: ["42"],
+        operationKey: OPERATION_KEY,
+        status: "submitted",
+      },
+      status: 200,
+    }),
+  });
+
+  const response = await asksConfirmRoute.POST(
+    makePublicPost(`https://curyo.xyz/api/agent/asks/${OPERATION_KEY}/confirm`, {
+      transactionHashes: [`0x${"4".repeat(64)}`],
+    }),
+    { params: Promise.resolve({ operationKey: OPERATION_KEY }) },
+  );
+  const body = (await response.json()) as Record<string, unknown>;
+
+  assert.equal(response.status, 200);
+  assert.equal(body.status, "submitted");
+  assert.equal(body.contentId, "42");
+  assert.deepEqual(body.warnings, []);
+});
+
 test("agent status route returns not_found without treating it as a transport error", async () => {
   const response = await asksByClientRoute.GET(
     makeGet("https://curyo.xyz/api/agent/asks/by-client-request?chainId=42220&clientRequestId=missing"),
@@ -568,6 +758,52 @@ test("agent status route returns not_found without treating it as a transport er
   assert.equal(body.status, "not_found");
   assert.equal(body.ready, false);
   assert.equal(body.terminal, true);
+});
+
+test("agent status route supports tokenless operation lookups", async () => {
+  await dbModule.dbClient.execute({
+    args: [
+      OPERATION_KEY,
+      "wallet:public-status",
+      "payload-hash",
+      42220,
+      "0x00000000000000000000000000000000000000aa",
+      "0x0000000000000000000000000000000000000001",
+      "1000000",
+      "1000000",
+      1,
+      "awaiting_wallet_signature",
+      new Date("2026-04-23T12:00:00.000Z"),
+      new Date("2026-04-23T12:00:00.000Z"),
+    ],
+    sql: `
+      INSERT INTO x402_question_submissions (
+        operation_key,
+        client_request_id,
+        payload_hash,
+        chain_id,
+        payer_address,
+        payment_asset,
+        payment_amount,
+        bounty_amount,
+        question_count,
+        status,
+        created_at,
+        updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `,
+  });
+
+  const response = await asksOperationRoute.GET(makePublicGet(`https://curyo.xyz/api/agent/asks/${OPERATION_KEY}`), {
+    params: Promise.resolve({ operationKey: OPERATION_KEY }),
+  });
+  const body = (await response.json()) as Record<string, unknown>;
+
+  assert.equal(response.status, 200);
+  assert.equal(body.operationKey, OPERATION_KEY);
+  assert.equal(body.status, "awaiting_wallet_signature");
+  assert.deepEqual(body.callbackDeliveries, []);
 });
 
 test("lifecycle sweep uses submitted x402 state even when reservation bookkeeping is stale", async () => {

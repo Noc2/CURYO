@@ -28,6 +28,17 @@ type AgentRouteOptions = {
   requiredScope: McpScope;
 };
 
+type PublicAgentRouteContext = {
+  scheduleBackgroundTask: (task: () => Promise<void> | void) => void;
+};
+
+type PublicAgentRouteOptions = {
+  allowOnStoreUnavailable?: boolean;
+  handler: (context: PublicAgentRouteContext) => Promise<Response | unknown>;
+  rateLimit: AgentRouteRateLimit;
+  request: NextRequest;
+};
+
 function metadataUrl(request: Request) {
   return new URL("/.well-known/oauth-protected-resource", request.url).toString();
 }
@@ -79,6 +90,32 @@ export async function handleAgentRoute(params: AgentRouteOptions) {
   try {
     const result = await params.handler({
       agent,
+      scheduleBackgroundTask: task => {
+        after(task);
+      },
+    });
+    if (result instanceof Response) {
+      return result;
+    }
+    return NextResponse.json(result);
+  } catch (error) {
+    const normalized = normalizeToolError(error);
+    return NextResponse.json(normalized, { status: normalized.status });
+  }
+}
+
+export function hasAgentBearerToken(request: Request) {
+  return /^Bearer\s+.+$/i.test(request.headers.get("authorization") ?? "");
+}
+
+export async function handlePublicAgentRoute(params: PublicAgentRouteOptions) {
+  const limited = await checkRateLimit(params.request, params.rateLimit, {
+    allowOnStoreUnavailable: params.allowOnStoreUnavailable ?? false,
+  });
+  if (limited) return limited;
+
+  try {
+    const result = await params.handler({
       scheduleBackgroundTask: task => {
         after(task);
       },

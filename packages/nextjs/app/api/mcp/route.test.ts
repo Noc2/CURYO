@@ -15,12 +15,14 @@ const originalVercel = env.VERCEL;
 env.DATABASE_URL = "memory:";
 
 type RouteModule = typeof import("./route");
+type PublicRouteModule = typeof import("./public/route");
 type DbModule = typeof import("../../../lib/db");
 type DbTestMemoryModule = typeof import("../../../lib/db/testMemory");
 type McpBudgetModule = typeof import("~~/lib/mcp/budget");
 type McpToolsModule = typeof import("~~/lib/mcp/tools");
 
 let route: RouteModule;
+let publicRoute: PublicRouteModule;
 let dbModule: DbModule;
 let dbTestMemory: DbTestMemoryModule;
 let mcpBudgetModule: McpBudgetModule;
@@ -58,8 +60,27 @@ function makePost(body: unknown, headers: Record<string, string> = {}) {
   });
 }
 
+function makePublicPost(body: unknown, headers: Record<string, string> = {}) {
+  return new NextRequest("https://curyo.xyz/api/mcp/public", {
+    body: JSON.stringify(body),
+    headers: new Headers({
+      "content-type": "application/json",
+      ...headers,
+    }),
+    method: "POST",
+  });
+}
+
 async function postJson(body: unknown, headers: Record<string, string> = {}) {
   const response = await route.POST(makePost(body, headers));
+  return {
+    body: (await response.json()) as Record<string, unknown>,
+    response,
+  };
+}
+
+async function postPublicJson(body: unknown, headers: Record<string, string> = {}) {
+  const response = await publicRoute.POST(makePublicPost(body, headers));
   return {
     body: (await response.json()) as Record<string, unknown>,
     response,
@@ -82,6 +103,7 @@ before(async () => {
   mcpBudgetModule = await import("~~/lib/mcp/budget");
   mcpToolsModule = await import("~~/lib/mcp/tools");
   route = await import("./route");
+  publicRoute = await import("./public/route");
 });
 
 beforeEach(async () => {
@@ -238,6 +260,102 @@ test("tools/list accepts supported MCP-Protocol-Version and returns tool annotat
   assert.ok(toolByName.get("curyo_get_question_status")?.outputSchema);
   assert.ok(toolByName.get("curyo_get_result")?.outputSchema);
   assert.ok(toolByName.get("curyo_get_agent_balance")?.outputSchema);
+});
+
+test("public MCP tools/list excludes managed-only balance tool", async () => {
+  const { body, response } = await postPublicJson(
+    {
+      id: "public-tools",
+      jsonrpc: "2.0",
+      method: "tools/list",
+      params: {},
+    },
+    { "mcp-protocol-version": "2025-11-25" },
+  );
+
+  const result = body.result as { tools: Array<{ name: string }> };
+  const names = result.tools.map(tool => tool.name);
+  assert.equal(response.status, 200);
+  assert.equal(names.includes("curyo_ask_humans"), true);
+  assert.equal(names.includes("curyo_get_agent_balance"), false);
+});
+
+test("public MCP ask returns a tokenless wallet-call plan", async () => {
+  mcpToolsModule.__setMcpToolTestOverridesForTests({
+    preparePermissionlessWalletQuestionSubmissionRequest: async params => ({
+      body: {
+        clientRequestId: params.payload.clientRequestId,
+        operationKey: `0x${"1".repeat(64)}` as const,
+        payment: {
+          amount: "1000000",
+          asset: "USDC",
+          bountyAmount: "1000000",
+          decimals: 6,
+          spender: "0x0000000000000000000000000000000000000002",
+          tokenAddress: "0x0000000000000000000000000000000000000001",
+        },
+        status: "awaiting_wallet_signature",
+        transactionPlan: {
+          calls: [{ id: "approve-usdc" }],
+          requiresOrderedExecution: true,
+        },
+        wallet: { address: params.walletAddress, fundingMode: "permissionless_wallet" },
+      },
+      status: 202,
+    }),
+    preflightX402QuestionSubmission: async () => ({
+      operation: {
+        canonicalPayload: {} as never,
+        operationKey: `0x${"1".repeat(64)}` as const,
+        payloadHash: "payload-hash",
+      },
+      paymentAmount: 1_000_000n,
+      resolvedCategoryIds: [5n],
+      submissionKeys: [`0x${"2".repeat(64)}` as const],
+    }),
+    resolveX402QuestionConfig: () =>
+      ({
+        questionRewardPoolEscrowAddress: "0x0000000000000000000000000000000000000002",
+        usdcAddress: "0x0000000000000000000000000000000000000001",
+      }) as never,
+  });
+
+  const { body, response } = await postPublicJson(
+    {
+      id: "public-ask",
+      jsonrpc: "2.0",
+      method: "tools/call",
+      params: {
+        arguments: {
+          bounty: {
+            amount: "1000000",
+            asset: "USDC",
+            rewardPoolExpiresAt: "1762000000",
+          },
+          chainId: 42220,
+          clientRequestId: "public-ask",
+          maxPaymentAmount: "1500000",
+          question: {
+            categoryId: "5",
+            contextUrl: "https://example.com/context",
+            description: "Should this action proceed?",
+            tags: ["agents"],
+            title: "Public wallet ask",
+          },
+          walletAddress: "0x00000000000000000000000000000000000000aa",
+        },
+        name: "curyo_ask_humans",
+      },
+    },
+    { "mcp-protocol-version": "2025-11-25" },
+  );
+
+  const result = body.result as Record<string, unknown>;
+  const structured = result.structuredContent as Record<string, unknown>;
+  assert.equal(response.status, 200);
+  assert.equal(structured.clientRequestId, "public-ask");
+  assert.equal(structured.walletPolicyRequired, false);
+  assert.equal((structured.transactionPlan as { calls: unknown[] }).calls.length, 1);
 });
 
 test("notifications require MCP-Protocol-Version after initialize", async () => {

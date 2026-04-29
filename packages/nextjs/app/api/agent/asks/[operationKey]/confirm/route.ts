@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AGENT_WRITE_RATE_LIMIT, MCP_SCOPES, handleAgentRoute, parseJsonBody } from "~~/lib/agent/http";
-import { callCuryoMcpTool } from "~~/lib/mcp/tools";
+import {
+  AGENT_WRITE_RATE_LIMIT,
+  MCP_SCOPES,
+  handleAgentRoute,
+  handlePublicAgentRoute,
+  hasAgentBearerToken,
+  parseJsonBody,
+} from "~~/lib/agent/http";
+import { callCuryoMcpTool, callPublicCuryoMcpTool } from "~~/lib/mcp/tools";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,6 +19,21 @@ export async function POST(request: NextRequest, context: { params: Promise<{ op
   }
 
   const { operationKey } = await context.params;
+  if (!hasAgentBearerToken(request)) {
+    return handlePublicAgentRoute({
+      handler: () =>
+        callPublicCuryoMcpTool({
+          arguments: {
+            ...body,
+            operationKey,
+          },
+          name: "curyo_confirm_ask_transactions",
+        }),
+      rateLimit: AGENT_WRITE_RATE_LIMIT,
+      request,
+    });
+  }
+
   return handleAgentRoute({
     handler: ({ agent }) =>
       callCuryoMcpTool({

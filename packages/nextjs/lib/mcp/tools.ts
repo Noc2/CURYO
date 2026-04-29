@@ -45,12 +45,17 @@ import {
 import {
   X402QuestionConfigError,
   X402QuestionConflictError,
+  buildPermissionlessWalletClientRequestId,
   confirmAgentWalletQuestionSubmissionRequest,
+  getX402QuestionSubmissionByClientRequest,
   getX402QuestionSubmissionByOperationKey,
   preflightX402QuestionSubmission,
   prepareAgentWalletQuestionSubmissionRequest,
   prepareNativeX402QuestionSubmissionRequest,
+  preparePermissionlessNativeX402QuestionSubmissionRequest,
+  preparePermissionlessWalletQuestionSubmissionRequest,
   resolveX402QuestionConfig,
+  toPermissionlessWalletPayload,
   x402QuestionSubmissionRecordBody,
 } from "~~/lib/x402/questionSubmission";
 import { ponderApi } from "~~/services/ponder/client";
@@ -83,6 +88,8 @@ type McpToolDependencies = {
   getMcpAgentBudgetSummary: typeof getMcpAgentBudgetSummary;
   prepareAgentWalletQuestionSubmissionRequest: typeof prepareAgentWalletQuestionSubmissionRequest;
   prepareNativeX402QuestionSubmissionRequest: typeof prepareNativeX402QuestionSubmissionRequest;
+  preparePermissionlessNativeX402QuestionSubmissionRequest: typeof preparePermissionlessNativeX402QuestionSubmissionRequest;
+  preparePermissionlessWalletQuestionSubmissionRequest: typeof preparePermissionlessWalletQuestionSubmissionRequest;
   preflightX402QuestionSubmission: typeof preflightX402QuestionSubmission;
   reserveMcpAgentBudget: typeof reserveMcpAgentBudget;
   resolveX402QuestionConfig: typeof resolveX402QuestionConfig;
@@ -103,6 +110,12 @@ function getMcpToolDependencies(): McpToolDependencies {
       mcpToolTestOverrides?.prepareAgentWalletQuestionSubmissionRequest ?? prepareAgentWalletQuestionSubmissionRequest,
     prepareNativeX402QuestionSubmissionRequest:
       mcpToolTestOverrides?.prepareNativeX402QuestionSubmissionRequest ?? prepareNativeX402QuestionSubmissionRequest,
+    preparePermissionlessNativeX402QuestionSubmissionRequest:
+      mcpToolTestOverrides?.preparePermissionlessNativeX402QuestionSubmissionRequest ??
+      preparePermissionlessNativeX402QuestionSubmissionRequest,
+    preparePermissionlessWalletQuestionSubmissionRequest:
+      mcpToolTestOverrides?.preparePermissionlessWalletQuestionSubmissionRequest ??
+      preparePermissionlessWalletQuestionSubmissionRequest,
     preflightX402QuestionSubmission:
       mcpToolTestOverrides?.preflightX402QuestionSubmission ?? preflightX402QuestionSubmission,
     reserveMcpAgentBudget: mcpToolTestOverrides?.reserveMcpAgentBudget ?? reserveMcpAgentBudget,
@@ -257,6 +270,18 @@ export const MCP_TOOLS: McpToolDefinition[] = [
   },
 ];
 
+const PUBLIC_MCP_TOOL_NAMES = new Set([
+  "curyo_list_categories",
+  "curyo_list_result_templates",
+  "curyo_quote_question",
+  "curyo_ask_humans",
+  "curyo_confirm_ask_transactions",
+  "curyo_get_question_status",
+  "curyo_get_result",
+]);
+
+export const PUBLIC_MCP_TOOLS = MCP_TOOLS.filter(tool => PUBLIC_MCP_TOOL_NAMES.has(tool.name));
+
 function asObject(value: unknown): JsonObject {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new McpToolError("Tool arguments must be an object.");
@@ -288,6 +313,32 @@ function parseAgentWalletAddress(args: JsonObject, agent: McpAgentAuth): Address
   }
 
   return rawAddress;
+}
+
+function parsePublicWalletAddress(args: JsonObject): Address {
+  const rawAddress =
+    typeof args.walletAddress === "string"
+      ? args.walletAddress.trim()
+      : typeof args.agentWalletAddress === "string"
+        ? args.agentWalletAddress.trim()
+        : "";
+  if (!isAddress(rawAddress)) {
+    throw new McpToolError(
+      "walletAddress is required for permissionless asks and must be the wallet that signs the transaction plan.",
+      400,
+    );
+  }
+
+  return rawAddress;
+}
+
+function assertNoPublicWebhook(args: JsonObject) {
+  const hasWebhookUrl = typeof args.webhookUrl === "string" && args.webhookUrl.trim().length > 0;
+  const hasWebhookSecret = typeof args.webhookSecret === "string" && args.webhookSecret.trim().length > 0;
+  const hasWebhookEvents = Array.isArray(args.webhookEvents) && args.webhookEvents.length > 0;
+  if (hasWebhookUrl || hasWebhookSecret || hasWebhookEvents) {
+    throw new McpToolError("Callbacks require a managed agent token and are unavailable in public wallet mode.", 401);
+  }
 }
 
 function parseAskHumansMode(value: unknown): AskHumansMode {
@@ -474,6 +525,39 @@ async function resolveManagedOperationKey(args: JsonObject, agent: McpAgentAuth)
   return reservation?.operationKey ?? null;
 }
 
+async function resolvePublicOperationKey(args: JsonObject): Promise<`0x${string}` | null> {
+  const operationKey = typeof args.operationKey === "string" ? args.operationKey.trim() : "";
+  if (operationKey) {
+    if (!/^0x[a-fA-F0-9]{64}$/.test(operationKey)) {
+      throw new McpToolError("operationKey must be a 32-byte hex string.");
+    }
+    return operationKey as `0x${string}`;
+  }
+
+  const chainId = Number.parseInt(String(args.chainId ?? ""), 10);
+  const clientRequestId = typeof args.clientRequestId === "string" ? args.clientRequestId.trim() : "";
+  if (!Number.isSafeInteger(chainId) || chainId <= 0 || !clientRequestId) {
+    throw new McpToolError("Provide operationKey or chainId, clientRequestId, and walletAddress.");
+  }
+  const walletAddress = parsePublicWalletAddress(args);
+  const publicClientRequestId = buildPermissionlessWalletClientRequestId({
+    chainId,
+    clientRequestId,
+    walletAddress,
+  });
+  const record = await getX402QuestionSubmissionByClientRequest({
+    chainId,
+    clientRequestId: publicClientRequestId,
+  });
+  return record?.operationKey ?? null;
+}
+
+async function lookupPublicQuestionOperation(args: JsonObject) {
+  const operationKey = await resolvePublicOperationKey(args);
+  if (!operationKey) return null;
+  return getX402QuestionSubmissionByOperationKey(operationKey);
+}
+
 async function loadCallbackDeliveryStatus(operationKey: `0x${string}`, agentId: string) {
   return normalizeCallbackDeliveries(
     await listAgentCallbackEventsByEventIdPrefix({
@@ -487,6 +571,7 @@ function formatQuoteResult(
   params: Awaited<ReturnType<typeof preflightX402QuestionSubmission>>,
   payload: X402QuestionPayload,
   config: ReturnType<typeof resolveX402QuestionConfig>,
+  options: { walletPolicyRequired?: boolean } = {},
 ) {
   return {
     canSubmit: true,
@@ -507,7 +592,7 @@ function formatQuoteResult(
     payloadHash: params.operation.payloadHash,
     questionCount: params.resolvedCategoryIds.length,
     resolvedCategoryIds: params.resolvedCategoryIds.map(categoryId => categoryId.toString()),
-    walletPolicyRequired: true,
+    walletPolicyRequired: options.walletPolicyRequired ?? true,
   };
 }
 
@@ -524,15 +609,35 @@ async function quoteQuestion(args: JsonObject, agent: McpAgentAuth) {
   };
 }
 
+async function quotePublicQuestion(args: JsonObject) {
+  const dependencies = getMcpToolDependencies();
+  const payload = parseX402QuestionRequest(args);
+  const walletAddress = parsePublicWalletAddress(args);
+  const permissionlessPayload = toPermissionlessWalletPayload(payload, walletAddress);
+  const config = dependencies.resolveX402QuestionConfig(permissionlessPayload.chainId);
+  const quote = await dependencies.preflightX402QuestionSubmission({ config, payload: permissionlessPayload });
+  return {
+    ...formatQuoteResult(quote, payload, config, { walletPolicyRequired: false }),
+    clientRequestId: payload.clientRequestId,
+    wallet: {
+      address: walletAddress,
+      fundingMode: "permissionless_wallet",
+      note: "The wallet signer controls whether to execute the returned plan; Curyo does not enforce a managed policy.",
+    },
+  };
+}
+
 function latestRoundFromContentResponse(response: Awaited<ReturnType<typeof ponderApi.getContentById>>) {
   const rounds = Array.isArray(response.rounds) ? response.rounds : [];
   return rounds[0] ?? null;
 }
 
-async function buildQuestionResult(args: JsonObject, agent: McpAgentAuth) {
+async function buildQuestionResultForRecord(
+  args: JsonObject,
+  record: Awaited<ReturnType<typeof getX402QuestionSubmissionByOperationKey>> | null,
+) {
   const dependencies = getMcpToolDependencies();
   const directContentId = typeof args.contentId === "string" ? args.contentId.trim() : "";
-  const record = hasOperationLookupArgs(args) ? await lookupQuestionOperation(args, agent) : null;
   const operation = normalizeMcpQuestionBody(x402QuestionSubmissionRecordBody(record));
   const operationContentIds =
     operation && typeof operation === "object" && Array.isArray((operation as JsonObject).contentIds)
@@ -635,6 +740,145 @@ async function buildQuestionResult(args: JsonObject, agent: McpAgentAuth) {
     operation: record ? normalizeMcpQuestionBody(x402QuestionSubmissionRecordBody(record)) : null,
     ...resultPackage,
   };
+}
+
+async function buildQuestionResult(args: JsonObject, agent: McpAgentAuth) {
+  return buildQuestionResultForRecord(
+    args,
+    hasOperationLookupArgs(args) ? await lookupQuestionOperation(args, agent) : null,
+  );
+}
+
+async function buildPublicQuestionResult(args: JsonObject) {
+  return buildQuestionResultForRecord(
+    args,
+    hasOperationLookupArgs(args) ? await lookupPublicQuestionOperation(args) : null,
+  );
+}
+
+export async function callPublicCuryoMcpTool(params: { arguments: unknown; name: string }): Promise<unknown> {
+  if (!PUBLIC_MCP_TOOL_NAMES.has(params.name)) {
+    throw new McpToolError(`Tool requires managed MCP authentication: ${params.name}`, 401);
+  }
+
+  const dependencies = getMcpToolDependencies();
+  const args = asObject(params.arguments ?? {});
+
+  switch (params.name) {
+    case "curyo_list_categories":
+      return ponderApi.getCategories();
+
+    case "curyo_list_result_templates":
+      return { templates: listAgentResultTemplates() };
+
+    case "curyo_quote_question":
+      return quotePublicQuestion(args);
+
+    case "curyo_ask_humans": {
+      parseAskHumansMode(args.mode);
+      assertNoPublicWebhook(args);
+      const paymentMode = parseAskHumansPaymentMode(args.paymentMode ?? args.fundingMode);
+      const payload = parseX402QuestionRequest(args);
+      const walletAddress = parsePublicWalletAddress(args);
+      const permissionlessPayload = toPermissionlessWalletPayload(payload, walletAddress);
+      const config = dependencies.resolveX402QuestionConfig(permissionlessPayload.chainId);
+      const quote = await dependencies.preflightX402QuestionSubmission({ config, payload: permissionlessPayload });
+      const maxPaymentAmount = parseMaxPaymentAmount(args.maxPaymentAmount);
+      if (quote.paymentAmount > maxPaymentAmount) {
+        throw new McpToolError("Quoted payment exceeds maxPaymentAmount.");
+      }
+
+      const result =
+        paymentMode === "x402_authorization"
+          ? await dependencies.preparePermissionlessNativeX402QuestionSubmissionRequest({
+              paymentAuthorization:
+                typeof args.paymentAuthorization === "object" && args.paymentAuthorization
+                  ? (args.paymentAuthorization as Record<string, unknown>)
+                  : null,
+              payload,
+              walletAddress,
+            })
+          : await dependencies.preparePermissionlessWalletQuestionSubmissionRequest({
+              payload,
+              walletAddress,
+            });
+      const body = normalizeMcpQuestionBody(result.body) as JsonObject;
+
+      return {
+        ...body,
+        clientRequestId: payload.clientRequestId,
+        confirmTool: "curyo_confirm_ask_transactions",
+        fastLane: buildAgentFastLaneGuidance({
+          bounty: payload.bounty,
+          questionCount: payload.questions.length,
+          roundConfig: payload.roundConfig,
+        }),
+        managedBudget: null,
+        pollAfterMs: 5_000,
+        publicUrl: null,
+        statusTool: "curyo_get_question_status",
+        walletPolicyRequired: false,
+        webhook: null,
+        warnings: [],
+      };
+    }
+
+    case "curyo_confirm_ask_transactions": {
+      const operationKey = await resolvePublicOperationKey(args);
+      if (!operationKey) {
+        throw new McpToolError("Provide operationKey for the ask to confirm.");
+      }
+      const rawHashes = Array.isArray(args.transactionHashes) ? args.transactionHashes : [];
+      const transactionHashes = rawHashes.filter((hash): hash is Hex => typeof hash === "string") as Hex[];
+      const result = await dependencies.confirmAgentWalletQuestionSubmissionRequest({
+        operationKey,
+        transactionHashes,
+      });
+      const body = normalizeMcpQuestionBody(result.body) as JsonObject;
+      return {
+        ...body,
+        publicUrl: getAgentPublicQuestionUrl(typeof body.contentId === "string" ? body.contentId : null),
+        warnings: [],
+        ...agentStatusHints(body),
+      };
+    }
+
+    case "curyo_get_question_status": {
+      const operationKey = await resolvePublicOperationKey(args);
+      const record = operationKey ? await getX402QuestionSubmissionByOperationKey(operationKey) : null;
+      let liveAskGuidance: ReturnType<typeof buildAgentLiveAskGuidance> = null;
+      let latestRoundState: number | null = null;
+      if (record?.contentId) {
+        try {
+          const contentResponse = await dependencies.getContentById(record.contentId);
+          const rawLatestRoundState = latestRoundFromContentResponse(contentResponse)?.state;
+          latestRoundState =
+            typeof rawLatestRoundState === "number" && Number.isFinite(rawLatestRoundState)
+              ? rawLatestRoundState
+              : null;
+          liveAskGuidance = buildAgentLiveAskGuidance({ content: contentResponse.content });
+        } catch (error) {
+          console.error("[mcp-public] live ask guidance unavailable", error);
+        }
+      }
+      const body = {
+        ...(normalizeMcpQuestionBody(x402QuestionSubmissionRecordBody(record)) as JsonObject),
+        callbackDeliveries: [],
+        liveAskGuidance,
+        publicUrl: getAgentPublicQuestionUrl(record?.contentId ?? null),
+      };
+      return {
+        ...body,
+        ...agentStatusHints(body, latestRoundState),
+      };
+    }
+
+    case "curyo_get_result":
+      return buildPublicQuestionResult(args);
+
+    default:
+      throw new McpToolError(`Unknown tool: ${params.name}`, 404);
+  }
 }
 
 export async function callCuryoMcpTool(params: {
