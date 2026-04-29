@@ -6,7 +6,7 @@ import {
   mkdirSync,
   writeFileSync,
 } from "fs";
-import { join, dirname } from "path";
+import { join, dirname, resolve } from "path";
 import { fileURLToPath } from "url";
 import { format } from "prettier";
 
@@ -22,6 +22,25 @@ const RAW_DEPLOYMENT_CONTRACTS_TO_SKIP = new Set([
   "ERC1967Proxy",
   "TransparentUpgradeableProxy",
 ]);
+
+const REQUIRED_NON_LOCAL_DEPLOYMENT_EXPORT_CONTRACTS = [
+  "TimelockController",
+  "CuryoGovernor",
+  "HumanReputation",
+  "FrontendRegistry",
+  "ProfileRegistry",
+  "ContentRegistry",
+  "RoundVotingEngine",
+  "ProtocolConfig",
+  "RoundRewardDistributor",
+  "QuestionRewardPoolEscrow",
+  "X402QuestionSubmitter",
+  "FeedbackBonusEscrow",
+  "CategoryRegistry",
+  "VoterIdNFT",
+  "ParticipationPool",
+  "HumanFaucet",
+];
 
 function getDirectories(path) {
   if (!existsSync(path)) {
@@ -150,6 +169,7 @@ function processAllDeployments(broadcastPath) {
   const scriptFolders = getDirectories(broadcastPath);
   const allDeployments = new Map();
   const allDeploymentsByAddress = new Map();
+  const latestBroadcastBlockNumbers = {};
 
   scriptFolders.forEach((scriptFolder) => {
     const scriptPath = join(broadcastPath, scriptFolder);
@@ -160,6 +180,15 @@ function processAllDeployments(broadcastPath) {
       const deploymentHistory = getDeploymentHistory(chainPath);
 
       deploymentHistory.forEach((deployment) => {
+        const deployedOnBlock =
+          deployment?.receipt?.blockNumber &&
+          Number(BigInt(deployment.receipt.blockNumber));
+        if (deployedOnBlock) {
+          latestBroadcastBlockNumbers[chainId] = Math.max(
+            latestBroadcastBlockNumbers[chainId] || 0,
+            deployedOnBlock
+          );
+        }
         const timestamp = parseInt(
           deployment.deploymentFile.match(/run-(\d+)/)?.[1] || "0"
         );
@@ -176,7 +205,7 @@ function processAllDeployments(broadcastPath) {
             timestamp,
             chainId,
             deploymentScript: scriptFolder,
-            deployedOnBlock: deployment?.receipt?.blockNumber,
+            deployedOnBlock,
           });
         }
 
@@ -189,7 +218,7 @@ function processAllDeployments(broadcastPath) {
             timestamp,
             chainId,
             deploymentScript: scriptFolder,
-            deployedOnBlock: deployment?.receipt?.blockNumber,
+            deployedOnBlock,
           });
         }
       });
@@ -233,6 +262,7 @@ function processAllDeployments(broadcastPath) {
     contracts: allContracts,
     deployers,
     deploymentsByAddress: allDeploymentsByAddress,
+    latestBroadcastBlockNumbers,
   };
 }
 
@@ -256,12 +286,90 @@ function readExistingDeployedContracts(targetFile) {
   }
 }
 
-function assertFreshTargetDeployment(allGeneratedContracts, existingContracts) {
+function deploymentExportContractNames(chainDeployments) {
+  if (typeof chainDeployments !== "object" || chainDeployments === null) {
+    return new Set();
+  }
+  return new Set(
+    Object.entries(chainDeployments)
+      .filter(([address]) => address.startsWith("0x"))
+      .map(([, contractName]) => contractName)
+  );
+}
+
+function isCompleteDeploymentExport(chainDeployments) {
+  return (
+    typeof chainDeployments === "object" &&
+    chainDeployments !== null &&
+    chainDeployments.deploymentComplete === "true"
+  );
+}
+
+function deploymentExportBlockNumber(chainDeployments) {
+  if (typeof chainDeployments !== "object" || chainDeployments === null) {
+    return 0;
+  }
+  const blockNumber = chainDeployments.deploymentBlockNumber;
+  if (blockNumber === undefined || blockNumber === null || blockNumber === "") {
+    return 0;
+  }
+  return Number(BigInt(blockNumber));
+}
+
+export function assertFreshTargetDeployment(
+  allGeneratedContracts,
+  existingContracts,
+  deployments = {},
+  latestBroadcastBlockNumbers = {}
+) {
   const deployTarget = process.env.DEPLOY_TARGET_NETWORK;
   if (!deployTarget) return;
 
   const targetChainId = DEPLOY_TARGET_TO_CHAIN_ID[deployTarget];
   if (!targetChainId) return;
+
+  if (deployTarget !== "localhost") {
+    const chainId = String(targetChainId);
+    const targetDeploymentExport = deployments[chainId];
+    if (!isCompleteDeploymentExport(targetDeploymentExport)) {
+      throw new Error(
+        `Fresh deployment export for DEPLOY_TARGET_NETWORK='${deployTarget}' (chainId ${targetChainId}) is not marked complete. Refusing to use raw broadcast data for target-chain artifacts.`
+      );
+    }
+
+    const exportedContractNames = deploymentExportContractNames(
+      targetDeploymentExport
+    );
+    const missingContracts =
+      REQUIRED_NON_LOCAL_DEPLOYMENT_EXPORT_CONTRACTS.filter(
+        (contractName) => !exportedContractNames.has(contractName)
+      );
+    if (missingContracts.length > 0) {
+      throw new Error(
+        `Fresh deployment export for DEPLOY_TARGET_NETWORK='${deployTarget}' (chainId ${targetChainId}) is missing required contracts: ${missingContracts.join(
+          ", "
+        )}. Refusing to use raw broadcast data for target-chain artifacts.`
+      );
+    }
+
+    const exportBlockNumber = deploymentExportBlockNumber(
+      targetDeploymentExport
+    );
+    const latestBroadcastBlockNumber =
+      latestBroadcastBlockNumbers[chainId] || 0;
+    if (latestBroadcastBlockNumber === 0) {
+      throw new Error(
+        `No broadcast run data found for DEPLOY_TARGET_NETWORK='${deployTarget}' (chainId ${targetChainId}). Refusing to publish target-chain deployment artifacts.`
+      );
+    }
+    if (exportBlockNumber < latestBroadcastBlockNumber) {
+      throw new Error(
+        `Deployment export for DEPLOY_TARGET_NETWORK='${deployTarget}' (chainId ${targetChainId}) is older than the latest broadcast deployment. Refusing to publish stale or partial target-chain artifacts.`
+      );
+    }
+
+    return;
+  }
 
   const generatedTargetContracts = allGeneratedContracts[String(targetChainId)];
   if (
@@ -275,7 +383,9 @@ function assertFreshTargetDeployment(allGeneratedContracts, existingContracts) {
     existingContracts[String(targetChainId)] || {}
   );
   const existingSummary = existingTargetContracts.length
-    ? ` Existing entries for ${existingTargetContracts.join(", ")} would be stale.`
+    ? ` Existing entries for ${existingTargetContracts.join(
+        ", "
+      )} would be stale.`
     : "";
 
   throw new Error(
@@ -293,10 +403,9 @@ function main() {
   // Load existing deployments from deployments directory
   Deploymentchains.forEach((chain) => {
     if (!chain.endsWith(".json")) return;
+    const deploymentFile = `${current_path_to_deployments}/${chain}`;
     chain = chain.slice(0, -5);
-    var deploymentObject = JSON.parse(
-      readFileSync(`${current_path_to_deployments}/${chain}.json`)
-    );
+    var deploymentObject = JSON.parse(readFileSync(deploymentFile));
     deployments[chain] = deploymentObject;
   });
 
@@ -305,6 +414,7 @@ function main() {
     contracts: allGeneratedContracts,
     deployers,
     deploymentsByAddress,
+    latestBroadcastBlockNumbers,
   } = processAllDeployments(current_path_to_broadcast);
 
   // Handle upgradeable proxies: the deployments JSON maps proxy addresses to
@@ -360,7 +470,12 @@ function main() {
   const existingContracts = readExistingDeployedContracts(
     deployedContractsTargetFile
   );
-  assertFreshTargetDeployment(allGeneratedContracts, existingContracts);
+  assertFreshTargetDeployment(
+    allGeneratedContracts,
+    existingContracts,
+    deployments,
+    latestBroadcastBlockNumbers
+  );
   const mergedContracts = {
     ...existingContracts,
     ...allGeneratedContracts,
@@ -665,9 +780,14 @@ function generateAbiFiles() {
   }
 }
 
-try {
-  main();
-} catch (error) {
-  console.error("Error:", error);
-  process.exitCode = 1;
+if (
+  process.argv[1] &&
+  fileURLToPath(import.meta.url) === resolve(process.argv[1])
+) {
+  try {
+    main();
+  } catch (error) {
+    console.error("Error:", error);
+    process.exitCode = 1;
+  }
 }

@@ -48,7 +48,7 @@ contract ScaffoldETHDeploy is Script {
         }
         _;
         _stopBroadcast();
-        exportDeployments();
+        exportDeployments(true);
     }
 
     function _startBroadcast() internal returns (address) {
@@ -72,6 +72,10 @@ contract ScaffoldETHDeploy is Script {
     }
 
     function exportDeployments() internal {
+        exportDeployments(false);
+    }
+
+    function exportDeployments(bool complete) internal {
         // fetch already existing contracts
         root = vm.projectRoot();
         path = string.concat(root, "/deployments/");
@@ -96,6 +100,8 @@ contract ScaffoldETHDeploy is Script {
             }
         }
         jsonWrite = vm.serializeString(jsonWrite, "networkName", chainName);
+        jsonWrite = vm.serializeString(jsonWrite, "deploymentComplete", complete ? "true" : "false");
+        jsonWrite = vm.serializeUint(jsonWrite, "deploymentBlockNumber", block.number);
         vm.writeJson(jsonWrite, path);
     }
 
