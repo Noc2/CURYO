@@ -103,7 +103,7 @@ function WorkflowHeading({
           <Icon className="h-8 w-8 text-primary" />
         </div>
       ) : null}
-      <h2 className="display-section text-4xl text-base-content sm:text-5xl">{title}</h2>
+      <h2 className="display-section text-[2.15rem] text-base-content sm:text-[2.85rem]">{title}</h2>
       {subtitle ? <p className="mt-2 text-lg font-semibold text-primary/90">{subtitle}</p> : null}
     </div>
   );
@@ -133,7 +133,7 @@ function AskWorkflowSection() {
   const [agentStep, mcpStep, resultStep] = ASK_STEPS;
 
   return (
-    <section className="mt-12 w-full">
+    <section className="mt-20 w-full sm:mt-24 lg:mt-28">
       <WorkflowHeading title="How It Works" />
       <div className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-3 lg:gap-6">
         <AskFlowPanel {...agentStep} />
@@ -276,22 +276,22 @@ export default async function LandingPage() {
   const socialProofItems = await getLandingPageSocialProofItems();
 
   return (
-    <div className="flex flex-col items-center grow px-4 pt-0 pb-16">
-      <div className="w-full max-w-5xl flex flex-col items-center">
+    <div className="flex flex-col items-center grow px-4 pt-8 pb-16 sm:pt-12 lg:pt-16">
+      <div className="w-full max-w-6xl flex flex-col items-center">
         {/* Hero: stacked on mobile, side-by-side on large screens */}
-        <div className="relative z-0 flex w-full flex-col lg:flex-row-reverse lg:items-center lg:gap-6 xl:gap-8">
+        <div className="relative z-0 flex w-full flex-col lg:flex-row-reverse lg:items-center lg:gap-8 xl:gap-10">
           {/* Animation (right on large screens) */}
-          <div className="relative z-0 lg:flex-[1.05] xl:flex-[1.08]">
+          <div className="relative z-0 lg:flex-[1.15] xl:flex-[1.22]">
             <CuryoAnimation />
           </div>
 
           {/* Title (left on large screens) */}
-          <div className="relative z-10 flex flex-col items-center lg:max-w-[34rem] lg:flex-[0.95] lg:items-start">
-            <h1 className="hero-headline max-w-[14ch] text-center text-[2.55rem] text-base-content sm:max-w-[11ch] sm:text-[3.45rem] lg:max-w-none lg:text-left lg:text-[3.75rem] xl:text-[4.2rem]">
+          <div className="relative z-10 flex flex-col items-center lg:max-w-[32rem] lg:flex-[0.85] lg:items-start">
+            <h1 className="hero-headline max-w-[14ch] text-center text-[2.35rem] text-base-content sm:max-w-[11ch] sm:text-[3.05rem] lg:max-w-none lg:text-left lg:text-[3.2rem] xl:text-[3.55rem]">
               <span className="block">AI Asks,</span>
               <span className="block">Humans Earn</span>
             </h1>
-            <p className="mt-4 max-w-[20ch] text-center text-[1.15rem] text-base-content/80 sm:text-[1.4rem] lg:max-w-none lg:text-left lg:text-[1.6rem]">
+            <p className="mt-4 max-w-[20ch] text-center text-[1.05rem] text-base-content/80 sm:text-[1.25rem] lg:max-w-none lg:text-left lg:text-[1.35rem]">
               Verified, Staked Human Feedback for AI Agents
             </p>
             <Suspense fallback={<LandingPageActionsFallback />}>
