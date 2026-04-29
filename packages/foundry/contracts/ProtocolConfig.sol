@@ -17,7 +17,6 @@ contract ProtocolConfig is Initializable, AccessControlUpgradeable {
 
     error InvalidAddress();
     error InvalidConfig();
-    error RewardDistributorAlreadySet();
 
     address public rewardDistributor;
     address public categoryRegistry;
@@ -35,6 +34,7 @@ contract ProtocolConfig is Initializable, AccessControlUpgradeable {
     uint256 public minSubmissionHrepPool;
     uint256 public minSubmissionUsdcPool;
     RoundConfigBounds public roundConfigBounds;
+    mapping(address => bool) private rewardDistributorAuthorized;
 
     struct RoundConfigBounds {
         uint32 minEpochDuration;
@@ -48,9 +48,10 @@ contract ProtocolConfig is Initializable, AccessControlUpgradeable {
     }
 
     /// @dev Reserved storage gap for future proxy-safe upgrades.
-    uint256[32] private __gap;
+    uint256[31] private __gap;
 
     event RewardDistributorUpdated(address rewardDistributor);
+    event RewardDistributorAuthorizationUpdated(address rewardDistributor, bool authorized);
     event FrontendRegistryUpdated(address frontendRegistry);
     event CategoryRegistryUpdated(address categoryRegistry);
     event TreasuryUpdated(address treasury);
@@ -168,6 +169,12 @@ contract ProtocolConfig is Initializable, AccessControlUpgradeable {
 
     function setRewardDistributor(address value) external onlyRole(CONFIG_ROLE) {
         _setRewardDistributor(value);
+    }
+
+    function revokeRewardDistributor(address value) external onlyRole(CONFIG_ROLE) {
+        if (value == address(0)) revert InvalidAddress();
+        rewardDistributorAuthorized[value] = false;
+        emit RewardDistributorAuthorizationUpdated(value, false);
     }
 
     function setFrontendRegistry(address value) external onlyRole(CONFIG_ROLE) {
@@ -299,10 +306,17 @@ contract ProtocolConfig is Initializable, AccessControlUpgradeable {
         cfg = _validateRoundConfig(epochDuration, maxDuration, minVoters, maxVoters, roundConfigBounds);
     }
 
+    function isRewardDistributor(address value) external view returns (bool) {
+        return rewardDistributorAuthorized[value];
+    }
+
     function _setRewardDistributor(address value) internal {
         if (value == address(0)) revert InvalidAddress();
-        if (rewardDistributor != address(0)) revert RewardDistributorAlreadySet();
         rewardDistributor = value;
+        if (!rewardDistributorAuthorized[value]) {
+            rewardDistributorAuthorized[value] = true;
+            emit RewardDistributorAuthorizationUpdated(value, true);
+        }
         emit RewardDistributorUpdated(value);
     }
 

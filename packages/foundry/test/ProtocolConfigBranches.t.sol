@@ -13,6 +13,7 @@ contract ProtocolConfigBranchesTest is Test {
 
     event DrandConfigUpdated(bytes32 drandChainHash, uint64 genesisTime, uint64 period);
     event RewardDistributorUpdated(address rewardDistributor);
+    event RewardDistributorAuthorizationUpdated(address rewardDistributor, bool authorized);
     event RatingConfigUpdated(
         uint256 smoothingAlpha,
         uint256 smoothingBeta,
@@ -97,20 +98,39 @@ contract ProtocolConfigBranchesTest is Test {
         assertEq(config.drandPeriod(), nextPeriod);
     }
 
-    function test_SetRewardDistributor_IsOneTimeOnly() public {
+    function test_SetRewardDistributor_RotatesAndKeepsPreviousAuthorized() public {
         ProtocolConfig config = deployInitializedProtocolConfig(address(this));
 
         address firstDistributor = address(0xBEEF);
         address replacementDistributor = address(0xCAFE);
 
         vm.expectEmit(false, false, false, true);
+        emit RewardDistributorAuthorizationUpdated(firstDistributor, true);
+        vm.expectEmit(false, false, false, true);
         emit RewardDistributorUpdated(firstDistributor);
         config.setRewardDistributor(firstDistributor);
         assertEq(config.rewardDistributor(), firstDistributor);
+        assertTrue(config.isRewardDistributor(firstDistributor));
 
-        vm.expectRevert(ProtocolConfig.RewardDistributorAlreadySet.selector);
+        vm.expectEmit(false, false, false, true);
+        emit RewardDistributorAuthorizationUpdated(replacementDistributor, true);
+        vm.expectEmit(false, false, false, true);
+        emit RewardDistributorUpdated(replacementDistributor);
         config.setRewardDistributor(replacementDistributor);
-        assertEq(config.rewardDistributor(), firstDistributor);
+        assertEq(config.rewardDistributor(), replacementDistributor);
+        assertTrue(config.isRewardDistributor(firstDistributor));
+        assertTrue(config.isRewardDistributor(replacementDistributor));
+    }
+
+    function test_RevokeRewardDistributor_RemovesAuthorization() public {
+        ProtocolConfig config = deployInitializedProtocolConfig(address(this));
+        address distributor = address(0xBEEF);
+        config.setRewardDistributor(distributor);
+
+        vm.expectEmit(false, false, false, true);
+        emit RewardDistributorAuthorizationUpdated(distributor, false);
+        config.revokeRewardDistributor(distributor);
+        assertFalse(config.isRewardDistributor(distributor));
     }
 
     function test_SetDrandConfig_RejectsZeroHashOrPeriod() public {

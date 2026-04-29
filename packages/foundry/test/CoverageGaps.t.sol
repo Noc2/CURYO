@@ -929,13 +929,24 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         ProtocolConfig(protocolConfigAddress).setRewardDistributor(address(0));
     }
 
-    function test_SetRewardDistributorSecondCallReverts() public {
+    function test_SetRewardDistributorSecondCallRotatesAndKeepsPreviousAuthorized() public {
         address originalDistributor = ProtocolConfig(protocolConfigAddress).rewardDistributor();
+        address replacementDistributor = address(0xBEEF);
+        uint256 transferAmount = 1e6;
+        assertTrue(ProtocolConfig(protocolConfigAddress).isRewardDistributor(originalDistributor));
 
         vm.prank(owner);
-        vm.expectRevert(ProtocolConfig.RewardDistributorAlreadySet.selector);
-        ProtocolConfig(protocolConfigAddress).setRewardDistributor(address(0xBEEF));
-        assertEq(ProtocolConfig(protocolConfigAddress).rewardDistributor(), originalDistributor);
+        ProtocolConfig(protocolConfigAddress).setRewardDistributor(replacementDistributor);
+        assertEq(ProtocolConfig(protocolConfigAddress).rewardDistributor(), replacementDistributor);
+        assertTrue(ProtocolConfig(protocolConfigAddress).isRewardDistributor(originalDistributor));
+        assertTrue(ProtocolConfig(protocolConfigAddress).isRewardDistributor(replacementDistributor));
+
+        uint256 balanceBefore = hrep.balanceOf(voter1);
+        vm.prank(originalDistributor);
+        engine.transferReward(voter1, transferAmount);
+        vm.prank(replacementDistributor);
+        engine.transferReward(voter1, transferAmount);
+        assertEq(hrep.balanceOf(voter1), balanceBefore + transferAmount * 2);
     }
 
     function test_SetFrontendRegistryZeroReverts() public {
