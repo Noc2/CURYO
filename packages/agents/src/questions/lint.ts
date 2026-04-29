@@ -5,6 +5,8 @@ const CLIENT_REQUEST_ID_PATTERN = /^[A-Za-z0-9._:-]{4,160}$/;
 const RANK_BY_RATING_TEMPLATE_IDS = new Set(["ranked_option_member", "pairwise_output_preference"]);
 const FEATURE_ACCEPTANCE_TEMPLATE_ID = "feature_acceptance_test";
 const FEATURE_ACCEPTANCE_REQUIRED_INPUTS = ["expectedBehavior", "testSteps", "acceptanceCriteria"] as const;
+const AGENT_TRACE_REVIEW_TEMPLATE_ID = "agent_trace_review";
+const AGENT_TRACE_REVIEW_REQUIRED_INPUTS = ["traceId", "taskGoal", "reviewFocus"] as const;
 
 function isObject(value: unknown): value is JsonObject {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -111,6 +113,18 @@ export function lintAgentQuestion(
           "warning",
           `${path}.templateInputs.${key}`,
           "Feature acceptance tests should include expected behavior, test steps, and acceptance criteria.",
+        );
+      }
+    }
+  }
+  if (templateId === AGENT_TRACE_REVIEW_TEMPLATE_ID) {
+    for (const key of AGENT_TRACE_REVIEW_REQUIRED_INPUTS) {
+      if (!templateInputText(templateInputs, key)) {
+        pushFinding(
+          findings,
+          "warning",
+          `${path}.templateInputs.${key}`,
+          "Agent trace reviews should include a trace id, task goal, and review focus.",
         );
       }
     }

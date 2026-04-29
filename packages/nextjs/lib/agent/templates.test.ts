@@ -7,6 +7,7 @@ test("listAgentResultTemplates exposes machine-readable metadata for agent clien
   const generic = templates.find(template => template.id === "generic_rating");
   const ranked = templates.find(template => template.id === "ranked_option_member");
   const featureAcceptance = templates.find(template => template.id === "feature_acceptance_test");
+  const traceReview = templates.find(template => template.id === "agent_trace_review");
 
   assert.ok(generic);
   assert.equal(generic?.submissionPattern, "single_question");
@@ -33,4 +34,11 @@ test("listAgentResultTemplates exposes machine-readable metadata for agent clien
   assert.ok(
     (featureAcceptance?.templateInputsSchema.properties as Record<string, unknown> | undefined)?.acceptanceCriteria,
   );
+
+  assert.ok(traceReview);
+  assert.equal(traceReview?.submissionPattern, "single_question");
+  assert.equal(traceReview?.bundleStrategy, "independent");
+  assert.ok((traceReview?.templateInputsSchema.properties as Record<string, unknown> | undefined)?.traceId);
+  assert.ok((traceReview?.templateInputsSchema.properties as Record<string, unknown> | undefined)?.taskGoal);
+  assert.ok((traceReview?.templateInputsSchema.properties as Record<string, unknown> | undefined)?.reviewFocus);
 });

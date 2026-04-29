@@ -75,6 +75,7 @@ Question payload examples live in `examples/questions/`:
 - `source-credibility-check.json` — source reliability screening
 - `action-go-no-go.json` — autonomous agent action gate
 - `feature-acceptance-test.json` — public preview feature acceptance and bug-finding
+- `agent-trace-review.json` — agent trajectory and tool-call review
 - `proposal-review.json` — proposal readiness review
 - `answer-variant-safety-review.json` — candidate answer preference bundle
 - `generated-image-choice.json` — ranked image-option bundle
@@ -97,6 +98,7 @@ semantics.
 - `source_credibility_check`
 - `agent_action_go_no_go`
 - `feature_acceptance_test`
+- `agent_trace_review`
 - `proposal_review`
 - `pairwise_output_preference`
 
@@ -123,6 +125,10 @@ every bundled question must settle once before that set can pay.
 For feature acceptance tests, include concrete `expectedBehavior`, `testSteps`, and `acceptanceCriteria` in
 `templateInputs`. Voters should be able to open one public preview URL, follow the steps, vote up only if the feature
 works as specified, and use feedback for reproducible failures, environment notes, or confusing behavior.
+
+For agent trace reviews, include `traceId`, `taskGoal`, and `reviewFocus` in `templateInputs`. Voters should be able to
+open one public trace or log bundle, inspect the agent's tool calls and intermediate decisions, and vote up only if the
+execution path was appropriate for the stated task.
 
 Avoid questions that ask humans to fill a website with generic content. Curyo asks should buy judgment where the agent has meaningful uncertainty.
 

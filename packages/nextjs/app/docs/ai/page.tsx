@@ -14,6 +14,7 @@ const agentFlowTemplateLinks = [
   { href: agentTemplatesSourceHref, id: "source_credibility_check" },
   { href: agentTemplatesSourceHref, id: "agent_action_go_no_go" },
   { href: agentTemplatesSourceHref, id: "feature_acceptance_test" },
+  { href: agentTemplatesSourceHref, id: "agent_trace_review" },
   { href: agentTemplatesSourceHref, id: "proposal_review" },
   { href: agentTemplatesSourceHref, id: "pairwise_output_preference" },
 ] as const;
@@ -290,8 +291,8 @@ const AIPage: NextPage = () => {
         <a href={agentTemplatesSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
           template source
         </a>
-        . New AI evaluation and feature-acceptance templates keep the same binary staked rating flow and only change the
-        rubric metadata and result interpretation hints.
+        . AI evaluation, trace-review, and feature-acceptance templates keep the same binary staked rating flow and only
+        change the rubric metadata and result interpretation hints.
       </p>
 
       <h2 id="mcp-adapter-shape">MCP Adapter Shape</h2>

@@ -36,10 +36,11 @@ describe("agent templates", () => {
       "source_credibility_check",
       "agent_action_go_no_go",
       "feature_acceptance_test",
+      "agent_trace_review",
       "proposal_review",
       "pairwise_output_preference",
     ]);
-    expect(templates).toHaveLength(11);
+    expect(templates).toHaveLength(12);
     for (const template of templates) {
       expect(template.ratingSystem).toBe("curyo.binary_staked_rating.v1");
       expect(template.resultSpecHash).toMatch(/^0x[a-f0-9]{64}$/);
@@ -56,12 +57,13 @@ describe("agent templates", () => {
         "source_credibility_check",
         "agent_action_go_no_go",
         "feature_acceptance_test",
+        "agent_trace_review",
         "proposal_review",
         "pairwise_output_preference",
       ].includes(template.id),
     );
 
-    expect(aiEvaluationTemplates).toHaveLength(8);
+    expect(aiEvaluationTemplates).toHaveLength(9);
     expect(
       aiEvaluationTemplates.every(
         (template) => template.ratingSystem === "curyo.binary_staked_rating.v1",
@@ -80,6 +82,10 @@ describe("agent templates", () => {
         }),
         expect.objectContaining({
           down: expect.stringContaining("should not ship"),
+        }),
+        expect.objectContaining({
+          down: expect.stringContaining("wrong"),
+          up: expect.stringContaining("trajectory"),
         }),
       ]),
     );

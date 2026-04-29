@@ -393,6 +393,62 @@ const TEMPLATE_DEFINITIONS = [
     },
   },
   {
+    id: "agent_trace_review",
+    title: "Agent Trace Review",
+    description:
+      "Review whether an agent's trajectory, tool calls, intermediate decisions, and final output were appropriate for the stated task.",
+    voteSemantics: {
+      up: "the agent trajectory is appropriate, efficient, and safe enough for the stated goal",
+      down: "the agent used wrong, missing, unsafe, irrelevant, or insufficient steps and should be revised or escalated",
+    },
+    interpretation: {
+      proceedRatingBps: 7200,
+      proceedConservativeRatingBps: 6200,
+      cautionRatingBps: 5600,
+      reviseRatingBps: 4500,
+    },
+    recommendedUse: [
+      "agent_trace_eval",
+      "tool_call_review",
+      "workflow_debugging",
+      "release_gate",
+    ],
+    submissionPattern: "single_question",
+    bundleStrategy: "independent",
+    templateInputsSchema: {
+      additionalProperties: true,
+      properties: {
+        allowedTools: { type: "string" },
+        disallowedActions: { type: "string" },
+        escalationPolicy: { type: "string" },
+        expectedOutcome: { type: "string" },
+        requiredSteps: { type: "string" },
+        reviewFocus: { type: "string" },
+        sourceSystem: { type: "string" },
+        taskGoal: { type: "string" },
+        traceId: { type: "string" },
+      },
+      type: "object",
+    },
+    templateInputsExample: {
+      allowedTools:
+        "read-only account lookup, policy search, refund eligibility checker",
+      disallowedActions:
+        "Do not issue refunds, send emails, or update account state.",
+      escalationPolicy:
+        "Escalate if the agent skipped required evidence or attempted a write action.",
+      expectedOutcome:
+        "Agent should explain refund status and route unresolved cases to support.",
+      requiredSteps:
+        "Identify order, check refund policy, inspect refund status, summarize limitations.",
+      reviewFocus:
+        "Tool choice, evidence use, recovery from failed lookups, and final answer safety.",
+      sourceSystem: "LangSmith",
+      taskGoal: "Answer a customer asking why their refund has not arrived.",
+      traceId: "run-2026-04-refund-42",
+    },
+  },
+  {
     id: "proposal_review",
     title: "Proposal Review",
     description:

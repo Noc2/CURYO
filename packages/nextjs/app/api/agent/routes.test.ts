@@ -1320,4 +1320,10 @@ test("agent templates route returns supported result templates", async () => {
   assert.ok(
     (featureAcceptance?.templateInputsSchema.properties as Record<string, unknown> | undefined)?.acceptanceCriteria,
   );
+  const traceReview = body.templates.find(template => template.id === "agent_trace_review");
+  assert.equal(traceReview?.submissionPattern, "single_question");
+  assert.equal(traceReview?.bundleStrategy, "independent");
+  assert.ok((traceReview?.templateInputsSchema.properties as Record<string, unknown> | undefined)?.traceId);
+  assert.ok((traceReview?.templateInputsSchema.properties as Record<string, unknown> | undefined)?.taskGoal);
+  assert.ok((traceReview?.templateInputsSchema.properties as Record<string, unknown> | undefined)?.reviewFocus);
 });

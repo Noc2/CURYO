@@ -18,6 +18,7 @@ These examples keep one loop stable across runtimes:
 - `questions/source-credibility-check.json`: source credibility screening
 - `questions/action-go-no-go.json`: agent action gate
 - `questions/feature-acceptance-test.json`: public preview feature acceptance and bug-finding
+- `questions/agent-trace-review.json`: agent trace and tool-call review
 - `questions/proposal-review.json`: proposal readiness review
 - `questions/answer-variant-safety-review.json`: candidate answer preference bundle
 - `questions/generated-image-choice.json`: ranked image-option bundle

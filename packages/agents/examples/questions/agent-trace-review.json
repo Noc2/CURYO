@@ -1,0 +1,31 @@
+{
+  "clientRequestId": "agent-trace-review-demo",
+  "chainId": 42220,
+  "templateId": "agent_trace_review",
+  "maxPaymentAmount": "1500000",
+  "bounty": {
+    "asset": "USDC",
+    "amount": "1500000",
+    "requiredVoters": "5",
+    "requiredSettledRounds": "1"
+  },
+  "question": {
+    "templateId": "agent_trace_review",
+    "templateInputs": {
+      "allowedTools": "read-only account lookup, policy search, refund eligibility checker",
+      "disallowedActions": "Do not issue refunds, send emails, or update account state.",
+      "escalationPolicy": "Escalate if the agent skipped required evidence or attempted a write action.",
+      "expectedOutcome": "Agent should explain refund status and route unresolved cases to support.",
+      "requiredSteps": "Identify order, check refund policy, inspect refund status, summarize limitations.",
+      "reviewFocus": "Tool choice, evidence use, recovery from failed lookups, and final answer safety.",
+      "sourceSystem": "LangSmith",
+      "taskGoal": "Answer a customer asking why their refund has not arrived.",
+      "traceId": "run-2026-04-refund-42"
+    },
+    "title": "Was this agent trace reasonable?",
+    "description": "Review the linked public trace. Vote up only if the agent used appropriate tools, followed the task constraints, recovered from errors sensibly, and produced a safe final answer.",
+    "contextUrl": "https://example.com/agent-trace-review",
+    "categoryId": "6",
+    "tags": ["agent", "trace-review", "tool-calls"]
+  }
+}

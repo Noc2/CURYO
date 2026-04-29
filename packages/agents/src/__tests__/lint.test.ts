@@ -174,4 +174,54 @@ describe("agent question linting", () => {
       warningCount: 0,
     });
   });
+
+  it("nudges agent trace reviews toward concrete trace context", () => {
+    const findings = lintAgentAskRequest({
+      ...VALID_REQUEST,
+      question: {
+        ...VALID_REQUEST.question,
+        templateId: "agent_trace_review",
+        title: "Was this agent trace reasonable?",
+      },
+    });
+
+    expect(findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          level: "warning",
+          path: "question.templateInputs.traceId",
+        }),
+        expect.objectContaining({
+          level: "warning",
+          path: "question.templateInputs.taskGoal",
+        }),
+        expect.objectContaining({
+          level: "warning",
+          path: "question.templateInputs.reviewFocus",
+        }),
+      ]),
+    );
+  });
+
+  it("accepts agent trace reviews with trace id, task goal, and review focus", () => {
+    const findings = lintAgentAskRequest({
+      ...VALID_REQUEST,
+      question: {
+        ...VALID_REQUEST.question,
+        templateId: "agent_trace_review",
+        templateInputs: {
+          reviewFocus: "Tool choice, evidence use, and final answer safety.",
+          taskGoal: "Answer why a customer refund has not arrived.",
+          traceId: "run-refund-42",
+        },
+        title: "Was this agent trace reasonable?",
+      },
+    });
+
+    expect(summarizeLintFindings(findings)).toEqual({
+      errorCount: 0,
+      ok: true,
+      warningCount: 0,
+    });
+  });
 });
