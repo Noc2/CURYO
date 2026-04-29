@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, test } from "node:test";
 
-import { assertFreshTargetDeployment } from "./generateTsAbis.js";
+import {
+  assertFreshTargetDeployment,
+  filterGeneratedContractsForDeployTarget,
+} from "./generateTsAbis.js";
 
 const ORIGINAL_DEPLOY_TARGET_NETWORK = process.env.DEPLOY_TARGET_NETWORK;
 
@@ -154,6 +157,36 @@ describe("assertFreshTargetDeployment", () => {
         {},
         { 31337: 200 }
       )
+    );
+  });
+});
+
+describe("filterGeneratedContractsForDeployTarget", () => {
+  test("publishes only the selected target chain during targeted redeploys", () => {
+    process.env.DEPLOY_TARGET_NETWORK = "celo";
+
+    assert.deepEqual(
+      filterGeneratedContractsForDeployTarget({
+        31337: { ContentRegistry: { address: "0xlocal" } },
+        42220: { ContentRegistry: { address: "0xcelo" } },
+        11142220: { ContentRegistry: { address: "0xstaleSepolia" } },
+      }),
+      {
+        42220: { ContentRegistry: { address: "0xcelo" } },
+      }
+    );
+  });
+
+  test("publishes all generated contracts for direct ABI generation", () => {
+    delete process.env.DEPLOY_TARGET_NETWORK;
+    const generatedContracts = {
+      31337: { ContentRegistry: { address: "0xlocal" } },
+      42220: { ContentRegistry: { address: "0xcelo" } },
+    };
+
+    assert.deepEqual(
+      filterGeneratedContractsForDeployTarget(generatedContracts),
+      generatedContracts
     );
   });
 });

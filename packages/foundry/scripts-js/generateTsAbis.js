@@ -431,6 +431,20 @@ export function assertFreshTargetDeployment(
   );
 }
 
+export function filterGeneratedContractsForDeployTarget(allGeneratedContracts) {
+  const deployTarget = process.env.DEPLOY_TARGET_NETWORK;
+  const targetChainId = DEPLOY_TARGET_TO_CHAIN_ID[deployTarget];
+  if (!deployTarget || !targetChainId) {
+    return allGeneratedContracts;
+  }
+
+  const targetChainKey = String(targetChainId);
+  const targetContracts = allGeneratedContracts[targetChainKey];
+  return hasGeneratedContracts(targetContracts)
+    ? { [targetChainKey]: targetContracts }
+    : {};
+}
+
 function main() {
   const current_path_to_broadcast = join(__dirname, "..", "broadcast");
   const current_path_to_deployments = join(__dirname, "..", "deployments");
@@ -514,9 +528,11 @@ function main() {
     deployments,
     latestBroadcastBlockNumbers
   );
+  const generatedContractsForPublish =
+    filterGeneratedContractsForDeployTarget(allGeneratedContracts);
   const mergedContracts = {
     ...existingContracts,
-    ...allGeneratedContracts,
+    ...generatedContractsForPublish,
   };
 
   // Generate the shared deployedContracts content
