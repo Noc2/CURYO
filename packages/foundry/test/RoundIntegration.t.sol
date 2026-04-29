@@ -1279,6 +1279,69 @@ contract RoundIntegrationTest is VotingTestBase {
         assertEq(hrepToken.getLockedBalance(voter4), STAKE, "governance lock remains active");
     }
 
+    function test_TiedRound_RemovedDelegateCanClaimOwnStakeRefund() public {
+        uint256 contentId = _submitContent();
+
+        MockVoterIdNFT voterIdNFT = new MockVoterIdNFT();
+        voterIdNFT.setHolder(voter1);
+        voterIdNFT.setHolder(voter2);
+        vm.prank(voter1);
+        voterIdNFT.setDelegate(voter4);
+
+        ProtocolConfig cfg = ProtocolConfig(address(votingEngine.protocolConfig()));
+        vm.prank(owner);
+        cfg.setVoterIdNFT(address(voterIdNFT));
+
+        address[] memory voters = new address[](2);
+        voters[0] = voter4;
+        voters[1] = voter2;
+        bool[] memory dirs = new bool[](2);
+        dirs[0] = true;
+        dirs[1] = false;
+
+        uint256 roundId = _settleRoundWith(voters, contentId, dirs, STAKE);
+        vm.prank(voter1);
+        voterIdNFT.removeDelegate();
+
+        uint256 stakePayerBalanceBefore = hrepToken.balanceOf(voter4);
+        vm.prank(voter4);
+        votingEngine.claimCancelledRoundRefund(contentId, roundId);
+        assertEq(hrepToken.balanceOf(voter4) - stakePayerBalanceBefore, STAKE);
+    }
+
+    function test_SettledRound_RemovedDelegateCanClaimOwnReward() public {
+        uint256 contentId = _submitContent();
+
+        MockVoterIdNFT voterIdNFT = new MockVoterIdNFT();
+        voterIdNFT.setHolder(voter1);
+        voterIdNFT.setHolder(voter2);
+        voterIdNFT.setHolder(voter3);
+        vm.prank(voter1);
+        voterIdNFT.setDelegate(voter4);
+
+        ProtocolConfig cfg = ProtocolConfig(address(votingEngine.protocolConfig()));
+        vm.prank(owner);
+        cfg.setVoterIdNFT(address(voterIdNFT));
+
+        address[] memory voters = new address[](3);
+        voters[0] = voter4;
+        voters[1] = voter2;
+        voters[2] = voter3;
+        bool[] memory dirs = new bool[](3);
+        dirs[0] = true;
+        dirs[1] = true;
+        dirs[2] = false;
+
+        uint256 roundId = _settleRoundWith(voters, contentId, dirs, STAKE);
+        vm.prank(voter1);
+        voterIdNFT.removeDelegate();
+
+        uint256 stakePayerBalanceBefore = hrepToken.balanceOf(voter4);
+        vm.prank(voter4);
+        rewardDistributor.claimReward(contentId, roundId);
+        assertGt(hrepToken.balanceOf(voter4), stakePayerBalanceBefore);
+    }
+
     function test_TiedRound_NewRoundAfterTie() public {
         uint256 contentId = _submitContent();
 

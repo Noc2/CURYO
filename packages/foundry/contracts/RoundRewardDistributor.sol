@@ -626,9 +626,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         bytes32 directCommitHash = votingEngine.voterCommitHash(contentId, roundId, account);
         if (directCommitHash != bytes32(0)) {
             commitKey = keccak256(abi.encodePacked(account, directCommitHash));
-            if (votingEngine.commitVoterId(contentId, roundId, commitKey) == 0) {
-                return (commitKey, account);
-            }
+            return (commitKey, account);
         }
 
         return (bytes32(0), account);

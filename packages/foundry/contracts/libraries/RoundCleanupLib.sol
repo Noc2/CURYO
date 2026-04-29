@@ -78,7 +78,7 @@ library RoundCleanupLib {
         mapping(address => bytes32) storage roundVoterCommitHash,
         mapping(uint256 => bytes32) storage roundVoterIdCommitKey,
         mapping(uint256 => bytes32) storage roundVoterNullifierCommitKey,
-        mapping(bytes32 => uint256) storage roundCommitVoterId,
+        mapping(bytes32 => uint256) storage,
         address voterIdNftAddress,
         address account
     ) external view returns (bytes32 commitKey, address rewardRecipient) {
@@ -103,9 +103,7 @@ library RoundCleanupLib {
         bytes32 directCommitHash = roundVoterCommitHash[account];
         if (directCommitHash != bytes32(0)) {
             commitKey = keccak256(abi.encodePacked(account, directCommitHash));
-            if (roundCommitVoterId[commitKey] == 0) {
-                return (commitKey, account);
-            }
+            return (commitKey, account);
         }
 
         return (bytes32(0), account);
