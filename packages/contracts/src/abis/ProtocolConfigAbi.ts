@@ -449,6 +449,25 @@ export const ProtocolConfigAbi = [
   },
   {
     "type": "function",
+    "name": "isRewardDistributor",
+    "inputs": [
+      {
+        "name": "value",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "minSubmissionHrepPool",
     "inputs": [],
     "outputs": [
@@ -589,6 +608,19 @@ export const ProtocolConfigAbi = [
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "revokeRewardDistributor",
+    "inputs": [
+      {
+        "name": "value",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -1315,6 +1347,25 @@ export const ProtocolConfigAbi = [
   },
   {
     "type": "event",
+    "name": "RewardDistributorAuthorizationUpdated",
+    "inputs": [
+      {
+        "name": "rewardDistributor",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      },
+      {
+        "name": "authorized",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "RewardDistributorUpdated",
     "inputs": [
       {
@@ -1571,11 +1622,6 @@ export const ProtocolConfigAbi = [
   {
     "type": "error",
     "name": "NotInitializing",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "RewardDistributorAlreadySet",
     "inputs": []
   }
 ] as const;

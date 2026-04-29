@@ -168,74 +168,6 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "contentRoundConfig",
-    "inputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "epochDuration",
-        "type": "uint32",
-        "internalType": "uint32"
-      },
-      {
-        "name": "maxDuration",
-        "type": "uint32",
-        "internalType": "uint32"
-      },
-      {
-        "name": "minVoters",
-        "type": "uint16",
-        "internalType": "uint16"
-      },
-      {
-        "name": "maxVoters",
-        "type": "uint16",
-        "internalType": "uint16"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "contentSlashConfigSnapshot",
-    "inputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "slashThresholdBps",
-        "type": "uint16",
-        "internalType": "uint16"
-      },
-      {
-        "name": "minSlashSettledRounds",
-        "type": "uint16",
-        "internalType": "uint16"
-      },
-      {
-        "name": "minSlashLowDuration",
-        "type": "uint48",
-        "internalType": "uint48"
-      },
-      {
-        "name": "minSlashEvidence",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "contentSubmitterNullifier",
     "inputs": [
       {
@@ -859,60 +791,6 @@ export const ContentRegistryAbi = [
         "name": "",
         "type": "address",
         "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "ratingState",
-    "inputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "ratingLogitX18",
-        "type": "int128",
-        "internalType": "int128"
-      },
-      {
-        "name": "confidenceMass",
-        "type": "uint128",
-        "internalType": "uint128"
-      },
-      {
-        "name": "effectiveEvidence",
-        "type": "uint128",
-        "internalType": "uint128"
-      },
-      {
-        "name": "settledRounds",
-        "type": "uint32",
-        "internalType": "uint32"
-      },
-      {
-        "name": "ratingBps",
-        "type": "uint16",
-        "internalType": "uint16"
-      },
-      {
-        "name": "conservativeRatingBps",
-        "type": "uint16",
-        "internalType": "uint16"
-      },
-      {
-        "name": "lastUpdatedAt",
-        "type": "uint48",
-        "internalType": "uint48"
-      },
-      {
-        "name": "lowSince",
-        "type": "uint48",
-        "internalType": "uint48"
       }
     ],
     "stateMutability": "view"
