@@ -23,7 +23,7 @@
     "e2e": "playwright test --config e2e/playwright.config.ts --project=chromium",
     "e2e:ci:smoke": "playwright test --config e2e/playwright.config.ts --project=ci-smoke",
     "e2e:ci:full": "REQUIRE_E2E_KEEPER=1 playwright test --config e2e/playwright.config.ts --project=chromium --project=settlement --project=settlement-keeper --project=round-cancellation --project=content-dormancy",
-    "e2e:ci:lifecycle": "playwright test --config e2e/playwright.config.ts --project=settlement --project=round-cancellation --project=content-dormancy",
+    "e2e:ci:lifecycle": "playwright test --config e2e/playwright.config.ts --no-deps --project=settlement --project=round-cancellation --project=content-dormancy",
     "e2e:ci:keeper": "REQUIRE_E2E_KEEPER=1 playwright test --config e2e/playwright.config.ts --project=settlement-keeper",
     "e2e:settlement": "playwright test --config e2e/playwright.config.ts --project=settlement",
     "e2e:settlement:keeper": "REQUIRE_E2E_KEEPER=1 playwright test --config e2e/playwright.config.ts --project=settlement-keeper",

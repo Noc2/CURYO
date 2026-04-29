@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import config from "./playwright.config";
 
@@ -51,4 +52,14 @@ test("browser-scoped Playwright projects only match their intended spec files", 
       `${project} should ignore ${nonMatchingSpec} even when the workspace path includes "${workspaceSegment}"`,
     );
   }
+});
+
+test("CI lifecycle script does not expand Playwright project dependencies", () => {
+  const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as {
+    scripts?: Record<string, string>;
+  };
+  const lifecycleScript = packageJson.scripts?.["e2e:ci:lifecycle"] ?? "";
+
+  assert.match(lifecycleScript, /--no-deps\b/, "lifecycle CI should not rerun dependency projects");
+  assert.doesNotMatch(lifecycleScript, /--project=chromium\b/, "lifecycle CI should not include the broad suite");
 });
