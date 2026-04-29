@@ -250,6 +250,33 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
         feedbackBonusEscrow.setVotingEngine(address(0xBEEF));
     }
 
+    function testCreateFeedbackBonusPoolRejectsStaleEscrowAfterEngineRotation() public {
+        uint256 contentId = _submitQuestion("");
+        RoundVotingEngine replacementEngine = RoundVotingEngine(
+            address(
+                new ERC1967Proxy(
+                    address(new RoundVotingEngine()),
+                    abi.encodeCall(
+                        RoundVotingEngine.initialize,
+                        (owner, address(hrepToken), address(registry), address(protocolConfig))
+                    )
+                )
+            )
+        );
+
+        vm.startPrank(owner);
+        registry.pause();
+        registry.setVotingEngine(address(replacementEngine));
+        registry.unpause();
+        vm.stopPrank();
+
+        vm.startPrank(funder);
+        usdc.approve(address(feedbackBonusEscrow), BONUS_AMOUNT);
+        vm.expectRevert("Stale engine");
+        feedbackBonusEscrow.createFeedbackBonusPool(contentId, 1, BONUS_AMOUNT, block.timestamp + 7 days, funder);
+        vm.stopPrank();
+    }
+
     function testAwardPaysRevealedVoterAndVoteAttributedFrontend() public {
         _registerFrontend(frontend1);
         uint256 contentId = _submitQuestion("");

@@ -137,6 +137,7 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
         require(awarder != address(0), "Invalid awarder");
         require(feedbackClosesAt > block.timestamp, "Invalid feedback close");
         require(registry.isContentActive(contentId), "Content not active");
+        _requireCurrentRegistryVotingEngine();
         _requireTargetRound(contentId, roundId);
 
         uint256 receivedAmount = _pullUsdc(msg.sender, amount);
@@ -290,6 +291,10 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
         require(roundId == currentRoundId, "Invalid target round");
         (, RoundLib.RoundState state,,,,,,,,,,,,) = votingEngine.rounds(contentId, roundId);
         require(state == RoundLib.RoundState.Open, "Round not open");
+    }
+
+    function _requireCurrentRegistryVotingEngine() internal view {
+        require(registry.votingEngine() == address(votingEngine), "Stale engine");
     }
 
     function _requireRevealedIndependentVoter(FeedbackBonusPool storage pool, address recipient)
