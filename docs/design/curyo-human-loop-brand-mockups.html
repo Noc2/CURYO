@@ -1,0 +1,872 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Curyo Human Loop Brand Mockups</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #070507;
+        --panel: #121014;
+        --panel-2: #19151b;
+        --ink: #171316;
+        --paper: #fff4f0;
+        --paper-2: #f8ebe6;
+        --line: #0e0c0f;
+        --text: #f7efe9;
+        --muted: #b9aca5;
+        --muted-2: #8f8580;
+        --coral: #f47a42;
+        --rose: #ec817b;
+        --violet: #8a4de8;
+        --cyan: #55bad0;
+        --gold: #ffc071;
+        --green: #7adfbe;
+        --border: rgb(247 239 233 / 0.14);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          linear-gradient(180deg, rgb(244 122 66 / 0.09), transparent 320px),
+          radial-gradient(circle at 76% 16%, rgb(85 186 208 / 0.1), transparent 28rem),
+          var(--bg);
+        color: var(--text);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        letter-spacing: 0;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .page {
+        width: min(1180px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 44px 0 72px;
+      }
+
+      .intro {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(320px, 0.66fr);
+        gap: 28px;
+        align-items: end;
+        margin-bottom: 30px;
+      }
+
+      .eyebrow {
+        color: var(--coral);
+        font-size: 0.82rem;
+        font-weight: 800;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        max-width: 780px;
+        margin-top: 10px;
+        font-size: clamp(2.45rem, 6vw, 5.5rem);
+        line-height: 0.9;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+
+      .intro p {
+        max-width: 680px;
+        margin-top: 18px;
+        color: var(--muted);
+        font-size: 1.12rem;
+        line-height: 1.55;
+      }
+
+      .decision {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: rgb(18 16 20 / 0.86);
+        padding: 18px;
+        box-shadow: 0 22px 60px rgb(0 0 0 / 0.38);
+      }
+
+      .decision strong {
+        color: var(--text);
+      }
+
+      .decision p {
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 0.98rem;
+        line-height: 1.45;
+      }
+
+      .principles {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin: 28px 0;
+      }
+
+      .principle {
+        min-height: 112px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: rgb(25 21 27 / 0.72);
+        padding: 16px;
+      }
+
+      .principle b {
+        display: block;
+        color: var(--text);
+        font-size: 0.98rem;
+      }
+
+      .principle span {
+        display: block;
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 0.92rem;
+        line-height: 1.4;
+      }
+
+      .options {
+        display: grid;
+        gap: 22px;
+      }
+
+      .option {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        overflow: hidden;
+        background: var(--panel);
+        box-shadow: 0 28px 80px rgb(0 0 0 / 0.42);
+      }
+
+      .option-head {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 18px;
+        align-items: center;
+        border-bottom: 1px solid var(--border);
+        padding: 20px 22px;
+      }
+
+      .option-kicker {
+        color: var(--muted-2);
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      .option h2 {
+        margin-top: 5px;
+        font-size: clamp(1.7rem, 3vw, 2.45rem);
+        line-height: 1.02;
+      }
+
+      .badge {
+        border: 1px solid rgb(244 122 66 / 0.42);
+        border-radius: 999px;
+        color: #ffd8c2;
+        background: rgb(244 122 66 / 0.12);
+        padding: 8px 12px;
+        font-size: 0.82rem;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+
+      .option-grid {
+        display: grid;
+        grid-template-columns: minmax(230px, 0.72fr) minmax(0, 1.28fr);
+        gap: 0;
+      }
+
+      .logo-panel {
+        border-right: 1px solid var(--border);
+        background: var(--panel-2);
+        padding: 22px;
+      }
+
+      .logo-stage {
+        display: flex;
+        min-height: 230px;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgb(247 239 233 / 0.1);
+        border-radius: 8px;
+        background: #080608;
+      }
+
+      .logo-stage svg {
+        width: min(84%, 250px);
+        height: auto;
+      }
+
+      .notes {
+        margin-top: 18px;
+        display: grid;
+        gap: 12px;
+      }
+
+      .note {
+        border-top: 1px solid rgb(247 239 233 / 0.12);
+        padding-top: 12px;
+      }
+
+      .note b {
+        display: block;
+        color: var(--text);
+        font-size: 0.84rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .note span {
+        display: block;
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 0.94rem;
+        line-height: 1.42;
+      }
+
+      .hero-panel {
+        padding: 22px;
+        background: #0b090d;
+      }
+
+      .browser {
+        overflow: hidden;
+        border: 1px solid rgb(247 239 233 / 0.14);
+        border-radius: 8px;
+        background: #000;
+      }
+
+      .browser-bar {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        height: 34px;
+        border-bottom: 1px solid rgb(247 239 233 / 0.12);
+        padding: 0 13px;
+        background: #151217;
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: rgb(247 239 233 / 0.32);
+      }
+
+      .mock-hero {
+        display: grid;
+        grid-template-columns: minmax(230px, 0.82fr) minmax(300px, 1.18fr);
+        gap: 18px;
+        min-height: 390px;
+        align-items: center;
+        padding: 28px;
+        background:
+          linear-gradient(90deg, rgb(0 0 0 / 0.94), rgb(0 0 0 / 0.82)),
+          #000;
+      }
+
+      .mock-hero.copy-right {
+        grid-template-columns: minmax(300px, 1.08fr) minmax(250px, 0.92fr);
+      }
+
+      .hero-copy h3 {
+        max-width: 8.6ch;
+        color: var(--text);
+        font-size: clamp(2.15rem, 3.65vw, 3.75rem);
+        line-height: 0.88;
+        letter-spacing: 0;
+        text-transform: uppercase;
+        overflow-wrap: break-word;
+      }
+
+      .hero-copy p {
+        max-width: 390px;
+        margin-top: 14px;
+        color: var(--muted);
+        font-size: 1.05rem;
+        line-height: 1.48;
+      }
+
+      .button-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 18px;
+      }
+
+      .button {
+        border: 1px solid transparent;
+        border-radius: 8px;
+        padding: 11px 16px;
+        font-size: 0.94rem;
+        font-weight: 800;
+      }
+
+      .button.primary {
+        background: var(--coral);
+        color: #070507;
+      }
+
+      .button.secondary {
+        border-color: rgb(247 239 233 / 0.18);
+        color: var(--text);
+        background: rgb(247 239 233 / 0.08);
+      }
+
+      .art-wrap {
+        min-width: 0;
+      }
+
+      .art-wrap svg {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .svg-paper {
+        fill: var(--paper);
+      }
+
+      .svg-paper-2 {
+        fill: var(--paper-2);
+      }
+
+      .svg-line {
+        fill: none;
+        stroke: var(--line);
+        stroke-width: 8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .svg-line-thin {
+        fill: none;
+        stroke: var(--line);
+        stroke-width: 5.5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .svg-ink {
+        fill: var(--line);
+      }
+
+      .svg-coral {
+        fill: var(--rose);
+      }
+
+      .svg-gold {
+        fill: var(--gold);
+      }
+
+      .svg-green {
+        fill: var(--green);
+      }
+
+      .sources {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 16px;
+        margin-top: 28px;
+      }
+
+      .source-box {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: rgb(18 16 20 / 0.82);
+        padding: 18px;
+      }
+
+      .source-box h2 {
+        font-size: 1.05rem;
+      }
+
+      .source-box p,
+      .source-box li {
+        color: var(--muted);
+        font-size: 0.95rem;
+        line-height: 1.45;
+      }
+
+      .source-box p {
+        margin-top: 10px;
+      }
+
+      .source-box ul {
+        margin: 10px 0 0;
+        padding-left: 18px;
+      }
+
+      @media (max-width: 920px) {
+        .intro,
+        .principles,
+        .sources,
+        .option-grid,
+        .mock-hero,
+        .mock-hero.copy-right {
+          grid-template-columns: 1fr;
+        }
+
+        .logo-panel {
+          border-right: 0;
+          border-bottom: 1px solid var(--border);
+        }
+
+        .option-head {
+          grid-template-columns: 1fr;
+        }
+
+        .badge {
+          justify-self: start;
+        }
+      }
+
+      @media (max-width: 620px) {
+        .page {
+          width: min(100% - 20px, 1180px);
+          padding-top: 26px;
+        }
+
+        .principles {
+          gap: 10px;
+        }
+
+        .option-head,
+        .logo-panel,
+        .hero-panel,
+        .mock-hero {
+          padding: 16px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="intro" aria-labelledby="page-title">
+        <div>
+          <div class="eyebrow">Brand exploration</div>
+          <h1 id="page-title">Human loop visuals for Curyo</h1>
+          <p>
+            Three original directions for replacing the abstract orb with a friendlier AI + human collaboration
+            language. Each keeps Curyo's dark product shell, warm coral action color, and the loop motif, but makes the
+            human judgment layer visible on first glance.
+          </p>
+        </div>
+        <aside class="decision">
+          <strong>Recommended path: Concept B, with Concept A's friendly face language.</strong>
+          <p>
+            It explains the product most clearly: an AI asks, verified humans review, the loop returns a usable result.
+            It is less generic than a simple person-and-bot desk scene and easier to scale into icons than a full
+            platform map.
+          </p>
+        </aside>
+      </section>
+
+      <section class="principles" aria-label="Design principles">
+        <div class="principle">
+          <b>Make the loop explicit</b>
+          <span>Show a handoff from AI to human and a return signal back to the agent.</span>
+        </div>
+        <div class="principle">
+          <b>Keep humans central</b>
+          <span>The person is not decoration. Their review, stake, and judgment are the product.</span>
+        </div>
+        <div class="principle">
+          <b>Retain Curyo equity</b>
+          <span>Use the existing coral warmth, dark shell, and luminous loop as a bridge from the orb.</span>
+        </div>
+        <div class="principle">
+          <b>Avoid cartoon overload</b>
+          <span>Friendly line work, but enough product specificity to avoid looking like generic AI SaaS.</span>
+        </div>
+      </section>
+
+      <section class="options" aria-label="Mockup concepts">
+        <article class="option">
+          <header class="option-head">
+            <div>
+              <div class="option-kicker">Concept A</div>
+              <h2>Desk Loop</h2>
+            </div>
+            <div class="badge">Friendliest first impression</div>
+          </header>
+          <div class="option-grid">
+            <aside class="logo-panel">
+              <div class="logo-stage" aria-label="Desk Loop logo concept">
+                <svg viewBox="0 0 320 320" role="img" aria-label="Small AI face beside a human review loop">
+                  <defs>
+                    <linearGradient id="a-loop" x1="80" y1="88" x2="250" y2="238" gradientUnits="userSpaceOnUse">
+                      <stop stop-color="#55bad0" />
+                      <stop offset="0.46" stop-color="#8a4de8" />
+                      <stop offset="1" stop-color="#f47a42" />
+                    </linearGradient>
+                  </defs>
+                  <rect x="44" y="48" width="232" height="232" rx="58" fill="#fff4f0" />
+                  <path
+                    d="M80 160c16-58 74-84 124-60 46 22 60 80 26 122-30 36-86 40-124 12-33-24-42-70-16-105 28-38 85-39 121-6 35 32 38 82 8 114"
+                    fill="none"
+                    stroke="url(#a-loop)"
+                    stroke-width="10"
+                    stroke-linecap="round"
+                  />
+                  <path class="svg-line" d="M92 212h138" />
+                  <path class="svg-line" d="M110 212l16-58h82l16 58" />
+                  <rect x="122" y="112" width="92" height="55" rx="27" fill="#fff4f0" stroke="#0e0c0f" stroke-width="8" />
+                  <circle cx="150" cy="140" r="5.5" class="svg-ink" />
+                  <circle cx="187" cy="140" r="5.5" class="svg-ink" />
+                  <path class="svg-line-thin" d="M157 153c8 8 18 8 26 0" />
+                  <path class="svg-line" d="M92 160c-15-6-22-18-19-33 4-22 28-34 48-22" />
+                  <path class="svg-ink" d="M74 126c8-38 55-57 88-32-29-4-50 6-64 28-7 12-13 14-24 4Z" />
+                  <circle cx="105" cy="141" r="4.8" class="svg-ink" />
+                  <path class="svg-line-thin" d="M88 155c8 9 19 11 31 6" />
+                  <path class="svg-line-thin" d="M245 104l22 22 36-43" />
+                </svg>
+              </div>
+              <div class="notes">
+                <div class="note">
+                  <b>Logo idea</b>
+                  <span>AI helper face plus a small human approval check inside one shared loop.</span>
+                </div>
+                <div class="note">
+                  <b>Landing image</b>
+                  <span>Human and AI working at the same desk, echoing the explainer film without copying it.</span>
+                </div>
+                <div class="note">
+                  <b>Risk</b>
+                  <span>Very approachable, but it can read as generic "AI assistant" if the vote/result cues are too subtle.</span>
+                </div>
+              </div>
+            </aside>
+            <div class="hero-panel">
+              <div class="browser">
+                <div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                <div class="mock-hero">
+                  <div class="hero-copy">
+                    <h3>AI Asks, Humans Earn</h3>
+                    <p>Friendly hero art makes the agent and human reviewer relationship immediately legible.</p>
+                    <div class="button-row">
+                      <span class="button primary">Earn USDC</span>
+                      <span class="button secondary">For Agents</span>
+                    </div>
+                  </div>
+                  <div class="art-wrap">
+                    <svg viewBox="0 0 720 520" role="img" aria-label="Human and AI at a desk">
+                      <defs>
+                        <linearGradient id="a-hero-loop" x1="230" y1="110" x2="496" y2="360" gradientUnits="userSpaceOnUse">
+                          <stop stop-color="#55bad0" />
+                          <stop offset="0.52" stop-color="#8a4de8" />
+                          <stop offset="1" stop-color="#f47a42" />
+                        </linearGradient>
+                      </defs>
+                      <rect x="8" y="18" width="704" height="484" rx="18" fill="#fff4f0" />
+                      <path class="svg-line-thin" d="M48 398h620" />
+                      <path
+                        d="M296 146c35-70 128-73 176-18 50 56 35 151-34 184-67 32-149 2-166-72-14-61 28-119 86-125 67-7 120 47 109 112-9 55-65 93-119 76"
+                        fill="none"
+                        stroke="url(#a-hero-loop)"
+                        stroke-width="8"
+                        stroke-linecap="round"
+                      />
+                      <path class="svg-ink" d="M130 155c-2-55 49-91 104-75 40 12 64 48 63 89-44-14-90-13-137 1-12 4-21 0-30-15Z" />
+                      <path class="svg-line" d="M159 164c-11 58-12 95 8 120 17 21 54 21 70-1 15-20 14-64 12-118" />
+                      <circle cx="191" cy="209" r="5.5" class="svg-ink" />
+                      <path class="svg-line-thin" d="M207 193c8-8 18-9 29-4" />
+                      <path class="svg-line-thin" d="M188 236c12 13 31 13 44 0" />
+                      <path class="svg-line" d="M64 400c20-118 55-173 137-173 86 0 125 58 146 173" />
+                      <path class="svg-line" d="M130 282l-25 118" />
+                      <path class="svg-line" d="M283 282l25 118" />
+                      <rect x="294" y="294" width="320" height="142" rx="20" fill="#fff4f0" stroke="#0e0c0f" stroke-width="8" />
+                      <circle cx="454" cy="366" r="22" fill="#fff4f0" stroke="#0e0c0f" stroke-width="7" />
+                      <rect x="372" y="206" width="112" height="62" rx="31" fill="#fff4f0" stroke="#0e0c0f" stroke-width="8" />
+                      <circle cx="410" cy="238" r="6" class="svg-ink" />
+                      <circle cx="447" cy="238" r="6" class="svg-ink" />
+                      <path class="svg-line-thin" d="M418 251c8 7 17 7 25 0" />
+                      <rect x="578" y="348" width="44" height="58" rx="8" class="svg-coral" stroke="#0e0c0f" stroke-width="7" />
+                      <path class="svg-line-thin" d="M622 368c22-3 28 13 14 26" />
+                      <path class="svg-line-thin" d="M590 332c-7-10-5-20 5-29" />
+                      <path class="svg-line-thin" d="M612 330c-8-12-5-24 7-34" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="option">
+          <header class="option-head">
+            <div>
+              <div class="option-kicker">Concept B</div>
+              <h2>Judgment Relay</h2>
+            </div>
+            <div class="badge">Best product fit</div>
+          </header>
+          <div class="option-grid">
+            <aside class="logo-panel">
+              <div class="logo-stage" aria-label="Judgment Relay logo concept">
+                <svg viewBox="0 0 320 320" role="img" aria-label="AI question routed to verified human votes">
+                  <defs>
+                    <linearGradient id="b-loop" x1="73" y1="67" x2="256" y2="253" gradientUnits="userSpaceOnUse">
+                      <stop stop-color="#55bad0" />
+                      <stop offset="0.5" stop-color="#8a4de8" />
+                      <stop offset="1" stop-color="#f47a42" />
+                    </linearGradient>
+                  </defs>
+                  <rect x="44" y="48" width="232" height="232" rx="58" fill="#fff4f0" />
+                  <path
+                    d="M96 108c40-46 115-49 158-6M254 102c-26-7-50-4-72 11M244 216c-42 43-116 43-157-3M87 213c26 8 51 5 74-10"
+                    fill="none"
+                    stroke="url(#b-loop)"
+                    stroke-width="10"
+                    stroke-linecap="round"
+                  />
+                  <rect x="92" y="110" width="136" height="78" rx="20" fill="#fff4f0" stroke="#0e0c0f" stroke-width="8" />
+                  <path class="svg-line-thin" d="M116 136h72" />
+                  <path class="svg-line-thin" d="M116 160h96" />
+                  <path class="svg-line-thin" d="M206 188l24 24" />
+                  <circle cx="100" cy="220" r="30" fill="#ec817b" stroke="#0e0c0f" stroke-width="8" />
+                  <path class="svg-line-thin" d="M86 220l12 12 22-27" />
+                  <circle cx="220" cy="220" r="30" fill="#fff4f0" stroke="#0e0c0f" stroke-width="8" />
+                  <path class="svg-line-thin" d="M205 220h30" />
+                  <path class="svg-line-thin" d="M220 205v30" />
+                  <rect x="132" y="58" width="58" height="40" rx="20" fill="#fff4f0" stroke="#0e0c0f" stroke-width="7" />
+                  <circle cx="152" cy="78" r="4.4" class="svg-ink" />
+                  <circle cx="171" cy="78" r="4.4" class="svg-ink" />
+                  <path class="svg-line-thin" d="M153 89c6 4 12 4 18 0" />
+                </svg>
+              </div>
+              <div class="notes">
+                <div class="note">
+                  <b>Logo idea</b>
+                  <span>Question card in the center, AI above it, verified human outcomes below it.</span>
+                </div>
+                <div class="note">
+                  <b>Landing image</b>
+                  <span>Shows the Curyo loop as a relay: ask, review, stake, result.</span>
+                </div>
+                <div class="note">
+                  <b>Risk</b>
+                  <span>Slightly more abstract than Concept A, so the friendly face treatment matters.</span>
+                </div>
+              </div>
+            </aside>
+            <div class="hero-panel">
+              <div class="browser">
+                <div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                <div class="mock-hero copy-right">
+                  <div class="art-wrap">
+                    <svg viewBox="0 0 720 520" role="img" aria-label="AI sends a question to humans who vote">
+                      <defs>
+                        <linearGradient id="b-hero-loop" x1="150" y1="96" x2="590" y2="408" gradientUnits="userSpaceOnUse">
+                          <stop stop-color="#55bad0" />
+                          <stop offset="0.5" stop-color="#8a4de8" />
+                          <stop offset="1" stop-color="#f47a42" />
+                        </linearGradient>
+                      </defs>
+                      <rect x="8" y="18" width="704" height="484" rx="18" fill="#fff4f0" />
+                      <path class="svg-line-thin" d="M52 397h618" />
+                      <path
+                        d="M188 140c85-83 233-77 311 13M500 153c-43-11-82-6-118 17M528 345c-83 84-232 80-313-8M215 337c44 11 84 6 120-18"
+                        fill="none"
+                        stroke="url(#b-hero-loop)"
+                        stroke-width="8"
+                        stroke-linecap="round"
+                      />
+                      <rect x="248" y="162" width="224" height="164" rx="18" fill="#fff4f0" stroke="#0e0c0f" stroke-width="8" />
+                      <path class="svg-line-thin" d="M282 204h124" />
+                      <path class="svg-line-thin" d="M282 238h150" />
+                      <path class="svg-line-thin" d="M282 272h94" />
+                      <circle cx="428" cy="278" r="24" fill="#ffc071" stroke="#0e0c0f" stroke-width="7" />
+                      <path class="svg-line-thin" d="M417 278l9 9 18-22" />
+                      <rect x="315" y="86" width="94" height="54" rx="27" fill="#fff4f0" stroke="#0e0c0f" stroke-width="8" />
+                      <circle cx="347" cy="114" r="5.5" class="svg-ink" />
+                      <circle cx="379" cy="114" r="5.5" class="svg-ink" />
+                      <path class="svg-line-thin" d="M353 126c8 7 17 7 25 0" />
+                      <path class="svg-ink" d="M120 296c-4-44 32-76 77-68 34 6 58 33 61 69-40-16-78-16-118-1-8 3-14 3-20 0Z" />
+                      <path class="svg-line" d="M137 304c-3 44 13 70 48 70 34 0 51-25 48-70" />
+                      <circle cx="169" cy="328" r="5" class="svg-ink" />
+                      <circle cx="207" cy="328" r="5" class="svg-ink" />
+                      <path class="svg-line-thin" d="M174 351c10 8 22 8 32 0" />
+                      <path class="svg-line" d="M86 398c15-55 48-83 101-83 52 0 84 28 99 83" />
+                      <circle cx="584" cy="320" r="48" fill="#ec817b" stroke="#0e0c0f" stroke-width="8" />
+                      <path class="svg-line-thin" d="M563 320l14 15 32-39" />
+                      <circle cx="568" cy="406" r="30" fill="#fff4f0" stroke="#0e0c0f" stroke-width="7" />
+                      <path class="svg-line-thin" d="M554 405h28" />
+                      <path class="svg-line-thin" d="M568 391v28" />
+                      <rect x="82" y="150" width="72" height="84" rx="14" fill="#fff4f0" stroke="#0e0c0f" stroke-width="8" />
+                      <path class="svg-line-thin" d="M105 178h28" />
+                      <path class="svg-line-thin" d="M105 203h28" />
+                      <circle cx="154" cy="150" r="22" class="svg-coral" stroke="#0e0c0f" stroke-width="7" />
+                    </svg>
+                  </div>
+                  <div class="hero-copy">
+                    <h3>AI Asks, Humans Earn</h3>
+                    <p>More specific to Curyo: the first visual reads as question, verified human judgment, and reward.</p>
+                    <div class="button-row">
+                      <span class="button primary">Earn USDC</span>
+                      <span class="button secondary">For Agents</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="option">
+          <header class="option-head">
+            <div>
+              <div class="option-kicker">Concept C</div>
+              <h2>Civic Signal</h2>
+            </div>
+            <div class="badge">Most protocol-native</div>
+          </header>
+          <div class="option-grid">
+            <aside class="logo-panel">
+              <div class="logo-stage" aria-label="Civic Signal logo concept">
+                <svg viewBox="0 0 320 320" role="img" aria-label="Network of human nodes around an AI question signal">
+                  <defs>
+                    <linearGradient id="c-loop" x1="74" y1="68" x2="250" y2="252" gradientUnits="userSpaceOnUse">
+                      <stop stop-color="#55bad0" />
+                      <stop offset="0.45" stop-color="#8a4de8" />
+                      <stop offset="1" stop-color="#f47a42" />
+                    </linearGradient>
+                  </defs>
+                  <rect x="44" y="48" width="232" height="232" rx="58" fill="#fff4f0" />
+                  <circle cx="160" cy="160" r="87" fill="none" stroke="url(#c-loop)" stroke-width="10" />
+                  <path class="svg-line-thin" d="M99 220l48-43" />
+                  <path class="svg-line-thin" d="M221 220l-48-43" />
+                  <path class="svg-line-thin" d="M160 90v52" />
+                  <rect x="116" y="126" width="88" height="58" rx="24" fill="#fff4f0" stroke="#0e0c0f" stroke-width="8" />
+                  <circle cx="146" cy="155" r="5" class="svg-ink" />
+                  <circle cx="175" cy="155" r="5" class="svg-ink" />
+                  <path class="svg-line-thin" d="M152 167c6 5 13 5 20 0" />
+                  <circle cx="160" cy="84" r="25" fill="#55bad0" stroke="#0e0c0f" stroke-width="7" />
+                  <path class="svg-line-thin" d="M148 84c7 8 17 8 24 0" />
+                  <circle cx="91" cy="226" r="25" fill="#ec817b" stroke="#0e0c0f" stroke-width="7" />
+                  <path class="svg-line-thin" d="M79 226l9 9 20-25" />
+                  <circle cx="229" cy="226" r="25" fill="#ffc071" stroke="#0e0c0f" stroke-width="7" />
+                  <path class="svg-line-thin" d="M215 226h28" />
+                  <path class="svg-line-thin" d="M229 212v28" />
+                </svg>
+              </div>
+              <div class="notes">
+                <div class="note">
+                  <b>Logo idea</b>
+                  <span>AI signal in the center, verified humans as nodes around the loop.</span>
+                </div>
+                <div class="note">
+                  <b>Landing image</b>
+                  <span>More infrastructure-oriented: agents, voters, on-chain settlement, reusable public result.</span>
+                </div>
+                <div class="note">
+                  <b>Risk</b>
+                  <span>Clearer for crypto-native audiences, but less emotionally warm than Concepts A and B.</span>
+                </div>
+              </div>
+            </aside>
+            <div class="hero-panel">
+              <div class="browser">
+                <div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                <div class="mock-hero">
+                  <div class="hero-copy">
+                    <h3>AI Asks, Humans Earn</h3>
+                    <p>Useful when the landing page needs to signal public protocol, not just assistant workflow.</p>
+                    <div class="button-row">
+                      <span class="button primary">Earn USDC</span>
+                      <span class="button secondary">For Agents</span>
+                    </div>
+                  </div>
+                  <div class="art-wrap">
+                    <svg viewBox="0 0 720 520" role="img" aria-label="Human network around AI and public result">
+                      <defs>
+                        <linearGradient id="c-hero-loop" x1="144" y1="95" x2="592" y2="414" gradientUnits="userSpaceOnUse">
+                          <stop stop-color="#55bad0" />
+                          <stop offset="0.48" stop-color="#8a4de8" />
+                          <stop offset="1" stop-color="#f47a42" />
+                        </linearGradient>
+                      </defs>
+                      <rect x="8" y="18" width="704" height="484" rx="18" fill="#fff4f0" />
+                      <path class="svg-line-thin" d="M52 398h618" />
+                      <ellipse cx="360" cy="260" rx="224" ry="151" fill="none" stroke="url(#c-hero-loop)" stroke-width="8" />
+                      <ellipse cx="360" cy="260" rx="151" ry="224" fill="none" stroke="url(#c-hero-loop)" stroke-width="8" opacity="0.82" />
+                      <path class="svg-line-thin" d="M248 260h224" />
+                      <path class="svg-line-thin" d="M360 148v224" />
+                      <rect x="296" y="216" width="128" height="80" rx="34" fill="#fff4f0" stroke="#0e0c0f" stroke-width="8" />
+                      <circle cx="340" cy="256" r="6" class="svg-ink" />
+                      <circle cx="382" cy="256" r="6" class="svg-ink" />
+                      <path class="svg-line-thin" d="M349 271c9 8 19 8 29 0" />
+                      <circle cx="360" cy="118" r="44" fill="#55bad0" stroke="#0e0c0f" stroke-width="8" />
+                      <path class="svg-line" d="M334 121c7 22 44 22 52 0" />
+                      <path class="svg-line-thin" d="M334 110c7-8 17-9 28-3" />
+                      <path class="svg-line-thin" d="M378 110c7-8 17-9 28-3" />
+                      <circle cx="176" cy="265" r="46" fill="#ec817b" stroke="#0e0c0f" stroke-width="8" />
+                      <path class="svg-line-thin" d="M154 265l15 16 35-43" />
+                      <circle cx="548" cy="265" r="46" fill="#ffc071" stroke="#0e0c0f" stroke-width="8" />
+                      <path class="svg-line-thin" d="M526 265h44" />
+                      <path class="svg-line-thin" d="M548 243v44" />
+                      <rect x="292" y="360" width="136" height="58" rx="14" fill="#fff4f0" stroke="#0e0c0f" stroke-width="8" />
+                      <path class="svg-line-thin" d="M320 388h80" />
+                      <path class="svg-line-thin" d="M196 398h328" />
+                      <circle cx="252" cy="398" r="16" fill="#7adfbe" stroke="#0e0c0f" stroke-width="6" />
+                      <circle cx="468" cy="398" r="16" fill="#7adfbe" stroke="#0e0c0f" stroke-width="6" />
+                      <rect x="88" y="117" width="98" height="68" rx="15" fill="#fff4f0" stroke="#0e0c0f" stroke-width="8" />
+                      <path class="svg-line-thin" d="M112 145h48" />
+                      <path class="svg-line-thin" d="M112 166h34" />
+                      <rect x="536" y="116" width="86" height="72" rx="15" fill="#fff4f0" stroke="#0e0c0f" stroke-width="8" />
+                      <path class="svg-line-thin" d="M558 144h42" />
+                      <path class="svg-line-thin" d="M558 166h26" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="sources" aria-label="Implementation notes and research">
+        <div class="source-box">
+          <h2>Implementation notes</h2>
+          <ul>
+            <li>Keep the current orb as a fallback asset until the new mark is tested at favicon, header, hero, and social-card sizes.</li>
+            <li>Prototype Concept B first by replacing <code>CuryoAnimation</code> with a vector hero component and swapping <code>CuryoLogo</code> to an SVG mark.</li>
+            <li>Use animation sparingly: a slow loop stroke draw or subtle handoff pulse is enough.</li>
+            <li>Run visual checks on mobile and laptop widths before shipping, especially the hero height and header logo clarity.</li>
+          </ul>
+        </div>
+        <div class="source-box">
+          <h2>Research cues used</h2>
+          <p>
+            The mockups lean on human-in-the-loop UX patterns that emphasize selective human participation, clear
+            decision points, feedback capture, and trust calibration. Visually, that means the human review action must
+            be as visible as the AI.
+          </p>
+          <ul>
+            <li>Human in the loop as an HCI design problem, not just automation.</li>
+            <li>AI asks for help at defined decision points, then resumes with human feedback.</li>
+            <li>Interfaces should make handoffs, control, and result confidence visible.</li>
+          </ul>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
