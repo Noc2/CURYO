@@ -1,7 +1,7 @@
+import { ContentRegistryAbi } from "@curyo/contracts/abis";
 import assert from "node:assert/strict";
 import { after, before, beforeEach, test } from "node:test";
-import { ContentRegistryAbi } from "@curyo/contracts/abis";
-import { encodeAbiParameters, encodeEventTopics, type Address, type Hex, type TransactionReceipt } from "viem";
+import { type Address, type Hex, type TransactionReceipt, encodeAbiParameters, encodeEventTopics } from "viem";
 import { __setDatabaseResourcesForTests, dbClient } from "~~/lib/db";
 import { createMemoryDatabaseResources } from "~~/lib/db/testMemory";
 import type { X402QuestionPayload } from "~~/lib/x402/questionPayload";

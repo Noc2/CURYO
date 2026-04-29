@@ -488,8 +488,7 @@ function getQuestionSubmissionDependencies() {
       x402QuestionSubmissionTestOverrides?.preflightX402QuestionSubmission ?? preflightX402QuestionSubmission,
     resolveX402QuestionConfig:
       x402QuestionSubmissionTestOverrides?.resolveX402QuestionConfig ?? resolveX402QuestionConfig,
-    waitForSuccessfulReceipt:
-      x402QuestionSubmissionTestOverrides?.waitForSuccessfulReceipt ?? waitForSuccessfulReceipt,
+    waitForSuccessfulReceipt: x402QuestionSubmissionTestOverrides?.waitForSuccessfulReceipt ?? waitForSuccessfulReceipt,
   };
 }
 
@@ -1098,7 +1097,10 @@ export async function buildNativeX402QuestionSubmissionPlan(params: {
   };
 }
 
-function readSubmissionResult(receipt: TransactionReceipt, contentRegistryAddress: Address): {
+function readSubmissionResult(
+  receipt: TransactionReceipt,
+  contentRegistryAddress: Address,
+): {
   bundleId: bigint | null;
   contentIds: bigint[];
   rewardPoolId: bigint | null;
