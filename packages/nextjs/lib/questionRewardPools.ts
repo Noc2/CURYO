@@ -66,12 +66,31 @@ function normalizeAddress(value: string | undefined): `0x${string}` | undefined 
   return trimmed && isAddress(trimmed) ? (trimmed as `0x${string}`) : undefined;
 }
 
+function getDeployedContractAddress(chainId: number, contractName: string): `0x${string}` | undefined {
+  const deployedAddress = (contracts?.[chainId]?.[contractName] as { address?: string } | undefined)?.address;
+  return normalizeAddress(deployedAddress);
+}
+
+export function getConfiguredContentRegistryAddress(chainId: number): `0x${string}` | undefined {
+  return getDeployedContractAddress(chainId, "ContentRegistry");
+}
+
 export function getConfiguredQuestionRewardPoolEscrowAddress(chainId: number): `0x${string}` | undefined {
   const envAddress = normalizeAddress(process.env.NEXT_PUBLIC_QUESTION_REWARD_POOL_ESCROW_ADDRESS);
-  if (envAddress) return envAddress;
+  const deployedAddress = getDeployedContractAddress(chainId, "QuestionRewardPoolEscrow");
 
-  const deployedAddress = (contracts?.[chainId]?.QuestionRewardPoolEscrow as { address?: string } | undefined)?.address;
-  return normalizeAddress(deployedAddress);
+  if (envAddress) {
+    if (process.env.NODE_ENV === "production") {
+      if (!deployedAddress || envAddress.toLowerCase() !== deployedAddress.toLowerCase()) {
+        throw new Error(
+          "NEXT_PUBLIC_QUESTION_REWARD_POOL_ESCROW_ADDRESS must match the shared QuestionRewardPoolEscrow deployment in production.",
+        );
+      }
+    }
+    return envAddress;
+  }
+
+  return deployedAddress;
 }
 
 export function getDefaultUsdcAddress(chainId: number): `0x${string}` | undefined {

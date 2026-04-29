@@ -24,7 +24,9 @@ import {
   MIN_REWARD_POOL_SETTLED_ROUNDS,
   QUESTION_REWARD_POOL_ESCROW_ABI,
   QUESTION_REWARD_POOL_ESCROW_WIRING_ABI,
+  QUESTION_SUBMISSION_ABI,
   formatUsdAmount,
+  getConfiguredContentRegistryAddress,
   getConfiguredQuestionRewardPoolEscrowAddress,
   getDefaultUsdcAddress,
   parseUsdRewardPoolAmount,
@@ -75,6 +77,7 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
   const [isFunding, setIsFunding] = useState(false);
 
   const chainId = chain?.id ?? wagmiConfig.chains[0]?.id ?? 0;
+  const contentRegistryAddress = useMemo(() => getConfiguredContentRegistryAddress(chainId), [chainId]);
   const escrowAddress = useMemo(() => getConfiguredQuestionRewardPoolEscrowAddress(chainId), [chainId]);
   const fallbackUsdcAddress = useMemo(() => getDefaultUsdcAddress(chainId), [chainId]);
   const parsedAmount = useMemo(() => parseUsdRewardPoolAmount(amount), [amount]);
@@ -90,6 +93,7 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
     bountyWindowSeconds !== null && bountyWindowAmount >= (bountyWindowPreset === "custom" ? 1 : 0);
   const canSubmit = Boolean(
     address &&
+      contentRegistryAddress &&
       escrowAddress &&
       parsedAmount &&
       voterCount >= MIN_REWARD_POOL_REQUIRED_VOTERS &&
@@ -106,6 +110,10 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
       notification.error("Bounties are not deployed on this network yet.");
       return;
     }
+    if (!contentRegistryAddress) {
+      notification.error("Curyo registry is not deployed on this network yet.");
+      return;
+    }
     if (!parsedAmount) {
       notification.warning("Enter a positive USD amount.");
       return;
@@ -119,14 +127,34 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
     try {
       let usdcAddress = fallbackUsdcAddress;
       try {
-        const [, configuredUsdcAddress] = (await readContract(wagmiConfig, {
+        const [, configuredUsdcAddress, wiredRegistryAddress] = (await readContract(wagmiConfig, {
           address: escrowAddress,
           abi: QUESTION_REWARD_POOL_ESCROW_WIRING_ABI,
           functionName: "getWiring",
         })) as readonly [`0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`];
+        if (wiredRegistryAddress.toLowerCase() !== contentRegistryAddress.toLowerCase()) {
+          notification.error("Bounty escrow is not wired to this registry.");
+          return;
+        }
         usdcAddress = configuredUsdcAddress;
       } catch {
-        // Deployment metadata can be ahead of the escrow read during local work; fall back to chain defaults.
+        notification.error("Could not verify bounty escrow wiring.");
+        return;
+      }
+
+      try {
+        const registryEscrowAddress = (await readContract(wagmiConfig, {
+          address: contentRegistryAddress,
+          abi: QUESTION_SUBMISSION_ABI,
+          functionName: "questionRewardPoolEscrow",
+        })) as `0x${string}`;
+        if (registryEscrowAddress.toLowerCase() !== escrowAddress.toLowerCase()) {
+          notification.error("Bounty escrow is not active for this registry.");
+          return;
+        }
+      } catch {
+        notification.error("Could not verify registry bounty escrow.");
+        return;
       }
 
       if (!usdcAddress) {
