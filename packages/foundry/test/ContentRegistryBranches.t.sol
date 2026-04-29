@@ -160,6 +160,22 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         assertEq(registry.questionRewardPoolEscrow(), address(replacementEscrow));
     }
 
+    function test_SetVotingEngine_UnpauseRejectsStaleRewardEscrow() public {
+        RoundVotingEngine replacementEngine = _deployReplacementVotingEngine();
+        mockQuestionRewardPoolEscrow.setWiring(address(registry), address(votingEngine));
+
+        vm.startPrank(owner);
+        registry.pause();
+        registry.setVotingEngine(address(replacementEngine));
+
+        vm.expectRevert("Bad escrow wiring");
+        registry.unpause();
+
+        mockQuestionRewardPoolEscrow.setWiring(address(registry), address(replacementEngine));
+        registry.unpause();
+        vm.stopPrank();
+    }
+
     function _vote(address voter, uint256 contentId, bool isUp) internal {
         _commit(voter, contentId, isUp);
     }
@@ -1830,6 +1846,37 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.prank(submitter);
         vm.expectRevert("Content has votes");
         registry.cancelContent(1);
+    }
+
+    function test_SetVotingEngine_OldEngineCanSettleInFlightRoundOnly() public {
+        vm.startPrank(submitter);
+        hrepToken.approve(address(registry), 10e6);
+        _submitContentWithReservation(registry, "https://example.com/in-flight-engine", "goal", "goal", "tags", 0);
+        vm.stopPrank();
+
+        (bytes32 ck1, bytes32 salt1) = _commit(voter1, 1, true);
+        (bytes32 ck2, bytes32 salt2) = _commit(voter2, 1, true);
+        (bytes32 ck3, bytes32 salt3) = _commit(voter3, 1, false);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, 1);
+
+        RoundVotingEngine replacementEngine = _deployReplacementVotingEngine();
+        vm.startPrank(owner);
+        registry.pause();
+        registry.setVotingEngine(address(replacementEngine));
+        registry.unpause();
+        vm.stopPrank();
+
+        vm.prank(address(votingEngine));
+        vm.expectRevert("Only VotingEngine");
+        registry.updateActivity(1);
+
+        _warpPastTlockRevealTime(block.timestamp + 1 hours);
+        votingEngine.revealVoteByCommitKey(1, roundId, ck1, true, salt1);
+        votingEngine.revealVoteByCommitKey(1, roundId, ck2, true, salt2);
+        votingEngine.revealVoteByCommitKey(1, roundId, ck3, false, salt3);
+        votingEngine.settleRound(1, roundId);
+
+        assertGt(registry.getRating(1), 5000);
     }
 
     function test_CancelContent_VotingEngineNotSet_AllowsCancel() public {
