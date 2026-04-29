@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Curyo Landing Page Mockups</title>
     <style>
-      @import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap");
+      @import url("https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700;800&display=swap");
 
       :root {
         color-scheme: dark;
@@ -138,67 +138,12 @@
         background: #000000;
       }
 
-      .hero-illustration {
+      .hero-art-card img,
+      .landing-art img,
+      .current-hero-orb {
         display: block;
         width: 100%;
         height: auto;
-        background: #000000;
-      }
-
-      .scene-line {
-        fill: none;
-        stroke: #ffffff;
-        stroke-width: 7.4;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-      }
-
-      .scene-line.thin {
-        stroke-width: 5.6;
-      }
-
-      .scene-white-fill {
-        fill: #ffffff;
-      }
-
-      .scene-thumb {
-        color: var(--orange);
-        filter: drop-shadow(0 0 12px rgb(242 100 38 / 0.34));
-      }
-
-      .orbit-strong {
-        fill: none;
-        stroke: var(--orange);
-        stroke-width: 8;
-        stroke-linecap: round;
-      }
-
-      .orbit-mid {
-        fill: none;
-        stroke: var(--orange-2);
-        stroke-width: 7;
-        stroke-linecap: round;
-      }
-
-      .orbit-soft {
-        fill: none;
-        stroke: var(--orange-3);
-        stroke-width: 6;
-        stroke-linecap: round;
-      }
-
-      .orbit-coral {
-        fill: none;
-        stroke: #ff6a31;
-        stroke-width: 6.8;
-        stroke-linecap: round;
-      }
-
-      .orbit-peach {
-        fill: none;
-        stroke: #ffc2a2;
-        stroke-width: 5.8;
-        stroke-linecap: round;
       }
 
       .hero-art-notes,
@@ -263,51 +208,84 @@
         font-size: 0.86rem;
       }
 
-      .thumb-mark {
-        display: inline-flex;
+      .mug-mark {
+        position: relative;
+        display: inline-block;
         width: 34px;
-        height: 34px;
+        height: 30px;
         flex: 0 0 auto;
-        align-items: center;
-        justify-content: center;
-        color: var(--orange);
+        border: 3px solid #ffffff;
+        border-top-width: 3px;
+        border-radius: 5px 5px 8px 8px;
+        background: linear-gradient(180deg, var(--orange), var(--orange-2));
+        box-shadow: inset 0 3px 0 rgb(255 255 255 / 0.18);
       }
 
-      .thumb-mark svg {
-        display: block;
-        width: 100%;
-        height: 100%;
-        overflow: visible;
+      .mug-mark::before {
+        content: "";
+        position: absolute;
+        top: 6px;
+        left: -13px;
+        width: 14px;
+        height: 15px;
+        border: 3px solid #ffffff;
+        border-right: 0;
+        border-radius: 11px 0 0 11px;
       }
 
-      .thumb-mark .thumb-fill {
-        fill: currentColor;
+      .mug-mark::after {
+        content: "";
+        position: absolute;
+        top: 4px;
+        left: 4px;
+        right: 4px;
+        height: 5px;
+        border-radius: 999px;
+        background: #050505;
       }
 
-      .thumb-mark .thumb-line {
-        fill: none;
-        stroke: #ffffff;
-        stroke-width: 3;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-      }
-
-      .thumb-mark.small {
+      .mug-mark.small {
         width: 22px;
-        height: 22px;
+        height: 20px;
+        border-width: 2px;
       }
 
-      .thumb-mark.small .thumb-line {
-        stroke-width: 3.4;
+      .mug-mark.small::before {
+        top: 4px;
+        left: -9px;
+        width: 9px;
+        height: 10px;
+        border-width: 2px;
       }
 
-      .thumb-mark.large {
-        width: 74px;
-        height: 74px;
+      .mug-mark.small::after {
+        top: 3px;
+        left: 3px;
+        right: 3px;
+        height: 4px;
       }
 
-      .thumb-mark.large .thumb-line {
-        stroke-width: 2.7;
+      .mug-mark.large {
+        width: 78px;
+        height: 68px;
+        border-width: 5px;
+        border-radius: 12px 12px 18px 18px;
+      }
+
+      .mug-mark.large::before {
+        top: 14px;
+        left: -28px;
+        width: 30px;
+        height: 33px;
+        border-width: 5px;
+        border-radius: 22px 0 0 22px;
+      }
+
+      .mug-mark.large::after {
+        top: 9px;
+        left: 10px;
+        right: 10px;
+        height: 10px;
       }
 
       .app-icon-preview {
@@ -324,8 +302,20 @@
         background: #000000;
       }
 
-      .app-icon-box.thumbs-up {
+      .app-icon-box.mug {
         border-color: rgb(242 100 38 / 0.44);
+      }
+
+      .current-orb-mark {
+        display: block;
+        width: 36px;
+        height: 36px;
+        flex: 0 0 auto;
+      }
+
+      .current-orb-mark.small {
+        width: 22px;
+        height: 22px;
       }
 
       .mockups {
@@ -483,6 +473,58 @@
         background: #000000;
       }
 
+      .landing.current .landing-nav {
+        border-bottom: 0;
+      }
+
+      .landing.current .brand-lockup {
+        align-items: center;
+      }
+
+      .current-brand-text {
+        display: grid;
+        gap: 2px;
+      }
+
+      .current-brand-title {
+        font-family: "Bebas Neue", Manrope, sans-serif;
+        font-size: 1.42rem;
+        letter-spacing: 0.08em;
+        line-height: 0.95;
+      }
+
+      .current-brand-subtitle {
+        color: var(--muted);
+        font-size: 0.86rem;
+        line-height: 1;
+      }
+
+      .landing.current .landing-copy h3 {
+        font-family: "Bebas Neue", Manrope, sans-serif;
+        max-width: 11ch;
+        font-size: clamp(3.2rem, 7vw, 6.6rem);
+        line-height: 0.82;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+      }
+
+      .landing.current .landing-copy p {
+        max-width: 24ch;
+        text-transform: uppercase;
+      }
+
+      .current-orb-wrap {
+        min-height: 430px;
+        display: grid;
+        place-items: center;
+        overflow: visible;
+      }
+
+      .current-hero-orb {
+        max-width: 580px;
+        transform: scale(1.08);
+      }
+
       .steps-band {
         border-top: 1px solid rgb(255 255 255 / 0.1);
         padding: 24px 30px 30px;
@@ -618,101 +660,21 @@
     </style>
   </head>
   <body>
-    <svg width="0" height="0" aria-hidden="true" focusable="false" style="position: absolute">
-      <symbol id="thumb-up-mark" viewBox="0 0 64 64">
-        <path
-          d="M22 54H12c-3.9 0-7-3.1-7-7V32c0-3.9 3.1-7 7-7h8.5l8.1-14.1c1.6-2.9 6-1.8 6 1.5V24h13.1c5 0 8.8 4.6 7.8 9.5l-2.9 13.7C51.7 51.2 48.1 54 44 54H22Z"
-          fill="currentColor"
-          stroke="#ffffff"
-          stroke-width="3.8"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        />
-        <path
-          d="M20.5 25v29"
-          fill="none"
-          stroke="#ffffff"
-          stroke-width="3.8"
-          stroke-linecap="round"
-        />
-      </symbol>
-      <symbol id="curyo-human-loop-scene" viewBox="0 0 1600 900">
-        <rect width="1600" height="900" fill="#000000" />
-
-        <g aria-hidden="true">
-          <path class="scene-line" d="M80 742H1520" />
-
-          <path class="scene-line thin" d="M130 742V610C130 540 178 493 244 493H332" />
-          <path class="scene-line" d="M252 742C260 578 330 448 456 418C560 393 640 467 666 617" />
-          <path class="scene-line thin" d="M420 398V457C434 486 501 488 520 457V398" />
-          <path
-            class="scene-line"
-            d="M472 204C410 204 372 247 372 306C372 363 414 400 472 400C528 400 570 360 570 304C570 247 532 204 472 204Z"
-          />
-          <path class="scene-line thin" d="M386 282C420 270 454 246 476 224C500 250 532 260 565 255" />
-          <circle class="scene-white-fill" cx="528" cy="294" r="5.8" />
-          <path class="scene-line thin" d="M552 305L545 329L564 329" />
-          <path class="scene-line thin" d="M528 358C548 375 583 372 604 350" />
-
-          <path class="scene-line thin" d="M340 554L312 702H475" />
-          <path class="scene-line thin" d="M536 552C520 596 512 635 514 665" />
-          <path class="scene-line thin" d="M472 696C488 648 518 617 552 606" />
-
-          <rect class="scene-line" x="604" y="366" width="430" height="285" rx="18" />
-          <path class="scene-line" d="M795 651L773 786H917L894 651" />
-          <path class="scene-line" d="M730 800H958" />
-          <circle class="scene-line" cx="843" cy="666" r="31" />
-          <path class="scene-line thin" d="M585 742H750" />
-          <path class="scene-line thin" d="M372 742H560" />
-          <g class="scene-thumb" transform="translate(498 566) scale(1.9)">
-            <path
-              d="M22 54H12c-3.9 0-7-3.1-7-7V32c0-3.9 3.1-7 7-7h8.5l8.1-14.1c1.6-2.9 6-1.8 6 1.5V24h13.1c5 0 8.8 4.6 7.8 9.5l-2.9 13.7C51.7 51.2 48.1 54 44 54H22Z"
-              fill="currentColor"
-              stroke="#ffffff"
-              stroke-width="3.8"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-            <path
-              d="M20.5 25v29"
-              fill="none"
-              stroke="#ffffff"
-              stroke-width="3.8"
-              stroke-linecap="round"
-            />
-          </g>
-        </g>
-
-        <g aria-hidden="true" transform="translate(1252 430)">
-          <ellipse class="orbit-strong" cx="0" cy="0" rx="270" ry="126" transform="rotate(-28)" />
-          <ellipse class="orbit-mid" cx="0" cy="0" rx="260" ry="112" transform="rotate(24)" />
-          <ellipse class="orbit-soft" cx="0" cy="0" rx="240" ry="150" transform="rotate(70)" />
-          <ellipse class="orbit-coral" cx="0" cy="0" rx="284" ry="98" transform="rotate(-4)" />
-          <ellipse class="orbit-peach" cx="0" cy="0" rx="228" ry="172" transform="rotate(116)" />
-
-          <rect class="scene-line" x="-112" y="-62" width="224" height="124" rx="58" />
-          <circle class="scene-white-fill" cx="-42" cy="-11" r="11" />
-          <circle class="scene-white-fill" cx="42" cy="-11" r="11" />
-          <path class="scene-line thin" d="M-24 27C-8 45 9 45 25 27" />
-        </g>
-      </symbol>
-    </svg>
     <main class="page">
       <section class="intro" aria-labelledby="page-title">
         <div>
           <div class="eyebrow">Design exploration</div>
-          <h1 id="page-title">Landing mockups with Manrope</h1>
+          <h1 id="page-title">Landing comparison with Manrope</h1>
           <p>
-            Design-only directions for a refreshed Curyo landing page. The mockups use Manrope, a shared orange
-            thumbs-up identity mark, calmer orange AI orbit paths, and an abstract human approval gesture in the hero
-            art.
+            Design-only comparison for a refreshed Curyo landing page. The proposal keeps the current page structure
+            but replaces the abstract orb hero with the friendlier human-and-AI collaboration image.
           </p>
         </div>
         <aside class="decision">
           <strong>No production implementation in this pass.</strong>
           <p>
-            These are static mockups for judging the brand direction: the page shell, proposed thumb identity, and first
-            fold layouts before touching the real Next.js landing page.
+            These are static mockups for judging the brand direction against the current landing page before touching
+            the real Next.js implementation.
           </p>
         </aside>
       </section>
@@ -720,66 +682,61 @@
       <h2 class="section-title">Hero Art Direction</h2>
       <section class="hero-art-card" aria-label="Refined hero art">
         <figure>
-          <svg
-            class="hero-illustration"
-            viewBox="0 0 1600 900"
-            role="img"
-            aria-label="Human giving an orange thumbs-up beside an abstract AI collaborator at a desktop computer with clean orange orbit paths"
-          >
-            <use href="#curyo-human-loop-scene"></use>
-          </svg>
+          <img
+            src="assets/curyo-human-loop-orange-orbits.png"
+            alt="Human giving a thumbs-up beside a desktop computer and an abstract AI collaborator with orange orbit lines"
+          />
         </figure>
         <aside class="hero-art-notes">
           <div class="kicker">Locked base direction</div>
-          <h2>White Lines + Thumb Signal</h2>
+          <h2>White Lines + Friendly Human Loop</h2>
           <ul>
-            <li>Thicker pure-white structural linework.</li>
-            <li>More orange/coral orbit paths around the AI, without dot markers.</li>
-            <li>Human thumbs-up is the same shape as the proposed favicon.</li>
-            <li>Desk prop removed so the approval signal owns the identity.</li>
-            <li>Still abstract enough to avoid face and hair detail issues.</li>
+            <li>Use the preferred raster image rather than the simplified redraw.</li>
+            <li>Keep the human, desktop computer, mug, and AI in the original positions.</li>
+            <li>Keep the richer orange orbit paths without dot markers.</li>
+            <li>Make the first read: AI working together with a human.</li>
           </ul>
         </aside>
       </section>
 
-      <h2 class="section-title">Thumb Favicon Mockup</h2>
-      <section class="identity-card" aria-label="Thumb identity samples">
+      <h2 class="section-title">Mug Favicon Mockup</h2>
+      <section class="identity-card" aria-label="Mug identity samples">
         <div class="identity-samples">
           <div class="brand-lockup">
-            <span class="thumb-mark" aria-hidden="true"><svg><use href="#thumb-up-mark"></use></svg></span>
+            <span class="mug-mark" aria-hidden="true"></span>
             <span class="brand-name">Curyo</span>
           </div>
           <div class="browser-tab">
-            <span class="thumb-mark small" aria-hidden="true"><svg><use href="#thumb-up-mark"></use></svg></span>
+            <span class="mug-mark small" aria-hidden="true"></span>
             <span>Curyo - AI Asks, Humans Earn</span>
           </div>
           <div class="app-icon-preview">
-            <div class="app-icon-box thumbs-up">
-              <span class="thumb-mark large" aria-hidden="true"><svg><use href="#thumb-up-mark"></use></svg></span>
+            <div class="app-icon-box mug">
+              <span class="mug-mark large" aria-hidden="true"></span>
             </div>
             <div>
               <div class="kicker">App icon / favicon idea</div>
-              <p>Black square, orange thumbs-up, white outline.</p>
+              <p>Black square, orange mug, white rim and handle.</p>
             </div>
           </div>
         </div>
         <aside class="identity-notes">
           <div class="kicker">Identity note</div>
-          <h2>Thumb as Human Approval Signal</h2>
+          <h2>Mug as Friendly Human Signal</h2>
           <p>
-            The exact same orange hand appears in the hero, brand lockup, browser tab, and favicon preview. That makes
-            the symbol read as human approval instead of a separate decorative object.
+            The mug is simple at favicon size and ties back to the human working scene. It keeps the brand warm without
+            asking the main hero art to become the logo.
           </p>
         </aside>
       </section>
 
-      <h2 class="section-title">Landing Page Mockups</h2>
-      <section class="mockups" aria-label="Landing page mockups">
+      <h2 class="section-title">Landing Page Comparison</h2>
+      <section class="mockups" aria-label="Landing page comparison">
         <article class="mockup-card">
           <header class="mockup-head">
             <div>
-              <div class="kicker">Mockup A</div>
-              <h2>Current Landing Refresh</h2>
+              <div class="kicker">Proposed</div>
+              <h2>Human Loop Refresh</h2>
             </div>
             <div class="badge">Closest to current site</div>
           </header>
@@ -788,12 +745,12 @@
               <span class="dot"></span>
               <span class="dot"></span>
               <span class="dot"></span>
-              <span class="tab-label"><span class="thumb-mark small" aria-hidden="true"><svg><use href="#thumb-up-mark"></use></svg></span>Curyo</span>
+              <span class="tab-label"><span class="mug-mark small" aria-hidden="true"></span>Curyo</span>
             </div>
             <div class="landing">
               <nav class="landing-nav" aria-label="Mock navigation">
                 <div class="brand-lockup">
-                  <span class="thumb-mark" aria-hidden="true"><svg><use href="#thumb-up-mark"></use></svg></span>
+                  <span class="mug-mark" aria-hidden="true"></span>
                   <span class="brand-name">Curyo</span>
                 </div>
                 <div class="nav-links">
@@ -817,14 +774,10 @@
                   </div>
                 </div>
                 <figure class="landing-art">
-                  <svg
-                    class="hero-illustration"
-                    viewBox="0 0 1600 900"
-                    role="img"
-                    aria-label="Hero mockup showing human approval and abstract AI collaboration"
-                  >
-                    <use href="#curyo-human-loop-scene"></use>
-                  </svg>
+                  <img
+                    src="assets/curyo-human-loop-orange-orbits.png"
+                    alt="Hero mockup showing human and abstract AI collaboration"
+                  />
                 </figure>
               </section>
               <section class="steps-band" aria-label="Mock steps">
@@ -839,7 +792,7 @@
           <aside class="mockup-notes">
             <p>
               Safest layout: keep the current copy structure, replace the abstract orb with the new collaborative hero,
-              and let the orange human hand carry the brand mark.
+              and use the orange mug as a small, friendly identity cue.
             </p>
           </aside>
         </article>
@@ -847,119 +800,70 @@
         <article class="mockup-card">
           <header class="mockup-head">
             <div>
-              <div class="kicker">Mockup B</div>
-              <h2>Centered Story First</h2>
+              <div class="kicker">Current</div>
+              <h2>Current Landing Page</h2>
             </div>
-            <div class="badge">Friendliest</div>
+            <div class="badge">Live direction</div>
           </header>
           <div class="browser-shell">
             <div class="browser-bar">
               <span class="dot"></span>
               <span class="dot"></span>
               <span class="dot"></span>
-              <span class="tab-label"><span class="thumb-mark small" aria-hidden="true"><svg><use href="#thumb-up-mark"></use></svg></span>Curyo</span>
+              <span class="tab-label">
+                <img class="current-orb-mark small" src="../../packages/nextjs/public/favicon.svg" alt="" />Curyo
+              </span>
             </div>
-            <div class="landing centered">
-              <nav class="landing-nav" aria-label="Mock navigation">
+            <div class="landing current">
+              <nav class="landing-nav" aria-label="Current landing navigation">
                 <div class="brand-lockup">
-                  <span class="thumb-mark" aria-hidden="true"><svg><use href="#thumb-up-mark"></use></svg></span>
-                  <span class="brand-name">Curyo</span>
+                  <img class="current-orb-mark" src="../../packages/nextjs/public/favicon.svg" alt="" />
+                  <span class="current-brand-text">
+                    <span class="current-brand-title">CURYO (BETA)</span>
+                    <span class="current-brand-subtitle">AI Asks, Humans Earn</span>
+                  </span>
                 </div>
                 <div class="nav-links">
-                  <span>Agents</span>
-                  <span>Humans</span>
                   <span>Docs</span>
+                  <span>How it works</span>
+                  <span>Rate</span>
                 </div>
               </nav>
-              <section class="landing-hero" aria-label="Mock hero">
+              <section class="landing-hero" aria-label="Current hero">
                 <div class="landing-copy">
-                  <h3>Human Judgment for AI Agents</h3>
-                  <p>Ask verified humans when an agent needs taste, context, evidence review, or a go/no-go signal.</p>
+                  <h3>AI Asks, Humans Earn</h3>
+                  <p>Verified, Staked Human Feedback for AI Agents</p>
                   <div class="cta-row">
-                    <span class="button primary">Ask Humans</span>
-                    <span class="button secondary">Start Voting</span>
+                    <span class="button primary">Earn USDC</span>
+                    <span class="button secondary">For Agents</span>
+                  </div>
+                  <div class="stat-row">
+                    <span class="stat"><strong>287</strong> verified humans</span>
+                    <span class="stat"><strong>3,482</strong> votes</span>
+                    <span class="stat"><strong>$0</strong> USDC paid</span>
                   </div>
                 </div>
-                <figure class="landing-art">
-                  <svg
-                    class="hero-illustration"
-                    viewBox="0 0 1600 900"
-                    role="img"
-                    aria-label="Centered landing mockup hero art"
-                  >
-                    <use href="#curyo-human-loop-scene"></use>
-                  </svg>
+                <figure class="landing-art current-orb-wrap">
+                  <img
+                    class="current-hero-orb"
+                    src="../../packages/nextjs/public/launch/curyo-v2-orb-hero-background.webp"
+                    alt="Current abstract Curyo orb hero"
+                  />
                 </figure>
+              </section>
+              <section class="steps-band" aria-label="Current mock steps">
+                <div class="step-row">
+                  <div class="step-card"><b>1. AI Asks</b><span>Agent submits a focused question and bounty.</span></div>
+                  <div class="step-card"><b>2. Humans Stake</b><span>Verified humans rate during blind rounds.</span></div>
+                  <div class="step-card"><b>3. Earn + Use</b><span>Humans earn rewards. Agents get a signal.</span></div>
+                </div>
               </section>
             </div>
           </div>
           <aside class="mockup-notes">
             <p>
-              More explanatory: the headline says what Curyo is before the familiar "AI Asks, Humans Earn" phrase shows
-              up elsewhere. Strong if the new hero art needs clearer positioning around human-in-the-loop.
-            </p>
-          </aside>
-        </article>
-
-        <article class="mockup-card">
-          <header class="mockup-head">
-            <div>
-              <div class="kicker">Mockup C</div>
-              <h2>Product + Proof Above Fold</h2>
-            </div>
-            <div class="badge">Most practical</div>
-          </header>
-          <div class="browser-shell">
-            <div class="browser-bar">
-              <span class="dot"></span>
-              <span class="dot"></span>
-              <span class="dot"></span>
-              <span class="tab-label"><span class="thumb-mark small" aria-hidden="true"><svg><use href="#thumb-up-mark"></use></svg></span>Curyo</span>
-            </div>
-            <div class="landing compact">
-              <nav class="landing-nav" aria-label="Mock navigation">
-                <div class="brand-lockup">
-                  <span class="thumb-mark" aria-hidden="true"><svg><use href="#thumb-up-mark"></use></svg></span>
-                  <span class="brand-name">Curyo</span>
-                </div>
-                <div class="nav-links">
-                  <span>Earn</span>
-                  <span>Ask</span>
-                  <span>Governance</span>
-                </div>
-              </nav>
-              <section class="landing-hero" aria-label="Mock hero">
-                <div class="landing-copy">
-                  <div>
-                    <h3>AI Asks, Humans Earn</h3>
-                    <p>Verified humans stake reputation on useful answers for agents.</p>
-                    <div class="cta-row">
-                      <span class="button primary">Earn USDC</span>
-                      <span class="button secondary">Read Docs</span>
-                    </div>
-                  </div>
-                  <div class="step-row">
-                    <div class="step-card"><b>Wallet-funded asks</b><span>Agents pay bounties directly.</span></div>
-                    <div class="step-card"><b>Public signal</b><span>Votes settle into auditable results.</span></div>
-                  </div>
-                </div>
-                <figure class="landing-art">
-                  <svg
-                    class="hero-illustration"
-                    viewBox="0 0 1600 900"
-                    role="img"
-                    aria-label="Compact landing mockup hero art"
-                  >
-                    <use href="#curyo-human-loop-scene"></use>
-                  </svg>
-                </figure>
-              </section>
-            </div>
-          </div>
-          <aside class="mockup-notes">
-            <p>
-              Highest information density: good if the landing page should quickly show what happens after the first
-              visual read. The orange hand mark keeps the human approval signal visible even in the denser layout.
+              Current direction: strong brand orb and poster feel, but the first visual read is more abstract and less
+              explicit about humans working with AI.
             </p>
           </aside>
         </article>
@@ -969,17 +873,17 @@
         <div class="note-box">
           <h2>Suggested Direction</h2>
           <p>
-            Mockup A is the best low-risk path because it keeps the current landing architecture while making the first
-            impression much clearer and warmer. Manrope makes it feel less poster-like than Bebas Neue while preserving
-            product clarity.
+            The proposed refresh is the best low-risk path because it keeps the current landing architecture while
+            making the first impression much clearer and warmer. Manrope makes the page feel less poster-like than
+            Bebas Neue while preserving product clarity.
           </p>
         </div>
         <div class="note-box">
           <h2>Prompt Lock</h2>
           <p>
-            For further image edits: preserve composition, keep pure white strokes, keep multiple solid orange AI orbit
-            lines without dot markers, keep the human thumbs-up readable, and avoid gradients, golden linework, desk
-            props, and detailed anatomy.
+            For further image edits: preserve the preferred raster composition, keep pure white strokes, keep the mug,
+            keep multiple solid orange AI orbit lines without dot markers, and avoid golden linework or detailed
+            anatomy.
           </p>
         </div>
       </section>
