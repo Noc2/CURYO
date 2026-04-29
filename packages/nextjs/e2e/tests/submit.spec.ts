@@ -33,7 +33,7 @@ test.describe("Ask page", () => {
     await urlInput.fill(`https://picsum.photos/seed/e2etest-${uniqueId}/1200/800.jpg`);
 
     // 3. Enter title and description.
-    const titleInput = page.getByPlaceholder("Ask something subjective that voters can rate");
+    const titleInput = page.getByPlaceholder("Write a subjective question voters can rate");
     await expect(titleInput).toBeVisible({ timeout: 3_000 });
     await titleInput.fill(`E2E Test Title ${uniqueId}`);
     await page.getByPlaceholder("Add context voters should consider").fill(`E2E test description ${uniqueId}`);
@@ -45,7 +45,7 @@ test.describe("Ask page", () => {
     // 5. Continue to bounty details, then ask
     await continueToBountyStep(page);
     await expect(page.getByRole("heading", { name: "Bounty" })).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByPlaceholder("Ask something subjective that voters can rate")).toBeHidden();
+    await expect(page.getByPlaceholder("Write a subjective question voters can rate")).toBeHidden();
     await selectBountyRewardAsset(page, "hrep");
 
     const submitBtn = page.getByRole("button", { name: /^Submit/i });

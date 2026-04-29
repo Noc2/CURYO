@@ -81,7 +81,7 @@ test.describe("Tied round lifecycle", () => {
     await urlInput.fill(`https://picsum.photos/seed/tie-test-${uniqueId}/1200/800.jpg`);
 
     // Enter title and description
-    const titleInput = page.getByPlaceholder("Ask something subjective that voters can rate");
+    const titleInput = page.getByPlaceholder("Write a subjective question voters can rate");
     await expect(titleInput).toBeVisible({ timeout: 3_000 });
     await titleInput.fill(`Tie Test Title ${uniqueId}`);
 

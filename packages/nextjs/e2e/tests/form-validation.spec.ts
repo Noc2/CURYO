@@ -6,7 +6,7 @@ async function fillRequiredQuestionFields(page: Page, contextUrl?: string): Prom
   if (!selectedCategory) return false;
 
   const uniqueId = Date.now();
-  await page.getByPlaceholder("Ask something subjective that voters can rate").fill(`Validation test ${uniqueId}`);
+  await page.getByPlaceholder("Write a subjective question voters can rate").fill(`Validation test ${uniqueId}`);
   await page.locator("textarea").first().fill(`Validation content ${uniqueId}`);
 
   const selectedSubcategory = await selectAskSubcategory(page);
