@@ -3,16 +3,18 @@ import { gotoWithRetry } from "../helpers/wait-helpers";
 import { expect, test } from "@playwright/test";
 
 test.describe("Public profiles", () => {
+  const profileAddress = ANVIL_ACCOUNTS.account9.address.toLowerCase();
+
   async function openPublicProfile(page: Parameters<typeof gotoWithRetry>[0]) {
-    await gotoWithRetry(page, `/profiles/${ANVIL_ACCOUNTS.account9.address}`);
-    await page.waitForLoadState("networkidle");
+    await gotoWithRetry(page, `/profiles/${ANVIL_ACCOUNTS.account9.address}`, { timeout: 45_000 });
+    await expect(page.getByText(profileAddress)).toBeVisible({ timeout: 30_000 });
   }
 
   test("public profile page renders without a connected wallet", async ({ page }) => {
     await openPublicProfile(page);
 
     // PublicProfileView renders the address, performance summary, recent questions, and recent votes sections.
-    await expect(page.getByText(ANVIL_ACCOUNTS.account9.address.toLowerCase())).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(profileAddress)).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText(/Win rate/i)).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText(/Daily Streak\s+\d+/i)).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText(/\b\d+\s+resolved\b/i).first()).toBeVisible({ timeout: 15_000 });

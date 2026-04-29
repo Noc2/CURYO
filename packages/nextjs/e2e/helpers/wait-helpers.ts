@@ -159,6 +159,7 @@ export async function gotoWithRetry(
  * or the "No questions have been asked yet" empty state shows.
  */
 export async function waitForFeedLoaded(page: Page, timeout = 15_000): Promise<void> {
+  const effectiveTimeout = getEffectiveE2ETimeout(timeout);
   const feedContent = () =>
     page
       .getByRole("button", { name: VOTE_UP_BUTTON_NAME })
@@ -183,11 +184,11 @@ export async function waitForFeedLoaded(page: Page, timeout = 15_000): Promise<v
       ) {
         await connectButton
           .first()
-          .waitFor({ state: "hidden", timeout: Math.min(timeout, 10_000) })
+          .waitFor({ state: "hidden", timeout: Math.min(effectiveTimeout, 10_000) })
           .catch(() => undefined);
       }
 
-      await feedContent().first().waitFor({ state: "visible", timeout });
+      await feedContent().first().waitFor({ state: "visible", timeout: effectiveTimeout });
       return;
     } catch (error) {
       lastError = error;
@@ -210,8 +211,8 @@ export async function waitForFeedLoaded(page: Page, timeout = 15_000): Promise<v
         throw error;
       }
 
-      await page.reload({ waitUntil: "domcontentloaded" });
-      await page.waitForLoadState("networkidle").catch(() => undefined);
+      await page.reload({ waitUntil: "domcontentloaded", timeout: effectiveTimeout });
+      await page.waitForLoadState("networkidle", { timeout: Math.min(effectiveTimeout, 10_000) }).catch(() => undefined);
     }
   }
 
