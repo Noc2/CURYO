@@ -234,6 +234,40 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(usdc.balanceOf(address(rewardPoolEscrow)), 0);
     }
 
+    function testCreateRewardPoolRejectsStaleRegistryEscrow() public {
+        uint256 contentId = _submitQuestion("");
+        QuestionRewardPoolEscrow replacementEscrow = QuestionRewardPoolEscrow(
+            address(
+                new ERC1967Proxy(
+                    address(new QuestionRewardPoolEscrow()),
+                    abi.encodeCall(
+                        QuestionRewardPoolEscrow.initialize,
+                        (
+                            owner,
+                            address(hrepToken),
+                            address(usdc),
+                            address(registry),
+                            address(votingEngine),
+                            address(voterIdNFT)
+                        )
+                    )
+                )
+            )
+        );
+
+        vm.startPrank(owner);
+        registry.pause();
+        registry.setQuestionRewardPoolEscrow(address(replacementEscrow));
+        registry.unpause();
+        vm.stopPrank();
+
+        vm.startPrank(funder);
+        usdc.approve(address(rewardPoolEscrow), REWARD_POOL_AMOUNT);
+        vm.expectRevert("Stale escrow");
+        rewardPoolEscrow.createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1, block.timestamp + 30 days, 0);
+        vm.stopPrank();
+    }
+
     function testQuestionRewardCannotReplayAfterVoterIdRemintWithSameNullifier() public {
         uint256 contentId = _submitQuestion("");
         uint256 rewardPoolId = _createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1);

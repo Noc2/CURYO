@@ -279,6 +279,7 @@ contract QuestionRewardPoolEscrow is
         uint256 feedbackClosesAt
     ) external nonReentrant whenNotPaused returns (uint256 rewardPoolId) {
         require(voterIdNFT.getTokenId(msg.sender) != 0, "Voter ID required");
+        _requireCurrentRegistryEscrow();
         rewardPoolId = _createRewardPool(
             contentId,
             msg.sender,
@@ -977,6 +978,11 @@ contract QuestionRewardPoolEscrow is
 
     function _requireRegistryVotingEngine() internal view {
         require(registry.votingEngine() == address(votingEngine), "Stale engine");
+    }
+
+    function _requireCurrentRegistryEscrow() internal view {
+        _requireRegistryVotingEngine();
+        require(registry.questionRewardPoolEscrow() == address(this), "Stale escrow");
     }
 
     function _getExistingRewardPool(uint256 rewardPoolId) internal view returns (RewardPool storage rewardPool) {
