@@ -5,9 +5,13 @@ import { createMemoryDatabaseResources } from "~~/lib/db/testMemory";
 import type { X402QuestionPayload } from "~~/lib/x402/questionPayload";
 import {
   __setX402QuestionSubmissionTestOverridesForTests,
+  buildPermissionlessWalletClientRequestId,
   getX402QuestionSubmissionByClientRequest,
   prepareAgentWalletQuestionSubmissionRequest,
   prepareNativeX402QuestionSubmissionRequest,
+  preparePermissionlessNativeX402QuestionSubmissionRequest,
+  preparePermissionlessWalletQuestionSubmissionRequest,
+  x402QuestionSubmissionRecordBody,
 } from "~~/lib/x402/questionSubmission";
 
 const env = process.env as Record<string, string | undefined>;
@@ -151,6 +155,43 @@ test("prepareAgentWalletQuestionSubmissionRequest stores a direct wallet plan wi
   assert.equal(record?.paymentAmount, payload.bounty.amount.toString());
 });
 
+test("preparePermissionlessWalletQuestionSubmissionRequest namespaces idempotency by wallet", async () => {
+  const payload = buildPayload("same-client-request");
+  const firstWallet = "0x00000000000000000000000000000000000000aa" as const;
+  const secondWallet = "0x00000000000000000000000000000000000000bb" as const;
+
+  const first = await preparePermissionlessWalletQuestionSubmissionRequest({
+    payload,
+    walletAddress: firstWallet,
+  });
+  const second = await preparePermissionlessWalletQuestionSubmissionRequest({
+    payload,
+    walletAddress: secondWallet,
+  });
+  const firstBody = first.body as { clientRequestId: string; operationKey: string; status: string };
+  const secondBody = second.body as { clientRequestId: string; operationKey: string; status: string };
+
+  assert.equal(first.status, 202);
+  assert.equal(second.status, 202);
+  assert.equal(firstBody.clientRequestId, payload.clientRequestId);
+  assert.equal(secondBody.clientRequestId, payload.clientRequestId);
+  assert.notEqual(firstBody.operationKey, secondBody.operationKey);
+
+  const storedClientRequestId = buildPermissionlessWalletClientRequestId({
+    chainId: payload.chainId,
+    clientRequestId: payload.clientRequestId,
+    walletAddress: firstWallet,
+  });
+  const record = await getX402QuestionSubmissionByClientRequest({
+    chainId: payload.chainId,
+    clientRequestId: storedClientRequestId,
+  });
+  assert.equal(record?.payerAddress, firstWallet);
+  assert.equal(record?.status, "awaiting_wallet_signature");
+  assert.equal(x402QuestionSubmissionRecordBody(record).clientRequestId, payload.clientRequestId);
+  assert.match(record?.paymentReceipt ?? "", /permissionless-wallet-plan/);
+});
+
 test("prepareNativeX402QuestionSubmissionRequest returns an authorization request before signature", async () => {
   const payload = buildPayload("native-x402-plan");
   const walletAddress = "0x00000000000000000000000000000000000000aa" as const;
@@ -250,4 +291,30 @@ test("prepareNativeX402QuestionSubmissionRequest returns an authorization reques
   };
   assert.equal(signedBody.nextAction, "submit_x402_transaction");
   assert.equal(signedBody.transactionPlan.calls.length, 2);
+
+  const permissionlessPayload = buildPayload("native-x402-public");
+  const permissionless = await preparePermissionlessNativeX402QuestionSubmissionRequest({
+    payload: permissionlessPayload,
+    walletAddress,
+  });
+  const permissionlessBody = permissionless.body as {
+    clientRequestId: string;
+    paymentMode: string;
+    x402AuthorizationRequest: { authorization: { nonce: string } };
+  };
+  assert.equal(permissionless.status, 202);
+  assert.equal(permissionlessBody.clientRequestId, permissionlessPayload.clientRequestId);
+  assert.equal(permissionlessBody.paymentMode, "x402_authorization");
+
+  const storedClientRequestId = buildPermissionlessWalletClientRequestId({
+    chainId: permissionlessPayload.chainId,
+    clientRequestId: permissionlessPayload.clientRequestId,
+    walletAddress,
+  });
+  const record = await getX402QuestionSubmissionByClientRequest({
+    chainId: permissionlessPayload.chainId,
+    clientRequestId: storedClientRequestId,
+  });
+  assert.equal(x402QuestionSubmissionRecordBody(record).clientRequestId, permissionlessPayload.clientRequestId);
+  assert.match(record?.paymentReceipt ?? "", /permissionless-x402-authorization/);
 });

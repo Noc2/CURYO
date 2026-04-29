@@ -39,6 +39,12 @@ const TX_RECEIPT_TIMEOUT_MS = 180_000;
 
 export type X402QuestionSubmissionStatus = "awaiting_wallet_signature" | "submitted" | "failed";
 
+type WalletSubmissionReceiptMode =
+  | "agent-wallet-plan"
+  | "native-x402-authorization"
+  | "permissionless-wallet-plan"
+  | "permissionless-x402-authorization";
+
 export type AgentWalletTransactionPhase =
   | "approve_usdc"
   | "reserve_submission"
@@ -122,6 +128,36 @@ export type X402QuestionSubmissionRecord = {
   error: string | null;
   updatedAt: Date;
 };
+
+function normalizedAddress(value: Address): Lowercase<Address> {
+  return value.toLowerCase() as Lowercase<Address>;
+}
+
+export function buildPermissionlessWalletClientRequestId(params: {
+  chainId: number;
+  clientRequestId: string;
+  walletAddress: Address;
+}) {
+  const walletAddress = normalizedAddress(params.walletAddress);
+  return `wallet:${createHash("sha256")
+    .update(`${params.chainId}:${walletAddress}:${params.clientRequestId}`)
+    .digest("hex")
+    .slice(0, 48)}`;
+}
+
+export function toPermissionlessWalletPayload(
+  payload: X402QuestionPayload,
+  walletAddress: Address,
+): X402QuestionPayload {
+  return {
+    ...payload,
+    clientRequestId: buildPermissionlessWalletClientRequestId({
+      chainId: payload.chainId,
+      clientRequestId: payload.clientRequestId,
+      walletAddress,
+    }),
+  };
+}
 
 type X402QuestionSubmissionTestOverrides = {
   buildAgentWalletQuestionSubmissionPlan?: typeof buildAgentWalletQuestionSubmissionPlan;
@@ -1140,17 +1176,20 @@ export function x402QuestionSubmissionStatusBody(params: {
 }
 
 async function recordAgentWalletSubmissionPlan(params: {
-  agentId: string;
+  agentId: string | null;
   config: X402QuestionSubmissionConfig;
+  mode?: WalletSubmissionReceiptMode;
   operation: X402QuestionOperation;
+  originalClientRequestId?: string;
   payload: X402QuestionPayload;
   plan: AgentWalletQuestionSubmissionPlan;
 }) {
   const now = new Date();
   const receipt = JSON.stringify({
-    agentId: params.agentId,
-    mode: "agent-wallet-plan",
+    ...(params.agentId ? { agentId: params.agentId } : {}),
+    mode: params.mode ?? "agent-wallet-plan",
     operationKey: params.operation.operationKey,
+    ...(params.originalClientRequestId ? { originalClientRequestId: params.originalClientRequestId } : {}),
     preparedAt: now.toISOString(),
     revealCommitment: params.plan.revealCommitment,
     walletAddress: params.plan.walletAddress,
@@ -1228,18 +1267,21 @@ async function recordAgentWalletSubmissionPlan(params: {
 }
 
 async function recordNativeX402SubmissionPlan(params: {
-  agentId: string;
+  agentId: string | null;
   config: X402QuestionSubmissionConfig;
+  mode?: WalletSubmissionReceiptMode;
   operation: X402QuestionOperation;
+  originalClientRequestId?: string;
   payload: X402QuestionPayload;
   plan: NativeX402QuestionSubmissionPlan;
 }) {
   const now = new Date();
   const receipt = JSON.stringify({
-    agentId: params.agentId,
+    ...(params.agentId ? { agentId: params.agentId } : {}),
     authorization: params.plan.authorization,
-    mode: "native-x402-authorization",
+    mode: params.mode ?? "native-x402-authorization",
     operationKey: params.operation.operationKey,
+    ...(params.originalClientRequestId ? { originalClientRequestId: params.originalClientRequestId } : {}),
     preparedAt: now.toISOString(),
     revealCommitment: params.plan.revealCommitment,
     walletAddress: params.plan.walletAddress,
@@ -1329,7 +1371,22 @@ function readStoredNativeX402Authorization(record: X402QuestionSubmissionRecord 
   }
 }
 
+function readOriginalClientRequestId(record: X402QuestionSubmissionRecord | null) {
+  if (!record?.paymentReceipt) return null;
+  try {
+    const parsed = JSON.parse(record.paymentReceipt) as {
+      originalClientRequestId?: unknown;
+    };
+    return typeof parsed.originalClientRequestId === "string" && parsed.originalClientRequestId.trim()
+      ? parsed.originalClientRequestId
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 function agentWalletQuestionSubmissionPlanBody(params: {
+  clientRequestId?: string;
   payload: X402QuestionPayload;
   plan: AgentWalletQuestionSubmissionPlan;
 }) {
@@ -1343,7 +1400,7 @@ function agentWalletQuestionSubmissionPlanBody(params: {
       feedbackClosesAt: params.payload.bounty.feedbackClosesAt.toString(),
     },
     chainId: params.payload.chainId,
-    clientRequestId: params.payload.clientRequestId,
+    clientRequestId: params.clientRequestId ?? params.payload.clientRequestId,
     operationKey: params.plan.operationKey,
     payment: params.plan.payment,
     payloadHash: params.plan.payloadHash,
@@ -1366,6 +1423,7 @@ function agentWalletQuestionSubmissionPlanBody(params: {
 }
 
 function nativeX402QuestionSubmissionPlanBody(params: {
+  clientRequestId?: string;
   payload: X402QuestionPayload;
   plan: NativeX402QuestionSubmissionPlan;
 }) {
@@ -1380,7 +1438,7 @@ function nativeX402QuestionSubmissionPlanBody(params: {
       feedbackClosesAt: params.payload.bounty.feedbackClosesAt.toString(),
     },
     chainId: params.payload.chainId,
-    clientRequestId: params.payload.clientRequestId,
+    clientRequestId: params.clientRequestId ?? params.payload.clientRequestId,
     nextAction: signed ? "submit_x402_transaction" : "sign_x402_authorization",
     operationKey: params.plan.operationKey,
     payment: params.plan.payment,
@@ -1419,6 +1477,35 @@ export async function prepareAgentWalletQuestionSubmissionRequest(params: {
   payload: X402QuestionPayload;
   walletAddress: Address;
 }): Promise<{ body: unknown; status: number }> {
+  return prepareWalletQuestionSubmissionRequest({
+    agentId: params.agentId,
+    payload: params.payload,
+    walletAddress: params.walletAddress,
+  });
+}
+
+export async function preparePermissionlessWalletQuestionSubmissionRequest(params: {
+  payload: X402QuestionPayload;
+  walletAddress: Address;
+}): Promise<{ body: unknown; status: number }> {
+  return prepareWalletQuestionSubmissionRequest({
+    agentId: null,
+    mode: "permissionless-wallet-plan",
+    originalClientRequestId: params.payload.clientRequestId,
+    payload: toPermissionlessWalletPayload(params.payload, params.walletAddress),
+    responseClientRequestId: params.payload.clientRequestId,
+    walletAddress: params.walletAddress,
+  });
+}
+
+async function prepareWalletQuestionSubmissionRequest(params: {
+  agentId: string | null;
+  mode?: WalletSubmissionReceiptMode;
+  originalClientRequestId?: string;
+  payload: X402QuestionPayload;
+  responseClientRequestId?: string;
+  walletAddress: Address;
+}): Promise<{ body: unknown; status: number }> {
   const dependencies = getQuestionSubmissionDependencies();
   const config = dependencies.resolveX402QuestionConfig(params.payload.chainId);
   const operation = buildX402QuestionOperation(params.payload);
@@ -1446,13 +1533,19 @@ export async function prepareAgentWalletQuestionSubmissionRequest(params: {
   await recordAgentWalletSubmissionPlan({
     agentId: params.agentId,
     config,
+    mode: params.mode,
     operation,
+    originalClientRequestId: params.originalClientRequestId,
     payload: params.payload,
     plan,
   });
 
   return {
-    body: agentWalletQuestionSubmissionPlanBody({ payload: params.payload, plan }),
+    body: agentWalletQuestionSubmissionPlanBody({
+      clientRequestId: params.responseClientRequestId,
+      payload: params.payload,
+      plan,
+    }),
     status: 202,
   };
 }
@@ -1461,6 +1554,39 @@ export async function prepareNativeX402QuestionSubmissionRequest(params: {
   agentId: string;
   paymentAuthorization?: NativeX402PaymentAuthorizationInput | null;
   payload: X402QuestionPayload;
+  walletAddress: Address;
+}): Promise<{ body: unknown; status: number }> {
+  return prepareNativeQuestionSubmissionRequest({
+    agentId: params.agentId,
+    paymentAuthorization: params.paymentAuthorization,
+    payload: params.payload,
+    walletAddress: params.walletAddress,
+  });
+}
+
+export async function preparePermissionlessNativeX402QuestionSubmissionRequest(params: {
+  paymentAuthorization?: NativeX402PaymentAuthorizationInput | null;
+  payload: X402QuestionPayload;
+  walletAddress: Address;
+}): Promise<{ body: unknown; status: number }> {
+  return prepareNativeQuestionSubmissionRequest({
+    agentId: null,
+    mode: "permissionless-x402-authorization",
+    originalClientRequestId: params.payload.clientRequestId,
+    paymentAuthorization: params.paymentAuthorization,
+    payload: toPermissionlessWalletPayload(params.payload, params.walletAddress),
+    responseClientRequestId: params.payload.clientRequestId,
+    walletAddress: params.walletAddress,
+  });
+}
+
+async function prepareNativeQuestionSubmissionRequest(params: {
+  agentId: string | null;
+  mode?: WalletSubmissionReceiptMode;
+  originalClientRequestId?: string;
+  paymentAuthorization?: NativeX402PaymentAuthorizationInput | null;
+  payload: X402QuestionPayload;
+  responseClientRequestId?: string;
   walletAddress: Address;
 }): Promise<{ body: unknown; status: number }> {
   const dependencies = getQuestionSubmissionDependencies();
@@ -1492,13 +1618,19 @@ export async function prepareNativeX402QuestionSubmissionRequest(params: {
   await recordNativeX402SubmissionPlan({
     agentId: params.agentId,
     config,
+    mode: params.mode,
     operation,
+    originalClientRequestId: params.originalClientRequestId,
     payload: params.payload,
     plan,
   });
 
   return {
-    body: nativeX402QuestionSubmissionPlanBody({ payload: params.payload, plan }),
+    body: nativeX402QuestionSubmissionPlanBody({
+      clientRequestId: params.responseClientRequestId,
+      payload: params.payload,
+      plan,
+    }),
     status: 202,
   };
 }
@@ -1600,7 +1732,7 @@ export function x402QuestionSubmissionRecordBody(record: X402QuestionSubmissionR
     },
     bundleId: record.bundleId,
     chainId: record.chainId,
-    clientRequestId: record.clientRequestId,
+    clientRequestId: readOriginalClientRequestId(record) ?? record.clientRequestId,
     contentId: record.contentId,
     contentIds: record.contentIds ? parseStoredContentIds(record.contentIds) : [],
     error: record.error,
