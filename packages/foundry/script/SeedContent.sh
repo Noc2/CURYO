@@ -8,6 +8,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEPLOY_JSON="$SCRIPT_DIR/../deployments/31337.json"
 CATEGORY_ID_RESOLVER="$SCRIPT_DIR/../scripts-js/resolveCategoryId.js"
+PONDER_ENV="$SCRIPT_DIR/../../ponder/.env.local"
 
 RPC="http://127.0.0.1:8545"
 SUBMISSION_BOUNTY_AMOUNT="1000000" # 1 HREP in 6 decimals (default minimum submission Bounty)
@@ -47,22 +48,25 @@ const fs = require("fs");
 const [path, contractName] = process.argv.slice(1);
 const deployments = JSON.parse(fs.readFileSync(path, "utf8"));
 const addressPattern = /^0x[0-9a-fA-F]{40}$/;
+const candidates = [deployments, deployments["31337"]].filter(Boolean);
 
-for (const [key, value] of Object.entries(deployments)) {
-  if (addressPattern.test(key) && value === contractName) {
-    console.log(key);
-    process.exit(0);
-  }
-
-  if (key === contractName) {
-    if (typeof value === "string" && addressPattern.test(value)) {
-      console.log(value);
+for (const candidate of candidates) {
+  for (const [key, value] of Object.entries(candidate)) {
+    if (addressPattern.test(key) && value === contractName) {
+      console.log(key);
       process.exit(0);
     }
 
-    if (value && typeof value === "object" && typeof value.address === "string" && addressPattern.test(value.address)) {
-      console.log(value.address);
-      process.exit(0);
+    if (key === contractName) {
+      if (typeof value === "string" && addressPattern.test(value)) {
+        console.log(value);
+        process.exit(0);
+      }
+
+      if (value && typeof value === "object" && typeof value.address === "string" && addressPattern.test(value.address)) {
+        console.log(value.address);
+        process.exit(0);
+      }
     }
   }
 }
@@ -71,16 +75,58 @@ process.exit(1);
 ' "$DEPLOY_JSON" "$1" || true
 }
 
-TOKEN=$(read_deployment_address "HumanReputation")
-REGISTRY=$(read_deployment_address "ContentRegistry")
-QUESTION_REWARD_POOL_ESCROW=$(read_deployment_address "QuestionRewardPoolEscrow")
-FEEDBACK_BONUS_ESCROW=$(read_deployment_address "FeedbackBonusEscrow")
-USDC_TOKEN=$(read_deployment_address "MockERC20")
-VOTING_ENGINE=$(read_deployment_address "RoundVotingEngine")
-CATEGORY_REGISTRY=$(read_deployment_address "CategoryRegistry")
+read_ponder_env_address() {
+  if [ ! -f "$PONDER_ENV" ]; then
+    return 0
+  fi
+
+  node -e '
+const fs = require("fs");
+const [path, envKey] = process.argv.slice(1);
+const addressPattern = /^0x[0-9a-fA-F]{40}$/;
+for (const line of fs.readFileSync(path, "utf8").split(/\r?\n/)) {
+  const trimmed = line.trim();
+  if (!trimmed || trimmed.startsWith("#")) continue;
+  const eqIdx = trimmed.indexOf("=");
+  if (eqIdx <= 0) continue;
+  const key = trimmed.slice(0, eqIdx).trim();
+  const value = trimmed.slice(eqIdx + 1).trim();
+  if (key === envKey && addressPattern.test(value)) {
+    console.log(value);
+    process.exit(0);
+  }
+}
+process.exit(1);
+' "$PONDER_ENV" "$1" || true
+}
+
+read_local_contract_address() {
+  local contract_name="$1"
+  local ponder_key="${2:-}"
+  local address
+
+  address=$(read_deployment_address "$contract_name")
+  if [ -n "$address" ]; then
+    printf "%s" "$address"
+    return 0
+  fi
+
+  if [ -n "$ponder_key" ]; then
+    read_ponder_env_address "$ponder_key"
+  fi
+}
+
+TOKEN=$(read_local_contract_address "HumanReputation" "PONDER_HREP_ADDRESS")
+REGISTRY=$(read_local_contract_address "ContentRegistry" "PONDER_CONTENT_REGISTRY_ADDRESS")
+QUESTION_REWARD_POOL_ESCROW=$(read_local_contract_address "QuestionRewardPoolEscrow" "PONDER_QUESTION_REWARD_POOL_ESCROW_ADDRESS")
+FEEDBACK_BONUS_ESCROW=$(read_local_contract_address "FeedbackBonusEscrow" "PONDER_FEEDBACK_BONUS_ESCROW_ADDRESS")
+USDC_TOKEN=$(read_local_contract_address "MockERC20")
+VOTING_ENGINE=$(read_local_contract_address "RoundVotingEngine" "PONDER_ROUND_VOTING_ENGINE_ADDRESS")
+CATEGORY_REGISTRY=$(read_local_contract_address "CategoryRegistry" "PONDER_CATEGORY_REGISTRY_ADDRESS")
 
 if [ -z "$TOKEN" ] || [ -z "$REGISTRY" ] || [ -z "$QUESTION_REWARD_POOL_ESCROW" ] || [ -z "$CATEGORY_REGISTRY" ]; then
   echo "ERROR: Could not read contract addresses from $DEPLOY_JSON"
+  echo "Missing required addresses: HumanReputation=${TOKEN:+set}, ContentRegistry=${REGISTRY:+set}, QuestionRewardPoolEscrow=${QUESTION_REWARD_POOL_ESCROW:+set}, CategoryRegistry=${CATEGORY_REGISTRY:+set}"
   exit 1
 fi
 
