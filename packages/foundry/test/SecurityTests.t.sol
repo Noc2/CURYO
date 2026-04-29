@@ -189,6 +189,7 @@ contract SecurityReentrancyTest is SecurityHarnessBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _defaultRatingReferenceBps(),
             targetRound,
             drandChainHash,
@@ -491,6 +492,7 @@ contract SecuritySettlementTimingTest is SecurityHarnessBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _defaultRatingReferenceBps(),
             targetRound,
             drandChainHash,

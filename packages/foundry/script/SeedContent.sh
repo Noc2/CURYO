@@ -644,7 +644,7 @@ for _ in {1..5}; do
 done
 
 # Vote on content items 1, 2, and 3 using commitVote (tlock commit-reveal).
-# commitVote(uint256 contentId, uint16 roundReferenceRatingBps, uint64 targetRound, bytes32 drandChainHash, bytes32 commitHash, bytes ciphertext, uint256 stakeAmount, address frontend)
+# commitVote(uint256 contentId, uint256 expectedRoundId, uint16 roundReferenceRatingBps, uint64 targetRound, bytes32 drandChainHash, bytes32 commitHash, bytes ciphertext, uint256 stakeAmount, address frontend)
 # commitHash = keccak256(abi.encodePacked(isUp, salt, voter, contentId, roundId, roundReferenceRatingBps, targetRound, drandChainHash, keccak256(ciphertext)))
 #
 # Voter 1 (account #9) votes UP on content 1 and 2
@@ -662,6 +662,7 @@ seed_commit() {
   local targetRound
   local drandChainHash
   local roundReferenceRatingBps
+  local expectedRoundId
   local artifacts
   local voterAddr
 
@@ -679,10 +680,11 @@ seed_commit() {
   targetRound=$(printf '%s\n' "$artifacts" | sed -n '3p')
   drandChainHash=$(printf '%s\n' "$artifacts" | sed -n '4p')
   roundReferenceRatingBps=$(printf '%s\n' "$artifacts" | sed -n '5p')
+  expectedRoundId=$(printf '%s\n' "$artifacts" | sed -n '6p')
 
   cast send "$VOTING_ENGINE" \
-    "commitVote(uint256,uint16,uint64,bytes32,bytes32,bytes,uint256,address)" \
-    "$contentId" "$roundReferenceRatingBps" "$targetRound" "$drandChainHash" "$commitHash" "$ciphertext" "$VOTE_STAKE" "$ZERO_ADDR" \
+    "commitVote(uint256,uint256,uint16,uint64,bytes32,bytes32,bytes,uint256,address)" \
+    "$contentId" "$expectedRoundId" "$roundReferenceRatingBps" "$targetRound" "$drandChainHash" "$commitHash" "$ciphertext" "$VOTE_STAKE" "$ZERO_ADDR" \
     --private-key "$privKey" --rpc-url "$RPC" > /dev/null || { echo "  (Commit may have failed)"; return 1; }
 }
 

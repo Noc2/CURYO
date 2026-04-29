@@ -13,6 +13,7 @@ import { encodeFunctionData, type Address, type Hex } from "viem";
 export interface CommitVoteParams {
   commitHash: VoteCommitHash;
   ciphertext: VoteCiphertext;
+  roundId: bigint;
   roundReferenceRatingBps: number;
   targetRound: bigint;
   drandChainHash: VoteDrandChainHash;
@@ -78,6 +79,7 @@ export async function buildCommitVoteParams(params: {
   return {
     commitHash,
     ciphertext,
+    roundId: params.roundId,
     roundReferenceRatingBps,
     targetRound,
     drandChainHash,

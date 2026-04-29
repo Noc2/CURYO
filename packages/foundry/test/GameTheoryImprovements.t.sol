@@ -141,6 +141,7 @@ contract GameTheoryImprovementsTest is VotingTestBase {
         hrepToken.approve(address(engine), stake);
         engine.commitVote(
             contentId,
+            engine.previewCommitRoundId(contentId),
             _defaultRatingReferenceBps(),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),

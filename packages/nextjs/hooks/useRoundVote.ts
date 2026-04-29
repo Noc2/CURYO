@@ -175,6 +175,7 @@ export function useRoundVote() {
 
       const payload = encodeVoteTransferPayload({
         contentId,
+        roundId: runtime.roundId,
         roundReferenceRatingBps,
         commitHash,
         ciphertext,

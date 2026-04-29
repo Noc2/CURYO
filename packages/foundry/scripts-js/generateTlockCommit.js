@@ -220,4 +220,4 @@ const commitHash = keccak256(
   )
 );
 
-process.stdout.write(`${commitHash}\n${ciphertext}\n${targetRound}\n${drandChainHash}\n${roundReferenceRatingBps}\n`);
+process.stdout.write(`${commitHash}\n${ciphertext}\n${targetRound}\n${drandChainHash}\n${roundReferenceRatingBps}\n${previewRoundId}\n`);

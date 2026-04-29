@@ -38,6 +38,7 @@ let tlockModulePromise: Promise<TlockModule> | undefined;
 
 export interface VoteTransferPayload {
   contentId: bigint;
+  roundId: bigint;
   roundReferenceRatingBps: number;
   commitHash: VoteCommitHash;
   ciphertext: VoteCiphertext;
@@ -55,6 +56,7 @@ export type VoteTlockRuntime = {
 
 const voteTransferPayloadParams = [
   { name: "contentId", type: "uint256" },
+  { name: "roundId", type: "uint256" },
   { name: "roundReferenceRatingBps", type: "uint16" },
   { name: "commitHash", type: "bytes32" },
   { name: "ciphertext", type: "bytes" },
@@ -167,6 +169,7 @@ export function buildCommitKey(voter: Address, commitHash: `0x${string}`): `0x${
 export function encodeVoteTransferPayload(payload: VoteTransferPayload): `0x${string}` {
   return encodeAbiParameters(voteTransferPayloadParams, [
     payload.contentId,
+    payload.roundId,
     payload.roundReferenceRatingBps,
     payload.commitHash,
     payload.ciphertext,
@@ -178,13 +181,14 @@ export function encodeVoteTransferPayload(payload: VoteTransferPayload): `0x${st
 
 export function decodeVoteTransferPayload(data: `0x${string}`): VoteTransferPayload {
   try {
-    const [contentId, roundReferenceRatingBps, commitHash, ciphertext, frontend, targetRound, drandChainHash] =
+    const [contentId, roundId, roundReferenceRatingBps, commitHash, ciphertext, frontend, targetRound, drandChainHash] =
       decodeAbiParameters(
       voteTransferPayloadParams,
       data,
     );
     const reencoded = encodeAbiParameters(voteTransferPayloadParams, [
       contentId,
+      roundId,
       roundReferenceRatingBps,
       commitHash,
       ciphertext,
@@ -198,6 +202,7 @@ export function decodeVoteTransferPayload(data: `0x${string}`): VoteTransferPayl
 
     return {
       contentId,
+      roundId,
       roundReferenceRatingBps,
       commitHash,
       ciphertext,

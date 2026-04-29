@@ -651,6 +651,7 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
         vm.expectRevert(RoundVotingEngine.SelfVote.selector);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             artifacts.roundReferenceRatingBps,
             artifacts.targetRound,
             artifacts.drandChainHash,

@@ -199,6 +199,7 @@ test("buildCommitHash includes the tlock round metadata", () => {
 test("encodeVoteTransferPayload round-trips the redeployed vote shape", () => {
   const payload = encodeVoteTransferPayload({
     contentId: 42n,
+    roundId: 4n,
     roundReferenceRatingBps: 5_000,
     commitHash: ("0x" + "11".repeat(32)) as `0x${string}`,
     ciphertext: "0x1234" as `0x${string}`,
@@ -209,6 +210,7 @@ test("encodeVoteTransferPayload round-trips the redeployed vote shape", () => {
 
   assert.deepEqual(decodeVoteTransferPayload(payload), {
     contentId: 42n,
+    roundId: 4n,
     roundReferenceRatingBps: 5_000,
     commitHash: "0x" + "11".repeat(32),
     ciphertext: "0x1234",

@@ -941,6 +941,7 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         vm.expectRevert(RoundVotingEngine.InvalidStake.selector);
         engine.commitVote(
             contentId,
+            engine.previewCommitRoundId(contentId),
             _defaultRatingReferenceBps(),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -964,6 +965,7 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         vm.expectRevert(RoundVotingEngine.ContentNotActive.selector);
         engine.commitVote(
             999,
+            engine.previewCommitRoundId(999),
             referenceRatingBps,
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -1157,6 +1159,7 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         vm.expectRevert(RoundVotingEngine.VoterIdRequired.selector);
         engine.commitVote(
             contentId,
+            engine.previewCommitRoundId(contentId),
             _defaultRatingReferenceBps(),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -1237,6 +1240,7 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         vm.prank(voter);
         engine.commitVote(
             contentId,
+            engine.previewCommitRoundId(contentId),
             referenceRatingBps,
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),

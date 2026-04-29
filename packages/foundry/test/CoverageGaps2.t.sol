@@ -1784,6 +1784,7 @@ contract RoundSettlementBranchTest is VotingTestBase {
         vm.expectRevert(RoundVotingEngine.InvalidStake.selector);
         engine.commitVote(
             contentId,
+            engine.previewCommitRoundId(contentId),
             _defaultRatingReferenceBps(),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -1971,6 +1972,7 @@ contract RoundSettlementBranchTest is VotingTestBase {
         vm.prank(voter);
         engine.commitVote(
             contentId,
+            engine.previewCommitRoundId(contentId),
             referenceRatingBps,
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),

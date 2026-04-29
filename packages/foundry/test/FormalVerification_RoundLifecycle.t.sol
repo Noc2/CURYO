@@ -136,6 +136,7 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         vm.prank(voter);
         engine.commitVote(
             cid,
+            engine.previewCommitRoundId(cid),
             referenceRatingBps,
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),

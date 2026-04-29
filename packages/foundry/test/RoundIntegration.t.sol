@@ -196,6 +196,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), stakeAmount);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -245,6 +246,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), stakeAmount);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -283,6 +285,7 @@ contract RoundIntegrationTest is VotingTestBase {
             hrepToken.approve(address(votingEngine), stakeAmount);
             votingEngine.commitVote(
                 contentId,
+                votingEngine.previewCommitRoundId(contentId),
                 _currentRatingReferenceBps(contentId),
                 _tlockCommitTargetRound(),
                 _tlockDrandChainHash(),
@@ -364,6 +367,7 @@ contract RoundIntegrationTest is VotingTestBase {
             hrepToken.approve(address(votingEngine), STAKE);
             votingEngine.commitVote(
                 contentId,
+                votingEngine.previewCommitRoundId(contentId),
                 _currentRatingReferenceBps(contentId),
                 _tlockCommitTargetRound(),
                 _tlockDrandChainHash(),
@@ -471,6 +475,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), 10e6);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -485,6 +490,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), 5e6);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -499,6 +505,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -717,6 +724,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId1,
+            votingEngine.previewCommitRoundId(contentId1),
             _currentRatingReferenceBps(contentId1),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -731,6 +739,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId1,
+            votingEngine.previewCommitRoundId(contentId1),
             _currentRatingReferenceBps(contentId1),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -751,6 +760,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId2,
+            votingEngine.previewCommitRoundId(contentId2),
             _currentRatingReferenceBps(contentId2),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -765,6 +775,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId2,
+            votingEngine.previewCommitRoundId(contentId2),
             _currentRatingReferenceBps(contentId2),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -814,6 +825,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId1,
+            votingEngine.previewCommitRoundId(contentId1),
             _currentRatingReferenceBps(contentId1),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -828,6 +840,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId1,
+            votingEngine.previewCommitRoundId(contentId1),
             _currentRatingReferenceBps(contentId1),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -842,6 +855,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId1,
+            votingEngine.previewCommitRoundId(contentId1),
             _currentRatingReferenceBps(contentId1),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -865,6 +879,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId2,
+            votingEngine.previewCommitRoundId(contentId2),
             _currentRatingReferenceBps(contentId2),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -879,6 +894,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId2,
+            votingEngine.previewCommitRoundId(contentId2),
             _currentRatingReferenceBps(contentId2),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -937,6 +953,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId1,
+            votingEngine.previewCommitRoundId(contentId1),
             _currentRatingReferenceBps(contentId1),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -952,6 +969,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId1,
+            votingEngine.previewCommitRoundId(contentId1),
             _currentRatingReferenceBps(contentId1),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -967,6 +985,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId2,
+            votingEngine.previewCommitRoundId(contentId2),
             _currentRatingReferenceBps(contentId2),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -982,6 +1001,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId2,
+            votingEngine.previewCommitRoundId(contentId2),
             _currentRatingReferenceBps(contentId2),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -1039,6 +1059,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -1081,6 +1102,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -1095,6 +1117,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -1122,6 +1145,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -1155,6 +1179,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -1183,6 +1208,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -1366,6 +1392,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -1396,6 +1423,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -1410,6 +1438,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -1457,6 +1486,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -1471,6 +1501,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -1524,6 +1555,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -1551,6 +1583,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -1574,6 +1607,7 @@ contract RoundIntegrationTest is VotingTestBase {
         vm.expectRevert(RoundVotingEngine.AlreadyCommitted.selector);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             referenceRatingBps,
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -1611,6 +1645,7 @@ contract RoundIntegrationTest is VotingTestBase {
         vm.expectRevert(RoundVotingEngine.CooldownActive.selector);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             referenceRatingBps,
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -1627,6 +1662,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -1657,6 +1693,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -1671,6 +1708,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -1782,6 +1820,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -1796,6 +1835,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -1854,6 +1894,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -1881,6 +1922,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -1900,6 +1942,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -1927,6 +1970,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -1941,6 +1985,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -1955,6 +2000,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -2001,6 +2047,7 @@ contract RoundIntegrationTest is VotingTestBase {
         vm.expectRevert(RoundVotingEngine.InvalidStake.selector);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             referenceRatingBps,
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -2020,6 +2067,7 @@ contract RoundIntegrationTest is VotingTestBase {
         vm.expectRevert(RoundVotingEngine.InvalidStake.selector);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             referenceRatingBps,
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -2046,6 +2094,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -2084,6 +2133,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -2111,6 +2161,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -2160,6 +2211,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -2174,6 +2226,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -2288,6 +2341,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -2302,6 +2356,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -2316,6 +2371,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -2637,6 +2693,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -2651,6 +2708,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -2665,6 +2723,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -2711,6 +2770,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -2725,6 +2785,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -2739,6 +2800,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -3350,6 +3412,7 @@ contract RoundIntegrationTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),

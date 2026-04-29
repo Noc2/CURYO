@@ -141,6 +141,7 @@ contract SelectiveRevelationTest is VotingTestBase {
         hrepToken.approve(address(engine), stake);
         engine.commitVote(
             contentId,
+            engine.previewCommitRoundId(contentId),
             _defaultRatingReferenceBps(),
             artifacts.targetRound,
             artifacts.drandChainHash,

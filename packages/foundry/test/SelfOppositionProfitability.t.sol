@@ -152,6 +152,7 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
         vm.prank(voter);
         engine.commitVote(
             cid,
+            engine.previewCommitRoundId(cid),
             _defaultRatingReferenceBps(),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),

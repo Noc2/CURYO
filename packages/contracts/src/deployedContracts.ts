@@ -9563,6 +9563,11 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "uint256",
             },
             {
+              name: "expectedRoundId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
               name: "roundReferenceRatingBps",
               type: "uint16",
               internalType: "uint16",
@@ -11524,6 +11529,11 @@ const deployedContracts: GenericContractsDeclaration = {
         {
           type: "error",
           name: "Unauthorized",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "UnexpectedRoundId",
           inputs: [],
         },
         {

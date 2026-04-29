@@ -111,6 +111,7 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
         vm.prank(voter);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _defaultRatingReferenceBps(),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),

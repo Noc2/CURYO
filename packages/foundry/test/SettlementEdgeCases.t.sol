@@ -159,6 +159,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         vm.prank(voter);
         engine.commitVote(
             contentId,
+            engine.previewCommitRoundId(contentId),
             referenceRatingBps,
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -210,7 +211,15 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         token.approve(address(votingEngine), stakeAmt);
         vm.prank(voter);
         votingEngine.commitVote(
-            contentId, referenceRatingBps, targetRound, drandChainHash, commitHash, ciphertext, stakeAmt, address(0)
+            contentId,
+            votingEngine.previewCommitRoundId(contentId),
+            referenceRatingBps,
+            targetRound,
+            drandChainHash,
+            commitHash,
+            ciphertext,
+            stakeAmt,
+            address(0)
         );
         commitKey = keccak256(abi.encodePacked(voter, commitHash));
     }

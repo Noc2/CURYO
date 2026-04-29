@@ -166,7 +166,15 @@ contract AdversarialTests is VotingTestBase {
         vm.startPrank(voter);
         hrepToken.approve(address(engine), stake);
         engine.commitVote(
-            contentId, referenceRatingBps, targetRound, drandChainHash, commitHash, ciphertext, stake, address(0)
+            contentId,
+            engine.previewCommitRoundId(contentId),
+            referenceRatingBps,
+            targetRound,
+            drandChainHash,
+            commitHash,
+            ciphertext,
+            stake,
+            address(0)
         );
         vm.stopPrank();
         commitKey = _commitKey(voter, commitHash);
@@ -619,6 +627,7 @@ contract AdversarialTests is VotingTestBase {
         token2.approve(address(eng2), STAKE);
         eng2.commitVote(
             1,
+            eng2.previewCommitRoundId(1),
             _defaultRatingReferenceBps(),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -637,6 +646,7 @@ contract AdversarialTests is VotingTestBase {
         token2.approve(address(eng2), STAKE);
         eng2.commitVote(
             1,
+            eng2.previewCommitRoundId(1),
             _defaultRatingReferenceBps(),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -798,6 +808,7 @@ contract AdversarialTests is VotingTestBase {
         hrepToken.approve(address(engine), STAKE);
         engine.commitVote(
             contentId,
+            engine.previewCommitRoundId(contentId),
             _defaultRatingReferenceBps(),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -825,6 +836,7 @@ contract AdversarialTests is VotingTestBase {
         vm.expectRevert(RoundVotingEngine.CooldownActive.selector);
         engine.commitVote(
             contentId,
+            engine.previewCommitRoundId(contentId),
             _defaultRatingReferenceBps(),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -899,6 +911,7 @@ contract AdversarialTests is VotingTestBase {
         vm.expectRevert(RoundVotingEngine.CooldownActive.selector);
         engine.commitVote(
             contentId,
+            engine.previewCommitRoundId(contentId),
             referenceRatingBps2,
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -1015,6 +1028,7 @@ contract AdversarialTests is VotingTestBase {
         hrepToken.approve(address(engine), STAKE);
         engine.commitVote(
             contentId,
+            engine.previewCommitRoundId(contentId),
             _defaultRatingReferenceBps(),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -1045,6 +1059,7 @@ contract AdversarialTests is VotingTestBase {
         hrepToken.approve(address(engine), STAKE);
         engine.commitVote(
             contentId,
+            engine.previewCommitRoundId(contentId),
             _defaultRatingReferenceBps(),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -1078,6 +1093,7 @@ contract AdversarialTests is VotingTestBase {
         hrepToken.approve(address(engine), STAKE);
         engine.commitVote(
             contentId,
+            engine.previewCommitRoundId(contentId),
             _defaultRatingReferenceBps(),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -1115,6 +1131,7 @@ contract AdversarialTests is VotingTestBase {
         vm.expectRevert(RoundVotingEngine.InvalidCiphertext.selector);
         engine.commitVote(
             contentId,
+            engine.previewCommitRoundId(contentId),
             _defaultRatingReferenceBps(),
             targetRound,
             drandChainHash,
@@ -1179,6 +1196,7 @@ contract AdversarialTests is VotingTestBase {
         vm.expectRevert(RoundVotingEngine.SelfVote.selector);
         engine.commitVote(
             contentId,
+            engine.previewCommitRoundId(contentId),
             _defaultRatingReferenceBps(),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -1207,6 +1225,7 @@ contract AdversarialTests is VotingTestBase {
         vm.expectRevert(RoundVotingEngine.InvalidStake.selector);
         engine.commitVote(
             contentId,
+            engine.previewCommitRoundId(contentId),
             _defaultRatingReferenceBps(),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -1232,6 +1251,7 @@ contract AdversarialTests is VotingTestBase {
         vm.expectRevert(RoundVotingEngine.InvalidStake.selector);
         engine.commitVote(
             contentId,
+            engine.previewCommitRoundId(contentId),
             _defaultRatingReferenceBps(),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),

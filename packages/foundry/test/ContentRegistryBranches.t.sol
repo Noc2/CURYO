@@ -189,6 +189,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), stake);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             referenceRatingBps,
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -1390,6 +1391,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.expectRevert(RoundVotingEngine.SelfVote.selector);
         votingEngine.commitVote(
             1,
+            votingEngine.previewCommitRoundId(1),
             referenceRatingBps,
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -2125,6 +2127,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.expectRevert(RoundVotingEngine.DormancyWindowElapsed.selector);
         votingEngine.commitVote(
             1,
+            votingEngine.previewCommitRoundId(1),
             _defaultRatingReferenceBps(),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),

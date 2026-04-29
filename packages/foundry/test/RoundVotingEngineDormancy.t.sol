@@ -109,6 +109,7 @@ contract RoundVotingEngineDormancyTest is VotingTestBase {
         vm.expectRevert(RoundVotingEngine.DormancyWindowElapsed.selector);
         engine.commitVote(
             contentId,
+            engine.previewCommitRoundId(contentId),
             _defaultRatingReferenceBps(),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -141,6 +142,7 @@ contract RoundVotingEngineDormancyTest is VotingTestBase {
         hrepToken.approve(address(engine), STAKE);
         engine.commitVote(
             contentId,
+            engine.previewCommitRoundId(contentId),
             _defaultRatingReferenceBps(),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),

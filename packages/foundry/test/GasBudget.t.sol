@@ -109,8 +109,9 @@ contract GasBudgetTest is RoundIntegrationTest {
             voter1,
             address(votingEngine),
             abi.encodeWithSelector(
-                bytes4(keccak256("commitVote(uint256,uint16,uint64,bytes32,bytes32,bytes,uint256,address)")),
+                bytes4(keccak256("commitVote(uint256,uint256,uint16,uint64,bytes32,bytes32,bytes,uint256,address)")),
                 contentId,
+                votingEngine.previewCommitRoundId(contentId),
                 roundReferenceRatingBps,
                 _tlockCommitTargetRound(),
                 _tlockDrandChainHash(),
@@ -135,6 +136,7 @@ contract GasBudgetTest is RoundIntegrationTest {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _defaultRatingReferenceBps(),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -226,6 +228,7 @@ contract GasBudgetTest is RoundIntegrationTest {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _defaultRatingReferenceBps(),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -240,6 +243,7 @@ contract GasBudgetTest is RoundIntegrationTest {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _defaultRatingReferenceBps(),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -254,6 +258,7 @@ contract GasBudgetTest is RoundIntegrationTest {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _defaultRatingReferenceBps(),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -293,6 +298,7 @@ contract GasBudgetTest is RoundIntegrationTest {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _defaultRatingReferenceBps(),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),

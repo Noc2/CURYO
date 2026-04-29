@@ -1617,6 +1617,7 @@ export async function commitVoteDirect(
             type: "function",
             inputs: [
               { name: "contentId", type: "uint256" },
+              { name: "expectedRoundId", type: "uint256" },
               { name: "roundReferenceRatingBps", type: "uint16" },
               { name: "targetRound", type: "uint64" },
               { name: "drandChainHash", type: "bytes32" },
@@ -1632,6 +1633,7 @@ export async function commitVoteDirect(
         functionName: "commitVote",
         args: [
           contentIdBigInt,
+          roundId,
           roundReferenceRatingBps,
           targetRound,
           drandChainHash,
@@ -1717,6 +1719,7 @@ export async function commitVoteWithTransferAndCallDirect(
 
       const payload = encodeVoteTransferPayload({
         contentId: contentIdBigInt,
+        roundId,
         roundReferenceRatingBps,
         commitHash: chash,
         ciphertext,

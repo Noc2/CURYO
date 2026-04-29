@@ -190,6 +190,11 @@ export const RoundVotingEngineAbi = [
         "internalType": "uint256"
       },
       {
+        "name": "expectedRoundId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
         "name": "roundReferenceRatingBps",
         "type": "uint16",
         "internalType": "uint16"
@@ -2151,6 +2156,11 @@ export const RoundVotingEngineAbi = [
   {
     "type": "error",
     "name": "Unauthorized",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "UnexpectedRoundId",
     "inputs": []
   },
   {

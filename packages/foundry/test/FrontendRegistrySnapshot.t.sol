@@ -218,6 +218,7 @@ contract FrontendRegistrySnapshotTest is VotingTestBase {
         hrepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _defaultRatingReferenceBps(),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),

@@ -26,6 +26,7 @@ library TlockVoteLib {
         pure
         returns (
             uint256 contentId,
+            uint256 expectedRoundId,
             uint16 roundReferenceRatingBps,
             bytes32 commitHash,
             bytes memory ciphertext,
@@ -34,9 +35,17 @@ library TlockVoteLib {
             address frontend
         )
     {
-        if (data.length < 224) revert InvalidCiphertext();
-        (contentId, roundReferenceRatingBps, commitHash, ciphertext, frontend, targetRound, drandChainHash) =
-            abi.decode(data, (uint256, uint16, bytes32, bytes, address, uint64, bytes32));
+        if (data.length < 256) revert InvalidCiphertext();
+        (
+            contentId,
+            expectedRoundId,
+            roundReferenceRatingBps,
+            commitHash,
+            ciphertext,
+            frontend,
+            targetRound,
+            drandChainHash
+        ) = abi.decode(data, (uint256, uint256, uint16, bytes32, bytes, address, uint64, bytes32));
     }
 
     function validateCommitData(
@@ -56,7 +65,11 @@ library TlockVoteLib {
         if (embeddedTargetRound != targetRound || embeddedDrandChainHash != drandChainHash) revert InvalidCiphertext();
     }
 
-    function targetRoundTimestamp(uint64 targetRound, uint64 genesisTime, uint64 period) external pure returns (uint256) {
+    function targetRoundTimestamp(uint64 targetRound, uint64 genesisTime, uint64 period)
+        external
+        pure
+        returns (uint256)
+    {
         if (targetRound == 0 || genesisTime == 0 || period == 0) revert TargetRoundOutOfWindow();
         return uint256(genesisTime) + (uint256(targetRound) - 1) * uint256(period);
     }
@@ -127,10 +140,13 @@ library TlockVoteLib {
         if (targetRound < minTargetRound || targetRound > maxTargetRound) revert TargetRoundOutOfWindow();
     }
 
-    function _extractTlockMetadata(bytes memory ciphertext) private pure returns (uint64 targetRound, bytes32 drandChainHash) {
+    function _extractTlockMetadata(bytes memory ciphertext)
+        private
+        pure
+        returns (uint64 targetRound, bytes32 drandChainHash)
+    {
         uint256 trimmedLength = _trimTrailingNewlines(ciphertext);
-        bytes memory decoded =
-            _decodeBase64Payload(ciphertext, AGE_HEADER.length, trimmedLength - AGE_FOOTER.length);
+        bytes memory decoded = _decodeBase64Payload(ciphertext, AGE_HEADER.length, trimmedLength - AGE_FOOTER.length);
 
         uint256 cursor = 0;
         (uint256 lineStart, uint256 lineEnd, uint256 nextCursor) = _readLineBounds(decoded, cursor);
@@ -173,7 +189,11 @@ library TlockVoteLib {
         return uint64(((elapsed + uint256(period) - 1) / uint256(period)) + 1);
     }
 
-    function _decodeBase64Payload(bytes memory data, uint256 start, uint256 end) private pure returns (bytes memory out) {
+    function _decodeBase64Payload(bytes memory data, uint256 start, uint256 end)
+        private
+        pure
+        returns (bytes memory out)
+    {
         bytes memory clean = _stripBase64Whitespace(data, start, end);
         if (clean.length == 0 || clean.length % 4 != 0) revert InvalidCiphertext();
 
@@ -207,7 +227,11 @@ library TlockVoteLib {
         }
     }
 
-    function _stripBase64Whitespace(bytes memory data, uint256 start, uint256 end) private pure returns (bytes memory clean) {
+    function _stripBase64Whitespace(bytes memory data, uint256 start, uint256 end)
+        private
+        pure
+        returns (bytes memory clean)
+    {
         uint256 cleanLength = 0;
         for (uint256 i = start; i < end; i++) {
             bytes1 ch = data[i];
@@ -350,7 +374,11 @@ library TlockVoteLib {
         }
     }
 
-    function _lineEquals(bytes memory data, uint256 start, uint256 end, bytes memory expected) private pure returns (bool) {
+    function _lineEquals(bytes memory data, uint256 start, uint256 end, bytes memory expected)
+        private
+        pure
+        returns (bool)
+    {
         if (end - start != expected.length) return false;
         for (uint256 i = 0; i < expected.length; i++) {
             if (data[start + i] != expected[i]) return false;

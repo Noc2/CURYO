@@ -123,6 +123,7 @@ contract VotingHandler is VotingTestBase {
         hrepToken.approve(address(engine), stakeAmount);
         try engine.commitVote(
             contentId,
+            engine.previewCommitRoundId(contentId),
             _defaultRatingReferenceBps(),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),

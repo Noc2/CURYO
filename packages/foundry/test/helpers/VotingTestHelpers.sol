@@ -296,10 +296,7 @@ abstract contract ContentSubmissionTestBase {
                 ),
                 keccak256(
                     abi.encode(
-                        roundConfig.epochDuration,
-                        roundConfig.maxDuration,
-                        roundConfig.minVoters,
-                        roundConfig.maxVoters
+                        roundConfig.epochDuration, roundConfig.maxDuration, roundConfig.minVoters, roundConfig.maxVoters
                     )
                 ),
                 spec.questionMetadataHash,
@@ -753,6 +750,7 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         request.engine
             .commitVote(
                 request.contentId,
+                artifacts.roundId,
                 artifacts.roundReferenceRatingBps,
                 artifacts.targetRound,
                 artifacts.drandChainHash,
@@ -775,6 +773,7 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         );
         bytes memory payload = abi.encode(
             request.contentId,
+            artifacts.roundId,
             artifacts.roundReferenceRatingBps,
             artifacts.commitHash,
             artifacts.ciphertext,

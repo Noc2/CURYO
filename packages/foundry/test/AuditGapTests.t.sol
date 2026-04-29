@@ -166,6 +166,7 @@ contract AuditGapTests is VotingTestBase {
         hrepToken.approve(address(votingEngine), stakeAmt);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _defaultRatingReferenceBps(),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -202,6 +203,7 @@ contract AuditGapTests is VotingTestBase {
         vm.expectRevert(); // EnforcedPause
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _defaultRatingReferenceBps(),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -541,6 +543,7 @@ contract AuditGapTests is VotingTestBase {
         vm.expectRevert(RoundVotingEngine.CooldownActive.selector);
         votingEngine.commitVote(
             contentId,
+            votingEngine.previewCommitRoundId(contentId),
             _defaultRatingReferenceBps(),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),

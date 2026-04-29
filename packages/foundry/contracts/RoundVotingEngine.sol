@@ -1,30 +1,30 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import {IERC1363Receiver} from "@openzeppelin/contracts/interfaces/IERC1363Receiver.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import { IERC1363Receiver } from "@openzeppelin/contracts/interfaces/IERC1363Receiver.sol";
 
-import {ContentRegistry} from "./ContentRegistry.sol";
-import {ProtocolConfig} from "./ProtocolConfig.sol";
-import {RoundLib} from "./libraries/RoundLib.sol";
-import {RatingLib} from "./libraries/RatingLib.sol";
-import {RoundSettlementSideEffectsLib} from "./libraries/RoundSettlementSideEffectsLib.sol";
-import {RoundSettlementDistributionLib} from "./libraries/RoundSettlementDistributionLib.sol";
-import {RoundCleanupLib} from "./libraries/RoundCleanupLib.sol";
-import {RoundRevealLib} from "./libraries/RoundRevealLib.sol";
-import {TlockVoteLib} from "./libraries/TlockVoteLib.sol";
-import {VotePreflightLib} from "./libraries/VotePreflightLib.sol";
-import {IFrontendRegistry} from "./interfaces/IFrontendRegistry.sol";
-import {ICategoryRegistry} from "./interfaces/ICategoryRegistry.sol";
-import {IVoterIdNFT} from "./interfaces/IVoterIdNFT.sol";
-import {IRoundVotingEngine} from "./interfaces/IRoundVotingEngine.sol";
-import {IParticipationPool} from "./interfaces/IParticipationPool.sol";
+import { ContentRegistry } from "./ContentRegistry.sol";
+import { ProtocolConfig } from "./ProtocolConfig.sol";
+import { RoundLib } from "./libraries/RoundLib.sol";
+import { RatingLib } from "./libraries/RatingLib.sol";
+import { RoundSettlementSideEffectsLib } from "./libraries/RoundSettlementSideEffectsLib.sol";
+import { RoundSettlementDistributionLib } from "./libraries/RoundSettlementDistributionLib.sol";
+import { RoundCleanupLib } from "./libraries/RoundCleanupLib.sol";
+import { RoundRevealLib } from "./libraries/RoundRevealLib.sol";
+import { TlockVoteLib } from "./libraries/TlockVoteLib.sol";
+import { VotePreflightLib } from "./libraries/VotePreflightLib.sol";
+import { IFrontendRegistry } from "./interfaces/IFrontendRegistry.sol";
+import { ICategoryRegistry } from "./interfaces/ICategoryRegistry.sol";
+import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
+import { IRoundVotingEngine } from "./interfaces/IRoundVotingEngine.sol";
+import { IParticipationPool } from "./interfaces/IParticipationPool.sol";
 
 interface IQuestionBundleRoundObserver {
     function recordBundleQuestionTerminal(uint256 contentId, uint256 roundId, bool settled) external;
@@ -77,6 +77,7 @@ contract RoundVotingEngine is
     error RoundNotExpired();
     error RoundNotSettledOrTied();
     error RoundNotCancelledOrTied();
+    error UnexpectedRoundId();
     error DormancyWindowElapsed();
     error ThresholdReached();
     error RevealGraceActive();
@@ -273,6 +274,7 @@ contract RoundVotingEngine is
 
     /// @notice Commit a blind vote on content. Direction is hidden via tlock encryption.
     /// @param contentId The content being voted on.
+    /// @param expectedRoundId Round ID used when constructing the commit hash.
     /// @param roundReferenceRatingBps Canonical round score the voter is judging against.
     /// @param targetRound drand round targeted by the ciphertext.
     /// @param drandChainHash drand chain hash bound into the commitment.
@@ -282,6 +284,7 @@ contract RoundVotingEngine is
     /// @param frontend Address of frontend operator for fee distribution.
     function commitVote(
         uint256 contentId,
+        uint256 expectedRoundId,
         uint16 roundReferenceRatingBps,
         uint64 targetRound,
         bytes32 drandChainHash,
@@ -293,6 +296,7 @@ contract RoundVotingEngine is
         _commitVote(
             msg.sender,
             contentId,
+            expectedRoundId,
             roundReferenceRatingBps,
             targetRound,
             drandChainHash,
@@ -315,6 +319,7 @@ contract RoundVotingEngine is
 
         (
             uint256 contentId,
+            uint256 expectedRoundId,
             uint16 roundReferenceRatingBps,
             bytes32 commitHash,
             bytes memory ciphertext,
@@ -326,6 +331,7 @@ contract RoundVotingEngine is
         _commitVote(
             from,
             contentId,
+            expectedRoundId,
             roundReferenceRatingBps,
             targetRound,
             drandChainHash,
@@ -341,6 +347,7 @@ contract RoundVotingEngine is
     function _commitVote(
         address voter,
         uint256 contentId,
+        uint256 expectedRoundId,
         uint16 roundReferenceRatingBps,
         uint64 targetRound,
         bytes32 drandChainHash,
@@ -370,6 +377,7 @@ contract RoundVotingEngine is
         }
 
         uint256 roundId = _getOrCreateRound(contentId);
+        if (roundId != expectedRoundId) revert UnexpectedRoundId();
         RoundLib.Round storage round = rounds[contentId][roundId];
         RoundLib.RoundConfig memory roundCfg = _getRoundConfig(contentId, roundId);
         uint16 expectedReferenceRatingBps = _getRoundReferenceRatingBps(contentId, roundId);
@@ -682,8 +690,8 @@ contract RoundVotingEngine is
         address bundleEscrow = registry.questionRewardPoolEscrow();
         if (bundleEscrow == address(0)) return;
 
-        try IQuestionBundleRoundObserver(bundleEscrow).recordBundleQuestionTerminal(contentId, roundId, settled) {}
-            catch {}
+        try IQuestionBundleRoundObserver(bundleEscrow).recordBundleQuestionTerminal(contentId, roundId, settled) { }
+            catch { }
     }
 
     // =========================================================================
