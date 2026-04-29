@@ -160,22 +160,6 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         assertEq(registry.questionRewardPoolEscrow(), address(replacementEscrow));
     }
 
-    function test_SetVotingEngine_UnpauseRejectsStaleRewardEscrow() public {
-        RoundVotingEngine replacementEngine = _deployReplacementVotingEngine();
-        mockQuestionRewardPoolEscrow.setWiring(address(registry), address(votingEngine));
-
-        vm.startPrank(owner);
-        registry.pause();
-        registry.setVotingEngine(address(replacementEngine));
-
-        vm.expectRevert("Bad escrow wiring");
-        registry.unpause();
-
-        mockQuestionRewardPoolEscrow.setWiring(address(registry), address(replacementEngine));
-        registry.unpause();
-        vm.stopPrank();
-    }
-
     function _vote(address voter, uint256 contentId, bool isUp) internal {
         _commit(voter, contentId, isUp);
     }

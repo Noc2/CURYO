@@ -1,22 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-import {ContentRegistry} from "./ContentRegistry.sol";
-import {RoundVotingEngine} from "./RoundVotingEngine.sol";
-import {ProtocolConfig} from "./ProtocolConfig.sol";
-import {IVoterIdNFT} from "./interfaces/IVoterIdNFT.sol";
-import {RoundLib} from "./libraries/RoundLib.sol";
-import {QuestionRewardPoolEscrowClaimLib} from "./libraries/QuestionRewardPoolEscrowClaimLib.sol";
-import {QuestionRewardPoolEscrowQualificationLib} from "./libraries/QuestionRewardPoolEscrowQualificationLib.sol";
-import {TokenTransferLib} from "./libraries/TokenTransferLib.sol";
+import { ContentRegistry } from "./ContentRegistry.sol";
+import { RoundVotingEngine } from "./RoundVotingEngine.sol";
+import { ProtocolConfig } from "./ProtocolConfig.sol";
+import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
+import { RoundLib } from "./libraries/RoundLib.sol";
+import { QuestionRewardPoolEscrowClaimLib } from "./libraries/QuestionRewardPoolEscrowClaimLib.sol";
+import { QuestionRewardPoolEscrowQualificationLib } from "./libraries/QuestionRewardPoolEscrowQualificationLib.sol";
+import { TokenTransferLib } from "./libraries/TokenTransferLib.sol";
 
 /// @title QuestionRewardPoolEscrow
 /// @notice Holds per-question USDC bounties and pays equal per-round rewards to revealed voters.
@@ -303,6 +303,7 @@ contract QuestionRewardPoolEscrow is
         uint256 feedbackClosesAt
     ) external nonReentrant whenNotPaused returns (uint256 rewardPoolId) {
         require(msg.sender == address(registry), "Only registry");
+        _requireRegistryVotingEngine();
         require(funder != address(0), "Invalid funder");
         rewardPoolId = _createRewardPool(
             contentId,
@@ -329,6 +330,7 @@ contract QuestionRewardPoolEscrow is
         uint256 feedbackClosesAt
     ) external nonReentrant whenNotPaused returns (uint256 rewardPoolId) {
         require(msg.sender == address(registry), "Only registry");
+        _requireRegistryVotingEngine();
         require(bundleId != 0, "Invalid bundle");
         require(bundleRewards[bundleId].id == 0, "Bundle exists");
         require(contentIds.length > 0, "No questions");
@@ -971,6 +973,10 @@ contract QuestionRewardPoolEscrow is
 
     function _protocolTreasury() internal view returns (address treasury) {
         return votingEngine.protocolConfig().treasury();
+    }
+
+    function _requireRegistryVotingEngine() internal view {
+        require(registry.votingEngine() == address(votingEngine), "Stale engine");
     }
 
     function _getExistingRewardPool(uint256 rewardPoolId) internal view returns (RewardPool storage rewardPool) {

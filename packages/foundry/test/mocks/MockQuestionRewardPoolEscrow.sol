@@ -1,14 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-interface IRegistryVotingEngine {
-    function votingEngine() external view returns (address);
-}
-
 contract MockQuestionRewardPoolEscrow {
     uint256 public nextRewardPoolId = 1;
-    address public registryOverride;
-    address public votingEngineOverride;
     uint256 public lastContentId;
     address public lastFunder;
     uint8 public lastAsset;
@@ -37,19 +31,6 @@ contract MockQuestionRewardPoolEscrow {
         uint256 bountyClosesAt,
         uint256 feedbackClosesAt
     );
-
-    function setWiring(address registry_, address votingEngine_) external {
-        registryOverride = registry_;
-        votingEngineOverride = votingEngine_;
-    }
-
-    function getWiring() external view returns (address, address, address registry_, address votingEngine_, address) {
-        registry_ = registryOverride == address(0) ? msg.sender : registryOverride;
-        votingEngine_ = votingEngineOverride == address(0)
-            ? IRegistryVotingEngine(msg.sender).votingEngine()
-            : votingEngineOverride;
-        return (address(0), address(0), registry_, votingEngine_, address(0));
-    }
 
     function createSubmissionRewardPoolFromRegistry(
         uint256 contentId,

@@ -19,8 +19,6 @@ import { ProtocolConfig } from "./ProtocolConfig.sol";
 import { SubmissionMediaValidator } from "./SubmissionMediaValidator.sol";
 
 interface IQuestionRewardPoolEscrow {
-    function getWiring() external view;
-
     function createSubmissionRewardPoolFromRegistry(
         uint256 contentId,
         address funder,
@@ -166,7 +164,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
     /// @notice Escrow that holds mandatory bounties.
     address public questionRewardPoolEscrow;
-    mapping(address => bool) public votingEngineCallbackAuthorized;
+    mapping(address => bool) internal votingEngineCallbackAuthorized;
 
     /// @notice Canonical submission key per content ID (for releasing/reserving uniqueness on status changes)
     mapping(uint256 => bytes32) internal contentSubmissionKey;
@@ -328,7 +326,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         require(_votingEngine.code.length != 0, "No code");
         if (votingEngine == _votingEngine) return;
         require(votingEngine == address(0) || paused(), "Pause required");
-        if (votingEngine != address(0)) votingEngineCallbackAuthorized[votingEngine] = true;
         votingEngine = _votingEngine;
         votingEngineCallbackAuthorized[_votingEngine] = true;
     }
@@ -359,7 +356,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         require(_questionRewardPoolEscrow.code.length != 0, "No code");
         if (questionRewardPoolEscrow == _questionRewardPoolEscrow) return;
         require(questionRewardPoolEscrow == address(0) || paused(), "Pause required");
-        _requireEscrowWiring(_questionRewardPoolEscrow, votingEngine);
         questionRewardPoolEscrow = _questionRewardPoolEscrow;
         emit QuestionRewardPoolEscrowUpdated(_questionRewardPoolEscrow);
     }
@@ -1087,7 +1083,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
     /// @notice Called by VotingEngine when content reaches milestone 0 through a settled round.
     function recordMeaningfulActivity(uint256 contentId) external {
-        require(_isVotingEngineCallback(msg.sender), "Only VotingEngine");
+        require(votingEngineCallbackAuthorized[msg.sender], "Only VotingEngine");
         contents[contentId].lastActivityAt = uint48(block.timestamp);
         dormancyAnchorAt[contentId] = block.timestamp;
     }
@@ -1098,7 +1094,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         uint16 referenceRatingBps,
         RatingLib.RatingState calldata nextState
     ) external {
-        require(_isVotingEngineCallback(msg.sender), "Only VotingEngine");
+        require(votingEngineCallbackAuthorized[msg.sender], "Only VotingEngine");
 
         Content storage c = contents[contentId];
         require(c.id != 0, "Content does not exist");
@@ -1401,24 +1397,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         return roundState == RoundLib.RoundState.Open;
     }
 
-    function _requireEscrowWiring(address escrow, address engine) internal view {
-        if (escrow == address(0) || engine == address(0)) return;
-        (bool ok, bytes memory wiring) =
-            escrow.staticcall(abi.encodeWithSelector(IQuestionRewardPoolEscrow.getWiring.selector));
-        require(ok && wiring.length >= 160, "Bad escrow wiring");
-        address registry_;
-        address votingEngine_;
-        assembly {
-            registry_ := mload(add(wiring, 0x60))
-            votingEngine_ := mload(add(wiring, 0x80))
-        }
-        require(registry_ == address(this) && votingEngine_ == engine, "Bad escrow wiring");
-    }
-
-    function _isVotingEngineCallback(address sender) internal view returns (bool) {
-        return sender == votingEngine || votingEngineCallbackAuthorized[sender];
-    }
-
     function _getInitialConfidenceMass() internal view returns (uint256) {
         if (address(protocolConfig) == address(0)) {
             return DEFAULT_CONFIDENCE_MASS_INITIAL;
@@ -1465,7 +1443,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     }
 
     function unpause() external onlyRole(PAUSER_ROLE) {
-        _requireEscrowWiring(questionRewardPoolEscrow, votingEngine);
         _unpause();
     }
 }

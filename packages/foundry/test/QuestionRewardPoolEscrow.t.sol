@@ -443,6 +443,78 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(configuredVotingEngine, address(votingEngine));
     }
 
+    function testRegistrySubmissionRewardRejectsStaleEscrowAfterEngineRotation() public {
+        RoundVotingEngine replacementEngine = RoundVotingEngine(
+            address(
+                new ERC1967Proxy(
+                    address(new RoundVotingEngine()),
+                    abi.encodeCall(
+                        RoundVotingEngine.initialize,
+                        (owner, address(hrepToken), address(registry), address(protocolConfig))
+                    )
+                )
+            )
+        );
+
+        vm.startPrank(owner);
+        registry.pause();
+        registry.setVotingEngine(address(replacementEngine));
+        registry.unpause();
+        vm.stopPrank();
+
+        string[] memory imageUrls = new string[](1);
+        imageUrls[0] = DEFAULT_MEDIA_URL;
+        bytes32 salt = keccak256("stale-engine-reward");
+        uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
+        ContentRegistry.SubmissionRewardTerms memory rewardTerms = _defaultSubmissionRewardTerms(registry);
+        RoundLib.RoundConfig memory roundConfig = RoundLib.RoundConfig({
+            epochDuration: uint32(EPOCH_DURATION), maxDuration: uint32(7 days), minVoters: 3, maxVoters: 200
+        });
+        (, bytes32 submissionKey) = registry.previewQuestionSubmissionKey(
+            "https://example.com/context", imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID
+        );
+        bytes32 revealCommitment = _questionRevealCommitment(
+            submissionKey,
+            _submissionMediaHash(imageUrls, ""),
+            QUESTION,
+            DESCRIPTION,
+            TAGS,
+            CATEGORY_ID,
+            salt,
+            submitter,
+            rewardTerms,
+            roundConfig
+        );
+
+        uint256 submitterBalanceBefore = hrepToken.balanceOf(submitter);
+        uint256 escrowBalanceBefore = hrepToken.balanceOf(address(rewardPoolEscrow));
+        uint256 nextContentIdBefore = registry.nextContentId();
+
+        vm.startPrank(submitter);
+        hrepToken.approve(address(rewardPoolEscrow), rewardAmount);
+        registry.reserveSubmission(revealCommitment);
+        vm.warp(block.timestamp + 1);
+        vm.expectRevert("Stale engine");
+        registry.submitQuestionWithRewardAndRoundConfig(
+            "https://example.com/context",
+            imageUrls,
+            "",
+            QUESTION,
+            DESCRIPTION,
+            TAGS,
+            CATEGORY_ID,
+            salt,
+            rewardTerms,
+            roundConfig,
+            _defaultQuestionSpec()
+        );
+        vm.stopPrank();
+
+        assertEq(registry.nextContentId(), nextContentIdBefore);
+        assertEq(hrepToken.balanceOf(submitter), submitterBalanceBefore);
+        assertEq(hrepToken.balanceOf(address(rewardPoolEscrow)), escrowBalanceBefore);
+    }
+
     function testSetVotingEngineRejectsZeroAddress() public {
         vm.prank(owner);
         (bool ok,) = address(rewardPoolEscrow).call(abi.encodeWithSignature("setVotingEngine(address)", address(0)));
