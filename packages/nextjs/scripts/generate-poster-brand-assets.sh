@@ -5,8 +5,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 PUBLIC_DIR="$REPO_ROOT/packages/nextjs/public"
-POSTER_ORB="$PUBLIC_DIR/launch/curyo-v2-orb-hero-alpha.png"
-POSTER_ORB_WEBP="$PUBLIC_DIR/launch/curyo-v2-orb-hero-alpha.webp"
+HERO_SOURCE="$PUBLIC_DIR/launch/curyo-human-loop-orange-orbits-neutral-ai.png"
+HERO_WEBP="$PUBLIC_DIR/launch/curyo-human-loop-orange-orbits-neutral-ai.webp"
+FAVICON_SVG="$PUBLIC_DIR/favicon.svg"
 TMP_DIR="$(mktemp -d)"
 
 trap 'rm -rf "$TMP_DIR"' EXIT
@@ -14,104 +15,107 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 BOLD_FONT="/System/Library/Fonts/Supplemental/Arial Bold.ttf"
 REGULAR_FONT="/System/Library/Fonts/Supplemental/Arial.ttf"
 
-ICON_SOURCE="$TMP_DIR/icon-source.png"
-ICON_MASK="$TMP_DIR/icon-mask.png"
-SOCIAL_SOURCE="$TMP_DIR/social-source.png"
-BANNER_SOURCE="$TMP_DIR/banner-source.png"
+LOGO_SOURCE="$TMP_DIR/logo.png"
+HERO_SOCIAL="$TMP_DIR/hero-social.png"
+HERO_BANNER="$TMP_DIR/hero-banner.png"
 OG_CANVAS="$TMP_DIR/og-image.png"
 BANNER_CANVAS="$TMP_DIR/banner.png"
 
-if [[ ! -f "$POSTER_ORB" ]]; then
-  echo "Poster orb source not found: $POSTER_ORB" >&2
+if [[ ! -f "$HERO_SOURCE" ]]; then
+  echo "Human loop hero source not found: $HERO_SOURCE" >&2
+  exit 1
+fi
+
+if [[ ! -f "$FAVICON_SVG" ]]; then
+  echo "Favicon source not found: $FAVICON_SVG" >&2
   exit 1
 fi
 
 if ! command -v magick >/dev/null 2>&1; then
-  echo "ImageMagick 'magick' binary is required to generate poster brand assets." >&2
+  echo "ImageMagick 'magick' binary is required to generate brand assets." >&2
   exit 1
 fi
 
 if command -v cwebp >/dev/null 2>&1; then
-  cwebp -q 90 -m 6 -alpha_q 98 "$POSTER_ORB" -o "$POSTER_ORB_WEBP" >/dev/null
+  cwebp -q 92 -m 6 -alpha_q 98 "$HERO_SOURCE" -o "$HERO_WEBP" >/dev/null
 else
-  magick "$POSTER_ORB" -strip -quality 90 "$POSTER_ORB_WEBP"
+  magick "$HERO_SOURCE" -strip -quality 92 "$HERO_WEBP"
 fi
 
-magick "$POSTER_ORB" \
-  -crop 540x540+130+8 \
-  +repage \
-  -resize 512x512 \
-  "$ICON_SOURCE"
-
-magick -size 512x512 xc:none \
-  -fill white \
-  -draw "circle 256,256 256,16" \
-  -blur 0x2 \
-  "$ICON_MASK"
-
-magick "$ICON_SOURCE" "$ICON_MASK" \
-  -compose copyopacity \
-  -composite \
+magick -size 512x512 xc:"#000000" \
+  -fill none \
+  -stroke "#ffffff" \
+  -strokewidth 32 \
+  -draw "path 'M 342,158 C 258,92 106,120 106,256 C 106,392 258,420 342,354'" \
+  -fill "#F26426" \
+  -stroke none \
+  -draw "circle 256,256 334,256" \
   "$PUBLIC_DIR/favicon.png"
+magick "$PUBLIC_DIR/favicon.png" -resize 92x92 "$LOGO_SOURCE"
+magick "$HERO_SOURCE" -resize 900x506 "$HERO_SOCIAL"
+magick "$HERO_SOURCE" -resize 900x506 "$HERO_BANNER"
 
-magick "$POSTER_ORB" \
-  -resize 540x540 \
-  "$SOCIAL_SOURCE"
-
-magick -size 1200x630 xc:"#050607" \
-  \( "$SOCIAL_SOURCE" \) \
+magick -size 1200x630 xc:"#000000" \
+  \( "$HERO_SOCIAL" \) \
   -gravity east \
-  -geometry -48+108 \
+  -geometry -36+92 \
+  -compose over \
+  -composite \
+  -fill "rgba(0,0,0,0.72)" \
+  -draw "rectangle 0,0 548,630" \
+  \( "$LOGO_SOURCE" \) \
+  -gravity northwest \
+  -geometry +76+72 \
   -compose over \
   -composite \
   -font "$BOLD_FONT" \
   -fill "#F7F2EE" \
-  -pointsize 104 \
+  -pointsize 72 \
   -gravity northwest \
-  -annotate +76+164 "CURYO" \
-  -font "$BOLD_FONT" \
-  -fill "#F7F2EE" \
-  -pointsize 50 \
-  -gravity northwest \
-  -annotate +82+310 "AI Asks, Humans Earn" \
+  -annotate +76+190 "AI Asks," \
+  -annotate +76+270 "Humans Earn" \
+  -font "$REGULAR_FONT" \
+  -fill "#C9C0BA" \
+  -pointsize 30 \
+  -annotate +82+382 "Verified, Staked Human Feedback" \
+  -annotate +82+424 "for AI Agents" \
   "$OG_CANVAS"
 
-magick "$OG_CANVAS" \
-  -strip \
-  -quality 90 \
-  "$PUBLIC_DIR/og-image.jpg"
+magick "$OG_CANVAS" -strip -quality 92 "$PUBLIC_DIR/og-image.png"
+magick "$OG_CANVAS" -strip -quality 90 "$PUBLIC_DIR/og-image.jpg"
 
 magick "$OG_CANVAS" \
   -gravity center \
   -crop 1200x600+0+0 \
   +repage \
-  -strip \
-  -quality 90 \
-  "$PUBLIC_DIR/twitter-image.jpg"
+  "$PUBLIC_DIR/twitter-image.png"
 
-magick "$POSTER_ORB" \
-  -resize 520x520 \
-  "$BANNER_SOURCE"
+magick "$PUBLIC_DIR/twitter-image.png" -strip -quality 90 "$PUBLIC_DIR/twitter-image.jpg"
 
-magick -size 1600x520 xc:"#050607" \
-  \( "$BANNER_SOURCE" \) \
+magick -size 1600x520 xc:"#000000" \
+  \( "$HERO_BANNER" \) \
   -gravity east \
-  -geometry +36+104 \
+  -geometry +18+68 \
+  -compose over \
+  -composite \
+  -fill "rgba(0,0,0,0.74)" \
+  -draw "rectangle 0,0 650,520" \
+  \( "$LOGO_SOURCE" \) \
+  -gravity northwest \
+  -geometry +86+92 \
   -compose over \
   -composite \
   -font "$BOLD_FONT" \
   -fill "#F7F2EE" \
-  -pointsize 120 \
+  -pointsize 88 \
   -gravity northwest \
-  -annotate +84+148 "CURYO" \
-  -font "$BOLD_FONT" \
-  -fill "#F7F2EE" \
-  -pointsize 58 \
-  -gravity northwest \
-  -annotate +92+290 "AI Asks, Humans Earn" \
+  -annotate +88+216 "AI Asks," \
+  -annotate +88+316 "Humans Earn" \
+  -font "$REGULAR_FONT" \
+  -fill "#C9C0BA" \
+  -pointsize 30 \
+  -annotate +94+414 "Verified, Staked Human Feedback" \
+  -annotate +94+452 "for AI Agents" \
   "$BANNER_CANVAS"
 
-magick "$BANNER_CANVAS" \
-  -strip \
-  -quality 90 \
-  "$PUBLIC_DIR/banner.jpg"
+magick "$BANNER_CANVAS" -strip -quality 90 "$PUBLIC_DIR/banner.jpg"

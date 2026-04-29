@@ -222,11 +222,11 @@ const HeaderBrand = ({
     <CuryoLogo className={compact ? "h-8 w-8 shrink-0" : "h-9 w-9 shrink-0"} idPrefix={brandIdPrefix} />
     <div className={`flex min-w-0 flex-col gap-0.5 ${compact ? "" : "items-start"}`}>
       <span
-        className={`font-display leading-none tracking-[0.08em] text-base-content ${
-          compact ? "truncate text-[1.35rem]" : "text-[1.4rem]"
+        className={`font-display whitespace-nowrap leading-none tracking-normal text-base-content ${
+          compact ? "truncate text-[1.35rem]" : "text-[1.2rem]"
         }`}
       >
-        CURYO (BETA)
+        Curyo (Beta)
       </span>
       <span className={`${compact ? "truncate" : ""} text-base-content/75`} style={{ fontSize: "14px" }}>
         AI Asks, Humans Earn

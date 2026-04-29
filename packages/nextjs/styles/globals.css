@@ -3,9 +3,9 @@
 @theme {
   --shadow-center: 0 0 12px -2px rgb(9 10 12 / 0.05);
   --animate-pulse-fast: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  --font-sans: var(--font-source-sans-3), ui-sans-serif, system-ui, sans-serif;
-  --font-heading: var(--font-source-sans-3), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-bebas-neue), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
 }
 
 @plugin "daisyui" {
@@ -15,11 +15,11 @@
 @plugin "daisyui/theme" {
   name: "dark";
 
-  --color-primary: #f47a42;
+  --color-primary: #f26426;
   --color-primary-content: #000000;
   --color-secondary: #8b858e;
   --color-secondary-content: #f8f2ed;
-  --color-accent: #ff8a50;
+  --color-accent: #ff8a4a;
   --color-accent-content: #000000;
   --color-neutral: #1d181e;
   --color-neutral-content: #f5f0eb;
@@ -28,7 +28,7 @@
   --color-base-300: #0d0a0f;
   --color-base-content: #f5f0eb;
   --color-info: #8b858e;
-  --color-success: #f47a42;
+  --color-success: #f26426;
   --color-success-content: #000000;
   --color-warning: #ffc071;
   --color-warning-content: #000000;
@@ -65,7 +65,7 @@
   h4 {
     margin-bottom: 0;
     line-height: 1.2;
-    letter-spacing: -0.01em;
+  letter-spacing: 0;
     font-family: var(--font-heading);
   }
 
@@ -76,9 +76,9 @@
 
 :root {
   background: #000000;
-  --curyo-ember: #f47a42;
-  --curyo-ember-hover: #ff9361;
-  --curyo-ember-deep: #dc4f30;
+  --curyo-ember: #f26426;
+  --curyo-ember-hover: #ff7a3d;
+  --curyo-ember-deep: #d94d1f;
   --curyo-warm-white: #f5f0eb;
   --curyo-steel: #8b858e;
   --curyo-surface: #000000;
@@ -90,9 +90,9 @@
   --curyo-control-idle-hover: rgb(245 240 235 / 0.23);
   --curyo-control-idle-muted: rgb(245 240 235 / 0.11);
   --curyo-control-idle-muted-hover: rgb(245 240 235 / 0.17);
-  --curyo-ember-rgb: 244 122 66;
-  --curyo-ember-hover-rgb: 255 147 97;
-  --curyo-ember-deep-rgb: 220 79 48;
+  --curyo-ember-rgb: 242 100 38;
+  --curyo-ember-hover-rgb: 255 122 61;
+  --curyo-ember-deep-rgb: 217 77 31;
   --curyo-warm-white-rgb: 245 240 235;
   --curyo-steel-rgb: 139 133 142;
   --curyo-surface-rgb: 0 0 0;
@@ -116,27 +116,31 @@ body {
 
 .font-display {
   font-family: var(--font-display);
+  font-weight: 800;
 }
 
 .hero-headline {
   font-family: var(--font-display);
-  line-height: 0.94;
-  letter-spacing: 0.01em;
-  text-transform: uppercase;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: none;
   text-wrap: balance;
 }
 
 .display-section {
   font-family: var(--font-display);
-  line-height: 0.94;
-  letter-spacing: 0.045em;
-  text-transform: uppercase;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .display-metric {
   font-family: var(--font-display);
+  font-weight: 800;
   line-height: 0.88;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 .btn {
@@ -749,7 +753,7 @@ body {
   font-size: clamp(2rem, 1.72rem + 1.2vw, 2.65rem);
   font-weight: 700;
   margin-bottom: 0.75rem;
-  letter-spacing: -0.03em;
+  letter-spacing: 0;
   text-wrap: balance;
 }
 
@@ -758,7 +762,7 @@ body {
   font-weight: 600;
   margin-top: 2.4rem;
   margin-bottom: 0.75rem;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
   text-wrap: balance;
 }
 

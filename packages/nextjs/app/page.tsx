@@ -231,9 +231,9 @@ async function getLandingPageSocialProofItems() {
     BigInt(FALLBACK_SOCIAL_PROOF_STATS.totalQuestionRewardsPaid) +
     BigInt(FALLBACK_SOCIAL_PROOF_STATS.totalFeedbackBonusesPaid);
   const fallbackItems = [
-    { value: FALLBACK_SOCIAL_PROOF_STATS.totalVoterIds.toLocaleString("en-US"), label: "verified humans" },
-    { value: FALLBACK_SOCIAL_PROOF_STATS.totalVotes.toLocaleString("en-US"), label: "votes" },
-    { value: formatUsdcPaidOut(fallbackPaidOut), label: "USDC paid" },
+    { value: FALLBACK_SOCIAL_PROOF_STATS.totalVoterIds.toLocaleString("en-US"), label: "Verified Humans" },
+    { value: FALLBACK_SOCIAL_PROOF_STATS.totalVotes.toLocaleString("en-US"), label: "Votes" },
+    { value: formatUsdcPaidOut(fallbackPaidOut), label: "USDC Paid" },
   ];
 
   const ponderUrl = getOptionalPonderUrl();
@@ -260,11 +260,11 @@ async function getLandingPageSocialProofItems() {
       BigInt(String(stats.totalQuestionRewardsPaid ?? 0)) + BigInt(String(stats.totalFeedbackBonusesPaid ?? 0));
 
     return [
-      { value: Math.max(0, Number(stats.totalVoterIds ?? 0)).toLocaleString("en-US"), label: "verified humans" },
-      { value: Math.max(0, Number(stats.totalVotes ?? 0)).toLocaleString("en-US"), label: "votes" },
+      { value: Math.max(0, Number(stats.totalVoterIds ?? 0)).toLocaleString("en-US"), label: "Verified Humans" },
+      { value: Math.max(0, Number(stats.totalVotes ?? 0)).toLocaleString("en-US"), label: "Votes" },
       {
         value: formatUsdcPaidOut(paidOut),
-        label: "USDC paid",
+        label: "USDC Paid",
       },
     ];
   } catch {
@@ -279,14 +279,14 @@ export default async function LandingPage() {
     <div className="flex flex-col items-center grow px-4 pt-0 pb-16">
       <div className="w-full max-w-5xl flex flex-col items-center">
         {/* Hero: stacked on mobile, side-by-side on large screens */}
-        <div className="relative z-0 w-full flex flex-col lg:flex-row-reverse lg:items-center lg:gap-3 xl:gap-6">
+        <div className="relative z-0 flex w-full flex-col lg:flex-row-reverse lg:items-center lg:gap-6 xl:gap-8">
           {/* Animation (right on large screens) */}
-          <div className="relative z-0 lg:flex-[0.84] xl:flex-[0.88]">
+          <div className="relative z-0 lg:flex-[1.05] xl:flex-[1.08]">
             <CuryoAnimation />
           </div>
 
           {/* Title (left on large screens) */}
-          <div className="relative z-10 flex flex-col items-center lg:items-start lg:flex-[1.16] lg:max-w-[45rem]">
+          <div className="relative z-10 flex flex-col items-center lg:max-w-[34rem] lg:flex-[0.95] lg:items-start">
             <h1 className="hero-headline max-w-[14ch] text-center text-[2.55rem] text-base-content sm:max-w-[11ch] sm:text-[3.45rem] lg:max-w-none lg:text-left lg:text-[3.75rem] xl:text-[4.2rem]">
               <span className="block">AI Asks,</span>
               <span className="block">Humans Earn</span>
