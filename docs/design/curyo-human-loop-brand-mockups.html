@@ -141,6 +141,91 @@
         line-height: 1.4;
       }
 
+      .generated-options {
+        display: grid;
+        gap: 22px;
+        margin-top: 28px;
+      }
+
+      .generated-card {
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: 0 28px 80px rgb(0 0 0 / 0.42);
+      }
+
+      .generated-card.featured {
+        border-color: rgb(244 122 66 / 0.4);
+      }
+
+      .generated-head {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 18px;
+        align-items: center;
+        border-bottom: 1px solid var(--border);
+        padding: 20px 22px;
+      }
+
+      .generated-head h2 {
+        margin-top: 5px;
+        font-size: clamp(1.7rem, 3vw, 2.45rem);
+        line-height: 1.02;
+      }
+
+      .generated-body {
+        display: grid;
+        grid-template-columns: minmax(0, 1.36fr) minmax(250px, 0.64fr);
+        gap: 0;
+      }
+
+      .generated-figure {
+        margin: 0;
+        background: #000000;
+      }
+
+      .generated-figure img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .generated-notes {
+        border-left: 1px solid var(--border);
+        padding: 22px;
+        background: rgb(25 21 27 / 0.78);
+      }
+
+      .generated-notes p {
+        color: var(--muted);
+        font-size: 0.98rem;
+        line-height: 1.5;
+      }
+
+      .generated-notes ul {
+        margin: 16px 0 0;
+        padding-left: 18px;
+        color: var(--muted);
+        font-size: 0.95rem;
+        line-height: 1.45;
+      }
+
+      .research-strip {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 16px;
+        margin-top: 22px;
+      }
+
+      .research-strip .source-box {
+        margin: 0;
+      }
+
+      .legacy-vector-board {
+        display: none;
+      }
+
       .options {
         display: grid;
         gap: 22px;
@@ -454,6 +539,8 @@
         .intro,
         .principles,
         .sources,
+        .generated-body,
+        .research-strip,
         .option-grid,
         .mock-hero,
         .mock-hero.copy-right {
@@ -467,6 +554,15 @@
 
         .option-head {
           grid-template-columns: 1fr;
+        }
+
+        .generated-head {
+          grid-template-columns: 1fr;
+        }
+
+        .generated-notes {
+          border-left: 0;
+          border-top: 1px solid var(--border);
         }
 
         .badge {
@@ -485,6 +581,8 @@
         }
 
         .option-head,
+        .generated-head,
+        .generated-notes,
         .logo-panel,
         .hero-panel,
         .mock-hero {
@@ -500,22 +598,128 @@
           <div class="eyebrow">Brand exploration</div>
           <h1 id="page-title">Human loop visuals for Curyo</h1>
           <p>
-            Three original directions for replacing the abstract orb with a friendlier AI + human collaboration
-            language. Each keeps Curyo's dark product shell, warm coral action color, and the loop motif, but makes the
-            human judgment layer visible on first glance.
+            Fresh generated image mockups for replacing the abstract orb with a clearer human + AI collaboration scene.
+            Each option keeps the black Curyo shell, warm orb colors, a shared desktop computer, and an orange coffee
+            mug so the hero explains the product at a glance.
           </p>
         </div>
         <aside class="decision">
-          <strong>Recommended path: Desk Loop, with the black production treatment.</strong>
+          <strong>Recommended path: generated Concept B, then refine from there.</strong>
           <p>
-            This is the friendliest read: an AI helper sits beside a human reviewer, while the Curyo-colored loop keeps
-            the existing brand energy. The black field and white line work make it fit the current landing page more
-            directly.
+            The strongest direction is image-led rather than hand-built SVG: generate the whole human/AI/computer scene
+            at once, then iterate with narrow prompts for composition, anatomy, and brand colors.
           </p>
         </aside>
       </section>
 
-      <section class="principles" aria-label="Design principles">
+      <section class="generated-options" aria-label="Generated image mockups">
+        <article class="generated-card featured">
+          <header class="generated-head">
+            <div>
+              <div class="option-kicker">Generated Concept B</div>
+              <h2>Shared Desktop Review</h2>
+            </div>
+            <div class="badge">Recommended</div>
+          </header>
+          <div class="generated-body">
+            <figure class="generated-figure">
+              <img
+                src="assets/human-ai-computer-mug-concept-b.png"
+                alt="Human reviewer and friendly robot collaborating at a desktop computer on a black background"
+              />
+            </figure>
+            <aside class="generated-notes">
+              <p>
+                This is the cleanest first-read hero: human, AI helper, desktop monitor, orange mug, and Curyo-colored
+                orbit accents all land without needing explanation.
+              </p>
+              <ul>
+                <li>Best balance of friendly and polished.</li>
+                <li>Computer is clearly a desktop monitor.</li>
+                <li>Leaves enough negative space to crop into the current landing hero.</li>
+              </ul>
+            </aside>
+          </div>
+        </article>
+
+        <article class="generated-card">
+          <header class="generated-head">
+            <div>
+              <div class="option-kicker">Generated Concept A</div>
+              <h2>Warm Co-Worker Scene</h2>
+            </div>
+            <div class="badge">Friendly</div>
+          </header>
+          <div class="generated-body">
+            <figure class="generated-figure">
+              <img
+                src="assets/human-ai-computer-mug-concept-a.png"
+                alt="Human and robot working together around a desktop computer with an orange coffee mug"
+              />
+            </figure>
+            <aside class="generated-notes">
+              <p>
+                A more narrative option with the human and robot in a shared workspace. It is approachable, but slightly
+                busier and less hero-crop friendly than Concept B.
+              </p>
+              <ul>
+                <li>Strongest emotional warmth.</li>
+                <li>Readable human and robot expressions.</li>
+                <li>May need cleanup to remove tiny decorative sparks.</li>
+              </ul>
+            </aside>
+          </div>
+        </article>
+
+        <article class="generated-card">
+          <header class="generated-head">
+            <div>
+              <div class="option-kicker">Generated Concept C</div>
+              <h2>Agent Beside Reviewer</h2>
+            </div>
+            <div class="badge">Most dramatic</div>
+          </header>
+          <div class="generated-body">
+            <figure class="generated-figure">
+              <img
+                src="assets/human-ai-computer-mug-concept-c.png"
+                alt="Human reviewer and robot beside a desktop monitor with Curyo-colored AI orbit accents"
+              />
+            </figure>
+            <aside class="generated-notes">
+              <p>
+                This has the strongest glow and brand drama. It is useful as inspiration, though the composition is a
+                bit more centered and could compete with the landing headline.
+              </p>
+              <ul>
+                <li>High visual impact.</li>
+                <li>Strong orb-color continuity.</li>
+                <li>Needs a quieter crop if used on the homepage.</li>
+              </ul>
+            </aside>
+          </div>
+        </article>
+      </section>
+
+      <section class="research-strip" aria-label="Research and generation notes">
+        <div class="source-box">
+          <h2>Generation Recipe</h2>
+          <p>
+            Generate the whole scene as one image, not separate vector parts. Lock the must-have objects: one human, one
+            friendly robot, shared desktop monitor with stand, orange mug, black background, no text, no laptop.
+          </p>
+        </div>
+        <div class="source-box">
+          <h2>Research Cues</h2>
+          <p>
+            Human-centered AI guidance consistently points to agency, feedback, control, and clear handoffs, so the
+            image should show a shared work surface rather than an isolated AI mascot. The source links below informed
+            the prompt structure.
+          </p>
+        </div>
+      </section>
+
+      <section class="principles legacy-vector-board" aria-label="Design principles">
         <div class="principle">
           <b>Make the loop explicit</b>
           <span>Show a handoff from AI to human and a return signal back to the agent.</span>
@@ -534,7 +738,7 @@
         </div>
       </section>
 
-      <section class="options" aria-label="Mockup concepts">
+      <section class="options legacy-vector-board" aria-label="Mockup concepts">
         <article class="option">
           <header class="option-head">
             <div>
@@ -920,27 +1124,34 @@
         </article>
       </section>
 
-      <section class="sources" aria-label="Implementation notes and research">
+      <section class="sources" aria-label="Research sources and next steps">
         <div class="source-box">
-          <h2>Implementation notes</h2>
+          <h2>Sources Used</h2>
           <ul>
-            <li>Keep the current orb as a fallback asset until the new mark is tested at favicon, header, hero, and social-card sizes.</li>
-            <li>Prototype Concept B first by replacing <code>CuryoAnimation</code> with a vector hero component and swapping <code>CuryoLogo</code> to an SVG mark.</li>
-            <li>Use animation sparingly: a slow loop stroke draw or subtle handoff pulse is enough.</li>
-            <li>Run visual checks on mobile and laptop widths before shipping, especially the hero height and header logo clarity.</li>
+            <li>
+              <a href="https://pair.withgoogle.com/guidebook-v2/chapters/feedback-controls/">Google PAIR: Feedback + Control</a>
+              for the emphasis on feedback, user control, and trust.
+            </li>
+            <li>
+              <a href="https://www.microsoft.com/en-us/research/project/guidelines-for-human-ai-interaction/">Microsoft Research: Human-AI Interaction Guidelines</a>
+              for capability clarity, correction, and ongoing user feedback.
+            </li>
+            <li>
+              <a href="https://hai.stanford.edu/news/humans-loop-design-interactive-ai-systems">Stanford HAI: Humans in the Loop</a>
+              for framing human-in-the-loop systems as collaborative tools, not full automation.
+            </li>
           </ul>
         </div>
         <div class="source-box">
-          <h2>Research cues used</h2>
+          <h2>Next Prompt Iteration</h2>
           <p>
-            The mockups lean on human-in-the-loop UX patterns that emphasize selective human participation, clear
-            decision points, feedback capture, and trust calibration. Visually, that means the human review action must
-            be as visible as the AI.
+            Start from Concept B and make smaller edits: preserve the black background, desktop monitor, orange mug, and
+            Curyo-colored orbital lines, then ask for only one correction per pass.
           </p>
           <ul>
-            <li>Human in the loop as an HCI design problem, not just automation.</li>
-            <li>AI asks for help at defined decision points, then resumes with human feedback.</li>
-            <li>Interfaces should make handoffs, control, and result confidence visible.</li>
+            <li>Pass 1: tighten composition for the current landing hero crop.</li>
+            <li>Pass 2: simplify background details and remove tiny spark marks.</li>
+            <li>Pass 3: export header/logo crops after the hero direction is chosen.</li>
           </ul>
         </div>
       </section>
