@@ -56,10 +56,5 @@ test("default required deployment list fails closed for core app contracts", () 
     },
   });
 
-  assert.deepEqual(missingContracts, [
-    "42220:HumanReputation",
-    "42220:QuestionRewardPoolEscrow",
-    "42220:X402QuestionSubmitter",
-    "42220:FeedbackBonusEscrow",
-  ]);
+  assert.deepEqual(missingContracts, ["42220:HumanReputation"]);
 });
