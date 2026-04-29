@@ -381,6 +381,28 @@
         fill: var(--green);
       }
 
+      .desk-loop-art .desk-bg {
+        fill: #000000;
+      }
+
+      .desk-loop-art .desk-panel {
+        fill: #000000;
+        stroke: var(--text);
+      }
+
+      .desk-loop-art .svg-line,
+      .desk-loop-art .svg-line-thin {
+        stroke: var(--text);
+      }
+
+      .desk-loop-art .svg-ink {
+        fill: var(--text);
+      }
+
+      .desk-loop-art .svg-coral {
+        stroke: var(--text);
+      }
+
       .sources {
         display: grid;
         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -471,11 +493,11 @@
           </p>
         </div>
         <aside class="decision">
-          <strong>Recommended path: Concept B, with Concept A's friendly face language.</strong>
+          <strong>Recommended path: Desk Loop, with the black production treatment.</strong>
           <p>
-            It explains the product most clearly: an AI asks, verified humans review, the loop returns a usable result.
-            It is less generic than a simple person-and-bot desk scene and easier to scale into icons than a full
-            platform map.
+            This is the friendliest read: an AI helper sits beside a human reviewer, while the Curyo-colored loop keeps
+            the existing brand energy. The black field and white line work make it fit the current landing page more
+            directly.
           </p>
         </aside>
       </section>
@@ -506,12 +528,12 @@
               <div class="option-kicker">Concept A</div>
               <h2>Desk Loop</h2>
             </div>
-            <div class="badge">Friendliest first impression</div>
+            <div class="badge">Preferred direction</div>
           </header>
           <div class="option-grid">
             <aside class="logo-panel">
               <div class="logo-stage" aria-label="Desk Loop logo concept">
-                <svg viewBox="0 0 320 320" role="img" aria-label="Small AI face beside a human review loop">
+                <svg class="desk-loop-art" viewBox="0 0 320 320" role="img" aria-label="Small AI face beside a human review loop">
                   <defs>
                     <linearGradient id="a-loop" x1="80" y1="88" x2="250" y2="238" gradientUnits="userSpaceOnUse">
                       <stop stop-color="#55bad0" />
@@ -519,25 +541,42 @@
                       <stop offset="1" stop-color="#f47a42" />
                     </linearGradient>
                   </defs>
-                  <rect x="44" y="48" width="232" height="232" rx="58" fill="#fff4f0" />
-                  <path
-                    d="M80 160c16-58 74-84 124-60 46 22 60 80 26 122-30 36-86 40-124 12-33-24-42-70-16-105 28-38 85-39 121-6 35 32 38 82 8 114"
+                  <rect class="desk-bg" x="44" y="48" width="232" height="232" rx="58" />
+                  <ellipse
+                    cx="190"
+                    cy="148"
+                    rx="64"
+                    ry="73"
                     fill="none"
                     stroke="url(#a-loop)"
-                    stroke-width="10"
+                    stroke-width="8"
                     stroke-linecap="round"
+                    transform="rotate(-26 190 148)"
                   />
-                  <path class="svg-line" d="M92 212h138" />
-                  <path class="svg-line" d="M110 212l16-58h82l16 58" />
-                  <rect x="122" y="112" width="92" height="55" rx="27" fill="#fff4f0" stroke="#0e0c0f" stroke-width="8" />
-                  <circle cx="150" cy="140" r="5.5" class="svg-ink" />
-                  <circle cx="187" cy="140" r="5.5" class="svg-ink" />
-                  <path class="svg-line-thin" d="M157 153c8 8 18 8 26 0" />
-                  <path class="svg-line" d="M92 160c-15-6-22-18-19-33 4-22 28-34 48-22" />
-                  <path class="svg-ink" d="M74 126c8-38 55-57 88-32-29-4-50 6-64 28-7 12-13 14-24 4Z" />
-                  <circle cx="105" cy="141" r="4.8" class="svg-ink" />
-                  <path class="svg-line-thin" d="M88 155c8 9 19 11 31 6" />
-                  <path class="svg-line-thin" d="M245 104l22 22 36-43" />
+                  <ellipse
+                    cx="190"
+                    cy="148"
+                    rx="64"
+                    ry="73"
+                    fill="none"
+                    stroke="url(#a-loop)"
+                    stroke-width="8"
+                    stroke-linecap="round"
+                    opacity="0.78"
+                    transform="rotate(24 190 148)"
+                  />
+                  <path class="svg-line-thin" d="M85 218h150" />
+                  <path class="desk-panel" d="M104 218l17-58h88l18 58Z" stroke-width="8" stroke-linejoin="round" />
+                  <path class="svg-ink" d="M80 132c5-35 43-54 75-35 15 9 23 22 24 38-25-14-52-15-79-2-8 4-14 4-20-1Z" />
+                  <path class="svg-line" d="M94 146c-6 33 7 58 35 60 27 2 44-19 43-52" />
+                  <circle cx="119" cy="164" r="4.8" class="svg-ink" />
+                  <path class="svg-line-thin" d="M134 181c8 8 20 9 30 1" />
+                  <rect class="desk-panel" x="146" y="112" width="92" height="56" rx="28" stroke-width="8" />
+                  <circle cx="176" cy="140" r="5.5" class="svg-ink" />
+                  <circle cx="208" cy="140" r="5.5" class="svg-ink" />
+                  <path class="svg-line-thin" d="M182 153c8 7 17 7 25 0" />
+                  <circle cx="242" cy="101" r="22" class="svg-coral" />
+                  <path class="svg-line-thin" d="M231 101l8 9 18-22" />
                 </svg>
               </div>
               <div class="notes">
@@ -568,7 +607,7 @@
                     </div>
                   </div>
                   <div class="art-wrap">
-                    <svg viewBox="0 0 720 520" role="img" aria-label="Human and AI at a desk">
+                    <svg class="desk-loop-art" viewBox="0 0 720 520" role="img" aria-label="Human and AI at a desk">
                       <defs>
                         <linearGradient id="a-hero-loop" x1="230" y1="110" x2="496" y2="360" gradientUnits="userSpaceOnUse">
                           <stop stop-color="#55bad0" />
@@ -576,14 +615,30 @@
                           <stop offset="1" stop-color="#f47a42" />
                         </linearGradient>
                       </defs>
-                      <rect x="8" y="18" width="704" height="484" rx="18" fill="#fff4f0" />
+                      <rect class="desk-bg" x="8" y="18" width="704" height="484" rx="18" />
                       <path class="svg-line-thin" d="M48 398h620" />
-                      <path
-                        d="M296 146c35-70 128-73 176-18 50 56 35 151-34 184-67 32-149 2-166-72-14-61 28-119 86-125 67-7 120 47 109 112-9 55-65 93-119 76"
+                      <ellipse
+                        cx="434"
+                        cy="229"
+                        rx="82"
+                        ry="93"
                         fill="none"
                         stroke="url(#a-hero-loop)"
                         stroke-width="8"
                         stroke-linecap="round"
+                        transform="rotate(-27 434 229)"
+                      />
+                      <ellipse
+                        cx="434"
+                        cy="229"
+                        rx="82"
+                        ry="93"
+                        fill="none"
+                        stroke="url(#a-hero-loop)"
+                        stroke-width="8"
+                        stroke-linecap="round"
+                        opacity="0.78"
+                        transform="rotate(23 434 229)"
                       />
                       <path class="svg-ink" d="M130 155c-2-55 49-91 104-75 40 12 64 48 63 89-44-14-90-13-137 1-12 4-21 0-30-15Z" />
                       <path class="svg-line" d="M159 164c-11 58-12 95 8 120 17 21 54 21 70-1 15-20 14-64 12-118" />
@@ -593,13 +648,13 @@
                       <path class="svg-line" d="M64 400c20-118 55-173 137-173 86 0 125 58 146 173" />
                       <path class="svg-line" d="M130 282l-25 118" />
                       <path class="svg-line" d="M283 282l25 118" />
-                      <rect x="294" y="294" width="320" height="142" rx="20" fill="#fff4f0" stroke="#0e0c0f" stroke-width="8" />
-                      <circle cx="454" cy="366" r="22" fill="#fff4f0" stroke="#0e0c0f" stroke-width="7" />
-                      <rect x="372" y="206" width="112" height="62" rx="31" fill="#fff4f0" stroke="#0e0c0f" stroke-width="8" />
+                      <rect class="desk-panel" x="294" y="294" width="320" height="142" rx="20" stroke-width="8" />
+                      <circle class="desk-panel" cx="454" cy="366" r="22" stroke-width="7" />
+                      <rect class="desk-panel" x="378" y="202" width="112" height="62" rx="31" stroke-width="8" />
                       <circle cx="410" cy="238" r="6" class="svg-ink" />
                       <circle cx="447" cy="238" r="6" class="svg-ink" />
                       <path class="svg-line-thin" d="M418 251c8 7 17 7 25 0" />
-                      <rect x="578" y="348" width="44" height="58" rx="8" class="svg-coral" stroke="#0e0c0f" stroke-width="7" />
+                      <rect x="578" y="348" width="44" height="58" rx="8" class="svg-coral" stroke-width="7" />
                       <path class="svg-line-thin" d="M622 368c22-3 28 13 14 26" />
                       <path class="svg-line-thin" d="M590 332c-7-10-5-20 5-29" />
                       <path class="svg-line-thin" d="M612 330c-8-12-5-24 7-34" />
