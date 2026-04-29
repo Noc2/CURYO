@@ -744,8 +744,8 @@ contract QuestionRewardPoolEscrow is
         BundleReward storage bundle = _getExistingBundleReward(bundleId);
         require(!bundle.refunded, "Already refunded");
         require(bundle.bountyClosesAt != 0 && block.timestamp > bundle.bountyClosesAt, "Bundle active");
+        require(block.timestamp > uint256(bundle.bountyClosesAt) + BUNDLE_CLAIM_GRACE, "Grace");
         if (bundle.completedRoundSets != 0) {
-            require(block.timestamp > uint256(bundle.bountyClosesAt) + BUNDLE_CLAIM_GRACE, "Grace");
             _requireBundleCleanupComplete(bundleId);
         }
         refundAmount = bundle.fundedAmount - bundle.claimedAmount;

@@ -2556,6 +2556,21 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
 
     // --- Security fix: BUNDLE_CLAIM_GRACE ---
 
+    function testBundleRefund_NoRecordedRoundSetStillWaitsForGraceAtBountyClose() public {
+        uint256[] memory contentIds = _submitBundleQuestions();
+        uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, REWARD_POOL_AMOUNT, 3);
+
+        vm.warp(block.timestamp + 31 days);
+        vm.expectRevert("Grace");
+        rewardPoolEscrow.refundQuestionBundleReward(bundleId);
+
+        vm.warp(block.timestamp + BUNDLE_CLAIM_GRACE + 1);
+        uint256 treasuryBalanceBefore = usdc.balanceOf(treasury);
+        uint256 refundAmount = rewardPoolEscrow.refundQuestionBundleReward(bundleId);
+        assertEq(refundAmount, REWARD_POOL_AMOUNT);
+        assertEq(usdc.balanceOf(treasury), treasuryBalanceBefore + refundAmount);
+    }
+
     function testBundleRefund_ClaimGraceBlocksRaceAtBountyClose() public {
         uint256[] memory contentIds = _submitBundleQuestions();
         uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, REWARD_POOL_AMOUNT, 3);
