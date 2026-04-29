@@ -40,7 +40,7 @@ test("required deployment helper reports missing contract definitions per target
   assert.deepEqual(missingContracts, ["42220:HumanReputation"]);
 });
 
-test("default required deployment list includes question reward and x402 runtime contracts", () => {
+test("default required deployment list keeps optional bounty contracts out of the global chain guard", () => {
   const missingContracts = listMissingRequiredTargetContracts([42220], {
     42220: {
       ContentRegistry: {},
@@ -49,9 +49,5 @@ test("default required deployment list includes question reward and x402 runtime
     },
   });
 
-  assert.deepEqual(missingContracts, [
-    "42220:QuestionRewardPoolEscrow",
-    "42220:FeedbackBonusEscrow",
-    "42220:X402QuestionSubmitter",
-  ]);
+  assert.deepEqual(missingContracts, []);
 });
