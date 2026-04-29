@@ -403,6 +403,19 @@
         stroke: var(--text);
       }
 
+      .desk-loop-art .svg-orange {
+        fill: var(--coral);
+        stroke: var(--text);
+      }
+
+      .desk-loop-art .human-hair {
+        fill: none;
+        stroke: var(--text);
+        stroke-width: 8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
       .sources {
         display: grid;
         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -536,9 +549,12 @@
                 <svg class="desk-loop-art" viewBox="0 0 320 320" role="img" aria-label="Small AI face beside a human review loop">
                   <defs>
                     <linearGradient id="a-loop" x1="80" y1="88" x2="250" y2="238" gradientUnits="userSpaceOnUse">
-                      <stop stop-color="#55bad0" />
-                      <stop offset="0.46" stop-color="#8a4de8" />
-                      <stop offset="1" stop-color="#f47a42" />
+                      <stop stop-color="#AFC5D7" />
+                      <stop offset="0.2" stop-color="#FFF8F2" />
+                      <stop offset="0.42" stop-color="#F7B070" />
+                      <stop offset="0.64" stop-color="#F26426" />
+                      <stop offset="0.84" stop-color="#B23C3B" />
+                      <stop offset="1" stop-color="#6A345F" />
                     </linearGradient>
                   </defs>
                   <rect class="desk-bg" x="44" y="48" width="232" height="232" rx="58" />
@@ -567,10 +583,11 @@
                   />
                   <path class="svg-line-thin" d="M85 218h150" />
                   <path class="desk-panel" d="M104 218l17-58h88l18 58Z" stroke-width="8" stroke-linejoin="round" />
-                  <path class="svg-ink" d="M80 132c5-35 43-54 75-35 15 9 23 22 24 38-25-14-52-15-79-2-8 4-14 4-20-1Z" />
-                  <path class="svg-line" d="M94 146c-6 33 7 58 35 60 27 2 44-19 43-52" />
+                  <path class="human-hair" d="M90 139c10-24 35-36 60-28 16 5 26 16 30 31" />
+                  <path class="svg-line" d="M96 148c-5 32 8 55 34 57 19 1 33-9 40-28" />
                   <circle cx="119" cy="164" r="4.8" class="svg-ink" />
-                  <path class="svg-line-thin" d="M134 181c8 8 20 9 30 1" />
+                  <circle cx="144" cy="166" r="4.4" class="svg-ink" />
+                  <path class="svg-line-thin" d="M134 181c7 7 17 8 26 2" />
                   <rect class="desk-panel" x="146" y="112" width="92" height="56" rx="28" stroke-width="8" />
                   <circle cx="176" cy="140" r="5.5" class="svg-ink" />
                   <circle cx="208" cy="140" r="5.5" class="svg-ink" />
@@ -610,9 +627,12 @@
                     <svg class="desk-loop-art" viewBox="0 0 720 520" role="img" aria-label="Human and AI at a desk">
                       <defs>
                         <linearGradient id="a-hero-loop" x1="230" y1="110" x2="496" y2="360" gradientUnits="userSpaceOnUse">
-                          <stop stop-color="#55bad0" />
-                          <stop offset="0.52" stop-color="#8a4de8" />
-                          <stop offset="1" stop-color="#f47a42" />
+                          <stop stop-color="#AFC5D7" />
+                          <stop offset="0.2" stop-color="#FFF8F2" />
+                          <stop offset="0.42" stop-color="#F7B070" />
+                          <stop offset="0.64" stop-color="#F26426" />
+                          <stop offset="0.84" stop-color="#B23C3B" />
+                          <stop offset="1" stop-color="#6A345F" />
                         </linearGradient>
                       </defs>
                       <rect class="desk-bg" x="8" y="18" width="704" height="484" rx="18" />
@@ -640,9 +660,10 @@
                         opacity="0.78"
                         transform="rotate(23 434 229)"
                       />
-                      <path class="svg-ink" d="M130 155c-2-55 49-91 104-75 40 12 64 48 63 89-44-14-90-13-137 1-12 4-21 0-30-15Z" />
-                      <path class="svg-line" d="M159 164c-11 58-12 95 8 120 17 21 54 21 70-1 15-20 14-64 12-118" />
+                      <path class="human-hair" d="M153 158c13-33 47-51 82-42 25 7 42 26 50 51" />
+                      <path class="svg-line" d="M160 166c-10 56-10 93 9 117 18 22 54 21 70-1 14-19 14-59 11-113" />
                       <circle cx="191" cy="209" r="5.5" class="svg-ink" />
+                      <circle cx="225" cy="209" r="5.5" class="svg-ink" />
                       <path class="svg-line-thin" d="M207 193c8-8 18-9 29-4" />
                       <path class="svg-line-thin" d="M188 236c12 13 31 13 44 0" />
                       <path class="svg-line" d="M64 400c20-118 55-173 137-173 86 0 125 58 146 173" />
@@ -654,7 +675,7 @@
                       <circle cx="410" cy="238" r="6" class="svg-ink" />
                       <circle cx="447" cy="238" r="6" class="svg-ink" />
                       <path class="svg-line-thin" d="M418 251c8 7 17 7 25 0" />
-                      <rect x="578" y="348" width="44" height="58" rx="8" class="svg-coral" stroke-width="7" />
+                      <rect x="578" y="348" width="44" height="58" rx="8" class="svg-orange" stroke-width="7" />
                       <path class="svg-line-thin" d="M622 368c22-3 28 13 14 26" />
                       <path class="svg-line-thin" d="M590 332c-7-10-5-20 5-29" />
                       <path class="svg-line-thin" d="M612 330c-8-12-5-24 7-34" />
