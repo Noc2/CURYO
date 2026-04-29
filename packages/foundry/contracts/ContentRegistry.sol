@@ -1,22 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
-import {TransientSlot} from "@openzeppelin/contracts/utils/TransientSlot.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import {ICategoryRegistry} from "./interfaces/ICategoryRegistry.sol";
-import {IRoundVotingEngine} from "./interfaces/IRoundVotingEngine.sol";
-import {IVoterIdNFT} from "./interfaces/IVoterIdNFT.sol";
-import {RoundLib} from "./libraries/RoundLib.sol";
-import {RatingLib} from "./libraries/RatingLib.sol";
-import {RatingMath} from "./libraries/RatingMath.sol";
-import {ProtocolConfig} from "./ProtocolConfig.sol";
-import {SubmissionMediaValidator} from "./SubmissionMediaValidator.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+import { TransientSlot } from "@openzeppelin/contracts/utils/TransientSlot.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import { ICategoryRegistry } from "./interfaces/ICategoryRegistry.sol";
+import { IRoundVotingEngine } from "./interfaces/IRoundVotingEngine.sol";
+import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
+import { RoundLib } from "./libraries/RoundLib.sol";
+import { RatingLib } from "./libraries/RatingLib.sol";
+import { RatingMath } from "./libraries/RatingMath.sol";
+import { ProtocolConfig } from "./ProtocolConfig.sol";
+import { SubmissionMediaValidator } from "./SubmissionMediaValidator.sol";
 
 interface IQuestionRewardPoolEscrow {
     function createSubmissionRewardPoolFromRegistry(
@@ -188,6 +188,9 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     ///      and milestone-0 settlement move the dormancy window forward.
     mapping(uint256 => uint256) internal dormancyAnchorAt;
 
+    /// @notice Content that has ever received a commit from any authorized voting engine.
+    mapping(uint256 => bool) internal contentHasVotes;
+
     /// @notice ProtocolConfig used for governance-tunable rating and slash parameters.
     ProtocolConfig public protocolConfig;
 
@@ -206,7 +209,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     SubmissionMediaValidator internal immutable SUBMISSION_MEDIA_VALIDATOR;
 
     /// @dev Reserved storage gap for future upgrades
-    uint256[45] private __gap;
+    uint256[44] private __gap;
 
     // --- Events ---
     event ContentSubmitted(
@@ -319,7 +322,9 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     /// @notice Set the VotingEngine address (can only be called by CONFIG_ROLE).
     function setVotingEngine(address _votingEngine) external onlyRole(CONFIG_ROLE) {
         require(_votingEngine != address(0), "Invalid address");
-        require(votingEngine == address(0), "VotingEngine already set");
+        require(_votingEngine.code.length != 0, "No code");
+        if (votingEngine == _votingEngine) return;
+        require(votingEngine == address(0) || paused(), "Pause required");
         votingEngine = _votingEngine;
     }
 
@@ -346,7 +351,9 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     /// @notice Set or update the bounty escrow.
     function setQuestionRewardPoolEscrow(address _questionRewardPoolEscrow) external onlyRole(CONFIG_ROLE) {
         require(_questionRewardPoolEscrow != address(0), "Invalid address");
-        require(questionRewardPoolEscrow == address(0));
+        require(_questionRewardPoolEscrow.code.length != 0, "No code");
+        if (questionRewardPoolEscrow == _questionRewardPoolEscrow) return;
+        require(questionRewardPoolEscrow == address(0) || paused(), "Pause required");
         questionRewardPoolEscrow = _questionRewardPoolEscrow;
         emit QuestionRewardPoolEscrowUpdated(_questionRewardPoolEscrow);
     }
@@ -637,28 +644,9 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         SubmissionMetadata memory metadata =
             _validatedContextSubmissionMetadata(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId);
         RoundLib.RoundConfig memory validatedRoundConfig = _validatedRoundConfig(roundConfig);
-        _validateQuestionSpec(spec);
-        uint256 resolvedCategoryId = _resolveQuestionSubmissionCategory(metadata);
-        bytes32 submissionKey = _deriveQuestionMediaSubmissionKey(metadata, resolvedCategoryId);
-        require(!submissionKeyUsed[submissionKey], "Question already submitted");
-        require(salt != bytes32(0), "Salt required");
-        _validateSubmissionReward(rewardTerms);
-        require(rewardTerms.requiredVoters <= validatedRoundConfig.maxVoters, "Voters exceed max");
-        bytes32 revealCommitment = _computeRevealCommitment(
-            submissionKey,
-            _submissionMediaHash(imageUrls, videoUrl),
-            metadata.title,
-            metadata.description,
-            metadata.tags,
-            metadata.categoryId,
-            salt,
-            submitter,
-            rewardTerms,
-            validatedRoundConfig,
-            spec
+        (uint256 resolvedCategoryId, bytes32 submissionKey,) = _prepareQuestionMediaSubmission(
+            metadata, imageUrls, videoUrl, salt, rewardTerms, validatedRoundConfig, spec, submitter
         );
-        _consumeReservedSubmission(revealCommitment, submitter);
-        submissionKeyUsed[submissionKey] = true;
         contentId = _storeQuestionAndAttachReward(
             submissionKey,
             submitter,
@@ -695,6 +683,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         Content storage c = contents[contentId];
         require(contentSubmitterIdentity[contentId] == _resolveOptionalSubmitterIdentity(msg.sender), "Not submitter");
         require(c.status == ContentStatus.Active, "Not active");
+        require(!contentHasVotes[contentId], "Content has votes");
         if (votingEngine != address(0)) {
             require(!IRoundVotingEngine(votingEngine).hasCommits(contentId), "Content has votes");
         }
@@ -752,8 +741,9 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         uint256 bundleIndex,
         QuestionSpecCommitment memory spec
     ) internal returns (uint256 contentId) {
-        (uint256 resolvedCategoryId, bytes32 submissionKey, PendingSubmission memory pending) =
-            _prepareQuestionMediaSubmission(metadata, imageUrls, videoUrl, salt, rewardTerms, roundConfig, spec);
+        (uint256 resolvedCategoryId, bytes32 submissionKey, PendingSubmission memory pending) = _prepareQuestionMediaSubmission(
+            metadata, imageUrls, videoUrl, salt, rewardTerms, roundConfig, spec, msg.sender
+        );
         contentId = _storeQuestionAndAttachReward(
             submissionKey,
             pending.submitter,
@@ -778,7 +768,8 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         bytes32 salt,
         SubmissionRewardTerms memory rewardTerms,
         RoundLib.RoundConfig memory roundConfig,
-        QuestionSpecCommitment memory spec
+        QuestionSpecCommitment memory spec,
+        address submitter
     ) internal returns (uint256 resolvedCategoryId, bytes32 submissionKey, PendingSubmission memory pending) {
         _validateQuestionSpec(spec);
         resolvedCategoryId = _resolveQuestionSubmissionCategory(metadata);
@@ -800,12 +791,12 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             metadata.tags,
             metadata.categoryId,
             salt,
-            msg.sender,
+            submitter,
             rewardTerms,
             roundConfig,
             spec
         );
-        pending = _consumeReservedSubmission(revealCommitment, msg.sender);
+        pending = _consumeReservedSubmission(revealCommitment, submitter);
         submissionKeyUsed[submissionKey] = true;
     }
 
@@ -1084,6 +1075,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     /// @dev Vote commits refresh UI-facing activity without extending the dormancy window.
     function updateActivity(uint256 contentId) external {
         require(msg.sender == votingEngine, "Only VotingEngine");
+        contentHasVotes[contentId] = true;
         contents[contentId].lastActivityAt = uint48(block.timestamp);
     }
 
@@ -1212,59 +1204,30 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         RoundLib.RoundConfig memory roundConfig,
         QuestionSpecCommitment memory spec
     ) internal pure returns (bytes32) {
-        uint256 titleTailLength = _encodedStringTailLength(title);
-        uint256 descriptionTailLength = _encodedStringTailLength(description);
-        uint256 titleOffset = 20 * 32;
-        uint256 descriptionOffset = titleOffset + titleTailLength;
-        uint256 tagsOffset = descriptionOffset + descriptionTailLength;
-        bytes memory encoded = new bytes(tagsOffset + _encodedStringTailLength(tags));
-
-        _writeUint(encoded, 0, uint256(submissionKey));
-        _writeUint(encoded, 32, uint256(mediaHash));
-        _writeUint(encoded, 2 * 32, titleOffset);
-        _writeUint(encoded, 3 * 32, descriptionOffset);
-        _writeUint(encoded, 4 * 32, tagsOffset);
-        _writeUint(encoded, 5 * 32, categoryId);
-        _writeUint(encoded, 6 * 32, uint256(salt));
-        _writeUint(encoded, 7 * 32, uint256(uint160(submitter)));
-        _writeUint(encoded, 8 * 32, uint256(rewardTerms.asset));
-        _writeUint(encoded, 9 * 32, rewardTerms.amount);
-        _writeUint(encoded, 10 * 32, rewardTerms.requiredVoters);
-        _writeUint(encoded, 11 * 32, rewardTerms.requiredSettledRounds);
-        _writeUint(encoded, 12 * 32, rewardTerms.bountyClosesAt);
-        _writeUint(encoded, 13 * 32, rewardTerms.feedbackClosesAt);
-        _writeUint(encoded, 14 * 32, uint256(roundConfig.epochDuration));
-        _writeUint(encoded, 15 * 32, uint256(roundConfig.maxDuration));
-        _writeUint(encoded, 16 * 32, uint256(roundConfig.minVoters));
-        _writeUint(encoded, 17 * 32, uint256(roundConfig.maxVoters));
-        _writeUint(encoded, 18 * 32, uint256(spec.questionMetadataHash));
-        _writeUint(encoded, 19 * 32, uint256(spec.resultSpecHash));
-        _writeStringTail(encoded, titleOffset, title);
-        _writeStringTail(encoded, descriptionOffset, description);
-        _writeStringTail(encoded, tagsOffset, tags);
-        return keccak256(encoded);
-    }
-
-    function _encodedStringTailLength(string memory value) internal pure returns (uint256) {
-        return ((bytes(value).length + 63) / 32) * 32;
-    }
-
-    function _writeUint(bytes memory encoded, uint256 offset, uint256 value) internal pure {
-        assembly ("memory-safe") {
-            mstore(add(add(encoded, 32), offset), value)
-        }
-    }
-
-    function _writeStringTail(bytes memory encoded, uint256 offset, string memory value) internal pure {
-        bytes memory raw = bytes(value);
-        uint256 rawLength = raw.length;
-        _writeUint(encoded, offset, rawLength);
-        for (uint256 i = 0; i < rawLength;) {
-            encoded[offset + 32 + i] = raw[i];
-            unchecked {
-                ++i;
-            }
-        }
+        return keccak256(
+            abi.encode(
+                submissionKey,
+                mediaHash,
+                title,
+                description,
+                tags,
+                categoryId,
+                salt,
+                submitter,
+                rewardTerms.asset,
+                rewardTerms.amount,
+                rewardTerms.requiredVoters,
+                rewardTerms.requiredSettledRounds,
+                rewardTerms.bountyClosesAt,
+                rewardTerms.feedbackClosesAt,
+                roundConfig.epochDuration,
+                roundConfig.maxDuration,
+                roundConfig.minVoters,
+                roundConfig.maxVoters,
+                spec.questionMetadataHash,
+                spec.resultSpecHash
+            )
+        );
     }
 
     function _computeQuestionBundleHash(

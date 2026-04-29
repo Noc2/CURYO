@@ -1269,9 +1269,7 @@ contract RoundIntegrationTest is VotingTestBase {
         dirs[1] = false;
 
         uint256 roundId = _settleRoundWith(voters, contentId, dirs, STAKE);
-        assertEq(
-            hrepToken.balanceOf(voter4), stakePayerBalanceBefore - STAKE, "stake payer should fund delegated vote"
-        );
+        assertEq(hrepToken.balanceOf(voter4), stakePayerBalanceBefore - STAKE, "stake payer should fund delegated vote");
 
         vm.prank(voter1);
         votingEngine.claimCancelledRoundRefund(contentId, roundId);
@@ -3354,7 +3352,7 @@ contract RoundIntegrationTest is VotingTestBase {
         assertEq(balAfter - balBefore, 4_500_000, "backfill should repair rate snapshot failures");
     }
 
-    function test_RegistryVotingEngineCannotRotateAfterInitialWiring() public {
+    function test_RegistryVotingEngineRotatesOnlyWhilePausedAfterInitialWiring() public {
         uint256 contentId = _submitContent();
         address[] memory voters = new address[](3);
         voters[0] = voter1;
@@ -3367,16 +3365,40 @@ contract RoundIntegrationTest is VotingTestBase {
 
         _commitAllThenReveal(voters, contentId, dirs, STAKE);
         uint256 roundId = _getActiveOrLatestRoundId(contentId);
+        RoundVotingEngine replacementEngine = _deployReplacementVotingEngine();
 
         vm.prank(owner);
-        vm.expectRevert("VotingEngine already set");
-        registry.setVotingEngine(address(0xBEEF));
+        vm.expectRevert("Pause required");
+        registry.setVotingEngine(address(replacementEngine));
 
         votingEngine.settleRound(contentId, roundId);
         assertEq(
             uint8(RoundEngineReadHelpers.round(votingEngine, contentId, roundId).state),
             uint8(RoundLib.RoundState.Settled)
         );
+
+        vm.startPrank(owner);
+        registry.pause();
+        registry.setVotingEngine(address(replacementEngine));
+        vm.stopPrank();
+
+        assertEq(registry.votingEngine(), address(replacementEngine));
+    }
+
+    function _deployReplacementVotingEngine() internal returns (RoundVotingEngine replacementEngine) {
+        vm.startPrank(owner);
+        replacementEngine = RoundVotingEngine(
+            address(
+                new ERC1967Proxy(
+                    address(new RoundVotingEngine()),
+                    abi.encodeCall(
+                        RoundVotingEngine.initialize,
+                        (owner, address(hrepToken), address(registry), address(_deployProtocolConfig(owner)))
+                    )
+                )
+            )
+        );
+        vm.stopPrank();
     }
 
     // =========================================================================

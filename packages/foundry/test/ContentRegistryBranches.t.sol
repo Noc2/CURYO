@@ -143,14 +143,21 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.stopPrank();
     }
 
-    function test_SetQuestionRewardPoolEscrow_IsOneShot() public {
+    function test_SetQuestionRewardPoolEscrow_RotationRequiresPause() public {
         MockQuestionRewardPoolEscrow replacementEscrow = new MockQuestionRewardPoolEscrow();
 
         vm.prank(owner);
-        vm.expectRevert();
+        vm.expectRevert("Pause required");
         registry.setQuestionRewardPoolEscrow(address(replacementEscrow));
 
         assertEq(registry.questionRewardPoolEscrow(), address(mockQuestionRewardPoolEscrow));
+
+        vm.startPrank(owner);
+        registry.pause();
+        registry.setQuestionRewardPoolEscrow(address(replacementEscrow));
+        vm.stopPrank();
+
+        assertEq(registry.questionRewardPoolEscrow(), address(replacementEscrow));
     }
 
     function _vote(address voter, uint256 contentId, bool isUp) internal {
@@ -1805,6 +1812,26 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         registry.cancelContent(1);
     }
 
+    function test_CancelContent_RemembersVotesAfterVotingEngineRotation() public {
+        vm.startPrank(submitter);
+        hrepToken.approve(address(registry), 10e6);
+        _submitContentWithReservation(registry, "https://example.com/rotated-engine", "goal", "goal", "tags", 0);
+        vm.stopPrank();
+
+        _vote(voter1, 1, true);
+        RoundVotingEngine replacementEngine = _deployReplacementVotingEngine();
+
+        vm.startPrank(owner);
+        registry.pause();
+        registry.setVotingEngine(address(replacementEngine));
+        registry.unpause();
+        vm.stopPrank();
+
+        vm.prank(submitter);
+        vm.expectRevert("Content has votes");
+        registry.cancelContent(1);
+    }
+
     function test_CancelContent_VotingEngineNotSet_AllowsCancel() public {
         // Deploy a fresh registry without votingEngine
         vm.startPrank(owner);
@@ -1862,6 +1889,22 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         uint256 treasuryAfter = hrepToken.balanceOf(treasury);
         assertEq(treasuryAfter - treasuryBefore, 0);
+    }
+
+    function _deployReplacementVotingEngine() internal returns (RoundVotingEngine replacementEngine) {
+        vm.startPrank(owner);
+        replacementEngine = RoundVotingEngine(
+            address(
+                new ERC1967Proxy(
+                    address(new RoundVotingEngine()),
+                    abi.encodeCall(
+                        RoundVotingEngine.initialize,
+                        (owner, address(hrepToken), address(registry), address(_deployProtocolConfig(owner)))
+                    )
+                )
+            )
+        );
+        vm.stopPrank();
     }
 
     // =========================================================================
