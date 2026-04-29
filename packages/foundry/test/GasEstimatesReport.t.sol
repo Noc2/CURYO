@@ -33,8 +33,7 @@ contract UserTransactionGasEstimatesTest is RoundIntegrationTest {
     {
         return abi.encode(
             contentId,
-            artifacts.roundId,
-            artifacts.roundReferenceRatingBps,
+            _roundContext(artifacts.roundId, artifacts.roundReferenceRatingBps),
             artifacts.commitHash,
             artifacts.ciphertext,
             frontend,
