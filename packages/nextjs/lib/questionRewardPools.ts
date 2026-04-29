@@ -80,7 +80,12 @@ export function getConfiguredQuestionRewardPoolEscrowAddress(chainId: number): `
   const deployedAddress = getDeployedContractAddress(chainId, "QuestionRewardPoolEscrow");
 
   if (envAddress) {
-    if (process.env.NODE_ENV === "production" && deployedAddress) {
+    if (process.env.NODE_ENV === "production") {
+      if (!deployedAddress) {
+        throw new Error(
+          "NEXT_PUBLIC_QUESTION_REWARD_POOL_ESCROW_ADDRESS requires a shared QuestionRewardPoolEscrow deployment in production.",
+        );
+      }
       if (envAddress.toLowerCase() !== deployedAddress.toLowerCase()) {
         throw new Error(
           "NEXT_PUBLIC_QUESTION_REWARD_POOL_ESCROW_ADDRESS must match the shared QuestionRewardPoolEscrow deployment in production.",
