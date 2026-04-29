@@ -118,42 +118,64 @@ test("quoteQuestion uses direct authenticated agent HTTP when apiBaseUrl and tok
   assert.equal(response.fastLane?.pricingConfidence, "medium");
 });
 
-test("quoteQuestion rejects tokenless hosted asks without agent auth", async () => {
-  let fetchCalls = 0;
+test("quoteQuestion supports tokenless direct agent HTTP with a wallet address", async () => {
+  let requestedUrl = "";
+  let requestedHeaders: Headers | undefined;
+  let requestedBody: any;
   const agent = createCuryoAgentClient({
     apiBaseUrl: API_BASE_URL,
-    fetchImpl: async () => {
-      fetchCalls += 1;
-      throw new Error("tokenless quote should not call fetch");
+    fetchImpl: async (input: URL | RequestInfo, init?: RequestInit) => {
+      requestedUrl = String(input);
+      requestedBody = JSON.parse(String(init?.body));
+      requestedHeaders = new Headers(init?.headers);
+      return jsonResponse({
+        canSubmit: true,
+        clientRequestId: "ask-tokenless-quote",
+        operationKey: `0x${"56".repeat(32)}`,
+        payment: { amount: "1000000", asset: "USDC", decimals: 6 },
+        walletPolicyRequired: false,
+      });
     },
   });
 
-  assert.throws(
-    () =>
-      agent.quoteQuestion({
-        bounty: { amount: 1_000_000n, requiredVoters: 3n },
-        chainId: 42220,
-        clientRequestId: "ask-tokenless-quote",
-        question: {
-          categoryId: 7n,
-          contextUrl: "https://example.com/context",
-          description: "Does this look ready for launch?",
-          tags: ["launch", "agent"],
-          title: "Launch readiness?",
-        },
-      }),
-    /agent asks require mcpAccessToken/i,
-  );
-  assert.equal(fetchCalls, 0);
+  const response = await agent.quoteQuestion({
+    bounty: { amount: 1_000_000n, requiredVoters: 3n },
+    chainId: 42220,
+    clientRequestId: "ask-tokenless-quote",
+    question: {
+      categoryId: 7n,
+      contextUrl: "https://example.com/context",
+      description: "Does this look ready for launch?",
+      tags: ["launch", "agent"],
+      title: "Launch readiness?",
+    },
+    walletAddress: "0x00000000000000000000000000000000000000aa",
+  });
+
+  assert.equal(requestedUrl, "https://curyo.example/api/agent/quote");
+  assert.equal(requestedHeaders?.get("authorization"), null);
+  assert.equal(requestedBody.bounty.amount, "1000000");
+  assert.equal(requestedBody.walletAddress, "0x00000000000000000000000000000000000000aa");
+  assert.equal(response.walletPolicyRequired, false);
+  assert.equal(response.operationKey, `0x${"56".repeat(32)}`);
 });
 
-test("askHumans rejects tokenless hosted asks without agent auth", async () => {
-  let fetchCalls = 0;
+test("askHumans supports tokenless direct agent HTTP with a wallet address", async () => {
+  let requestedUrl = "";
+  let requestedHeaders: Headers | undefined;
+  let requestedBody: any;
   const agent = createCuryoAgentClient({
     apiBaseUrl: API_BASE_URL,
-    fetchImpl: async () => {
-      fetchCalls += 1;
-      throw new Error("tokenless ask should not call fetch");
+    fetchImpl: async (input: URL | RequestInfo, init?: RequestInit) => {
+      requestedUrl = String(input);
+      requestedBody = JSON.parse(String(init?.body));
+      requestedHeaders = new Headers(init?.headers);
+      return jsonResponse({
+        clientRequestId: "ask-2",
+        operationKey: `0x${"57".repeat(32)}`,
+        status: "awaiting_wallet_signature",
+        walletPolicyRequired: false,
+      });
     },
   });
 
@@ -169,13 +191,17 @@ test("askHumans rejects tokenless hosted asks without agent auth", async () => {
       tags: "launch,agent",
       title: "Launch readiness?",
     },
+    walletAddress: "0x00000000000000000000000000000000000000aa",
   };
 
-  await assert.rejects(
-    () => agent.askHumans(request),
-    /agent asks require mcpAccessToken/i,
-  );
-  assert.equal(fetchCalls, 0);
+  const response = await agent.askHumans(request);
+
+  assert.equal(requestedUrl, "https://curyo.example/api/agent/asks");
+  assert.equal(requestedHeaders?.get("authorization"), null);
+  assert.equal(requestedBody.maxPaymentAmount, "1250000");
+  assert.equal(requestedBody.walletAddress, "0x00000000000000000000000000000000000000aa");
+  assert.equal(response.walletPolicyRequired, false);
+  assert.equal(response.status, "awaiting_wallet_signature");
 });
 
 test("askHumans prefers direct authenticated agent HTTP before MCP framing", async () => {
@@ -274,28 +300,38 @@ test("confirmAskTransactions can use MCP framing", async () => {
   assert.equal(response.status, "submitted");
 });
 
-test("getQuestionStatus rejects tokenless hosted status lookups without agent auth", async () => {
-  let fetchCalls = 0;
+test("getQuestionStatus supports tokenless direct operation and wallet client lookups", async () => {
+  const requestedUrls: string[] = [];
   const agent = createCuryoAgentClient({
     apiBaseUrl: API_BASE_URL,
-    fetchImpl: async () => {
-      fetchCalls += 1;
-      throw new Error("tokenless status should not call fetch");
+    fetchImpl: async (input: URL | RequestInfo, init?: RequestInit) => {
+      requestedUrls.push(String(input));
+      const headers = new Headers(init?.headers);
+      assert.equal(headers.get("authorization"), null);
+      return jsonResponse({
+        operationKey: `0x${"33".repeat(32)}`,
+        ready: false,
+        status: "awaiting_wallet_signature",
+        terminal: false,
+      });
     },
   });
 
-  await assert.rejects(
-    () =>
-      agent.getQuestionStatus({
-        operationKey: `0x${"33".repeat(32)}`,
-      }),
-    /agent asks require mcpAccessToken/i,
-  );
-  await assert.rejects(
-    () => agent.getQuestionStatus({ chainId: 42220, clientRequestId: "ask-3" }),
-    /agent asks require mcpAccessToken/i,
-  );
-  assert.equal(fetchCalls, 0);
+  const byOperation = await agent.getQuestionStatus({
+    operationKey: `0x${"33".repeat(32)}`,
+  });
+  const byClient = await agent.getQuestionStatus({
+    chainId: 42220,
+    clientRequestId: "ask-3",
+    walletAddress: "0x00000000000000000000000000000000000000aa",
+  });
+
+  assert.deepEqual(requestedUrls, [
+    `https://curyo.example/api/agent/asks/0x${"33".repeat(32)}`,
+    "https://curyo.example/api/agent/asks/by-client-request?chainId=42220&clientRequestId=ask-3&walletAddress=0x00000000000000000000000000000000000000aa",
+  ]);
+  assert.equal(byOperation.status, "awaiting_wallet_signature");
+  assert.equal(byClient.terminal, false);
 });
 
 test("authenticated status, result, and templates use direct agent HTTP endpoints", async () => {
@@ -538,24 +574,31 @@ test("getResult summarizes tokenless feature acceptance feedback", async () => {
   assert.deepEqual(result.sourceUrls, ["https://example.com/repro"]);
 });
 
-test("getResult rejects tokenless operation lookups until a public content id is available", async () => {
-  let fetchCalls = 0;
+test("getResult supports tokenless direct operation lookups", async () => {
+  let requestedUrl = "";
+  let requestedHeaders: Headers | undefined;
   const agent = createCuryoAgentClient({
     apiBaseUrl: API_BASE_URL,
-    fetchImpl: async () => {
-      fetchCalls += 1;
-      throw new Error("tokenless operation result should not call fetch");
+    fetchImpl: async (input: URL | RequestInfo, init?: RequestInit) => {
+      requestedUrl = String(input);
+      requestedHeaders = new Headers(init?.headers);
+      return jsonResponse({
+        answer: "pending",
+        operation: { operationKey: `0x${"99".repeat(32)}` },
+        ready: false,
+        recommendedNextAction: "wait_for_settlement",
+      });
     },
   });
 
-  await assert.rejects(
-    () =>
-      agent.getResult({
-        operationKey: `0x${"99".repeat(32)}`,
-      }),
-    /agent asks require mcpAccessToken/i,
-  );
-  assert.equal(fetchCalls, 0);
+  const result = await agent.getResult({
+    operationKey: `0x${"99".repeat(32)}`,
+  });
+
+  assert.equal(requestedUrl, `https://curyo.example/api/agent/results/0x${"99".repeat(32)}`);
+  assert.equal(requestedHeaders?.get("authorization"), null);
+  assert.equal(result.ready, false);
+  assert.equal(result.answer, "pending");
 });
 
 test("getResult treats terminal non-settled tokenless rounds as ready results", async () => {

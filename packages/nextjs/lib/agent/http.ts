@@ -105,7 +105,7 @@ export async function handleAgentRoute(params: AgentRouteOptions) {
 }
 
 export function hasAgentBearerToken(request: Request) {
-  return /^Bearer\s+.+$/i.test(request.headers.get("authorization") ?? "");
+  return Boolean(request.headers.get("authorization")?.trim());
 }
 
 export async function handlePublicAgentRoute(params: PublicAgentRouteOptions) {

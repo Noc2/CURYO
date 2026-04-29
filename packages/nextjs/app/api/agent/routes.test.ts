@@ -493,18 +493,18 @@ after(() => {
   restoreEnv("NODE_ENV", originalNodeEnv);
 });
 
-test("agent templates require bearer auth and return a structured auth error", async () => {
+test("agent templates route returns public templates without bearer auth", async () => {
   const response = await templatesRoute.GET(
     new NextRequest("https://curyo.xyz/api/agent/templates", { method: "GET" }),
   );
-  const body = (await response.json()) as Record<string, unknown>;
+  const body = (await response.json()) as {
+    templates: Array<{ id: string; submissionPattern: string }>;
+  };
 
-  assert.equal(response.status, 401);
-  assert.equal(body.code, "transport_auth_required");
-  assert.match(
-    response.headers.get("www-authenticate") ?? "",
-    /resource_metadata="https:\/\/curyo\.xyz\/\.well-known\/oauth-protected-resource"/,
-  );
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("www-authenticate"), null);
+  assert.equal(body.templates[0]?.id, "generic_rating");
+  assert.equal(body.templates[0]?.submissionPattern, "single_question");
 });
 
 test("agent quote route returns a direct authenticated quote response", async () => {
@@ -537,6 +537,23 @@ test("agent quote route returns a tokenless wallet quote response", async () => 
   assert.equal(body.operationKey, OPERATION_KEY);
   assert.equal(body.walletPolicyRequired, false);
   assert.equal((body.wallet as Record<string, unknown>).address, "0x00000000000000000000000000000000000000aa");
+});
+
+test("agent quote route treats malformed authorization as managed auth", async () => {
+  const response = await quoteRoute.POST(
+    makePublicPost(
+      "https://curyo.xyz/api/agent/quote",
+      {
+        ...questionPayload("quote-bad-auth"),
+        walletAddress: "0x00000000000000000000000000000000000000aa",
+      },
+      { authorization: "Token malformed" },
+    ),
+  );
+  const body = (await response.json()) as Record<string, unknown>;
+
+  assert.equal(response.status, 401);
+  assert.equal(body.code, "transport_auth_required");
 });
 
 test("agent asks route returns the wallet transaction plan response", async () => {

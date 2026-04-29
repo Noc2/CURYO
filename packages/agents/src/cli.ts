@@ -133,6 +133,7 @@ async function main() {
           chainId: typeof options["chain-id"] === "string" ? Number(options["chain-id"]) : undefined,
           clientRequestId: typeof options["client-request-id"] === "string" ? options["client-request-id"] : undefined,
           operationKey: typeof options["operation-key"] === "string" ? options["operation-key"] : undefined,
+          walletAddress: typeof options["wallet-address"] === "string" ? options["wallet-address"] : undefined,
         }),
       );
       return;
@@ -146,6 +147,7 @@ async function main() {
           clientRequestId: typeof options["client-request-id"] === "string" ? options["client-request-id"] : undefined,
           contentId: typeof options["content-id"] === "string" ? options["content-id"] : undefined,
           operationKey: typeof options["operation-key"] === "string" ? options["operation-key"] : undefined,
+          walletAddress: typeof options["wallet-address"] === "string" ? options["wallet-address"] : undefined,
         }),
       );
       return;

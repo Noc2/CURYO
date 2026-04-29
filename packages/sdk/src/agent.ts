@@ -15,8 +15,9 @@ const DEFAULT_TIMEOUT_MS = 10_000;
 const DEFAULT_MCP_PROTOCOL_VERSION = "2025-11-25";
 const DEFAULT_AGENT_API_PATH = "/api/agent";
 const DEFAULT_MCP_PATH = "/api/mcp";
+const DEFAULT_PUBLIC_MCP_PATH = "/api/mcp/public";
 const AGENT_AUTH_REQUIRED_MESSAGE =
-  "Curyo agent asks require mcpAccessToken for the hosted agent API, or a user-controlled wallet execution flow.";
+  "Curyo agent operations require apiBaseUrl for direct HTTP or mcpApiUrl for MCP. Add mcpAccessToken only for managed agent policies.";
 
 export interface CuryoAgentClientOptions {
   agentApiPath?: string;
@@ -69,6 +70,7 @@ export interface CuryoAgentQuestionRequest {
   questions?: CuryoAgentQuestionItem[];
   bounty: CuryoAgentBounty;
   roundConfig?: CuryoAgentRoundConfig;
+  walletAddress?: `0x${string}` | string;
   [key: string]: unknown;
 }
 
@@ -89,7 +91,6 @@ export interface AskHumansRequest extends CuryoAgentQuestionRequest {
   };
   paymentMode?: "wallet_calls" | "x402_authorization";
   transport?: "http" | "mcp";
-  walletAddress?: `0x${string}` | string;
 }
 
 export interface ConfirmAskTransactionsRequest {
@@ -101,6 +102,7 @@ export interface QuestionStatusLookup {
   operationKey?: `0x${string}` | string;
   chainId?: number;
   clientRequestId?: string;
+  walletAddress?: `0x${string}` | string;
 }
 
 export interface CuryoAgentPayment {
@@ -433,10 +435,6 @@ export function quoteQuestion(
     });
   }
 
-  if (config.apiBaseUrl && !config.mcpAccessToken) {
-    throw new CuryoSdkError(AGENT_AUTH_REQUIRED_MESSAGE);
-  }
-
   return callMcpTool<QuoteQuestionResponse>(
     config,
     "curyo_quote_question",
@@ -462,7 +460,7 @@ export async function askHumans(
     });
   }
 
-  if (transport === "mcp" || config.mcpAccessToken) {
+  if (transport === "mcp" || config.mcpApiUrl) {
     return callMcpTool<AskHumansResponse>(config, "curyo_ask_humans", body);
   }
 
@@ -482,7 +480,7 @@ export async function confirmAskTransactions(
     });
   }
 
-  if (config.mcpAccessToken) {
+  if (config.mcpApiUrl) {
     return callMcpTool<QuestionStatusResponse>(config, "curyo_confirm_ask_transactions", { ...params });
   }
 
@@ -505,7 +503,7 @@ export async function getQuestionStatus(
     );
   }
 
-  if (config.mcpAccessToken) {
+  if (config.mcpApiUrl) {
     return callMcpTool<QuestionStatusResponse>(
       config,
       "curyo_get_question_status",
@@ -521,6 +519,12 @@ export async function getResult(
   options: CuryoAgentClientOptions = {},
 ): Promise<CuryoAgentResult> {
   const config = normalizeAgentConfig(options);
+  const contentId =
+    params.contentId === undefined ? "" : String(params.contentId).trim();
+  if (contentId && config.apiBaseUrl && !config.mcpAccessToken) {
+    return buildPublicAgentResult(config, contentId, null);
+  }
+
   if (hasDirectAgentHttp(config)) {
     return requestJson<CuryoAgentResult>(
       config,
@@ -532,13 +536,7 @@ export async function getResult(
     );
   }
 
-  const contentId =
-    params.contentId === undefined ? "" : String(params.contentId).trim();
-  if (contentId && config.apiBaseUrl && !config.mcpAccessToken) {
-    return buildPublicAgentResult(config, contentId, null);
-  }
-
-  if (config.mcpAccessToken) {
+  if (config.mcpApiUrl) {
     const result = await callMcpTool<unknown>(config, "curyo_get_result", {
       ...params,
       contentId:
@@ -1267,6 +1265,9 @@ function normalizeAgentConfig(
 ): NormalizedAgentConfig {
   const apiBaseUrl = normalizeUrl(options.apiBaseUrl);
   const fetchImpl = options.fetchImpl ?? fetch;
+  const defaultMcpPath = options.mcpAccessToken
+    ? DEFAULT_MCP_PATH
+    : DEFAULT_PUBLIC_MCP_PATH;
   return {
     agentApiPath: options.agentApiPath ?? DEFAULT_AGENT_API_PATH,
     apiBaseUrl,
@@ -1275,7 +1276,7 @@ function normalizeAgentConfig(
     mcpApiUrl:
       normalizeUrl(options.mcpApiUrl) ??
       (apiBaseUrl
-        ? new URL(DEFAULT_MCP_PATH, `${apiBaseUrl}/`).toString()
+        ? new URL(defaultMcpPath, `${apiBaseUrl}/`).toString()
         : undefined),
     mcpProtocolVersion:
       options.mcpProtocolVersion ?? DEFAULT_MCP_PROTOCOL_VERSION,
@@ -1344,6 +1345,9 @@ function agentStatusUrl(
   const url = new URL("./asks/by-client-request", `${agentBaseUrl(config)}/`);
   url.searchParams.set("chainId", String(params.chainId));
   url.searchParams.set("clientRequestId", params.clientRequestId);
+  if (params.walletAddress) {
+    url.searchParams.set("walletAddress", params.walletAddress);
+  }
   return url.toString();
 }
 
@@ -1381,6 +1385,9 @@ function agentResultUrl(
   );
   url.searchParams.set("chainId", String(params.chainId));
   url.searchParams.set("clientRequestId", params.clientRequestId);
+  if (params.walletAddress) {
+    url.searchParams.set("walletAddress", params.walletAddress);
+  }
   return url.toString();
 }
 
@@ -1389,20 +1396,19 @@ function agentTemplatesUrl(config: NormalizedAgentConfig) {
 }
 
 function hasDirectAgentHttp(config: NormalizedAgentConfig) {
-  return Boolean(config.apiBaseUrl && config.mcpAccessToken);
+  return Boolean(config.apiBaseUrl);
 }
 
 function agentHeaders(config: NormalizedAgentConfig) {
-  if (!config.mcpAccessToken) {
-    throw new CuryoSdkError(
-      "mcpAccessToken is required for authenticated agent HTTP operations",
-    );
+  const headers: Record<string, string> = {
+    accept: "application/json",
+  };
+
+  if (config.mcpAccessToken) {
+    headers.authorization = `Bearer ${config.mcpAccessToken}`;
   }
 
-  return {
-    accept: "application/json",
-    authorization: `Bearer ${config.mcpAccessToken}`,
-  };
+  return headers;
 }
 
 function jsonAgentHeaders(config: NormalizedAgentConfig) {
