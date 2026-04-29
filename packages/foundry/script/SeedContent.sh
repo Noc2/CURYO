@@ -39,14 +39,45 @@ if ! cast chain-id --rpc-url "$RPC" > /dev/null 2>&1; then
   exit 0
 fi
 
-# Read contract addresses from deployment file
-TOKEN=$(grep -o '"0x[^"]*": "HumanReputation"' "$DEPLOY_JSON" | grep -o '0x[^"]*' || true)
-REGISTRY=$(grep -o '"0x[^"]*": "ContentRegistry"' "$DEPLOY_JSON" | grep -o '0x[^"]*' || true)
-QUESTION_REWARD_POOL_ESCROW=$(grep -o '"0x[^"]*": "QuestionRewardPoolEscrow"' "$DEPLOY_JSON" | grep -o '0x[^"]*' || true)
-FEEDBACK_BONUS_ESCROW=$(grep -o '"0x[^"]*": "FeedbackBonusEscrow"' "$DEPLOY_JSON" | grep -o '0x[^"]*' || true)
-USDC_TOKEN=$(grep -o '"0x[^"]*": "MockERC20"' "$DEPLOY_JSON" | grep -o '0x[^"]*' || true)
-VOTING_ENGINE=$(grep -o '"0x[^"]*": "RoundVotingEngine"' "$DEPLOY_JSON" | grep -o '0x[^"]*' || true)
-CATEGORY_REGISTRY=$(grep -o '"0x[^"]*": "CategoryRegistry"' "$DEPLOY_JSON" | grep -o '0x[^"]*' || true)
+# Read contract addresses from deployment file. Foundry may rewrite JSON spacing,
+# so parse the artifact instead of grepping for a specific pretty-printed shape.
+read_deployment_address() {
+  node -e '
+const fs = require("fs");
+const [path, contractName] = process.argv.slice(1);
+const deployments = JSON.parse(fs.readFileSync(path, "utf8"));
+const addressPattern = /^0x[0-9a-fA-F]{40}$/;
+
+for (const [key, value] of Object.entries(deployments)) {
+  if (addressPattern.test(key) && value === contractName) {
+    console.log(key);
+    process.exit(0);
+  }
+
+  if (key === contractName) {
+    if (typeof value === "string" && addressPattern.test(value)) {
+      console.log(value);
+      process.exit(0);
+    }
+
+    if (value && typeof value === "object" && typeof value.address === "string" && addressPattern.test(value.address)) {
+      console.log(value.address);
+      process.exit(0);
+    }
+  }
+}
+
+process.exit(1);
+' "$DEPLOY_JSON" "$1" || true
+}
+
+TOKEN=$(read_deployment_address "HumanReputation")
+REGISTRY=$(read_deployment_address "ContentRegistry")
+QUESTION_REWARD_POOL_ESCROW=$(read_deployment_address "QuestionRewardPoolEscrow")
+FEEDBACK_BONUS_ESCROW=$(read_deployment_address "FeedbackBonusEscrow")
+USDC_TOKEN=$(read_deployment_address "MockERC20")
+VOTING_ENGINE=$(read_deployment_address "RoundVotingEngine")
+CATEGORY_REGISTRY=$(read_deployment_address "CategoryRegistry")
 
 if [ -z "$TOKEN" ] || [ -z "$REGISTRY" ] || [ -z "$QUESTION_REWARD_POOL_ESCROW" ] || [ -z "$CATEGORY_REGISTRY" ]; then
   echo "ERROR: Could not read contract addresses from $DEPLOY_JSON"
