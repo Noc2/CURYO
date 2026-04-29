@@ -8,6 +8,14 @@ import { RatingLib } from "../contracts/libraries/RatingLib.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { deployInitializedProtocolConfig } from "./helpers/VotingTestHelpers.sol";
 
+contract MockRewardDistributorForConfig {
+    address public votingEngine;
+
+    constructor(address votingEngine_) {
+        votingEngine = votingEngine_;
+    }
+}
+
 contract ProtocolConfigBranchesTest is Test {
     bytes32 internal constant QUICKNET_CHAIN_HASH = 0x52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971;
 
@@ -98,11 +106,12 @@ contract ProtocolConfigBranchesTest is Test {
         assertEq(config.drandPeriod(), nextPeriod);
     }
 
-    function test_SetRewardDistributor_RotatesAndKeepsPreviousAuthorized() public {
+    function test_SetRewardDistributor_RotatesAndRevokesPreviousForSameEngine() public {
         ProtocolConfig config = deployInitializedProtocolConfig(address(this));
 
-        address firstDistributor = address(0xBEEF);
-        address replacementDistributor = address(0xCAFE);
+        address engine = address(0xE641);
+        address firstDistributor = address(new MockRewardDistributorForConfig(engine));
+        address replacementDistributor = address(new MockRewardDistributorForConfig(engine));
 
         vm.expectEmit(false, false, false, true);
         emit RewardDistributorAuthorizationUpdated(firstDistributor, true);
@@ -113,13 +122,35 @@ contract ProtocolConfigBranchesTest is Test {
         assertTrue(config.isRewardDistributor(firstDistributor));
 
         vm.expectEmit(false, false, false, true);
+        emit RewardDistributorAuthorizationUpdated(firstDistributor, false);
+        vm.expectEmit(false, false, false, true);
         emit RewardDistributorAuthorizationUpdated(replacementDistributor, true);
         vm.expectEmit(false, false, false, true);
         emit RewardDistributorUpdated(replacementDistributor);
         config.setRewardDistributor(replacementDistributor);
         assertEq(config.rewardDistributor(), replacementDistributor);
+        assertFalse(config.isRewardDistributor(firstDistributor));
+        assertTrue(config.isRewardDistributor(replacementDistributor));
+        assertFalse(config.isRewardDistributorForEngine(firstDistributor, engine));
+        assertTrue(config.isRewardDistributorForEngine(replacementDistributor, engine));
+    }
+
+    function test_SetRewardDistributor_KeepsPreviousEngineAuthorized() public {
+        ProtocolConfig config = deployInitializedProtocolConfig(address(this));
+
+        address firstEngine = address(0xE641);
+        address replacementEngine = address(0xE642);
+        address firstDistributor = address(new MockRewardDistributorForConfig(firstEngine));
+        address replacementDistributor = address(new MockRewardDistributorForConfig(replacementEngine));
+
+        config.setRewardDistributor(firstDistributor);
+        config.setRewardDistributor(replacementDistributor);
+
+        assertEq(config.rewardDistributor(), replacementDistributor);
         assertTrue(config.isRewardDistributor(firstDistributor));
         assertTrue(config.isRewardDistributor(replacementDistributor));
+        assertTrue(config.isRewardDistributorForEngine(firstDistributor, firstEngine));
+        assertTrue(config.isRewardDistributorForEngine(replacementDistributor, replacementEngine));
     }
 
     function test_RevokeRewardDistributor_RemovesAuthorization() public {

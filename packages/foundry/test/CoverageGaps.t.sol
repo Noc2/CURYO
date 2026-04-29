@@ -939,24 +939,34 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         ProtocolConfig(protocolConfigAddress).setRewardDistributor(address(0));
     }
 
-    function test_SetRewardDistributorSecondCallRotatesAndKeepsPreviousAuthorized() public {
+    function test_SetRewardDistributorSecondCallRevokesSameEngineAuthorization() public {
         address originalDistributor = ProtocolConfig(protocolConfigAddress).rewardDistributor();
-        address replacementDistributor = address(0xBEEF);
+        RoundRewardDistributor replacementDistributor = RoundRewardDistributor(
+            address(
+                new ERC1967Proxy(
+                    address(new RoundRewardDistributor()),
+                    abi.encodeCall(
+                        RoundRewardDistributor.initialize, (owner, address(hrep), address(engine), address(registry))
+                    )
+                )
+            )
+        );
         uint256 transferAmount = 1e6;
         assertTrue(ProtocolConfig(protocolConfigAddress).isRewardDistributor(originalDistributor));
 
         vm.prank(owner);
-        ProtocolConfig(protocolConfigAddress).setRewardDistributor(replacementDistributor);
-        assertEq(ProtocolConfig(protocolConfigAddress).rewardDistributor(), replacementDistributor);
-        assertTrue(ProtocolConfig(protocolConfigAddress).isRewardDistributor(originalDistributor));
-        assertTrue(ProtocolConfig(protocolConfigAddress).isRewardDistributor(replacementDistributor));
+        ProtocolConfig(protocolConfigAddress).setRewardDistributor(address(replacementDistributor));
+        assertEq(ProtocolConfig(protocolConfigAddress).rewardDistributor(), address(replacementDistributor));
+        assertFalse(ProtocolConfig(protocolConfigAddress).isRewardDistributor(originalDistributor));
+        assertTrue(ProtocolConfig(protocolConfigAddress).isRewardDistributor(address(replacementDistributor)));
 
         uint256 balanceBefore = hrep.balanceOf(voter1);
         vm.prank(originalDistributor);
+        vm.expectRevert(RoundVotingEngine.Unauthorized.selector);
         engine.transferReward(voter1, transferAmount);
-        vm.prank(replacementDistributor);
+        vm.prank(address(replacementDistributor));
         engine.transferReward(voter1, transferAmount);
-        assertEq(hrep.balanceOf(voter1), balanceBefore + transferAmount * 2);
+        assertEq(hrep.balanceOf(voter1), balanceBefore + transferAmount);
     }
 
     function test_SetFrontendRegistryZeroReverts() public {

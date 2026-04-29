@@ -238,7 +238,7 @@ contract RoundVotingEngine is
 
     /// @notice Transfer HREP reward tokens to a recipient. Only callable by RewardDistributor.
     function transferReward(address recipient, uint256 hrepAmount) external {
-        if (!protocolConfig.isRewardDistributor(msg.sender)) revert Unauthorized();
+        if (!protocolConfig.isRewardDistributorForEngine(msg.sender, address(this))) revert Unauthorized();
         if (recipient == address(0)) revert InvalidAddress();
         if (hrepAmount > 0) {
             accountedHrepBalance -= hrepAmount;

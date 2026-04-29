@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import { IRoundRewardDistributor } from "./interfaces/IRoundRewardDistributor.sol";
 import { RoundLib } from "./libraries/RoundLib.sol";
 import { RatingLib } from "./libraries/RatingLib.sol";
 
@@ -35,6 +36,8 @@ contract ProtocolConfig is Initializable, AccessControlUpgradeable {
     uint256 public minSubmissionUsdcPool;
     RoundConfigBounds public roundConfigBounds;
     mapping(address => bool) private rewardDistributorAuthorized;
+    mapping(address => address) public rewardDistributorVotingEngine;
+    mapping(address => address) public rewardDistributorForVotingEngine;
 
     struct RoundConfigBounds {
         uint32 minEpochDuration;
@@ -48,7 +51,7 @@ contract ProtocolConfig is Initializable, AccessControlUpgradeable {
     }
 
     /// @dev Reserved storage gap for future proxy-safe upgrades.
-    uint256[31] private __gap;
+    uint256[29] private __gap;
 
     event RewardDistributorUpdated(address rewardDistributor);
     event RewardDistributorAuthorizationUpdated(address rewardDistributor, bool authorized);
@@ -310,14 +313,37 @@ contract ProtocolConfig is Initializable, AccessControlUpgradeable {
         return rewardDistributorAuthorized[value];
     }
 
+    function isRewardDistributorForEngine(address value, address engine) external view returns (bool) {
+        return engine != address(0) && rewardDistributorAuthorized[value] && rewardDistributorVotingEngine[value] == engine;
+    }
+
     function _setRewardDistributor(address value) internal {
         if (value == address(0)) revert InvalidAddress();
+        address engine = _readRewardDistributorVotingEngine(value);
+        if (engine != address(0)) {
+            address previousForEngine = rewardDistributorForVotingEngine[engine];
+            if (previousForEngine != address(0) && previousForEngine != value && rewardDistributorAuthorized[previousForEngine]) {
+                rewardDistributorAuthorized[previousForEngine] = false;
+                emit RewardDistributorAuthorizationUpdated(previousForEngine, false);
+            }
+            rewardDistributorVotingEngine[value] = engine;
+            rewardDistributorForVotingEngine[engine] = value;
+        }
         rewardDistributor = value;
         if (!rewardDistributorAuthorized[value]) {
             rewardDistributorAuthorized[value] = true;
             emit RewardDistributorAuthorizationUpdated(value, true);
         }
         emit RewardDistributorUpdated(value);
+    }
+
+    function _readRewardDistributorVotingEngine(address value) internal view returns (address engine) {
+        if (value.code.length == 0) return address(0);
+        try IRoundRewardDistributor(value).votingEngine() returns (address distributorEngine) {
+            engine = distributorEngine;
+        } catch {
+            engine = address(0);
+        }
     }
 
     function _setFrontendRegistry(address value) internal {
