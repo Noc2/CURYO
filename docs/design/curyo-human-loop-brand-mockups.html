@@ -560,6 +560,28 @@
         border-width: 3px;
       }
 
+      .avatar-face-shell {
+        position: relative;
+        z-index: 3;
+        display: grid;
+        width: 48px;
+        height: 30px;
+        place-items: center;
+        border: 3px solid #ffffff;
+        border-radius: 999px;
+        background: #000000;
+      }
+
+      .c-avatar-face {
+        display: block;
+        width: 23px;
+        height: 19px;
+        border: 5px solid var(--orange);
+        border-right-color: transparent;
+        border-radius: 50%;
+        transform: rotate(-10deg);
+      }
+
       .avatar-orb.human .mug-mark {
         z-index: 2;
         width: 38px;
@@ -608,6 +630,293 @@
       .avatar-notes ul {
         margin: 16px 0 0;
         padding-left: 18px;
+        color: var(--muted);
+        font-size: 0.95rem;
+        line-height: 1.45;
+      }
+
+      .loop-variants-card {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: 0 28px 80px rgb(0 0 0 / 0.42);
+      }
+
+      .loop-variant-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .loop-variant {
+        display: grid;
+        gap: 16px;
+        align-content: start;
+        min-height: 310px;
+        border-right: 1px solid var(--line);
+        padding: 22px;
+        background: #070707;
+      }
+
+      .loop-variant:last-child {
+        border-right: 0;
+      }
+
+      .loop-variant p {
+        color: var(--muted);
+        font-size: 0.95rem;
+        line-height: 1.45;
+      }
+
+      .loop-mark-row {
+        display: flex;
+        min-height: 112px;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .loop-mark {
+        position: relative;
+        display: inline-grid;
+        width: 92px;
+        height: 92px;
+        flex: 0 0 auto;
+        place-items: center;
+        border: 1px solid rgb(255 255 255 / 0.22);
+        border-radius: 22px;
+        background: #000000;
+      }
+
+      .loop-mark.small {
+        width: 36px;
+        height: 36px;
+        border-radius: 9px;
+      }
+
+      .loop-mark .c-outer,
+      .loop-mark .c-inner,
+      .loop-mark .c-fill,
+      .loop-mark .c-window,
+      .loop-mark .face-window {
+        position: absolute;
+        display: block;
+      }
+
+      .loop-mark .c-outer {
+        inset: 17px;
+        border: 8px solid #ffffff;
+        border-right-color: transparent;
+        border-radius: 50%;
+        transform: rotate(-12deg);
+      }
+
+      .loop-mark.small .c-outer {
+        inset: 7px;
+        border-width: 3px;
+      }
+
+      .loop-mark .c-inner {
+        inset: 29px;
+        border: 5px solid var(--orange);
+        border-right-color: transparent;
+        border-radius: 50%;
+        transform: rotate(-12deg);
+      }
+
+      .loop-mark.small .c-inner {
+        inset: 13px;
+        border-width: 2px;
+      }
+
+      .loop-mark.round .c-outer {
+        inset: 15px;
+        border-width: 9px;
+        transform: rotate(-6deg);
+      }
+
+      .loop-mark.round .c-inner {
+        inset: 31px;
+        border-width: 5px;
+        border-color: var(--orange-2);
+        border-right-color: transparent;
+        transform: rotate(-6deg);
+      }
+
+      .loop-mark.white-outside .c-outer {
+        inset: 13px;
+        border-width: 10px;
+        transform: rotate(-18deg);
+      }
+
+      .loop-mark.white-outside .c-fill {
+        inset: 30px 25px 30px 21px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--orange), var(--orange-2));
+      }
+
+      .loop-mark.white-outside.small .c-fill {
+        inset: 13px 10px 13px 9px;
+      }
+
+      .loop-mark.orbit-c .c-outer {
+        inset: 18px 13px;
+        border-color: var(--orange);
+        border-right-color: transparent;
+        transform: rotate(20deg);
+      }
+
+      .loop-mark.orbit-c .c-inner {
+        inset: 23px 9px;
+        border-color: #ffffff;
+        border-right-color: transparent;
+        transform: rotate(-26deg);
+      }
+
+      .loop-mark.face-c .face-window {
+        z-index: 2;
+        width: 56px;
+        height: 34px;
+        border: 4px solid #ffffff;
+        border-radius: 999px;
+      }
+
+      .loop-mark.face-c .c-window {
+        z-index: 3;
+        width: 28px;
+        height: 22px;
+        border: 5px solid var(--orange);
+        border-right-color: transparent;
+        border-radius: 50%;
+        transform: rotate(-10deg);
+      }
+
+      .loop-mark.face-c.small .face-window {
+        width: 24px;
+        height: 15px;
+        border-width: 2px;
+      }
+
+      .loop-mark.face-c.small .c-window {
+        width: 12px;
+        height: 10px;
+        border-width: 2px;
+      }
+
+      .loop-mark.face-c .orbit-line {
+        inset: 17px 10px;
+      }
+
+      .loop-mark.face-c .orbit-line.secondary {
+        inset: 24px 8px;
+      }
+
+      .ai-face-application {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(260px, 0.72fr);
+        border-top: 1px solid var(--line);
+      }
+
+      .ai-face-stage {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+        padding: 22px;
+        background: #000000;
+      }
+
+      .ai-face-sample {
+        display: grid;
+        min-height: 160px;
+        place-items: center;
+        gap: 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 18px 12px;
+        text-align: center;
+      }
+
+      .ai-face-sample span:last-child {
+        color: var(--muted);
+        font-size: 0.82rem;
+        font-weight: 800;
+      }
+
+      .ai-head {
+        position: relative;
+        display: grid;
+        width: 118px;
+        height: 92px;
+        place-items: center;
+      }
+
+      .ai-head::before,
+      .ai-head::after {
+        content: "";
+        position: absolute;
+        border: 3px solid var(--orange);
+        border-radius: 50%;
+      }
+
+      .ai-head::before {
+        inset: 14px 7px;
+        transform: rotate(-22deg);
+      }
+
+      .ai-head::after {
+        inset: 22px 4px;
+        border-color: var(--orange-2);
+        transform: rotate(27deg);
+      }
+
+      .ai-head .face-shell {
+        position: relative;
+        z-index: 2;
+        display: grid;
+        width: 66px;
+        height: 42px;
+        place-items: center;
+        border: 4px solid #ffffff;
+        border-radius: 999px;
+        background: #000000;
+      }
+
+      .ai-head .face-c {
+        width: 26px;
+        height: 22px;
+        border: 5px solid var(--orange);
+        border-right-color: transparent;
+        border-radius: 50%;
+        transform: rotate(-10deg);
+      }
+
+      .ai-head.white-fill .face-shell {
+        border-color: #ffffff;
+      }
+
+      .ai-head.white-fill .face-c {
+        width: 34px;
+        height: 24px;
+        border-width: 0;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--orange), var(--orange-2));
+      }
+
+      .ai-head.minimal::before {
+        display: none;
+      }
+
+      .ai-head.minimal::after {
+        inset: 17px 6px;
+        border-color: var(--orange);
+        transform: rotate(-24deg);
+      }
+
+      .ai-face-notes {
+        border-left: 1px solid var(--line);
+        padding: 22px;
+      }
+
+      .ai-face-notes p {
         color: var(--muted);
         font-size: 0.95rem;
         line-height: 1.45;
@@ -923,16 +1232,20 @@
         }
 
         .identity-options,
-        .avatar-stage {
+        .loop-variant-grid,
+        .avatar-stage,
+        .ai-face-application {
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
-        .identity-option {
+        .identity-option,
+        .loop-variant {
           border-right: 0;
           border-bottom: 1px solid var(--line);
         }
 
-        .identity-option:last-child {
+        .identity-option:last-child,
+        .loop-variant:last-child {
           border-bottom: 0;
         }
 
@@ -942,6 +1255,15 @@
         }
 
         .avatar-notes {
+          border-left: 0;
+          border-top: 1px solid var(--line);
+        }
+
+        .ai-face-stage {
+          grid-template-columns: 1fr;
+        }
+
+        .ai-face-notes {
           border-left: 0;
           border-top: 1px solid var(--line);
         }
@@ -985,6 +1307,8 @@
         }
 
         .identity-options,
+        .loop-variant-grid,
+        .ai-face-application,
         .avatar-stage {
           grid-template-columns: 1fr;
         }
@@ -1114,11 +1438,129 @@
         </div>
       </section>
 
+      <h2 class="section-title">Loop C Mark Variants</h2>
+      <section class="loop-variants-card" aria-label="Loop C mark variants">
+        <div class="loop-variant-grid">
+          <article class="loop-variant">
+            <div class="kicker">Softer favicon</div>
+            <h2>Round C</h2>
+            <div class="loop-mark-row" aria-hidden="true">
+              <span class="loop-mark round">
+                <span class="c-outer"></span>
+                <span class="c-inner"></span>
+              </span>
+              <span class="loop-mark round small">
+                <span class="c-outer"></span>
+                <span class="c-inner"></span>
+              </span>
+            </div>
+            <p>
+              More circular and less angular than the current C option. This is friendlier, reads cleaner at favicon
+              size, and still hints at the orbit system.
+            </p>
+          </article>
+
+          <article class="loop-variant">
+            <div class="kicker">Your direction</div>
+            <h2>White Outside, Orange Inside</h2>
+            <div class="loop-mark-row" aria-hidden="true">
+              <span class="loop-mark white-outside">
+                <span class="c-outer"></span>
+                <span class="c-fill"></span>
+              </span>
+              <span class="loop-mark white-outside small">
+                <span class="c-outer"></span>
+                <span class="c-fill"></span>
+              </span>
+            </div>
+            <p>
+              Strongest bridge to the hero image: white structural line on the outside, orange intelligence/signal on
+              the inside. This could become both favicon and AI face language.
+            </p>
+          </article>
+
+          <article class="loop-variant">
+            <div class="kicker">More dynamic</div>
+            <h2>Orbit C</h2>
+            <div class="loop-mark-row" aria-hidden="true">
+              <span class="loop-mark orbit-c">
+                <span class="c-outer"></span>
+                <span class="c-inner"></span>
+              </span>
+              <span class="loop-mark orbit-c small">
+                <span class="c-outer"></span>
+                <span class="c-inner"></span>
+              </span>
+            </div>
+            <p>
+              The C becomes two crossing orbital paths. It feels closest to the orange rings around the AI, but it is a
+              little busier for tiny favicons.
+            </p>
+          </article>
+
+          <article class="loop-variant">
+            <div class="kicker">AI face candidate</div>
+            <h2>C Window</h2>
+            <div class="loop-mark-row" aria-hidden="true">
+              <span class="loop-mark face-c">
+                <span class="orbit-line"></span>
+                <span class="orbit-line secondary"></span>
+                <span class="face-window"></span>
+                <span class="c-window"></span>
+              </span>
+              <span class="loop-mark face-c small">
+                <span class="orbit-line"></span>
+                <span class="face-window"></span>
+                <span class="c-window"></span>
+              </span>
+            </div>
+            <p>
+              Treat the C as the AI face/window instead of eyes or a smile. This keeps the AI abstract and makes the
+              product mark show up inside the character.
+            </p>
+          </article>
+        </div>
+
+        <div class="ai-face-application">
+          <div class="ai-face-stage">
+            <div class="ai-face-sample">
+              <span class="ai-head" aria-hidden="true">
+                <span class="face-shell"><span class="face-c"></span></span>
+              </span>
+              <span>C as AI window</span>
+            </div>
+            <div class="ai-face-sample">
+              <span class="ai-head white-fill" aria-hidden="true">
+                <span class="face-shell"><span class="face-c"></span></span>
+              </span>
+              <span>Orange inner signal</span>
+            </div>
+            <div class="ai-face-sample">
+              <span class="ai-head minimal" aria-hidden="true">
+                <span class="face-shell"><span class="face-c"></span></span>
+              </span>
+              <span>Minimal avatar face</span>
+            </div>
+          </div>
+          <aside class="ai-face-notes">
+            <div class="kicker">Recommendation</div>
+            <h2>Use the C as the Neutral AI Face</h2>
+            <p>
+              The white-outside/orange-inside version is the strongest candidate. It keeps the AI from becoming cute,
+              gives the neutral variant a recognizable center, and lets the favicon, AI avatar, and hero art share one
+              visual grammar.
+            </p>
+          </aside>
+        </div>
+      </section>
+
       <h2 class="section-title">Avatar Orb System</h2>
       <section class="avatar-system-card" aria-label="Avatar orb design suggestions">
         <div class="avatar-stage">
           <div class="avatar-sample">
-            <span class="avatar-orb ai" aria-hidden="true"><span class="ai-capsule"></span></span>
+            <span class="avatar-orb ai" aria-hidden="true">
+              <span class="avatar-face-shell"><span class="c-avatar-face"></span></span>
+            </span>
             <span>AI agent</span>
           </div>
           <div class="avatar-sample">
@@ -1142,7 +1584,7 @@
             density and shade can communicate role or status without adding cute facial features.
           </p>
           <ul>
-            <li>AI agents: white capsule plus two active orange orbits.</li>
+            <li>AI agents: white capsule face with the orange C signal inside.</li>
             <li>Humans: human signal mark inside the same orb container.</li>
             <li>Pools: concentric orange rings for aggregated judgment.</li>
             <li>Pending or low-confidence states: dimmer orange and dotted orbit treatment.</li>
