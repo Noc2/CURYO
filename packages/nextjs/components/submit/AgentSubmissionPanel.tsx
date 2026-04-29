@@ -42,18 +42,20 @@ const CELO_MAINNET_CHAIN_ID = 42220;
 const DEFAULT_FUNDING_AMOUNT_USDC = "10";
 const DEFAULT_PER_ASK_CAP_ATOMIC = 2_000_000n;
 const DEFAULT_AGENT_SCOPES = ["curyo:ask", "curyo:read", "curyo:quote", "curyo:balance"];
-const SETUP_STEP_ORDER = ["wallet", "fund", "payment", "policy", "mcp"] as const;
+const MANAGED_SETUP_STEP_ORDER = ["wallet", "fund", "payment", "policy", "mcp"] as const;
+const WALLET_DIRECT_SETUP_STEP_ORDER = ["wallet", "fund", "payment", "mcp"] as const;
 const AGENT_WALLET_HELP_TEXT =
-  "The owner wallet signs policy changes. The agent wallet is the address your MCP client uses as walletAddress when it submits paid asks.";
+  "The agent wallet is the address your client passes as walletAddress when it pays USDC for asks.";
 const AGENT_FUND_HELP_TEXT =
   "Add Celo USDC to the agent wallet. Runtime wallet-call plans include the exact approval needed when the agent submits an ask.";
 const AGENT_PAYMENT_HELP_TEXT =
   "Both modes fund protocol escrow directly. Choose the shape your agent client can execute today.";
 const AGENT_POLICY_HELP_TEXT =
   "These limits are signed by the connected owner wallet and enforced by the managed MCP policy.";
-const AGENT_MCP_HELP_TEXT = "Create or rotate the access token your agent client uses for Curyo MCP tools.";
+const AGENT_MCP_HELP_TEXT = "Use public MCP without a token, or create a managed token after saving a policy.";
 
-type AgentSetupStep = (typeof SETUP_STEP_ORDER)[number];
+type AgentSetupStep = (typeof MANAGED_SETUP_STEP_ORDER)[number];
+type AgentAccessMode = "wallet_direct" | "managed_policy";
 type PaymentMode = "wallet_calls" | "x402_authorization";
 
 const PAYMENT_MODE_OPTIONS: Array<{
@@ -175,10 +177,12 @@ export function AgentSubmissionPanel() {
   const [selectedPolicyId, setSelectedPolicyId] = useState<string | null>(null);
   const [policyForm, setPolicyForm] = useState<AgentPolicyFormState>(DEFAULT_POLICY_FORM);
   const [activeSetupStep, setActiveSetupStep] = useState<AgentSetupStep>("wallet");
+  const [agentAccessMode, setAgentAccessMode] = useState<AgentAccessMode>("wallet_direct");
   const [isSetupMode, setIsSetupMode] = useState(false);
   const [paymentMode, setPaymentMode] = useState<PaymentMode>("wallet_calls");
   const [generatedToken, setGeneratedToken] = useState<string | null>(null);
   const [generatedMcpConfig, setGeneratedMcpConfig] = useState<string | null>(null);
+  const [publicAgentApiBaseUrl, setPublicAgentApiBaseUrl] = useState("");
   const escrowAddress = getConfiguredQuestionRewardPoolEscrowAddress(targetNetwork.id);
   const usdcAddress = getDefaultUsdcAddress(targetNetwork.id);
   const thirdwebTargetChain = useMemo(() => defineChain(targetNetwork), [targetNetwork]);
@@ -222,9 +226,11 @@ export function AgentSubmissionPanel() {
     ? parsePositiveAtomicAmount(selectedPolicy.perAskLimitAtomic, DEFAULT_PER_ASK_CAP_ATOMIC)
     : (policyFormPerAskCapAtomic ?? DEFAULT_PER_ASK_CAP_ATOMIC);
   const fundingReady = Boolean((selectedPolicy || policyFormPerAskCapAtomic) && balance >= requiredPerAskFunding);
-  const ready = Boolean(
+  const managedReady = Boolean(
     address && agentWalletAddress && escrowAddress && usdcAddress && fundingReady && selectedPolicy,
   );
+  const walletDirectReady = Boolean(agentWalletAddress && escrowAddress && usdcAddress && fundingReady);
+  const ready = agentAccessMode === "managed_policy" ? managedReady : walletDirectReady;
   const canUseThirdwebFunding = Boolean(
     thirdwebClient && agentWalletAddress && usdcAddress && targetNetwork.id === CELO_MAINNET_CHAIN_ID,
   );
@@ -235,10 +241,14 @@ export function AgentSubmissionPanel() {
       : targetNetwork.id === CELO_MAINNET_CHAIN_ID
         ? "Celo USDC is not configured for this network."
         : "Switch to Celo mainnet to buy Celo USDC here. On local networks, use the faucet from your wallet menu.";
-  const dashboardMode = Boolean(selectedPolicy && !isSetupMode);
-  const setupSteps: Array<{ complete: boolean; id: AgentSetupStep; label: string }> = [
+  const dashboardMode = Boolean(agentAccessMode === "managed_policy" && selectedPolicy && !isSetupMode);
+  const activeSetupStepOrder: readonly AgentSetupStep[] =
+    agentAccessMode === "managed_policy" ? MANAGED_SETUP_STEP_ORDER : WALLET_DIRECT_SETUP_STEP_ORDER;
+  const allSetupSteps: Array<{ complete: boolean; id: AgentSetupStep; label: string }> = [
     {
-      complete: Boolean(address && agentWalletAddress && !agentWalletInputInvalid),
+      complete: Boolean(
+        (agentAccessMode === "wallet_direct" || address) && agentWalletAddress && !agentWalletInputInvalid,
+      ),
       id: "wallet",
       label: "Agent wallet",
     },
@@ -258,11 +268,15 @@ export function AgentSubmissionPanel() {
       label: "Policy",
     },
     {
-      complete: Boolean(selectedPolicy?.hasToken || generatedToken),
+      complete:
+        agentAccessMode === "wallet_direct"
+          ? Boolean(agentWalletAddress)
+          : Boolean(selectedPolicy?.hasToken || generatedToken),
       id: "mcp",
       label: "Agent access",
     },
   ];
+  const setupSteps = allSetupSteps.filter(step => activeSetupStepOrder.includes(step.id));
 
   useEffect(() => {
     setPolicyForm(prev => {
@@ -272,11 +286,20 @@ export function AgentSubmissionPanel() {
   }, [address]);
 
   useEffect(() => {
+    setPublicAgentApiBaseUrl(window.location.origin);
+  }, []);
+
+  useEffect(() => {
     if (selectedPolicyId || isSetupMode || agentPolicies.policies.length === 0) return;
     const firstPolicy = agentPolicies.policies[0];
     setSelectedPolicyId(firstPolicy.id);
     setPolicyForm(policyToForm(firstPolicy, address));
   }, [address, agentPolicies.policies, isSetupMode, selectedPolicyId]);
+
+  useEffect(() => {
+    if (activeSetupStepOrder.some(step => step === activeSetupStep)) return;
+    setActiveSetupStep("mcp");
+  }, [activeSetupStep, activeSetupStepOrder]);
 
   const handleCopy = useCallback(
     async (value: string | undefined) => {
@@ -356,6 +379,7 @@ export function AgentSubmissionPanel() {
   const handlePolicySelect = useCallback(
     (policyId: string) => {
       const policy = agentPolicies.policies.find(candidate => candidate.id === policyId);
+      setAgentAccessMode("managed_policy");
       setSelectedPolicyId(policyId || null);
       setGeneratedToken(null);
       setGeneratedMcpConfig(null);
@@ -434,6 +458,7 @@ export function AgentSubmissionPanel() {
       scopes: policyForm.scopes,
     });
     if (result.ok && result.policy) {
+      setAgentAccessMode("managed_policy");
       setSelectedPolicyId(result.policy.id);
       setPolicyForm(policyToForm(result.policy, address));
       setActiveSetupStep("mcp");
@@ -512,10 +537,41 @@ export function AgentSubmissionPanel() {
     [address, agentPolicies, selectedPolicy],
   );
 
-  const activeStepIndex = SETUP_STEP_ORDER.indexOf(activeSetupStep);
+  const publicAgentOrigin = publicAgentApiBaseUrl || "https://curyo.example";
+  const publicMcpUrl = `${publicAgentOrigin}/api/mcp/public`;
+  const publicAgentHttpUrl = `${publicAgentOrigin}/api/agent`;
+  const publicMcpConfig = useMemo(() => {
+    return JSON.stringify(
+      {
+        mcpServers: {
+          curyo: {
+            headers: {
+              "MCP-Protocol-Version": "2025-11-25",
+            },
+            url: publicMcpUrl,
+          },
+        },
+      },
+      null,
+      2,
+    );
+  }, [publicMcpUrl]);
+
+  const handleAccessModeChange = (mode: AgentAccessMode) => {
+    setAgentAccessMode(mode);
+    setGeneratedToken(null);
+    setGeneratedMcpConfig(null);
+    setIsSetupMode(true);
+    if (mode === "wallet_direct" && activeSetupStep === "policy") {
+      setActiveSetupStep("mcp");
+    }
+  };
+
+  const activeStepIndex = Math.max(0, activeSetupStepOrder.indexOf(activeSetupStep));
   const activeStepNumber = activeStepIndex + 1;
 
   const handleStartNewPolicy = () => {
+    setAgentAccessMode("managed_policy");
     setSelectedPolicyId(null);
     setGeneratedToken(null);
     setGeneratedMcpConfig(null);
@@ -525,6 +581,7 @@ export function AgentSubmissionPanel() {
   };
 
   const handleEditSelectedPolicy = () => {
+    setAgentAccessMode("managed_policy");
     if (selectedPolicy) {
       setPolicyForm(policyToForm(selectedPolicy, address));
     }
@@ -876,12 +933,59 @@ export function AgentSubmissionPanel() {
               <ArrowTopRightOnSquareIcon className="h-4 w-4" />
             </Link>
             {renderUnlockAgentPoliciesButton()}
-            {selectedPolicy ? (
+            {agentAccessMode === "managed_policy" && selectedPolicy ? (
               <button type="button" className="btn btn-outline btn-sm" onClick={() => setIsSetupMode(false)}>
                 Manage agent
               </button>
             ) : null}
           </div>
+        </div>
+
+        <div className="mt-5 grid gap-3 md:grid-cols-2">
+          <button
+            type="button"
+            className={`rounded-lg border p-4 text-left transition-colors ${
+              agentAccessMode === "wallet_direct"
+                ? "border-primary/40 bg-primary/10 text-base-content"
+                : "border-base-300 bg-base-100/50 hover:border-primary/30"
+            }`}
+            onClick={() => handleAccessModeChange("wallet_direct")}
+          >
+            <span className="flex items-center gap-2 text-base font-semibold">
+              <input
+                type="radio"
+                className="radio radio-primary radio-sm"
+                checked={agentAccessMode === "wallet_direct"}
+                readOnly
+              />
+              Wallet direct
+            </span>
+            <span className="mt-2 block text-sm leading-relaxed text-base-content/65">
+              Use a wallet with USDC to quote, submit, confirm, and read asks without saving a Curyo policy or token.
+            </span>
+          </button>
+          <button
+            type="button"
+            className={`rounded-lg border p-4 text-left transition-colors ${
+              agentAccessMode === "managed_policy"
+                ? "border-primary/40 bg-primary/10 text-base-content"
+                : "border-base-300 bg-base-100/50 hover:border-primary/30"
+            }`}
+            onClick={() => handleAccessModeChange("managed_policy")}
+          >
+            <span className="flex items-center gap-2 text-base font-semibold">
+              <input
+                type="radio"
+                className="radio radio-primary radio-sm"
+                checked={agentAccessMode === "managed_policy"}
+                readOnly
+              />
+              Managed policy
+            </span>
+            <span className="mt-2 block text-sm leading-relaxed text-base-content/65">
+              Add Curyo-enforced category, scope, and spend limits, then issue a bearer token for managed agents.
+            </span>
+          </button>
         </div>
 
         <div className="mt-5 flex flex-wrap items-center gap-2 text-sm font-medium text-base-content/55">
@@ -911,7 +1015,7 @@ export function AgentSubmissionPanel() {
         <div className="surface-card rounded-lg p-5">
           <div>
             <p className="text-sm font-semibold uppercase tracking-wide text-base-content/50">
-              Step {activeStepNumber} of {SETUP_STEP_ORDER.length}
+              Step {activeStepNumber} of {activeSetupStepOrder.length}
             </p>
             <h3 className="mt-1 flex items-center gap-2 text-xl font-semibold">
               Choose the agent wallet
@@ -919,16 +1023,18 @@ export function AgentSubmissionPanel() {
             </h3>
           </div>
 
-          <div className="mt-5 grid gap-3 md:grid-cols-2">
-            <label className="form-control gap-2 sm:grid sm:grid-cols-[max-content_minmax(0,1fr)] sm:items-center sm:gap-x-6">
-              <span className="label-text text-sm font-medium">Agent id</span>
-              <input
-                className="input input-bordered mt-1 min-w-0 sm:mt-0"
-                value={policyForm.agentId}
-                onChange={event => setPolicyForm(prev => ({ ...prev, agentId: event.target.value }))}
-                placeholder="research-agent"
-              />
-            </label>
+          <div className={`mt-5 grid gap-3 ${agentAccessMode === "managed_policy" ? "md:grid-cols-2" : ""}`}>
+            {agentAccessMode === "managed_policy" ? (
+              <label className="form-control gap-2 sm:grid sm:grid-cols-[max-content_minmax(0,1fr)] sm:items-center sm:gap-x-6">
+                <span className="label-text text-sm font-medium">Agent id</span>
+                <input
+                  className="input input-bordered mt-1 min-w-0 sm:mt-0"
+                  value={policyForm.agentId}
+                  onChange={event => setPolicyForm(prev => ({ ...prev, agentId: event.target.value }))}
+                  placeholder="research-agent"
+                />
+              </label>
+            ) : null}
             <label className="form-control gap-2 sm:grid sm:grid-cols-[max-content_minmax(0,1fr)] sm:items-center sm:gap-x-6">
               <span className="label-text text-sm font-medium">Agent wallet</span>
               <input
@@ -962,8 +1068,9 @@ export function AgentSubmissionPanel() {
             <div className="rounded-lg border border-base-300 bg-base-100/50 p-4">
               <h4 className="text-sm font-semibold">Key custody</h4>
               <p className="mt-2 text-sm leading-relaxed text-base-content/60">
-                Keep the private key in the agent vault or runtime. Curyo only stores the public wallet address and
-                policy limits.
+                {agentAccessMode === "managed_policy"
+                  ? "Keep the private key in the agent vault or runtime. Curyo stores the public wallet address and policy limits."
+                  : "Keep the private key in the agent vault or runtime. Curyo only sees the public wallet address on paid ask operations."}
               </p>
             </div>
           </div>
@@ -975,7 +1082,7 @@ export function AgentSubmissionPanel() {
             <button
               type="button"
               className="btn btn-primary btn-sm"
-              disabled={!address || !agentWalletAddress || agentWalletInputInvalid}
+              disabled={!agentWalletAddress || agentWalletInputInvalid}
               onClick={() => setActiveSetupStep("fund")}
             >
               Continue
@@ -989,7 +1096,7 @@ export function AgentSubmissionPanel() {
           <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
             <div>
               <p className="text-sm font-semibold uppercase tracking-wide text-base-content/50">
-                Step {activeStepNumber} of {SETUP_STEP_ORDER.length}
+                Step {activeStepNumber} of {activeSetupStepOrder.length}
               </p>
               <h3 className="mt-1 flex items-center gap-2 text-xl font-semibold">
                 Fund the wallet
@@ -1095,7 +1202,7 @@ export function AgentSubmissionPanel() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p className="text-sm font-semibold uppercase tracking-wide text-base-content/50">
-                Step {activeStepNumber} of {SETUP_STEP_ORDER.length}
+                Step {activeStepNumber} of {activeSetupStepOrder.length}
               </p>
               <h3 className="mt-1 flex items-center gap-2 text-xl font-semibold">
                 Pick the payment mode
@@ -1140,8 +1247,9 @@ export function AgentSubmissionPanel() {
             </p>
           ) : (
             <p className="mt-4 text-sm leading-relaxed text-base-content/65">
-              Native X402 authorization is configured in the agent client; the managed policy still limits categories,
-              scopes, and spend.
+              {agentAccessMode === "managed_policy"
+                ? "Native X402 authorization is configured in the agent client; the managed policy still limits categories, scopes, and spend."
+                : "Native X402 authorization is configured in the agent client and spends from the wallet address included with the ask."}
             </p>
           )}
 
@@ -1149,19 +1257,23 @@ export function AgentSubmissionPanel() {
             <button type="button" className="btn btn-outline btn-sm" onClick={() => setActiveSetupStep("fund")}>
               Back
             </button>
-            <button type="button" className="btn btn-primary btn-sm" onClick={() => setActiveSetupStep("policy")}>
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={() => setActiveSetupStep(agentAccessMode === "managed_policy" ? "policy" : "mcp")}
+            >
               Continue
             </button>
           </div>
         </div>
       ) : null}
 
-      {activeSetupStep === "policy" ? (
+      {agentAccessMode === "managed_policy" && activeSetupStep === "policy" ? (
         <div className="surface-card rounded-lg p-5">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <p className="text-sm font-semibold uppercase tracking-wide text-base-content/50">
-                Step {activeStepNumber} of {SETUP_STEP_ORDER.length}
+                Step {activeStepNumber} of {activeSetupStepOrder.length}
               </p>
               <h3 className="mt-1 flex items-center gap-2 text-xl font-semibold">
                 Set policy limits
@@ -1266,16 +1378,22 @@ export function AgentSubmissionPanel() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-sm font-semibold uppercase tracking-wide text-base-content/50">
-                Step {activeStepNumber} of {SETUP_STEP_ORDER.length}
+                Step {activeStepNumber} of {activeSetupStepOrder.length}
               </p>
               <h3 className="mt-1 flex items-center gap-2 text-xl font-semibold">
-                {selectedPolicy ? "Agent policy saved" : "Connect agent"}
+                {agentAccessMode === "wallet_direct"
+                  ? "Public agent access"
+                  : selectedPolicy
+                    ? "Agent policy saved"
+                    : "Connect agent"}
                 <InfoTooltip text={AGENT_MCP_HELP_TEXT} position="right" />
               </h3>
               <p className="mt-2 max-w-2xl text-sm leading-relaxed text-base-content/65">
-                {selectedPolicy
-                  ? "Your agent can now submit asks within these limits. Create an access token when you are ready to connect it to an AI client."
-                  : "Save a policy before creating agent access."}
+                {agentAccessMode === "wallet_direct"
+                  ? "Your agent can submit asks as long as it controls the wallet and signs the returned payment calls or authorization."
+                  : selectedPolicy
+                    ? "Your agent can now submit asks within these limits. Create an access token when you are ready to connect it to an AI client."
+                    : "Save a policy before creating agent access."}
               </p>
             </div>
             <Link href="/docs/ai#generic-mcp-config" className="link link-primary text-sm">
@@ -1283,7 +1401,52 @@ export function AgentSubmissionPanel() {
             </Link>
           </div>
 
-          {selectedPolicy ? (
+          {agentAccessMode === "wallet_direct" ? (
+            <>
+              <div className="mt-5 grid gap-3 md:grid-cols-3">
+                <div className="rounded-lg border border-base-300 bg-base-100/70 p-4">
+                  <div className="flex items-center gap-2 text-sm font-medium text-base-content/60">
+                    <WalletIcon className="h-4 w-4" />
+                    <span>Wallet address</span>
+                  </div>
+                  <p className="mt-2 break-words font-mono text-sm">{agentWalletAddress ?? "0x..."}</p>
+                </div>
+                <div className="rounded-lg border border-base-300 bg-base-100/70 p-4">
+                  <div className="flex items-center gap-2 text-sm font-medium text-base-content/60">
+                    <CpuChipIcon className="h-4 w-4" />
+                    <span>Direct HTTP</span>
+                  </div>
+                  <p className="mt-2 break-all font-mono text-xs">{publicAgentHttpUrl}</p>
+                </div>
+                <div className="rounded-lg border border-base-300 bg-base-100/70 p-4">
+                  <div className="flex items-center gap-2 text-sm font-medium text-base-content/60">
+                    <KeyIcon className="h-4 w-4" />
+                    <span>Auth</span>
+                  </div>
+                  <p className="mt-2 text-sm text-base-content/70">No bearer token required</p>
+                </div>
+              </div>
+
+              <div className="mt-5 rounded-lg border border-base-300 bg-base-100/50 p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <h4 className="font-semibold">Public MCP config</h4>
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-xs"
+                    onClick={() => void handleCopy(publicMcpConfig)}
+                  >
+                    Copy config
+                  </button>
+                </div>
+                <pre className="mt-3 max-h-56 overflow-auto whitespace-pre-wrap break-words rounded bg-black p-3 text-xs text-white">
+                  {publicMcpConfig}
+                </pre>
+                <p className="mt-3 text-sm leading-relaxed text-base-content/60">
+                  Include walletAddress on quote, ask, status, and result calls that use clientRequestId lookups.
+                </p>
+              </div>
+            </>
+          ) : selectedPolicy ? (
             <>
               <div className="mt-5 grid gap-3 md:grid-cols-3">
                 <div className="rounded-lg border border-base-300 bg-base-100/70 p-4">
@@ -1334,15 +1497,28 @@ export function AgentSubmissionPanel() {
           )}
 
           <div className="mt-5 flex flex-wrap gap-2">
-            <button type="button" className="btn btn-outline btn-sm" onClick={() => setActiveSetupStep("policy")}>
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              onClick={() => setActiveSetupStep(agentAccessMode === "managed_policy" ? "policy" : "payment")}
+            >
               Back
             </button>
-            {selectedPolicy && !(selectedPolicy.hasToken || generatedToken) ? (
+            {agentAccessMode === "wallet_direct" ? (
+              <span
+                className={`inline-flex items-center rounded-full border px-3 py-1 text-sm ${
+                  ready ? "border-success/30 text-success" : "border-warning/40 text-warning"
+                }`}
+              >
+                {ready ? "Ready for wallet-paid asks" : "Add wallet USDC before asking"}
+              </span>
+            ) : null}
+            {agentAccessMode === "managed_policy" && selectedPolicy && !(selectedPolicy.hasToken || generatedToken) ? (
               <button type="button" className="btn btn-outline btn-sm" onClick={() => setIsSetupMode(false)}>
                 Finish without token
               </button>
             ) : null}
-            {selectedPolicy && (selectedPolicy.hasToken || generatedToken) ? (
+            {agentAccessMode === "managed_policy" && selectedPolicy && (selectedPolicy.hasToken || generatedToken) ? (
               <button type="button" className="btn btn-primary btn-sm" onClick={() => setIsSetupMode(false)}>
                 Manage agent
               </button>
