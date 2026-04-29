@@ -69,11 +69,13 @@ library QuestionRewardPoolEscrowQualificationLib {
     function isBundleExcludedVoter(
         IVoterIdNFT voterIdNft,
         address account,
+        address funder,
         uint256 funderNullifier,
         uint256 submitterNullifier
     ) external view returns (bool) {
         uint256 voterId = voterIdNft.getTokenId(account);
         if (voterId == 0) return false;
+        if (voterId == voterIdNft.getTokenId(funder)) return true;
 
         uint256 voterNullifier = voterIdNft.getNullifier(voterId);
         return voterNullifier != 0 && (voterNullifier == funderNullifier || voterNullifier == submitterNullifier);

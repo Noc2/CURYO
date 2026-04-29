@@ -1232,6 +1232,7 @@ contract QuestionRewardPoolEscrow is
             if (QuestionRewardPoolEscrowQualificationLib.isBundleExcludedVoter(
                     _roundVoterIdNft(question.contentId, roundId),
                     account,
+                    bundle.funder,
                     bundle.funderNullifier,
                     question.submitterNullifier
                 )) {

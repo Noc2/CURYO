@@ -46,6 +46,9 @@ library VotePreflightLib {
             }
         }
 
+        (,, address rawSubmitter,,,,,,,) = registry.contents(contentId);
+        if (voter == rawSubmitter) revert SelfVote();
+
         address effectiveVoter = voter;
         if (hasVoterIdNft) {
             address resolved = voterIdNft.resolveHolder(voter);

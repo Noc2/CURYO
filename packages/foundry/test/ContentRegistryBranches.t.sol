@@ -1362,6 +1362,45 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         assertEq(registry.getSubmitterIdentity(id), submitter, "submitter identity should snapshot the holder");
     }
 
+    function test_SubmitContent_RawDelegateSubmitterCannotVoteAfterReassignment() public {
+        vm.prank(submitter);
+        mockVoterIdNFT.setDelegate(delegate);
+
+        vm.startPrank(delegate);
+        hrepToken.approve(address(registry), 10e6);
+        _submitContentWithReservation(
+            registry, "https://example.com/delegate-reassigned-vote", "goal", "goal", "tags", 0
+        );
+        vm.stopPrank();
+
+        vm.prank(submitter);
+        mockVoterIdNFT.removeDelegate();
+        vm.prank(voter4);
+        mockVoterIdNFT.setDelegate(delegate);
+
+        bytes32 salt = keccak256("raw-delegate-submit-vote");
+        uint16 referenceRatingBps = _currentRatingReferenceBps(1);
+        bytes memory ciphertext = _testCiphertext(true, salt, 1);
+        bytes32 commitHash = _commitHash(
+            true, salt, delegate, 1, referenceRatingBps, _tlockCommitTargetRound(), _tlockDrandChainHash(), ciphertext
+        );
+
+        vm.startPrank(delegate);
+        hrepToken.approve(address(votingEngine), STAKE);
+        vm.expectRevert(RoundVotingEngine.SelfVote.selector);
+        votingEngine.commitVote(
+            1,
+            referenceRatingBps,
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            commitHash,
+            ciphertext,
+            STAKE,
+            address(0)
+        );
+        vm.stopPrank();
+    }
+
     function test_SubmitContent_VoterIdNotConfigured_Reverts() public {
         vm.startPrank(owner);
         ContentRegistry registryImpl2 = new ContentRegistry();

@@ -808,6 +808,39 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter2), 0);
     }
 
+    function testBundleDelegatedFunderStaysExcludedAfterAgentReassignment() public {
+        address voter5 = address(0x55);
+        voterIdNFT.setHolder(voter5);
+        vm.prank(owner);
+        hrepToken.mint(voter5, 10_000e6);
+        vm.prank(owner);
+        hrepToken.mint(delegate1, 10_000e6);
+
+        uint256[] memory contentIds = _submitBundleQuestions();
+        vm.prank(voter1);
+        voterIdNFT.setDelegate(delegate1);
+        uint256 bundleId = _createSubmissionBundle(contentIds, delegate1, REWARD_ASSET_USDC, REWARD_POOL_AMOUNT, 3);
+        vm.prank(voter1);
+        voterIdNFT.removeDelegate();
+        vm.prank(voter3);
+        voterIdNFT.setDelegate(delegate1);
+
+        address[] memory voters = new address[](4);
+        voters[0] = delegate1;
+        voters[1] = voter2;
+        voters[2] = voter4;
+        voters[3] = voter5;
+        bool[] memory directions = _directions(true, true, false, true);
+
+        _settleRoundWith(voters, contentIds[0], directions);
+        _settleRoundWith(voters, contentIds[1], directions);
+
+        assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter3), 0);
+        vm.prank(voter3);
+        vm.expectRevert("Excluded voter");
+        rewardPoolEscrow.claimQuestionBundleReward(bundleId, 0);
+    }
+
     function testBundleSubmitterNullifierStaysExcludedAfterRemintToDifferentAddress() public {
         address remintedSubmitter = address(0x5A1D);
         uint256 nullifier = 222_225;
