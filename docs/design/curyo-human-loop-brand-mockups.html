@@ -3,20 +3,21 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Curyo Abstract Human Loop Mockups</title>
+    <title>Curyo Landing Page Mockups</title>
     <style>
       :root {
         color-scheme: dark;
-        --bg: #070507;
-        --panel: #121014;
-        --panel-2: #19151b;
-        --text: #f7efe9;
+        --bg: #050505;
+        --panel: #111114;
+        --panel-2: #18161a;
+        --text: #fbf7f2;
         --muted: #b9aca5;
         --muted-2: #8f8580;
-        --coral: #f47a42;
-        --violet: #8a4de8;
-        --cyan: #55bad0;
-        --border: rgb(247 239 233 / 0.14);
+        --line: rgb(251 247 242 / 0.14);
+        --line-strong: rgb(251 247 242 / 0.28);
+        --orange: #f47a42;
+        --orange-2: #ff5c22;
+        --orange-3: #ffa06f;
       }
 
       * {
@@ -26,10 +27,7 @@
       body {
         margin: 0;
         min-height: 100vh;
-        background:
-          linear-gradient(180deg, rgb(244 122 66 / 0.08), transparent 330px),
-          radial-gradient(circle at 76% 14%, rgb(85 186 208 / 0.1), transparent 27rem),
-          var(--bg);
+        background: var(--bg);
         color: var(--text);
         font-family:
           Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -40,37 +38,38 @@
         color: inherit;
       }
 
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
       .page {
-        width: min(1180px, calc(100% - 32px));
+        width: min(1220px, calc(100% - 32px));
         margin: 0 auto;
         padding: 44px 0 72px;
       }
 
       .intro {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(320px, 0.64fr);
+        grid-template-columns: minmax(0, 1fr) minmax(320px, 0.62fr);
         gap: 28px;
         align-items: end;
-        margin-bottom: 30px;
+        margin-bottom: 28px;
       }
 
       .eyebrow,
-      .option-kicker {
-        color: var(--coral);
+      .kicker {
+        color: var(--orange);
         font-size: 0.78rem;
         font-weight: 800;
         letter-spacing: 0.16em;
         text-transform: uppercase;
       }
 
-      .option-kicker {
+      .kicker {
         color: var(--muted-2);
-      }
-
-      h1,
-      h2,
-      p {
-        margin: 0;
       }
 
       h1 {
@@ -78,7 +77,6 @@
         margin-top: 10px;
         font-size: clamp(2.45rem, 6vw, 5.5rem);
         line-height: 0.9;
-        letter-spacing: 0;
         text-transform: uppercase;
       }
 
@@ -91,50 +89,221 @@
       }
 
       .decision,
-      .source-box {
-        border: 1px solid var(--border);
+      .note-box {
+        border: 1px solid var(--line);
         border-radius: 8px;
-        background: rgb(18 16 20 / 0.86);
+        background: rgb(17 17 20 / 0.9);
         padding: 18px;
       }
 
       .decision {
-        box-shadow: 0 22px 60px rgb(0 0 0 / 0.38);
-      }
-
-      .decision strong {
-        color: var(--text);
+        box-shadow: 0 22px 60px rgb(0 0 0 / 0.4);
       }
 
       .decision p,
-      .source-box p,
-      .source-box li {
+      .note-box p,
+      .note-box li {
         color: var(--muted);
         font-size: 0.95rem;
         line-height: 1.45;
       }
 
       .decision p,
-      .source-box p {
+      .note-box p {
         margin-top: 10px;
       }
 
-      .mockups {
-        display: grid;
-        gap: 22px;
-        margin-top: 28px;
+      .section-title {
+        margin: 34px 0 14px;
+        font-size: clamp(1.45rem, 2.4vw, 2.1rem);
       }
 
+      .hero-art-card,
+      .identity-card,
       .mockup-card {
         overflow: hidden;
-        border: 1px solid var(--border);
+        border: 1px solid var(--line);
         border-radius: 8px;
         background: var(--panel);
         box-shadow: 0 28px 80px rgb(0 0 0 / 0.42);
       }
 
-      .mockup-card.featured {
-        border-color: rgb(244 122 66 / 0.44);
+      .hero-art-card {
+        display: grid;
+        grid-template-columns: minmax(0, 1.42fr) minmax(280px, 0.58fr);
+      }
+
+      .hero-art-card figure {
+        margin: 0;
+        background: #000000;
+      }
+
+      .hero-art-card img,
+      .landing-art img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .hero-art-notes,
+      .identity-notes,
+      .mockup-notes {
+        padding: 22px;
+      }
+
+      .hero-art-notes ul,
+      .mockup-notes ul,
+      .note-box ul {
+        margin: 16px 0 0;
+        padding-left: 18px;
+        color: var(--muted);
+        font-size: 0.95rem;
+        line-height: 1.45;
+      }
+
+      .identity-grid,
+      .notes-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 16px;
+      }
+
+      .identity-card {
+        display: grid;
+        grid-template-columns: minmax(0, 0.8fr) minmax(320px, 1.2fr);
+        min-height: 220px;
+      }
+
+      .identity-samples {
+        display: grid;
+        gap: 16px;
+        align-content: center;
+        border-right: 1px solid var(--line);
+        padding: 22px;
+        background: #070707;
+      }
+
+      .brand-lockup,
+      .browser-tab,
+      .app-icon-preview {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .brand-name {
+        font-size: 1.35rem;
+        font-weight: 900;
+        letter-spacing: 0.02em;
+      }
+
+      .browser-tab {
+        width: min(100%, 290px);
+        border: 1px solid var(--line);
+        border-radius: 8px 8px 0 0;
+        padding: 10px 12px;
+        background: var(--panel-2);
+        color: var(--muted);
+        font-size: 0.86rem;
+      }
+
+      .mug-mark {
+        position: relative;
+        display: inline-block;
+        width: 34px;
+        height: 30px;
+        flex: 0 0 auto;
+        border: 3px solid #ffffff;
+        border-top-width: 3px;
+        border-radius: 5px 5px 8px 8px;
+        background: linear-gradient(180deg, var(--orange), var(--orange-2));
+        box-shadow: inset 0 3px 0 rgb(255 255 255 / 0.18);
+      }
+
+      .mug-mark::before {
+        content: "";
+        position: absolute;
+        top: 6px;
+        left: -13px;
+        width: 14px;
+        height: 15px;
+        border: 3px solid #ffffff;
+        border-right: 0;
+        border-radius: 11px 0 0 11px;
+      }
+
+      .mug-mark::after {
+        content: "";
+        position: absolute;
+        top: 4px;
+        left: 4px;
+        right: 4px;
+        height: 5px;
+        border-radius: 999px;
+        background: #050505;
+      }
+
+      .mug-mark.small {
+        width: 22px;
+        height: 20px;
+        border-width: 2px;
+      }
+
+      .mug-mark.small::before {
+        top: 4px;
+        left: -9px;
+        width: 9px;
+        height: 10px;
+        border-width: 2px;
+      }
+
+      .mug-mark.small::after {
+        top: 3px;
+        left: 3px;
+        right: 3px;
+        height: 4px;
+      }
+
+      .mug-mark.large {
+        width: 78px;
+        height: 68px;
+        border-width: 5px;
+        border-radius: 12px 12px 18px 18px;
+      }
+
+      .mug-mark.large::before {
+        top: 14px;
+        left: -28px;
+        width: 30px;
+        height: 33px;
+        border-width: 5px;
+        border-radius: 22px 0 0 22px;
+      }
+
+      .mug-mark.large::after {
+        top: 9px;
+        left: 10px;
+        right: 10px;
+        height: 10px;
+      }
+
+      .app-icon-preview {
+        gap: 18px;
+      }
+
+      .app-icon-box {
+        display: grid;
+        width: 112px;
+        height: 112px;
+        place-items: center;
+        border: 1px solid var(--line-strong);
+        border-radius: 22px;
+        background: #000000;
+      }
+
+      .mockups {
+        display: grid;
+        gap: 28px;
       }
 
       .mockup-head {
@@ -142,18 +311,18 @@
         grid-template-columns: minmax(0, 1fr) auto;
         gap: 18px;
         align-items: center;
-        border-bottom: 1px solid var(--border);
+        border-bottom: 1px solid var(--line);
         padding: 20px 22px;
       }
 
       .mockup-head h2 {
         margin-top: 5px;
-        font-size: clamp(1.7rem, 3vw, 2.45rem);
-        line-height: 1.02;
+        font-size: clamp(1.65rem, 3vw, 2.35rem);
+        line-height: 1.04;
       }
 
       .badge {
-        border: 1px solid rgb(244 122 66 / 0.42);
+        border: 1px solid rgb(244 122 66 / 0.5);
         border-radius: 999px;
         color: #ffd8c2;
         background: rgb(244 122 66 / 0.12);
@@ -163,90 +332,260 @@
         white-space: nowrap;
       }
 
-      .mockup-body {
-        display: grid;
-        grid-template-columns: minmax(0, 1.36fr) minmax(250px, 0.64fr);
-      }
-
-      .mockup-figure {
-        margin: 0;
+      .browser-shell {
         background: #000000;
       }
 
-      .mockup-figure img {
-        display: block;
-        width: 100%;
-        height: auto;
+      .browser-bar {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        height: 36px;
+        border-bottom: 1px solid var(--line);
+        padding: 0 14px;
+        background: #151318;
       }
 
-      .mockup-notes {
-        border-left: 1px solid var(--border);
-        padding: 22px;
-        background: rgb(25 21 27 / 0.78);
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: rgb(251 247 242 / 0.32);
       }
 
-      .mockup-notes p {
+      .tab-label {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        gap: 8px;
+        margin-left: 10px;
         color: var(--muted);
-        font-size: 0.98rem;
-        line-height: 1.5;
+        font-size: 0.82rem;
       }
 
-      .mockup-notes ul,
-      .source-box ul {
-        margin: 16px 0 0;
-        padding-left: 18px;
+      .landing {
+        min-height: 650px;
+        background: #000000;
+      }
+
+      .landing-nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        min-height: 72px;
+        border-bottom: 1px solid rgb(255 255 255 / 0.1);
+        padding: 0 30px;
+      }
+
+      .nav-links,
+      .cta-row,
+      .stat-row,
+      .step-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .nav-links {
         color: var(--muted);
-        font-size: 0.95rem;
+        font-size: 0.9rem;
+        font-weight: 700;
+      }
+
+      .button {
+        border: 1px solid transparent;
+        border-radius: 8px;
+        padding: 12px 16px;
+        font-size: 0.94rem;
+        font-weight: 900;
+      }
+
+      .button.primary {
+        background: var(--orange);
+        color: #050505;
+      }
+
+      .button.secondary {
+        border-color: rgb(255 255 255 / 0.18);
+        color: var(--text);
+        background: rgb(255 255 255 / 0.06);
+      }
+
+      .landing-hero {
+        display: grid;
+        grid-template-columns: minmax(0, 0.86fr) minmax(420px, 1.14fr);
+        gap: 20px;
+        align-items: center;
+        padding: 42px 30px 30px;
+      }
+
+      .landing-copy h3 {
+        max-width: 11ch;
+        font-size: clamp(2.7rem, 5.7vw, 5.8rem);
+        line-height: 0.88;
+        text-transform: uppercase;
+      }
+
+      .landing-copy p {
+        max-width: 520px;
+        margin-top: 18px;
+        color: var(--muted);
+        font-size: 1.22rem;
         line-height: 1.45;
       }
 
-      .prompt-grid,
-      .sources {
+      .cta-row,
+      .stat-row {
+        margin-top: 24px;
+      }
+
+      .stat {
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
+      .stat strong {
+        color: var(--text);
+      }
+
+      .landing-art {
+        overflow: hidden;
+        border-radius: 8px;
+        background: #000000;
+      }
+
+      .steps-band {
+        border-top: 1px solid rgb(255 255 255 / 0.1);
+        padding: 24px 30px 30px;
+      }
+
+      .step-card {
+        flex: 1 1 180px;
+        min-height: 116px;
+        border: 1px solid rgb(255 255 255 / 0.12);
+        border-radius: 8px;
+        padding: 16px;
+        background: rgb(255 255 255 / 0.04);
+      }
+
+      .step-card b {
+        display: block;
+      }
+
+      .step-card span {
+        display: block;
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 0.9rem;
+        line-height: 1.4;
+      }
+
+      .landing.compact .landing-hero {
+        grid-template-columns: minmax(0, 1fr);
+        padding-top: 28px;
+      }
+
+      .landing.compact .landing-copy {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-        gap: 16px;
-        margin-top: 22px;
+        grid-template-columns: minmax(0, 0.9fr) minmax(300px, 1.1fr);
+        gap: 24px;
+        align-items: end;
       }
 
-      .source-box h2 {
-        font-size: 1.05rem;
+      .landing.compact .landing-copy h3 {
+        max-width: 12ch;
       }
 
-      code {
-        color: #ffd8c2;
+      .landing.compact .landing-art {
+        max-width: 860px;
+        margin: 28px auto 0;
       }
 
-      @media (max-width: 920px) {
+      .landing.centered .landing-hero {
+        grid-template-columns: 1fr;
+        padding-top: 34px;
+        text-align: center;
+      }
+
+      .landing.centered .landing-copy {
+        justify-self: center;
+      }
+
+      .landing.centered .landing-copy h3,
+      .landing.centered .landing-copy p {
+        max-width: 860px;
+      }
+
+      .landing.centered .cta-row,
+      .landing.centered .stat-row,
+      .landing.centered .step-row {
+        justify-content: center;
+      }
+
+      .landing.centered .landing-art {
+        width: min(100%, 900px);
+        justify-self: center;
+      }
+
+      .mockup-notes {
+        border-top: 1px solid var(--line);
+        background: var(--panel-2);
+      }
+
+      @media (max-width: 940px) {
         .intro,
-        .mockup-body,
-        .prompt-grid,
-        .sources {
+        .hero-art-card,
+        .identity-card,
+        .identity-grid,
+        .notes-grid,
+        .landing-hero,
+        .landing.compact .landing-copy {
           grid-template-columns: 1fr;
+        }
+
+        .identity-samples {
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
         }
 
         .mockup-head {
           grid-template-columns: 1fr;
         }
 
-        .mockup-notes {
-          border-left: 0;
-          border-top: 1px solid var(--border);
-        }
-
         .badge {
           justify-self: start;
+        }
+
+        .landing-copy h3 {
+          max-width: 12ch;
         }
       }
 
       @media (max-width: 620px) {
         .page {
-          width: min(100% - 20px, 1180px);
+          width: min(100% - 20px, 1220px);
           padding-top: 26px;
         }
 
+        .hero-art-notes,
+        .identity-notes,
+        .identity-samples,
         .mockup-head,
-        .mockup-notes {
+        .mockup-notes,
+        .landing-nav,
+        .landing-hero,
+        .steps-band {
           padding: 16px;
+        }
+
+        .landing {
+          min-height: 0;
+        }
+
+        .nav-links {
+          display: none;
         }
       }
     </style>
@@ -255,154 +594,266 @@
     <main class="page">
       <section class="intro" aria-labelledby="page-title">
         <div>
-          <div class="eyebrow">Brand exploration</div>
-          <h1 id="page-title">Abstract human loop visuals for Curyo</h1>
+          <div class="eyebrow">Design exploration</div>
+          <h1 id="page-title">Landing mockups with mug mark</h1>
           <p>
-            A cleaner direction for replacing the literal robot coworker with more abstract human + AI collaboration
-            imagery. Each option keeps the black Curyo field, desktop computer, orange coffee mug, and orbit colors, but
-            reduces anatomy and robot details so the image feels more brand-ownable.
+            Design-only directions for a refreshed Curyo landing page. The hero uses thicker white linework, orange AI
+            orbit paths, and the coffee mug as the proposed logo and favicon motif.
           </p>
         </div>
         <aside class="decision">
-          <strong>Recommended path: Abstract Concept A.</strong>
+          <strong>No production implementation in this pass.</strong>
           <p>
-            The first option keeps the product story readable while turning the AI into a luminous partner form instead
-            of a mascot. It should be the strongest base for landing hero crops and later logo experiments.
+            These are static mockups for judging the brand direction: the page shell, proposed mug identity, and first
+            fold layouts before touching the real Next.js landing page.
           </p>
         </aside>
       </section>
 
-      <section class="mockups" aria-label="Abstract generated image mockups">
-        <article class="mockup-card featured">
+      <h2 class="section-title">Hero Art Direction</h2>
+      <section class="hero-art-card" aria-label="Refined hero art">
+        <figure>
+          <img
+            src="assets/curyo-human-loop-orange-orbits.png"
+            alt="Human and abstract AI collaborator at a desktop computer with thicker white lines and orange orbit paths"
+          />
+        </figure>
+        <aside class="hero-art-notes">
+          <div class="kicker">Locked base direction</div>
+          <h2>White Lines + Orange Orbits</h2>
+          <ul>
+            <li>Thicker pure-white structural linework.</li>
+            <li>Orange/coral orbit paths around the AI only.</li>
+            <li>Orange mug becomes the visual identity hook.</li>
+            <li>Still abstract enough to avoid face and hair detail issues.</li>
+          </ul>
+        </aside>
+      </section>
+
+      <h2 class="section-title">Logo + Favicon Mockup</h2>
+      <section class="identity-card" aria-label="Mug identity samples">
+        <div class="identity-samples">
+          <div class="brand-lockup">
+            <span class="mug-mark" aria-hidden="true"></span>
+            <span class="brand-name">Curyo</span>
+          </div>
+          <div class="browser-tab">
+            <span class="mug-mark small" aria-hidden="true"></span>
+            <span>Curyo - AI Asks, Humans Earn</span>
+          </div>
+          <div class="app-icon-preview">
+            <div class="app-icon-box">
+              <span class="mug-mark large" aria-hidden="true"></span>
+            </div>
+            <div>
+              <div class="kicker">App icon / favicon idea</div>
+              <p>Black square, orange mug, white rim and handle.</p>
+            </div>
+          </div>
+        </div>
+        <aside class="identity-notes">
+          <div class="kicker">Identity note</div>
+          <h2>Mug as Human Loop Signal</h2>
+          <p>
+            The mug makes the brand warmer and more memorable than a generic AI orb. It also anchors the product in
+            human review work: someone is present, judging, sipping coffee, and helping the agent move forward.
+          </p>
+        </aside>
+      </section>
+
+      <h2 class="section-title">Landing Page Mockups</h2>
+      <section class="mockups" aria-label="Landing page mockups">
+        <article class="mockup-card">
           <header class="mockup-head">
             <div>
-              <div class="option-kicker">Abstract Concept A</div>
-              <h2>Loop Partner</h2>
+              <div class="kicker">Mockup A</div>
+              <h2>Current Landing Refresh</h2>
             </div>
-            <div class="badge">Recommended</div>
+            <div class="badge">Closest to current site</div>
           </header>
-          <div class="mockup-body">
-            <figure class="mockup-figure">
-              <img
-                src="assets/abstract-loop-partner.png"
-                alt="Abstract human collaborator and luminous AI loop partner working at a desktop computer with an orange mug"
-              />
-            </figure>
-            <aside class="mockup-notes">
-              <p>
-                Best overall balance: the human is reduced to clean contour lines, the AI reads as an intelligent orbit
-                form, and the desktop plus mug keep the story grounded.
-              </p>
-              <ul>
-                <li>Most abstract without losing the collaboration read.</li>
-                <li>AI feels closer to the current Curyo orb language.</li>
-                <li>Cleanest foundation for a future animated hero.</li>
-              </ul>
-            </aside>
+          <div class="browser-shell">
+            <div class="browser-bar">
+              <span class="dot"></span>
+              <span class="dot"></span>
+              <span class="dot"></span>
+              <span class="tab-label"><span class="mug-mark small" aria-hidden="true"></span>Curyo</span>
+            </div>
+            <div class="landing">
+              <nav class="landing-nav" aria-label="Mock navigation">
+                <div class="brand-lockup">
+                  <span class="mug-mark" aria-hidden="true"></span>
+                  <span class="brand-name">Curyo</span>
+                </div>
+                <div class="nav-links">
+                  <span>Docs</span>
+                  <span>How it works</span>
+                  <span>For agents</span>
+                </div>
+              </nav>
+              <section class="landing-hero" aria-label="Mock hero">
+                <div class="landing-copy">
+                  <h3>AI Asks, Humans Earn</h3>
+                  <p>Verified, staked human feedback for AI agents.</p>
+                  <div class="cta-row">
+                    <span class="button primary">Earn USDC</span>
+                    <span class="button secondary">For Agents</span>
+                  </div>
+                  <div class="stat-row">
+                    <span class="stat"><strong>287</strong> verified humans</span>
+                    <span class="stat"><strong>3,482</strong> votes</span>
+                    <span class="stat"><strong>$0</strong> USDC paid</span>
+                  </div>
+                </div>
+                <figure class="landing-art">
+                  <img
+                    src="assets/curyo-human-loop-orange-orbits.png"
+                    alt="Hero mockup showing human and abstract AI collaboration"
+                  />
+                </figure>
+              </section>
+              <section class="steps-band" aria-label="Mock steps">
+                <div class="step-row">
+                  <div class="step-card"><b>1. AI Asks</b><span>Agent submits a focused question and bounty.</span></div>
+                  <div class="step-card"><b>2. Humans Stake</b><span>Verified humans rate during blind rounds.</span></div>
+                  <div class="step-card"><b>3. Earn + Use</b><span>Humans earn rewards. Agents get a signal.</span></div>
+                </div>
+              </section>
+            </div>
           </div>
+          <aside class="mockup-notes">
+            <p>
+              Safest layout: keep the current copy structure, replace the abstract orb with the new collaborative hero,
+              and update only the brand mark to the mug.
+            </p>
+          </aside>
         </article>
 
         <article class="mockup-card">
           <header class="mockup-head">
             <div>
-              <div class="option-kicker">Abstract Concept B</div>
-              <h2>Signal Co-Worker</h2>
+              <div class="kicker">Mockup B</div>
+              <h2>Centered Story First</h2>
             </div>
             <div class="badge">Friendliest</div>
           </header>
-          <div class="mockup-body">
-            <figure class="mockup-figure">
-              <img
-                src="assets/abstract-signal-collab.png"
-                alt="Simplified human and abstract AI signal form collaborating at a desktop computer with an orange mug"
-              />
-            </figure>
-            <aside class="mockup-notes">
-              <p>
-                Friendlier and more character-like. The AI is still abstracted by loops and glow, but this version keeps
-                a clearer assistant personality.
-              </p>
-              <ul>
-                <li>Most immediately approachable.</li>
-                <li>Good if the brand should feel warmer and less mysterious.</li>
-                <li>Slightly more literal than Concept A.</li>
-              </ul>
-            </aside>
+          <div class="browser-shell">
+            <div class="browser-bar">
+              <span class="dot"></span>
+              <span class="dot"></span>
+              <span class="dot"></span>
+              <span class="tab-label"><span class="mug-mark small" aria-hidden="true"></span>Curyo</span>
+            </div>
+            <div class="landing centered">
+              <nav class="landing-nav" aria-label="Mock navigation">
+                <div class="brand-lockup">
+                  <span class="mug-mark" aria-hidden="true"></span>
+                  <span class="brand-name">Curyo</span>
+                </div>
+                <div class="nav-links">
+                  <span>Agents</span>
+                  <span>Humans</span>
+                  <span>Docs</span>
+                </div>
+              </nav>
+              <section class="landing-hero" aria-label="Mock hero">
+                <div class="landing-copy">
+                  <h3>Human Judgment for AI Agents</h3>
+                  <p>Ask verified humans when an agent needs taste, context, evidence review, or a go/no-go signal.</p>
+                  <div class="cta-row">
+                    <span class="button primary">Ask Humans</span>
+                    <span class="button secondary">Start Voting</span>
+                  </div>
+                </div>
+                <figure class="landing-art">
+                  <img
+                    src="assets/curyo-human-loop-orange-orbits.png"
+                    alt="Centered landing mockup hero art"
+                  />
+                </figure>
+              </section>
+            </div>
           </div>
+          <aside class="mockup-notes">
+            <p>
+              More explanatory: the headline says what Curyo is before the familiar "AI Asks, Humans Earn" phrase shows
+              up elsewhere. Strong if the new hero art needs clearer positioning around human-in-the-loop.
+            </p>
+          </aside>
         </article>
 
         <article class="mockup-card">
           <header class="mockup-head">
             <div>
-              <div class="option-kicker">Abstract Concept C</div>
-              <h2>Orbit Review</h2>
+              <div class="kicker">Mockup C</div>
+              <h2>Product + Proof Above Fold</h2>
             </div>
-            <div class="badge">Most abstract</div>
+            <div class="badge">Most practical</div>
           </header>
-          <div class="mockup-body">
-            <figure class="mockup-figure">
-              <img
-                src="assets/abstract-orbit-review.png"
-                alt="Faceless human contour and abstract AI orbit cloud collaborating at a desktop computer with an orange mug"
-              />
-            </figure>
-            <aside class="mockup-notes">
-              <p>
-                Strongest abstraction. The human has almost no facial detail, and the AI is mostly a glowing network
-                cloud. It may need a little compositional tightening, but the style is distinctive.
-              </p>
-              <ul>
-                <li>Best answer to the anatomy and hair concerns.</li>
-                <li>Most premium and least cartoon-like.</li>
-                <li>AI orbit form is large enough to become a brand motif.</li>
-              </ul>
-            </aside>
+          <div class="browser-shell">
+            <div class="browser-bar">
+              <span class="dot"></span>
+              <span class="dot"></span>
+              <span class="dot"></span>
+              <span class="tab-label"><span class="mug-mark small" aria-hidden="true"></span>Curyo</span>
+            </div>
+            <div class="landing compact">
+              <nav class="landing-nav" aria-label="Mock navigation">
+                <div class="brand-lockup">
+                  <span class="mug-mark" aria-hidden="true"></span>
+                  <span class="brand-name">Curyo</span>
+                </div>
+                <div class="nav-links">
+                  <span>Earn</span>
+                  <span>Ask</span>
+                  <span>Governance</span>
+                </div>
+              </nav>
+              <section class="landing-hero" aria-label="Mock hero">
+                <div class="landing-copy">
+                  <div>
+                    <h3>AI Asks, Humans Earn</h3>
+                    <p>Verified humans stake reputation on useful answers for agents.</p>
+                    <div class="cta-row">
+                      <span class="button primary">Earn USDC</span>
+                      <span class="button secondary">Read Docs</span>
+                    </div>
+                  </div>
+                  <div class="step-row">
+                    <div class="step-card"><b>Wallet-funded asks</b><span>Agents pay bounties directly.</span></div>
+                    <div class="step-card"><b>Public signal</b><span>Votes settle into auditable results.</span></div>
+                  </div>
+                </div>
+                <figure class="landing-art">
+                  <img
+                    src="assets/curyo-human-loop-orange-orbits.png"
+                    alt="Compact landing mockup hero art"
+                  />
+                </figure>
+              </section>
+            </div>
           </div>
+          <aside class="mockup-notes">
+            <p>
+              Highest information density: good if the landing page should quickly show what happens after the first
+              visual read. The mug mark still gives the page a friendlier first signal.
+            </p>
+          </aside>
         </article>
       </section>
 
-      <section class="prompt-grid" aria-label="Prompt direction">
-        <div class="source-box">
-          <h2>Prompt Direction</h2>
+      <section class="notes-grid" aria-label="Design notes">
+        <div class="note-box">
+          <h2>Suggested Direction</h2>
           <p>
-            Generate the full scene as one image, but avoid literal character design. Ask for a partial human contour,
-            hands at the work surface, a desktop monitor with stand, an orange mug, and an AI presence made from an
-            orbital capsule, nodes, and soft glow.
+            Mockup A is the best low-risk path because it keeps the current landing architecture while making the first
+            impression much clearer and warmer.
           </p>
         </div>
-        <div class="source-box">
-          <h2>Useful Constraints</h2>
+        <div class="note-box">
+          <h2>Prompt Lock</h2>
           <p>
-            The key negative prompts are <code>no laptop</code>, <code>no literal robot body</code>,
-            <code>no detailed face</code>, <code>no oversized hair</code>, <code>no text</code>, and
-            <code>black background</code>.
-          </p>
-        </div>
-      </section>
-
-      <section class="sources" aria-label="Research sources and next steps">
-        <div class="source-box">
-          <h2>Sources Used</h2>
-          <ul>
-            <li>
-              <a href="https://pair.withgoogle.com/guidebook-v2/chapters/feedback-controls/">Google PAIR: Feedback + Control</a>
-              for the emphasis on feedback, user control, and trust.
-            </li>
-            <li>
-              <a href="https://www.microsoft.com/en-us/research/project/guidelines-for-human-ai-interaction/">Microsoft Research: Human-AI Interaction Guidelines</a>
-              for capability clarity, correction, and ongoing user feedback.
-            </li>
-            <li>
-              <a href="https://hai.stanford.edu/news/humans-loop-design-interactive-ai-systems">Stanford HAI: Humans in the Loop</a>
-              for framing human-in-the-loop systems as collaborative tools, not full automation.
-            </li>
-          </ul>
-        </div>
-        <div class="source-box">
-          <h2>Next Iteration</h2>
-          <p>
-            Start from Concept A if the homepage needs a clear product story. Start from Concept C if the brand should
-            lean more premium and symbolic. In either case, edit one thing at a time: crop, AI shape, then hand position.
+            For further image edits: preserve composition, thicken pure white strokes slightly, make AI orbit lines only
+            orange/coral, keep the orange mug, and avoid gradients, golden linework, and detailed anatomy.
           </p>
         </div>
       </section>
