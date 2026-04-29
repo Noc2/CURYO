@@ -605,7 +605,7 @@ export function resolveX402QuestionConfig(chainId: number): X402QuestionSubmissi
   const contentRegistryAddress = getSharedDeploymentAddress(chainId, "ContentRegistry");
   const questionRewardPoolEscrowAddress = getSharedDeploymentAddress(chainId, "QuestionRewardPoolEscrow");
   const x402QuestionSubmitterAddress = getSharedDeploymentAddress(chainId, "X402QuestionSubmitter");
-  if (!contentRegistryAddress || !questionRewardPoolEscrowAddress) {
+  if (!contentRegistryAddress || !questionRewardPoolEscrowAddress || !x402QuestionSubmitterAddress) {
     throw new X402QuestionConfigError("Curyo contracts are not deployed for the requested chain.");
   }
 
