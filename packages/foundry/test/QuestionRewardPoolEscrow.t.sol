@@ -2275,7 +2275,9 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
                 validAfter,
                 validBefore
             ),
-            signature: hex""
+            v: 27,
+            r: bytes32(0),
+            s: bytes32(0)
         });
     }
 

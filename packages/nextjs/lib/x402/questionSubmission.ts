@@ -14,6 +14,7 @@ import {
   http,
   isAddress,
   keccak256,
+  parseSignature,
 } from "viem";
 import { dbClient } from "~~/lib/db";
 import {
@@ -452,7 +453,9 @@ const X402QuestionSubmitterAbi = [
           { name: "validAfter", type: "uint256" },
           { name: "validBefore", type: "uint256" },
           { name: "nonce", type: "bytes32" },
-          { name: "signature", type: "bytes" },
+          { name: "v", type: "uint8" },
+          { name: "r", type: "bytes32" },
+          { name: "s", type: "bytes32" },
         ],
         name: "paymentAuthorization",
         type: "tuple",
@@ -1044,6 +1047,18 @@ function defaultNativeX402ValidBefore() {
   return BigInt(Math.floor(Date.now() / 1000) + 30 * 60);
 }
 
+function getEip3009SignatureParts(signature: Hex) {
+  if (signature.length !== 132) {
+    throw new X402QuestionConflictError("paymentAuthorization.signature must be a 65-byte EIP-3009 signature.");
+  }
+  const parsed = parseSignature(signature);
+  return {
+    r: parsed.r,
+    s: parsed.s,
+    v: Number(parsed.v ?? BigInt(parsed.yParity + 27)),
+  };
+}
+
 function buildNativeX402TypedData(params: {
   authorization: NativeX402PaymentAuthorization;
   chainId: number;
@@ -1052,7 +1067,9 @@ function buildNativeX402TypedData(params: {
   return {
     domain: {
       chainId: params.chainId,
+      name: "USDC",
       verifyingContract: params.tokenAddress,
+      version: "2",
     },
     message: {
       from: params.authorization.from,
@@ -1171,56 +1188,61 @@ export async function buildNativeX402QuestionSubmissionPlan(params: {
     value: params.payload.bounty.amount.toString(),
   };
   const calls: AgentWalletTransactionCall[] = authorization.signature
-    ? [
-        {
-          data: encodeFunctionData({
-            abi: ContentRegistryAbi,
+    ? (() => {
+        const signatureParts = getEip3009SignatureParts(authorization.signature);
+        return [
+          {
+            data: encodeFunctionData({
+              abi: ContentRegistryAbi,
+              functionName: "reserveSubmission",
+              args: [context.revealCommitment],
+            }),
+            description: "Reserve the deterministic question commitment from the wallet signer",
             functionName: "reserveSubmission",
-            args: [context.revealCommitment],
-          }),
-          description: "Reserve the deterministic question commitment from the wallet signer",
-          functionName: "reserveSubmission",
-          id: "reserve-submission",
-          phase: "reserve_submission",
-          to: params.config.contentRegistryAddress,
-          value: "0",
-          waitAfterMs: RESERVED_SUBMISSION_WAIT_MS,
-        },
-        {
-          data: encodeFunctionData({
-            abi: X402QuestionSubmitterAbi,
+            id: "reserve-submission",
+            phase: "reserve_submission",
+            to: params.config.contentRegistryAddress,
+            value: "0",
+            waitAfterMs: RESERVED_SUBMISSION_WAIT_MS,
+          },
+          {
+            data: encodeFunctionData({
+              abi: X402QuestionSubmitterAbi,
+              functionName: "submitQuestionWithX402Payment",
+              args: [
+                question.contextUrl,
+                question.imageUrls,
+                question.videoUrl,
+                question.title,
+                question.description,
+                question.tags,
+                question.categoryId,
+                question.salt,
+                context.rewardTerms,
+                context.roundConfigAbi,
+                question.spec,
+                {
+                  from: authorization.from,
+                  nonce: authorization.nonce,
+                  to: authorization.to,
+                  validAfter: BigInt(authorization.validAfter),
+                  validBefore: BigInt(authorization.validBefore),
+                  value: BigInt(authorization.value),
+                  v: signatureParts.v,
+                  r: signatureParts.r,
+                  s: signatureParts.s,
+                },
+              ],
+            }),
+            description: "Submit the question and fund protocol escrow with the signed x402 USDC authorization",
             functionName: "submitQuestionWithX402Payment",
-            args: [
-              question.contextUrl,
-              question.imageUrls,
-              question.videoUrl,
-              question.title,
-              question.description,
-              question.tags,
-              question.categoryId,
-              question.salt,
-              context.rewardTerms,
-              context.roundConfigAbi,
-              question.spec,
-              {
-                from: authorization.from,
-                nonce: authorization.nonce,
-                signature: authorization.signature,
-                to: authorization.to,
-                validAfter: BigInt(authorization.validAfter),
-                validBefore: BigInt(authorization.validBefore),
-                value: BigInt(authorization.value),
-              },
-            ],
-          }),
-          description: "Submit the question and fund protocol escrow with the signed x402 USDC authorization",
-          functionName: "submitQuestionWithX402Payment",
-          id: "submit-x402-question",
-          phase: "submit_x402_question",
-          to: params.config.x402QuestionSubmitterAddress,
-          value: "0",
-        },
-      ]
+            id: "submit-x402-question",
+            phase: "submit_x402_question",
+            to: params.config.x402QuestionSubmitterAddress,
+            value: "0",
+          },
+        ];
+      })()
     : [];
 
   return {

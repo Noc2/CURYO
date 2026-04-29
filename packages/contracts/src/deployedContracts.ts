@@ -11927,9 +11927,19 @@ const deployedContracts: GenericContractsDeclaration = {
                   internalType: "bytes32",
                 },
                 {
-                  name: "signature",
-                  type: "bytes",
-                  internalType: "bytes",
+                  name: "v",
+                  type: "uint8",
+                  internalType: "uint8",
+                },
+                {
+                  name: "r",
+                  type: "bytes32",
+                  internalType: "bytes32",
+                },
+                {
+                  name: "s",
+                  type: "bytes32",
+                  internalType: "bytes32",
                 },
               ],
             },

@@ -1,4 +1,4 @@
-import { ContentRegistryAbi } from "@curyo/contracts/abis";
+import { ContentRegistryAbi, X402QuestionSubmitterAbi } from "@curyo/contracts/abis";
 import assert from "node:assert/strict";
 import { after, before, beforeEach, test } from "node:test";
 import { type Address, type Hex, type TransactionReceipt, encodeAbiParameters, encodeEventTopics } from "viem";
@@ -528,7 +528,10 @@ test("prepareNativeX402QuestionSubmissionRequest returns an authorization reques
     nextAction: string;
     paymentMode: string;
     transactionPlan: null | { calls: unknown[] };
-    x402AuthorizationRequest: { authorization: { nonce: string } };
+    x402AuthorizationRequest: {
+      authorization: { nonce: string };
+      eip712: { domain: { name?: string; version?: string; verifyingContract?: string } };
+    };
   };
 
   assert.equal(prepared.status, 202);
@@ -536,6 +539,31 @@ test("prepareNativeX402QuestionSubmissionRequest returns an authorization reques
   assert.equal(body.nextAction, "sign_x402_authorization");
   assert.equal(body.transactionPlan, null);
   assert.equal(body.x402AuthorizationRequest.authorization.nonce, `0x${"4".repeat(64)}`);
+  assert.equal(body.x402AuthorizationRequest.eip712.domain.name, "USDC");
+  assert.equal(body.x402AuthorizationRequest.eip712.domain.version, "2");
+  assert.equal(body.x402AuthorizationRequest.eip712.domain.verifyingContract, TEST_CONFIG.usdcAddress);
+
+  const submitFunction = X402QuestionSubmitterAbi.find(
+    item => item.type === "function" && item.name === "submitQuestionWithX402Payment",
+  );
+  assert.ok(submitFunction && "inputs" in submitFunction);
+  const paymentAuthorizationInput = submitFunction.inputs.at(-1);
+  assert.deepEqual(
+    paymentAuthorizationInput && "components" in paymentAuthorizationInput
+      ? paymentAuthorizationInput.components.map(component => [component.name, component.type])
+      : [],
+    [
+      ["from", "address"],
+      ["to", "address"],
+      ["value", "uint256"],
+      ["validAfter", "uint256"],
+      ["validBefore", "uint256"],
+      ["nonce", "bytes32"],
+      ["v", "uint8"],
+      ["r", "bytes32"],
+      ["s", "bytes32"],
+    ],
+  );
 
   const signed = await prepareNativeX402QuestionSubmissionRequest({
     agentId: "native-agent",

@@ -35,7 +35,9 @@ contract MockERC20 is ERC20 {
         uint256 validAfter,
         uint256 validBefore,
         bytes32 nonce,
-        bytes calldata
+        uint8,
+        bytes32,
+        bytes32
     ) external {
         require(to == msg.sender, "MockERC20: caller must be payee");
         require(block.timestamp > validAfter, "MockERC20: authorization not yet valid");

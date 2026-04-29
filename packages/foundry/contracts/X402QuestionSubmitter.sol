@@ -14,7 +14,9 @@ struct Eip3009Authorization {
     uint256 validAfter;
     uint256 validBefore;
     bytes32 nonce;
-    bytes signature;
+    uint8 v;
+    bytes32 r;
+    bytes32 s;
 }
 
 interface IReceiveWithAuthorizationToken {
@@ -25,7 +27,9 @@ interface IReceiveWithAuthorizationToken {
         uint256 validAfter,
         uint256 validBefore,
         bytes32 nonce,
-        bytes calldata signature
+        uint8 v,
+        bytes32 r,
+        bytes32 s
     ) external;
 }
 
@@ -101,7 +105,9 @@ contract X402QuestionSubmitter {
                 paymentAuthorization.validAfter,
                 paymentAuthorization.validBefore,
                 paymentAuthorization.nonce,
-                paymentAuthorization.signature
+                paymentAuthorization.v,
+                paymentAuthorization.r,
+                paymentAuthorization.s
             );
         usdcToken.forceApprove(questionRewardPoolEscrow, paymentAuthorization.value);
 
