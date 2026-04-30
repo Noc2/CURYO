@@ -329,6 +329,8 @@ test("renderer returns svg markup for the no-accuracy fallback", () => {
   );
 
   assert.match(svg, /signal-disc-avatar-core/);
+  assert.doesNotMatch(svg, /signal-disc-avatar-badge/);
+  assert.doesNotMatch(svg, /fill="#05070B"/);
   assert.doesNotMatch(svg, /signal-disc-avatar-rail/);
   assert.doesNotMatch(svg, /signal-disc-avatar-progress/);
 });
@@ -336,7 +338,8 @@ test("renderer returns svg markup for the no-accuracy fallback", () => {
 test("renderer returns svg markup for the signal-disc avatar", () => {
   const svg = renderSignalDiscAvatarSvg(buildPayload(), { nowSeconds: NOW_SECONDS, size: 64 });
 
-  assert.match(svg, /signal-disc-avatar-badge/);
+  assert.doesNotMatch(svg, /signal-disc-avatar-badge/);
+  assert.doesNotMatch(svg, /fill="#05070B"/);
   assert.match(svg, /signal-disc-avatar-core/);
   assert.match(svg, /signal-disc-avatar-progress/);
   assert.match(svg, /<svg[^>]+width="64"/);

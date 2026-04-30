@@ -21,7 +21,6 @@ interface SignalDiscAvatarProgress {
 
 interface SignalDiscAvatarModel {
   badgeRadius: number;
-  badgeColor: string;
   core: SignalDiscAvatarCore;
   progress: SignalDiscAvatarProgress | null;
 }
@@ -192,7 +191,6 @@ export function buildSignalDiscAvatarModel(
 
   return {
     badgeRadius: BADGE_RADIUS,
-    badgeColor: "#05070B",
     core: {
       radius: CORE_RADIUS,
       color: palette.coreColor,
@@ -221,7 +219,6 @@ export function renderSignalDiscAvatarSvg(
   const model = buildSignalDiscAvatarModel(payload, { nowSeconds: options?.nowSeconds });
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}" fill="none">
-  <circle class="signal-disc-avatar-badge" cx="${CENTER}" cy="${CENTER}" r="${model.badgeRadius.toFixed(2)}" fill="${model.badgeColor}"/>
   ${model.progress ? renderProgress(model.progress) : ""}
   <circle class="signal-disc-avatar-core" cx="${CENTER}" cy="${CENTER}" r="${model.core.radius.toFixed(2)}" fill="${model.core.color}"/>
   <circle class="signal-disc-avatar-core-edge" cx="${CENTER}" cy="${CENTER}" r="${model.core.radius.toFixed(2)}" fill="none" stroke="${model.core.edgeColor}" stroke-width="7" stroke-opacity="0.32"/>
