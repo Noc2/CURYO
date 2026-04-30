@@ -328,7 +328,7 @@ export default async function LandingPage() {
         {/* Hero: stacked on mobile, oversized background illustration on large screens */}
         <div className="relative z-0 flex w-full flex-col lg:min-h-[34rem] lg:items-center lg:justify-center xl:min-h-[38rem]">
           {/* Animation: regular stack on mobile, oversized background layer on large screens */}
-          <div className="relative z-0 lg:pointer-events-none lg:absolute lg:bottom-[-2.5rem] lg:left-[25rem] lg:right-0 lg:top-[-2.5rem] xl:bottom-[-3.5rem] xl:left-[23rem] xl:right-0 xl:top-[-3.5rem]">
+          <div className="relative z-0 lg:pointer-events-none lg:absolute lg:bottom-[-2.5rem] lg:left-[25rem] lg:right-0 lg:top-[-2.5rem] lg:translate-y-7 xl:bottom-[-3.5rem] xl:left-[23rem] xl:right-0 xl:top-[-3.5rem] xl:translate-y-10">
             <CuryoAnimation />
           </div>
 
