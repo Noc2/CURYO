@@ -2182,9 +2182,14 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     }
 
     function test_MarkDormant_ReleasesUrlForResubmission() public {
+        string memory url = "https://example.com/dormant-url";
+        string memory title = "goal";
+        string memory description = "goal";
+        string memory tags = "tags";
+
         vm.startPrank(submitter);
         hrepToken.approve(address(registry), 20e6);
-        _submitContentWithReservation(registry, "https://example.com/dormant-url", "goal", "goal", "tags", 0);
+        _submitContentWithReservation(registry, url, title, description, tags, 0);
         vm.stopPrank();
 
         // Mark dormant after 31 days
@@ -2197,12 +2202,19 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         // Should be able to resubmit the same URL
         vm.startPrank(submitter);
         hrepToken.approve(address(registry), 10e6);
-        _submitContentWithReservation(registry, "https://example.com/dormant-url", "goal2", "goal2", "tags2", 0);
+        _submitContentWithReservation(registry, url, title, description, tags, 0);
         vm.stopPrank();
 
         // New content created with same URL
         (,,,,, ContentRegistry.ContentStatus status,,,,) = registry.contents(2);
         assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Active));
+
+        vm.expectRevert("Key already released");
+        registry.releaseDormantSubmissionKey(1);
+
+        (, bytes32 submissionKey) =
+            registry.previewQuestionSubmissionKey(url, _emptyImageUrls(), "", title, description, tags, 1);
+        assertTrue(registry.submissionKeyUsed(submissionKey), "active resubmission keeps canonical key reserved");
     }
 
     function test_ReviveContent_ReservesUrlAgain() public {

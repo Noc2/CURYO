@@ -1070,10 +1070,12 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
         bytes32 submissionKey = contentSubmissionKey[contentId];
         require(submissionKey != bytes32(0), "No submission key");
+        require(dormantKeyReleasableAt[contentId] != 0, "Key already released");
         require(submissionKeyUsed[submissionKey], "Key already released");
         require(block.timestamp > dormantKeyReleasableAt[contentId], "Revival window active");
 
         submissionKeyUsed[submissionKey] = false;
+        delete dormantKeyReleasableAt[contentId];
 
         emit DormantSubmissionKeyReleased(contentId, submissionKey);
     }
