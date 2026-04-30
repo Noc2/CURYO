@@ -218,6 +218,40 @@ contract GameTheoryImprovementsTest is VotingTestBase {
         assertGt(registry.getRating(cid), 5_000, "rating should follow raw revealed UP majority");
     }
 
+    function test_WeightedTieBreak_PreventsLateEpochRefundGrief() public {
+        uint256 cid = _submit();
+        uint256 roundStart = block.timestamp;
+
+        _commit(alice, cid, true, 100e6);
+        _commit(bob, cid, false, 75e6);
+
+        uint256 roundId = engine.currentRoundId(cid);
+        _warpPastTlockRevealTime(roundStart + EPOCH_DURATION);
+        _reveal(alice, cid, roundId, true);
+        _reveal(bob, cid, roundId, false);
+
+        _commit(carol, cid, false, 100e6);
+        _warpPastTlockRevealTime(roundStart + 2 * EPOCH_DURATION);
+        _reveal(carol, cid, roundId, false);
+
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, cid, roundId);
+        assertEq(round.weightedUpPool, 100e6, "epoch-1 UP weight");
+        assertEq(round.weightedDownPool, 100e6, "epoch-1 plus late DOWN equalizes weight");
+        assertEq(round.upPool, 100e6, "raw UP pool");
+        assertEq(round.downPool, 175e6, "raw DOWN pool");
+
+        _settle(cid, roundId);
+
+        RoundLib.Round memory settled = RoundEngineReadHelpers.round(engine, cid, roundId);
+        assertEq(uint256(settled.state), uint256(RoundLib.RoundState.Settled), "weighted-only tie settles");
+        assertTrue(settled.upWins, "earlier higher-weight side wins weighted-only tie");
+        assertEq(engine.roundWinningStake(cid, roundId), 100e6, "winning weighted stake");
+
+        vm.prank(carol);
+        vm.expectRevert(RoundVotingEngine.RoundNotCancelledOrTied.selector);
+        engine.claimCancelledRoundRefund(cid, roundId);
+    }
+
     // =========================================================================
     // TEST 2: EpochWeightRewards (4:1 ratio)
     // =========================================================================

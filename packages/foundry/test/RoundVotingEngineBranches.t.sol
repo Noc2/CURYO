@@ -449,7 +449,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         vm.startPrank(voter4);
         hrepToken.approve(address(engine), STAKE);
-        vm.expectRevert(RoundVotingEngine.UnexpectedRoundId.selector);
+        vm.expectRevert(RoundVotingEngine.InvalidCommitHash.selector);
         engine.commitVote(
             contentId,
             _roundContext(staleCommit.roundId, staleCommit.roundReferenceRatingBps),
@@ -1761,7 +1761,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         vm.stopPrank();
     }
 
-    function test_Commit_RoundNotAccepting_ExpiredRound_Reverts() public {
+    function test_Commit_RoundNotOpen_ExpiredRound_Reverts() public {
         uint256 contentId = _submitContent();
         _commit(voter1, contentId, true, STAKE);
 
@@ -1777,7 +1777,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         uint256 cachedRoundContext14 =
             _roundContext(engine.previewCommitRoundId(contentId), _defaultRatingReferenceBps());
         vm.prank(voter2);
-        vm.expectRevert(RoundVotingEngine.RoundNotAccepting.selector);
+        vm.expectRevert(RoundVotingEngine.RoundNotOpen.selector);
         engine.commitVote(
             contentId,
             cachedRoundContext14,

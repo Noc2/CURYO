@@ -70,13 +70,10 @@ contract RoundVotingEngine is
     error DrandChainHashMismatch();
     error TargetRoundOutOfWindow();
     error RoundNotOpen();
-    error ReferenceRatingMismatch();
     error ActiveRoundStillOpen();
-    error RoundNotAccepting();
     error RoundNotExpired();
     error RoundNotSettledOrTied();
     error RoundNotCancelledOrTied();
-    error UnexpectedRoundId();
     error DormancyWindowElapsed();
     error ThresholdReached();
     error RevealGraceActive();
@@ -367,15 +364,15 @@ contract RoundVotingEngine is
 
         uint256 roundId = _getOrCreateRound(contentId);
         uint256 expectedRoundId = roundContext >> 16;
-        if (roundId != expectedRoundId) revert UnexpectedRoundId();
+        if (roundId != expectedRoundId) revert InvalidCommitHash();
         RoundLib.Round storage round = rounds[contentId][roundId];
         RoundLib.RoundConfig memory roundCfg = _getRoundConfig(contentId, roundId);
         uint16 roundReferenceRatingBps = uint16(roundContext);
         uint16 expectedReferenceRatingBps = _getRoundReferenceRatingBps(contentId, roundId);
-        if (roundReferenceRatingBps != expectedReferenceRatingBps) revert ReferenceRatingMismatch();
+        if (roundReferenceRatingBps != expectedReferenceRatingBps) revert InvalidCommitHash();
 
         // Round must be Open and not expired
-        if (!RoundLib.acceptsVotes(round, roundCfg.maxDuration)) revert RoundNotAccepting();
+        if (!RoundLib.acceptsVotes(round, roundCfg.maxDuration)) revert RoundNotOpen();
         if (round.thresholdReachedAt != 0) revert ThresholdReached();
 
         IVoterIdNFT roundVoterIdNft = _getRoundVoterIdNft(contentId, roundId);
@@ -761,17 +758,18 @@ contract RoundVotingEngine is
             roundUnrevealedCleanupRemaining[contentId][roundId] = unrevealedPastEpochCount;
         }
 
-        // Tie: equal weighted pools, no winners
-        if (round.weightedUpPool == round.weightedDownPool) {
-            round.state = RoundLib.RoundState.Tied;
-            round.settledAt = block.timestamp.toUint48();
-            _notifyBundleRoundTerminal(contentId, roundId, false);
-            emit RoundTied(contentId, roundId);
-            return;
-        }
-
         // Determine winner: weighted majority wins (anti-herding)
         bool upWins = round.weightedUpPool > round.weightedDownPool;
+        if (round.weightedUpPool == round.weightedDownPool) {
+            if (round.upPool == round.downPool) {
+                round.state = RoundLib.RoundState.Tied;
+                round.settledAt = block.timestamp.toUint48();
+                _notifyBundleRoundTerminal(contentId, roundId, false);
+                emit RoundTied(contentId, roundId);
+                return;
+            }
+            upWins = round.upPool < round.downPool;
+        }
         round.upWins = upWins;
         round.state = RoundLib.RoundState.Settled;
         round.settledAt = block.timestamp.toUint48();
