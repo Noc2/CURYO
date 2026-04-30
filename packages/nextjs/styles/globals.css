@@ -32,7 +32,7 @@
   --color-success-content: #000000;
   --color-warning: #ffc071;
   --color-warning-content: #000000;
-  --color-error: #ff8a4a;
+  --color-error: #bf3f18;
   --color-error-content: #000000;
 
   --radius-selector: 0.5rem;
@@ -79,8 +79,8 @@
   --curyo-ember: #f26426;
   --curyo-ember-hover: #ff7a3d;
   --curyo-ember-deep: #bf3f18;
-  --curyo-action-orange: #bf3f18;
-  --curyo-action-orange-hover: #cc471a;
+  --curyo-action-orange: #f26426;
+  --curyo-action-orange-hover: #f26426;
   --curyo-action-content: #ffffff;
   --curyo-warm-white: #f5f0eb;
   --curyo-steel: #8b858e;
