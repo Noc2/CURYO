@@ -1,0 +1,386 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1180" viewBox="0 0 1600 1180" role="img" aria-labelledby="title desc">
+  <title id="title">Curyo avatar system mockups</title>
+  <desc id="desc">Three proposed avatar directions where the center color carries identity and the white circular line shows accuracy.</desc>
+
+  <defs>
+    <style>
+      .canvas {
+        fill: #080a0f;
+      }
+
+      .panel {
+        fill: #10131a;
+        stroke: #242a36;
+        stroke-width: 1;
+      }
+
+      .panel-recommended {
+        stroke: #ffffff;
+        stroke-opacity: 0.22;
+      }
+
+      .title {
+        fill: #f6f1eb;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 44px;
+        font-weight: 720;
+        letter-spacing: 0;
+      }
+
+      .subtitle,
+      .body,
+      .label,
+      .tiny {
+        font-family: Arial, Helvetica, sans-serif;
+        letter-spacing: 0;
+      }
+
+      .subtitle {
+        fill: #aeb7c6;
+        font-size: 20px;
+      }
+
+      .row-title {
+        fill: #fff8f1;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 25px;
+        font-weight: 700;
+      }
+
+      .body {
+        fill: #aeb7c6;
+        font-size: 17px;
+      }
+
+      .label {
+        fill: #e8edf5;
+        font-size: 18px;
+        font-weight: 650;
+        text-anchor: middle;
+      }
+
+      .tiny {
+        fill: #8f99aa;
+        font-size: 14px;
+        text-anchor: middle;
+      }
+
+      .badge {
+        fill: #1f252f;
+        stroke: #3a4354;
+        stroke-width: 1;
+      }
+
+      .badge-text {
+        fill: #f6f1eb;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0;
+        text-anchor: middle;
+      }
+
+      .avatar-back {
+        fill: #080a0f;
+      }
+
+      .avatar-disc {
+        fill: #11151d;
+      }
+
+      .avatar-rail {
+        fill: none;
+        stroke: #ffffff;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .rail-a {
+        stroke-opacity: 0.1;
+        stroke-width: 7;
+      }
+
+      .rail-b {
+        stroke: #2a303a;
+        stroke-opacity: 1;
+        stroke-width: 8;
+      }
+
+      .rail-c {
+        stroke-opacity: 0.12;
+        stroke-width: 6;
+      }
+
+      .avatar-progress {
+        fill: none;
+        stroke: #ffffff;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .progress-a {
+        stroke-width: 7;
+      }
+
+      .progress-b {
+        stroke-width: 8;
+      }
+
+      .progress-c {
+        stroke-width: 6;
+      }
+
+      .avatar-core {
+        fill: currentColor;
+      }
+
+      .avatar-core-shadow {
+        fill: #000000;
+        opacity: 0.2;
+      }
+
+      .avatar-core-ring {
+        fill: none;
+        stroke: #ffffff;
+        stroke-opacity: 0.16;
+      }
+
+      .avatar-core-light {
+        fill: #ffffff;
+        opacity: 0.14;
+      }
+
+      .swatch {
+        fill: currentColor;
+        stroke: #ffffff;
+        stroke-opacity: 0.18;
+        stroke-width: 2;
+      }
+    </style>
+
+    <symbol id="avatar-a-base" viewBox="0 0 96 96">
+      <circle class="avatar-back" cx="48" cy="48" r="46" />
+      <circle class="avatar-rail rail-a" cx="48" cy="48" r="40" />
+      <circle class="avatar-core-shadow" cx="52" cy="48" r="22" />
+      <circle class="avatar-core" cx="52" cy="48" r="19.5" />
+      <circle class="avatar-core-light" cx="45" cy="40" r="7" />
+      <circle class="avatar-core-ring" cx="52" cy="48" r="19.5" stroke-width="1.4" />
+    </symbol>
+
+    <symbol id="avatar-b-base" viewBox="0 0 96 96">
+      <circle class="avatar-disc" cx="48" cy="48" r="46" />
+      <circle cx="48" cy="48" r="43" fill="none" stroke="#ffffff" stroke-opacity="0.04" stroke-width="1.4" />
+      <circle class="avatar-rail rail-b" cx="48" cy="48" r="37" />
+      <circle class="avatar-core-shadow" cx="48" cy="48" r="25" />
+      <circle class="avatar-core" cx="48" cy="48" r="22.5" />
+      <circle class="avatar-core-light" cx="40" cy="39" r="7" />
+      <circle class="avatar-core-ring" cx="48" cy="48" r="22.5" stroke-width="1.6" />
+    </symbol>
+
+    <symbol id="avatar-c-base" viewBox="0 0 96 96">
+      <circle class="avatar-rail rail-c" cx="48" cy="48" r="40" />
+      <circle class="avatar-core-shadow" cx="50" cy="48" r="26" />
+      <circle class="avatar-core" cx="50" cy="48" r="23.5" />
+      <circle class="avatar-core-light" cx="41" cy="38" r="7" />
+      <circle class="avatar-core-ring" cx="50" cy="48" r="23.5" stroke-width="1.3" />
+    </symbol>
+
+    <symbol id="avatar-a-0" viewBox="0 0 96 96">
+      <use href="#avatar-a-base" />
+    </symbol>
+    <symbol id="avatar-a-25" viewBox="0 0 96 96">
+      <use href="#avatar-a-base" />
+      <path class="avatar-progress progress-a" d="M 74.77 18.27 A 40 40 0 0 0 18.27 21.23" />
+    </symbol>
+    <symbol id="avatar-a-50" viewBox="0 0 96 96">
+      <use href="#avatar-a-base" />
+      <path class="avatar-progress progress-a" d="M 74.77 18.27 A 40 40 0 0 0 21.23 77.73" />
+    </symbol>
+    <symbol id="avatar-a-72" viewBox="0 0 96 96">
+      <use href="#avatar-a-base" />
+      <path class="avatar-progress progress-a" d="M 74.77 18.27 A 40 40 0 1 0 72.18 79.86" />
+    </symbol>
+    <symbol id="avatar-a-75" viewBox="0 0 96 96">
+      <use href="#avatar-a-base" />
+      <path class="avatar-progress progress-a" d="M 74.77 18.27 A 40 40 0 1 0 77.73 74.77" />
+    </symbol>
+    <symbol id="avatar-a-100" viewBox="0 0 96 96">
+      <use href="#avatar-a-base" />
+      <circle class="avatar-progress progress-a" cx="48" cy="48" r="40" />
+    </symbol>
+
+    <symbol id="avatar-b-0" viewBox="0 0 96 96">
+      <use href="#avatar-b-base" />
+    </symbol>
+    <symbol id="avatar-b-25" viewBox="0 0 96 96">
+      <use href="#avatar-b-base" />
+      <path class="avatar-progress progress-b" d="M 72.76 20.50 A 37 37 0 0 0 20.50 23.24" />
+    </symbol>
+    <symbol id="avatar-b-50" viewBox="0 0 96 96">
+      <use href="#avatar-b-base" />
+      <path class="avatar-progress progress-b" d="M 72.76 20.50 A 37 37 0 0 0 23.24 75.50" />
+    </symbol>
+    <symbol id="avatar-b-75" viewBox="0 0 96 96">
+      <use href="#avatar-b-base" />
+      <path class="avatar-progress progress-b" d="M 72.76 20.50 A 37 37 0 1 0 75.50 72.76" />
+    </symbol>
+    <symbol id="avatar-b-100" viewBox="0 0 96 96">
+      <use href="#avatar-b-base" />
+      <circle class="avatar-progress progress-b" cx="48" cy="48" r="37" />
+    </symbol>
+
+    <symbol id="avatar-c-0" viewBox="0 0 96 96">
+      <use href="#avatar-c-base" />
+    </symbol>
+    <symbol id="avatar-c-25" viewBox="0 0 96 96">
+      <use href="#avatar-c-base" />
+      <path class="avatar-progress progress-c" d="M 74.77 18.27 A 40 40 0 0 0 18.27 21.23" />
+    </symbol>
+    <symbol id="avatar-c-50" viewBox="0 0 96 96">
+      <use href="#avatar-c-base" />
+      <path class="avatar-progress progress-c" d="M 74.77 18.27 A 40 40 0 0 0 21.23 77.73" />
+    </symbol>
+    <symbol id="avatar-c-75" viewBox="0 0 96 96">
+      <use href="#avatar-c-base" />
+      <path class="avatar-progress progress-c" d="M 74.77 18.27 A 40 40 0 1 0 77.73 74.77" />
+    </symbol>
+    <symbol id="avatar-c-100" viewBox="0 0 96 96">
+      <use href="#avatar-c-base" />
+      <circle class="avatar-progress progress-c" cx="48" cy="48" r="40" />
+    </symbol>
+  </defs>
+
+  <rect class="canvas" width="1600" height="1180" />
+
+  <text class="title" x="72" y="86">Avatar system mockups</text>
+  <text class="subtitle" x="72" y="122">Center color keeps the existing avatar color idea. White logo line = accuracy: 0% none, 50% half circle, 100% full circle.</text>
+
+  <g transform="translate(72 170)">
+    <rect class="panel panel-recommended" x="0" y="0" width="1456" height="245" rx="20" />
+    <text class="row-title" x="36" y="48">A. Logo arc</text>
+    <text class="body" x="36" y="78">Recommended default.</text>
+    <rect class="badge" x="36" y="102" width="128" height="30" rx="15" />
+    <text class="badge-text" x="100" y="122">BEST DEFAULT</text>
+
+    <g transform="translate(220 36)" color="#F26426">
+      <use href="#avatar-a-0" width="124" height="124" />
+      <text class="label" x="62" y="166">0%</text>
+      <text class="tiny" x="62" y="188">no line</text>
+    </g>
+    <g transform="translate(390 36)" color="#F26426">
+      <use href="#avatar-a-25" width="124" height="124" />
+      <text class="label" x="62" y="166">25%</text>
+      <text class="tiny" x="62" y="188">quarter</text>
+    </g>
+    <g transform="translate(560 36)" color="#F26426">
+      <use href="#avatar-a-50" width="124" height="124" />
+      <text class="label" x="62" y="166">50%</text>
+      <text class="tiny" x="62" y="188">half</text>
+    </g>
+    <g transform="translate(730 36)" color="#F26426">
+      <use href="#avatar-a-75" width="124" height="124" />
+      <text class="label" x="62" y="166">75%</text>
+      <text class="tiny" x="62" y="188">logo-like C</text>
+    </g>
+    <g transform="translate(900 36)" color="#F26426">
+      <use href="#avatar-a-100" width="124" height="124" />
+      <text class="label" x="62" y="166">100%</text>
+      <text class="tiny" x="62" y="188">closed ring</text>
+    </g>
+  </g>
+
+  <g transform="translate(72 445)">
+    <rect class="panel" x="0" y="0" width="1456" height="245" rx="20" />
+    <text class="row-title" x="36" y="48">B. Signal disc</text>
+    <text class="body" x="36" y="78">High contrast at small sizes.</text>
+
+    <g transform="translate(220 36)" color="#42D0B7">
+      <use href="#avatar-b-0" width="124" height="124" />
+      <text class="label" x="62" y="166">0%</text>
+      <text class="tiny" x="62" y="188">rail only</text>
+    </g>
+    <g transform="translate(390 36)" color="#42D0B7">
+      <use href="#avatar-b-25" width="124" height="124" />
+      <text class="label" x="62" y="166">25%</text>
+      <text class="tiny" x="62" y="188">high contrast</text>
+    </g>
+    <g transform="translate(560 36)" color="#42D0B7">
+      <use href="#avatar-b-50" width="124" height="124" />
+      <text class="label" x="62" y="166">50%</text>
+      <text class="tiny" x="62" y="188">compact</text>
+    </g>
+    <g transform="translate(730 36)" color="#42D0B7">
+      <use href="#avatar-b-75" width="124" height="124" />
+      <text class="label" x="62" y="166">75%</text>
+      <text class="tiny" x="62" y="188">badge read</text>
+    </g>
+    <g transform="translate(900 36)" color="#42D0B7">
+      <use href="#avatar-b-100" width="124" height="124" />
+      <text class="label" x="62" y="166">100%</text>
+      <text class="tiny" x="62" y="188">complete</text>
+    </g>
+  </g>
+
+  <g transform="translate(72 720)">
+    <rect class="panel" x="0" y="0" width="1456" height="245" rx="20" />
+    <text class="row-title" x="36" y="48">C. Minimal bead</text>
+    <text class="body" x="36" y="78">Most color-forward.</text>
+
+    <g transform="translate(220 36)" color="#8D5CFF">
+      <use href="#avatar-c-0" width="124" height="124" />
+      <text class="label" x="62" y="166">0%</text>
+      <text class="tiny" x="62" y="188">quiet</text>
+    </g>
+    <g transform="translate(390 36)" color="#8D5CFF">
+      <use href="#avatar-c-25" width="124" height="124" />
+      <text class="label" x="62" y="166">25%</text>
+      <text class="tiny" x="62" y="188">simple</text>
+    </g>
+    <g transform="translate(560 36)" color="#8D5CFF">
+      <use href="#avatar-c-50" width="124" height="124" />
+      <text class="label" x="62" y="166">50%</text>
+      <text class="tiny" x="62" y="188">balanced</text>
+    </g>
+    <g transform="translate(730 36)" color="#8D5CFF">
+      <use href="#avatar-c-75" width="124" height="124" />
+      <text class="label" x="62" y="166">75%</text>
+      <text class="tiny" x="62" y="188">logo echo</text>
+    </g>
+    <g transform="translate(900 36)" color="#8D5CFF">
+      <use href="#avatar-c-100" width="124" height="124" />
+      <text class="label" x="62" y="166">100%</text>
+      <text class="tiny" x="62" y="188">full signal</text>
+    </g>
+  </g>
+
+  <g transform="translate(72 1000)">
+    <text class="row-title" x="0" y="30">Color variants at 72%</text>
+    <text class="body" x="0" y="60">Only the center changes; the accuracy line stays white.</text>
+
+    <g transform="translate(520 0)" color="#F26426">
+      <use href="#avatar-a-72" width="88" height="88" />
+      <circle class="swatch" cx="110" cy="44" r="13" />
+      <text class="tiny" x="44" y="116">orange</text>
+    </g>
+    <g transform="translate(650 0)" color="#42D0B7">
+      <use href="#avatar-a-72" width="88" height="88" />
+      <circle class="swatch" cx="110" cy="44" r="13" />
+      <text class="tiny" x="44" y="116">teal</text>
+    </g>
+    <g transform="translate(780 0)" color="#3D7CFF">
+      <use href="#avatar-a-72" width="88" height="88" />
+      <circle class="swatch" cx="110" cy="44" r="13" />
+      <text class="tiny" x="44" y="116">blue</text>
+    </g>
+    <g transform="translate(910 0)" color="#8D5CFF">
+      <use href="#avatar-a-72" width="88" height="88" />
+      <circle class="swatch" cx="110" cy="44" r="13" />
+      <text class="tiny" x="44" y="116">violet</text>
+    </g>
+    <g transform="translate(1040 0)" color="#F2C94C">
+      <use href="#avatar-a-72" width="88" height="88" />
+      <circle class="swatch" cx="110" cy="44" r="13" />
+      <text class="tiny" x="44" y="116">gold</text>
+    </g>
+  </g>
+</svg>
