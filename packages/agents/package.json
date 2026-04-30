@@ -14,10 +14,12 @@
     "ask": "tsx src/cli.ts ask",
     "check-types": "tsc --noEmit",
     "lint:questions": "tsx src/cli.ts lint",
+    "local-ask": "tsx src/cli.ts local-ask",
     "quote": "tsx src/cli.ts quote",
     "result": "tsx src/cli.ts result",
     "status": "tsx src/cli.ts status",
     "templates": "tsx src/cli.ts templates",
+    "wallet": "tsx src/cli.ts wallet",
     "test": "vitest run",
     "test:watch": "vitest"
   },

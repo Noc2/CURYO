@@ -24,6 +24,11 @@ yarn agents:lint --file packages/agents/examples/questions/landing-pitch-review.
 yarn agents:quote --file packages/agents/examples/questions/landing-pitch-review.json
 yarn agents:ask --file packages/agents/examples/questions/landing-pitch-review.json
 
+# Local signer path for Codex-like agents that can hold an encrypted keystore.
+yarn workspace @curyo/agents wallet --generate --keystore ~/.curyo/local-signer.json
+yarn workspace @curyo/agents wallet
+yarn workspace @curyo/agents local-ask --file packages/agents/examples/questions/landing-pitch-review.json
+
 # Recover later without resubmitting.
 yarn agents:status --operation-key 0x...
 yarn agents:result --operation-key 0x...
@@ -42,6 +47,30 @@ The CLI reads `.env` from the current process environment. For the default walle
 
 Managed agents can also call `curyo_get_agent_balance` and can attach signed callbacks, but those controls require a saved policy and bearer token.
 
+## Local Signer CLI
+
+`local-ask` is the narrow signer path for local agents. It loads the local wallet, sets `walletAddress`, calls
+`askHumans`, signs a returned x402 authorization request when needed, re-calls `askHumans` with
+`paymentAuthorization`, sends every returned `transactionPlan.calls` item in order through viem, waits for receipts, and
+confirms the hashes with Curyo.
+
+Use an encrypted keystore for persistent wallets:
+
+```bash
+export CURYO_LOCAL_SIGNER_KEYSTORE_PATH="$HOME/.curyo/local-signer.json"
+export CURYO_LOCAL_SIGNER_KEYSTORE_PASSWORD="$(security find-generic-password -a curyo-local-signer -w)"
+export CURYO_RPC_URL="https://forno.celo.org"
+export CURYO_CHAIN_ID=42220
+
+yarn workspace @curyo/agents wallet --generate
+yarn workspace @curyo/agents wallet
+yarn workspace @curyo/agents local-ask --file packages/agents/examples/questions/landing-pitch-review.json
+```
+
+The local signer never prints the private key. `CURYO_LOCAL_SIGNER_PRIVATE_KEY` exists only for short-lived CI or
+ephemeral test wallets; avoid putting long-lived funded keys in shell history, committed `.env` files, or shared logs.
+If the ask payload already contains `walletAddress`, `local-ask` refuses to continue unless it matches the loaded signer.
+
 ## Configuration
 
 ```bash
@@ -52,6 +81,11 @@ cp packages/agents/.env.example packages/agents/.env
 | ---------------------------- | ------------------------------------------------------------------------------------------ |
 | `CURYO_API_BASE_URL`         | Hosted Curyo origin, for example `https://curyo.example`                                                |
 | `CURYO_AGENT_WALLET_ADDRESS` | Funded wallet address for tokenless public asks                                                         |
+| `CURYO_RPC_URL`              | RPC URL used by `local-ask` to send returned transaction plan calls                                     |
+| `CURYO_CHAIN_ID`             | Optional chain guard; `local-ask` refuses mismatched RPCs                                               |
+| `CURYO_LOCAL_SIGNER_KEYSTORE_PATH` | Encrypted local signer keystore path                                                            |
+| `CURYO_LOCAL_SIGNER_KEYSTORE_PASSWORD` | Password for the local signer keystore; load from a secret source                             |
+| `CURYO_LOCAL_SIGNER_PRIVATE_KEY` | Ephemeral CI/test-wallet fallback; prefer a keystore for persistent funded wallets                  |
 | `CURYO_MCP_TOKEN`            | Optional managed agent bearer token with quote, ask, read, and balance scopes                           |
 | `CURYO_MCP_API_URL`          | Optional MCP endpoint override; tokenless SDK clients default to `${CURYO_API_BASE_URL}/api/mcp/public` |
 | `CURYO_MCP_PROTOCOL_VERSION` | Optional MCP protocol version override                                                                  |
