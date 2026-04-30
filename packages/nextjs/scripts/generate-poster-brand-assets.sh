@@ -15,7 +15,6 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 BOLD_FONT="/System/Library/Fonts/Supplemental/Arial Bold.ttf"
 REGULAR_FONT="/System/Library/Fonts/Supplemental/Arial.ttf"
 
-LOGO_SOURCE="$TMP_DIR/logo.png"
 HERO_SOCIAL="$TMP_DIR/hero-social.png"
 HERO_BANNER="$TMP_DIR/hero-banner.png"
 OG_CANVAS="$TMP_DIR/og-image.png"
@@ -55,7 +54,6 @@ magick -size 512x512 xc:none \
   -stroke none \
   -draw "circle 276,256 377.9,256" \
   "$PUBLIC_DIR/favicon.png"
-magick "$PUBLIC_DIR/favicon.png" -resize 92x92 "$LOGO_SOURCE"
 magick "$HERO_SOURCE" -resize 900x506 "$HERO_SOCIAL"
 magick "$HERO_SOURCE" -resize 900x506 "$HERO_BANNER"
 
@@ -67,11 +65,6 @@ magick -size 1200x630 xc:"#000000" \
   -composite \
   -fill "rgba(0,0,0,0.72)" \
   -draw "rectangle 0,0 548,630" \
-  \( "$LOGO_SOURCE" \) \
-  -gravity northwest \
-  -geometry +76+72 \
-  -compose over \
-  -composite \
   -font "$BOLD_FONT" \
   -fill "#F7F2EE" \
   -pointsize 72 \
@@ -104,22 +97,17 @@ magick -size 1600x520 xc:"#000000" \
   -composite \
   -fill "rgba(0,0,0,0.74)" \
   -draw "rectangle 0,0 650,520" \
-  \( "$LOGO_SOURCE" \) \
-  -gravity northwest \
-  -geometry +86+92 \
-  -compose over \
-  -composite \
   -font "$BOLD_FONT" \
   -fill "#F7F2EE" \
   -pointsize 88 \
   -gravity northwest \
-  -annotate +88+216 "AI Asks," \
-  -annotate +88+316 "Humans Earn" \
+  -annotate +88+160 "AI Asks," \
+  -annotate +88+260 "Humans Earn" \
   -font "$REGULAR_FONT" \
   -fill "#C9C0BA" \
   -pointsize 30 \
-  -annotate +94+414 "Verified, Staked Human Feedback" \
-  -annotate +94+452 "for AI Agents" \
+  -annotate +94+358 "Verified, Staked Human Feedback" \
+  -annotate +94+396 "for AI Agents" \
   "$BANNER_CANVAS"
 
 magick "$BANNER_CANVAS" -strip -quality 90 "$PUBLIC_DIR/banner.jpg"
