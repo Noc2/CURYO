@@ -107,7 +107,7 @@ export function StakeSelector({
   const phaseHeadline = effectiveIsBlind ? "Blind phase" : "Open phase";
   const phaseToneClassName = isUp ? (effectiveIsBlind ? "bg-primary/10" : "bg-warning/10") : "bg-error/10";
   const phaseHeadlineClassName = isUp ? (effectiveIsBlind ? "text-primary" : "text-warning") : "text-error";
-  const selectedPresetClassName = isUp ? "bg-primary text-primary-content" : "bg-error text-primary-content";
+  const selectedPresetClassName = "action-orange-control";
   const sliderClassName = `range ${isUp ? "range-primary" : "range-error"} range-sm w-full`;
   const sliderStyle = { "--range-thumb": "var(--curyo-warm-white)" } as CSSProperties;
   const weightPercent = Math.round(
@@ -320,7 +320,7 @@ export function StakeSelector({
               </button>
               <button
                 onClick={() => onConfirm(amount)}
-                className={`btn flex-1 text-primary-content ${isUp ? "bg-success hover:bg-success/90" : "bg-error hover:bg-error/90"}`}
+                className="btn flex-1 action-orange-control"
                 disabled={confirmDisabled}
               >
                 {isConfirming ? (

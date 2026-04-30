@@ -397,7 +397,7 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
                             <button
                               onClick={() => handleSelect(category)}
                               className={`whitespace-nowrap ${
-                                activeCategory === category ? "bg-primary text-primary-content hover:bg-primary" : ""
+                                activeCategory === category ? "action-orange-control" : ""
                               }`}
                             >
                               {category}

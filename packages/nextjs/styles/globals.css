@@ -310,6 +310,18 @@ body {
   box-shadow: none;
 }
 
+.action-orange-control {
+  color: var(--curyo-action-content) !important;
+  background: var(--curyo-action-orange) !important;
+  border-color: transparent !important;
+}
+
+.action-orange-control:hover:not(:disabled) {
+  color: var(--curyo-action-content) !important;
+  background: var(--curyo-action-orange-hover) !important;
+  border-color: transparent !important;
+}
+
 .btn-curyo {
   @apply shadow-sm;
   color: var(--color-base-100);
@@ -845,17 +857,17 @@ body {
 .pill-active,
 .pill-filter-active {
   border-radius: var(--curyo-radius-control);
-  background: var(--curyo-ember);
+  background: var(--curyo-action-orange);
   background-image: none;
-  color: var(--color-primary-content);
+  color: var(--curyo-action-content);
   box-shadow: none;
 }
 
 .pill-category {
   border-radius: var(--curyo-radius-control);
-  background: var(--curyo-ember);
+  background: var(--curyo-action-orange);
   background-image: none;
-  color: var(--color-primary-content);
+  color: var(--curyo-action-content);
   box-shadow: none;
 }
 
