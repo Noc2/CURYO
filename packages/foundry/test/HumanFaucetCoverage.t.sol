@@ -179,6 +179,61 @@ contract HumanFaucetCoverageTest is Test {
         assertEq(realVoterIdNFT.delegateTo(user1), address(0));
     }
 
+    function test_ResetNullifier_RemintsVoterIdWithoutSecondReward() public {
+        VoterIdNFT realVoterIdNFT = _deployRealVoterIdNFT();
+        uint256 nullifier = 333333;
+
+        vm.prank(admin);
+        faucet.setVoterIdNFT(address(realVoterIdNFT));
+
+        mockHub.setVerifiedWithNullifier(user1, nullifier);
+        mockHub.simulateVerification(address(faucet), user1);
+
+        uint256 faucetBalanceBefore = hrepToken.balanceOf(address(faucet));
+        uint256 totalClaimedBefore = faucet.totalClaimed();
+        uint256 totalClaimantsBefore = faucet.totalClaimants();
+
+        vm.prank(admin);
+        realVoterIdNFT.revokeVoterId(user1);
+        vm.prank(admin);
+        realVoterIdNFT.resetNullifier(nullifier);
+
+        mockHub.setVerifiedWithNullifier(user2, nullifier);
+        bytes memory remintUserData = abi.encodePacked(bytes4("HFVR"));
+
+        vm.expectRevert(HumanFaucet.NullifierAlreadyUsed.selector);
+        mockHub.simulateVerification(address(faucet), user2);
+
+        mockHub.simulateVerificationWithUserData(address(faucet), user2, remintUserData);
+
+        assertFalse(realVoterIdNFT.hasVoterId(user1));
+        assertTrue(realVoterIdNFT.hasVoterId(user2));
+        assertEq(hrepToken.balanceOf(user2), 0, "remint does not pay HREP");
+        assertEq(hrepToken.balanceOf(address(faucet)), faucetBalanceBefore, "faucet balance unchanged");
+        assertEq(faucet.totalClaimed(), totalClaimedBefore, "claim accounting unchanged");
+        assertEq(faucet.totalClaimants(), totalClaimantsBefore, "claimant count unchanged");
+        assertTrue(faucet.hasClaimed(user2), "replacement wallet cannot claim a second reward");
+        assertEq(faucet.claimNullifier(user2), nullifier);
+    }
+
+    function test_ResetNullifier_RemintRequiresVoterIdReset() public {
+        VoterIdNFT realVoterIdNFT = _deployRealVoterIdNFT();
+        uint256 nullifier = 444444;
+
+        vm.prank(admin);
+        faucet.setVoterIdNFT(address(realVoterIdNFT));
+
+        mockHub.setVerifiedWithNullifier(user1, nullifier);
+        mockHub.simulateVerification(address(faucet), user1);
+
+        vm.prank(admin);
+        realVoterIdNFT.revokeVoterId(user1);
+
+        mockHub.setVerifiedWithNullifier(user2, nullifier);
+        vm.expectRevert(HumanFaucet.NullifierAlreadyUsed.selector);
+        mockHub.simulateVerificationWithUserData(address(faucet), user2, abi.encodePacked(bytes4("HFVR")));
+    }
+
     function test_Claim_RevertsWhenAddressAlreadyClaimedEvenWithFreshNullifier() public {
         mockHub.setVerified(user1);
         mockHub.simulateVerification(address(faucet), user1);

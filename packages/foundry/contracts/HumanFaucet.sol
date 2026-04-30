@@ -570,13 +570,18 @@ contract HumanFaucet is SelfVerificationRoot, EIP712, Ownable, Pausable {
             revert MinimumAgeNotMet();
         }
 
-        // Check nullifier hasn't been used (same passport can't claim twice)
-        if (nullifierUsed[output.nullifier]) {
-            revert NullifierAlreadyUsed();
-        }
-
         // Derive user address from the verified userIdentifier
         address user = address(uint160(output.userIdentifier));
+
+        // A reset Voter ID nullifier can remint the SBT without reopening the HREP faucet reward.
+        if (nullifierUsed[output.nullifier]) {
+            if (_isVoterIdRemintRequest(userData)) {
+                _remintVoterId(user, output.nullifier);
+                _claiming = false;
+                return;
+            }
+            revert NullifierAlreadyUsed();
+        }
 
         // Defense-in-depth: block repeated claims to the same wallet even with a fresh passport nullifier
         if (addressClaimed[user]) {
@@ -653,6 +658,19 @@ contract HumanFaucet is SelfVerificationRoot, EIP712, Ownable, Pausable {
         }
 
         _claiming = false;
+    }
+
+    function _remintVoterId(address user, uint256 nullifier) internal {
+        require(address(voterIdNFT) != address(0), "VoterIdNFT not set");
+        if (voterIdNFT.isNullifierUsed(nullifier) || voterIdNFT.getTokenIdForNullifier(nullifier) != 0) {
+            revert NullifierAlreadyUsed();
+        }
+
+        addressClaimed[user] = true;
+        claimNullifier[user] = nullifier;
+
+        uint256 tokenId = voterIdNFT.mint(user, nullifier);
+        emit VoterIdMinted(user, tokenId, nullifier);
     }
 
     function _requireClaimAuthorization(address user, address referrer, uint256 deadline, bytes memory signature)
@@ -814,6 +832,11 @@ contract HumanFaucet is SelfVerificationRoot, EIP712, Ownable, Pausable {
         if (payload.length < 4) return false;
         return payload[0] == bytes1("H") && payload[1] == bytes1("F") && payload[2] == bytes1("C")
             && payload[3] == bytes1("A");
+    }
+
+    function _isVoterIdRemintRequest(bytes memory userData) internal pure returns (bool) {
+        return userData.length == 4 && userData[0] == bytes1("H") && userData[1] == bytes1("F")
+            && userData[2] == bytes1("V") && userData[3] == bytes1("R");
     }
 
     function _decodeHexBytes(bytes memory userData) internal pure returns (bytes memory) {
