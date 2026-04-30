@@ -42,6 +42,9 @@ contract QuestionRewardPoolEscrow is
     /// @notice Grace period voters have after bountyClosesAt to claim on a still-claimable bundle
     ///         before a third party can sweep the remainder back to the funder.
     uint256 internal constant BUNDLE_CLAIM_GRACE = 7 days;
+    /// @dev Worst-case settlement delay for a threshold-reached bundle round:
+    ///      2 * absolute max epoch/round duration + max reveal grace + claim grace.
+    uint256 internal constant BUNDLE_REFUND_GRACE = 98 days;
     uint8 internal constant REWARD_ASSET_HREP = 0;
     uint8 internal constant REWARD_ASSET_USDC = 1;
 
@@ -747,7 +750,7 @@ contract QuestionRewardPoolEscrow is
         BundleReward storage bundle = _getExistingBundleReward(bundleId);
         require(!bundle.refunded, "Already refunded");
         require(bundle.bountyClosesAt != 0 && block.timestamp > bundle.bountyClosesAt, "Bundle active");
-        require(block.timestamp > uint256(bundle.bountyClosesAt) + (2 * BUNDLE_CLAIM_GRACE), "Grace");
+        require(block.timestamp > uint256(bundle.bountyClosesAt) + BUNDLE_REFUND_GRACE, "Grace");
         if (bundle.completedRoundSets != 0) {
             _requireBundleCleanupComplete(bundleId);
         }

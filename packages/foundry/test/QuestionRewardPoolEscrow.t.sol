@@ -52,6 +52,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
     uint8 internal constant REWARD_ASSET_HREP = 0;
     uint8 internal constant REWARD_ASSET_USDC = 1;
     uint256 internal constant BUNDLE_CLAIM_GRACE = 7 days;
+    uint256 internal constant BUNDLE_REFUND_GRACE = 98 days;
 
     event RewardPoolCreated(
         uint256 indexed rewardPoolId,
@@ -2538,6 +2539,37 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(votingEngine.roundUnrevealedCleanupRemaining(contentId, roundId), 1);
     }
 
+    function _revealThresholdWithOneUnrevealed(uint256 contentId) internal returns (uint256 roundId) {
+        address[] memory voters = _fourVoters();
+        bool[] memory directions = _directions(true, true, false, true);
+        bytes32[] memory salts = new bytes32[](voters.length);
+        bytes32[] memory commitKeys = new bytes32[](voters.length);
+
+        for (uint256 i = 0; i < voters.length; i++) {
+            salts[i] = keccak256(abi.encodePacked("threshold-open", voters[i], contentId, directions[i], i));
+            commitKeys[i] = _commitTestVote(
+                DirectTestCommitRequest({
+                    engine: votingEngine,
+                    hrepToken: hrepToken,
+                    voter: voters[i],
+                    contentId: contentId,
+                    isUp: directions[i],
+                    stake: STAKE,
+                    frontend: address(0),
+                    salt: salts[i]
+                })
+            );
+        }
+
+        roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
+        _warpPastTlockRevealTime(uint256(round.startTime) + EPOCH_DURATION);
+
+        for (uint256 i = 0; i < voters.length - 1; i++) {
+            votingEngine.revealVoteByCommitKey(contentId, roundId, commitKeys[i], directions[i], salts[i]);
+        }
+    }
+
     function _mockSettledRound(uint256 contentId, uint256 roundId, uint16 revealedCount) internal {
         vm.mockCall(
             address(votingEngine),
@@ -2704,6 +2736,35 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertGt(rewardPoolEscrow.claimQuestionBundleReward(bundleId, 0), 0);
     }
 
+    function testBundleRefundWindowCoversMaxRevealGraceForOpenThresholdRounds() public {
+        vm.prank(owner);
+        protocolConfig.setRevealGracePeriod(31 days);
+
+        uint256[] memory contentIds = _submitBundleQuestions();
+        uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, REWARD_POOL_AMOUNT, 3);
+        uint256 bountyClosesAt = block.timestamp + 30 days;
+
+        vm.warp(bountyClosesAt - 1 days);
+        uint256 firstRoundId = _revealThresholdWithOneUnrevealed(contentIds[0]);
+        uint256 secondRoundId = _revealThresholdWithOneUnrevealed(contentIds[1]);
+        assertLe(RoundEngineReadHelpers.round(votingEngine, contentIds[0], firstRoundId).thresholdReachedAt, bountyClosesAt);
+        assertLe(
+            RoundEngineReadHelpers.round(votingEngine, contentIds[1], secondRoundId).thresholdReachedAt,
+            bountyClosesAt
+        );
+
+        vm.warp(bountyClosesAt + (2 * BUNDLE_CLAIM_GRACE) + 1);
+        vm.expectRevert("Grace");
+        rewardPoolEscrow.refundQuestionBundleReward(bundleId);
+
+        votingEngine.settleRound(contentIds[0], firstRoundId);
+        votingEngine.settleRound(contentIds[1], secondRoundId);
+        votingEngine.processUnrevealedVotes(contentIds[0], firstRoundId, 0, 0);
+        votingEngine.processUnrevealedVotes(contentIds[1], secondRoundId, 0, 0);
+
+        assertGt(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter1), 0);
+    }
+
     function testBundleRefund_NoRecordedRoundSetStillWaitsForGraceAtBountyClose() public {
         uint256[] memory contentIds = _submitBundleQuestions();
         uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, REWARD_POOL_AMOUNT, 3);
@@ -2713,7 +2774,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         vm.expectRevert("Grace");
         rewardPoolEscrow.refundQuestionBundleReward(bundleId);
 
-        vm.warp(bountyClosesAt + (2 * BUNDLE_CLAIM_GRACE) + 1);
+        vm.warp(bountyClosesAt + BUNDLE_REFUND_GRACE + 1);
         uint256 treasuryBalanceBefore = usdc.balanceOf(treasury);
         uint256 refundAmount = rewardPoolEscrow.refundQuestionBundleReward(bundleId);
         assertEq(refundAmount, REWARD_POOL_AMOUNT);
@@ -2745,9 +2806,9 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         vm.expectRevert("Grace");
         rewardPoolEscrow.refundQuestionBundleReward(bundleId);
 
-        // Jump past the second grace; refund now allowed (forfeits to treasury since
+        // Jump past the refund grace; refund now allowed (forfeits to treasury since
         // registry-initiated bundles are nonRefundable).
-        vm.warp(bountyClosesAt + (2 * BUNDLE_CLAIM_GRACE) + 1);
+        vm.warp(bountyClosesAt + BUNDLE_REFUND_GRACE + 1);
         uint256 treasuryBalanceBefore = usdc.balanceOf(treasury);
         uint256 refundAmount = rewardPoolEscrow.refundQuestionBundleReward(bundleId);
         assertGt(refundAmount, 0);
@@ -2768,7 +2829,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         bool[] memory directions = _directions(true, true, false);
         _settleRoundWith(voters, contentIds[1], directions);
 
-        vm.warp(bountyClosesAt + (2 * BUNDLE_CLAIM_GRACE) + 1);
+        vm.warp(bountyClosesAt + BUNDLE_REFUND_GRACE + 1);
         vm.expectRevert("Cleanup pending");
         rewardPoolEscrow.refundQuestionBundleReward(bundleId);
 
