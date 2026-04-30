@@ -256,11 +256,9 @@
   <text class="subtitle" x="72" y="122">Center color keeps the existing avatar color idea. White logo line = accuracy: 0% none, 50% half circle, 100% full circle.</text>
 
   <g transform="translate(72 170)">
-    <rect class="panel panel-recommended" x="0" y="0" width="1456" height="245" rx="20" />
+    <rect class="panel" x="0" y="0" width="1456" height="245" rx="20" />
     <text class="row-title" x="36" y="48">A. Logo arc</text>
-    <text class="body" x="36" y="78">Recommended default.</text>
-    <rect class="badge" x="36" y="102" width="128" height="30" rx="15" />
-    <text class="badge-text" x="100" y="122">BEST DEFAULT</text>
+    <text class="body" x="36" y="78">Alternative brand-forward direction.</text>
 
     <g transform="translate(220 36)" color="#F26426">
       <use href="#avatar-a-0" width="124" height="124" />
@@ -290,9 +288,11 @@
   </g>
 
   <g transform="translate(72 445)">
-    <rect class="panel" x="0" y="0" width="1456" height="245" rx="20" />
+    <rect class="panel panel-recommended" x="0" y="0" width="1456" height="245" rx="20" />
     <text class="row-title" x="36" y="48">B. Signal disc</text>
-    <text class="body" x="36" y="78">High contrast at small sizes.</text>
+    <text class="body" x="36" y="78">Implemented default.</text>
+    <rect class="badge" x="36" y="102" width="128" height="30" rx="15" />
+    <text class="badge-text" x="100" y="122">SELECTED</text>
 
     <g transform="translate(220 36)" color="#42D0B7">
       <use href="#avatar-b-0" width="124" height="124" />

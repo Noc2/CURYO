@@ -1,7 +1,7 @@
 import { isAddress } from "viem";
 import { normalizeAvatarAccentHex } from "~~/lib/avatar/avatarAccent";
 import type { ReputationAvatarPayload } from "~~/lib/avatar/avatarPayload";
-import { renderOrbitalAvatarSvg } from "~~/lib/avatar/orbitalAvatar";
+import { renderSignalDiscAvatarSvg } from "~~/lib/avatar/signalDiscAvatar";
 
 const EMPTY_REPUTATION_AVATAR_STREAK: ReputationAvatarPayload["streak"] = {
   currentDailyStreak: 0,
@@ -74,6 +74,6 @@ export function getFallbackReputationAvatarDataUrl(
     return null;
   }
 
-  const svg = renderOrbitalAvatarSvg(payload, { size });
+  const svg = renderSignalDiscAvatarSvg(payload, { size });
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
