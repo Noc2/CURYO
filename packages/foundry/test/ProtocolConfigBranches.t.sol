@@ -160,7 +160,7 @@ contract ProtocolConfigBranchesTest is Test {
         assertFalse(config.isRewardDistributor(distributor));
     }
 
-    function test_RevokeRewardDistributor_AllowsSameEngineReplacement() public {
+    function test_RevokeRewardDistributor_KeepsSameEngineReplacementBlocked() public {
         ProtocolConfig config = deployInitializedProtocolConfig(address(this));
 
         address engine = address(0xE641);
@@ -173,12 +173,14 @@ contract ProtocolConfigBranchesTest is Test {
         config.revokeRewardDistributor(firstDistributor);
         assertFalse(config.isRewardDistributor(firstDistributor));
         assertFalse(config.isRewardDistributorForEngine(firstDistributor, engine));
-        assertEq(config.rewardDistributorForVotingEngine(engine), address(0));
+        assertEq(config.rewardDistributorForVotingEngine(engine), firstDistributor);
+        assertEq(config.rewardDistributorVotingEngine(firstDistributor), engine);
 
+        vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
         config.setRewardDistributor(replacementDistributor);
-        assertEq(config.rewardDistributor(), replacementDistributor);
-        assertTrue(config.isRewardDistributor(replacementDistributor));
-        assertTrue(config.isRewardDistributorForEngine(replacementDistributor, engine));
+        assertEq(config.rewardDistributor(), firstDistributor);
+        assertFalse(config.isRewardDistributor(replacementDistributor));
+        assertFalse(config.isRewardDistributorForEngine(replacementDistributor, engine));
     }
 
     function test_SetDrandConfig_RejectsZeroHashOrPeriod() public {

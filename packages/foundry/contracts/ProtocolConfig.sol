@@ -176,11 +176,8 @@ contract ProtocolConfig is Initializable, AccessControlUpgradeable {
 
     function revokeRewardDistributor(address value) external onlyRole(CONFIG_ROLE) {
         if (value == address(0)) revert InvalidAddress();
-        address engine = rewardDistributorVotingEngine[value];
-        if (engine != address(0) && rewardDistributorForVotingEngine[engine] == value) {
-            delete rewardDistributorForVotingEngine[engine];
-            delete rewardDistributorVotingEngine[value];
-        }
+        // Keep the engine slot pinned. Claim accounting lives in the distributor,
+        // so a fresh same-engine distributor would reopen historical claims.
         rewardDistributorAuthorized[value] = false;
         emit RewardDistributorAuthorizationUpdated(value, false);
     }
