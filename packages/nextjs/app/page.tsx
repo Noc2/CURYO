@@ -204,7 +204,7 @@ function AskWorkflowSection() {
 
 function getFeatureBenefitCardClassName(index: number) {
   const spanClass = index < 3 ? "lg:col-span-2" : "lg:col-span-3";
-  return `group flex min-h-[13.25rem] flex-col rounded-lg border border-base-content/12 bg-base-300/12 p-5 text-left shadow-[0_18px_36px_rgba(9,10,12,0.14)] transition duration-200 hover:-translate-y-0.5 hover:border-primary/25 hover:bg-base-300/20 ${spanClass}`;
+  return `group flex min-h-[13.25rem] flex-col rounded-lg border border-base-content/10 bg-[var(--curyo-surface-elevated)] p-5 text-left shadow-[0_18px_36px_rgba(9,10,12,0.2)] transition duration-200 hover:-translate-y-0.5 hover:border-primary/25 hover:bg-[var(--curyo-surface-elevated-hover)] ${spanClass}`;
 }
 
 function FeatureBenefitCard({
