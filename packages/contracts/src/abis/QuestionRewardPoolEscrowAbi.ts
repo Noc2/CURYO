@@ -1492,6 +1492,11 @@ export const QuestionRewardPoolEscrowAbi = [
   },
   {
     "type": "error",
+    "name": "RewardPoolCursorNeedsAdvance",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "SafeCastOverflowedUintDowncast",
     "inputs": [
       {

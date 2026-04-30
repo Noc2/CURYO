@@ -45,6 +45,8 @@ contract QuestionRewardPoolEscrow is
     uint8 internal constant REWARD_ASSET_HREP = 0;
     uint8 internal constant REWARD_ASSET_USDC = 1;
 
+    error RewardPoolCursorNeedsAdvance();
+
     struct RewardPool {
         uint64 id;
         uint64 contentId;
@@ -1353,34 +1355,22 @@ contract QuestionRewardPoolEscrow is
         if (state != RoundLib.RoundState.Settled) return (true, false, 0);
 
         (, canQualify, eligibleVoters,) = _previewRoundQualification(rewardPool, roundId);
-        if (canQualify) {
-            uint256 allocation = _previewRoundAllocation(rewardPool);
-            canQualify = allocation >= eligibleVoters;
-        }
+        if (canQualify) canQualify = _previewRoundAllocation(rewardPool) >= eligibleVoters;
         return (true, canQualify, eligibleVoters);
     }
 
     function _requireNoPendingFinishedRound(RewardPool storage rewardPool) internal view {
         uint256 nextRoundToEvaluate = rewardPool.nextRoundToEvaluate;
-        if (nextRoundToEvaluate > votingEngine.currentRoundId(rewardPool.contentId)) return;
-
-        if (_hasPendingQualifyingOpenRound(rewardPool, nextRoundToEvaluate)) revert("Bounty has qualifying round");
-
-        (bool roundFinished, bool canQualify,) = _roundQualificationStatus(rewardPool, nextRoundToEvaluate);
-        if (!roundFinished) return;
-        if (canQualify) revert("Bounty has qualifying round");
-        revert("Advance cursor");
-    }
-
-    function _hasPendingQualifyingOpenRound(RewardPool storage rewardPool, uint256 roundId)
-        internal
-        view
-        returns (bool)
-    {
         (, RoundLib.RoundState state,,,,,,,,,, uint48 thresholdReachedAt,,) =
-            votingEngine.rounds(rewardPool.contentId, roundId);
-        return state == RoundLib.RoundState.Open && thresholdReachedAt != 0
-            && (rewardPool.bountyClosesAt == 0 || thresholdReachedAt <= rewardPool.bountyClosesAt);
+            votingEngine.rounds(rewardPool.contentId, nextRoundToEvaluate);
+        if (state == RoundLib.RoundState.Open) {
+            if (
+                thresholdReachedAt != 0
+                    && (rewardPool.bountyClosesAt == 0 || thresholdReachedAt <= rewardPool.bountyClosesAt)
+            ) revert RewardPoolCursorNeedsAdvance();
+            return;
+        }
+        revert RewardPoolCursorNeedsAdvance();
     }
 
     function _previewRoundAllocation(RewardPool storage rewardPool) internal view returns (uint256 allocation) {

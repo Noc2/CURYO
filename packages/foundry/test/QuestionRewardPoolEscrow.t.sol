@@ -1397,7 +1397,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
 
         vm.warp(expiresAt + 1);
 
-        vm.expectRevert("Bounty has qualifying round");
+        vm.expectRevert(QuestionRewardPoolEscrow.RewardPoolCursorNeedsAdvance.selector);
         rewardPoolEscrow.refundExpiredRewardPool(rewardPoolId);
 
         assertEq(rewardPoolEscrow.claimableQuestionReward(rewardPoolId, roundId, voter1), REWARD_POOL_AMOUNT / 3);
@@ -1417,7 +1417,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
 
         vm.warp(expiresAt + 1);
 
-        vm.expectRevert("Bounty has qualifying round");
+        vm.expectRevert(QuestionRewardPoolEscrow.RewardPoolCursorNeedsAdvance.selector);
         rewardPoolEscrow.refundExpiredRewardPool(rewardPoolId);
 
         votingEngine.settleRound(contentId, roundId);
@@ -1491,7 +1491,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         // past it to reach the "pending qualifying round" check this test is asserting.
         vm.warp(block.timestamp + 2 days);
 
-        vm.expectRevert("Bounty has qualifying round");
+        vm.expectRevert(QuestionRewardPoolEscrow.RewardPoolCursorNeedsAdvance.selector);
         rewardPoolEscrow.refundInactiveRewardPool(rewardPoolId);
 
         vm.prank(voter1);
