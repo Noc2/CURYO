@@ -1364,10 +1364,23 @@ contract QuestionRewardPoolEscrow is
         uint256 nextRoundToEvaluate = rewardPool.nextRoundToEvaluate;
         if (nextRoundToEvaluate > votingEngine.currentRoundId(rewardPool.contentId)) return;
 
+        if (_hasPendingQualifyingOpenRound(rewardPool, nextRoundToEvaluate)) revert("Bounty has qualifying round");
+
         (bool roundFinished, bool canQualify,) = _roundQualificationStatus(rewardPool, nextRoundToEvaluate);
         if (!roundFinished) return;
         if (canQualify) revert("Bounty has qualifying round");
         revert("Advance cursor");
+    }
+
+    function _hasPendingQualifyingOpenRound(RewardPool storage rewardPool, uint256 roundId)
+        internal
+        view
+        returns (bool)
+    {
+        (, RoundLib.RoundState state,,,,,,,,,, uint48 thresholdReachedAt,,) =
+            votingEngine.rounds(rewardPool.contentId, roundId);
+        return state == RoundLib.RoundState.Open && thresholdReachedAt != 0
+            && (rewardPool.bountyClosesAt == 0 || thresholdReachedAt <= rewardPool.bountyClosesAt);
     }
 
     function _previewRoundAllocation(RewardPool storage rewardPool) internal view returns (uint256 allocation) {

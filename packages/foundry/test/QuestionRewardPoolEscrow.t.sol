@@ -1407,6 +1407,27 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(reward, REWARD_POOL_AMOUNT / 3);
     }
 
+    function testOpenRoundThatReachedThresholdBeforeExpiryBlocksRefundAndCanQualify() public {
+        uint256 contentId = _submitQuestion("");
+        uint256 expiresAt = block.timestamp + EPOCH_DURATION + 10;
+        uint256 rewardPoolId = _createRewardPoolWithExpiry(contentId, REWARD_POOL_AMOUNT, 3, 1, expiresAt);
+
+        address[] memory voters = _threeVoters();
+        uint256 roundId = _revealRoundWith(voters, contentId, _directions(true, true, false));
+
+        vm.warp(expiresAt + 1);
+
+        vm.expectRevert("Bounty has qualifying round");
+        rewardPoolEscrow.refundExpiredRewardPool(rewardPoolId);
+
+        votingEngine.settleRound(contentId, roundId);
+        assertEq(rewardPoolEscrow.claimableQuestionReward(rewardPoolId, roundId, voter1), REWARD_POOL_AMOUNT / 3);
+
+        vm.prank(voter1);
+        uint256 reward = rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
+        assertEq(reward, REWARD_POOL_AMOUNT / 3);
+    }
+
     function testCompletedPoolRefundRequiresGraceAndSweepsUnclaimedRewards() public {
         uint256 contentId = _submitQuestion("");
         uint256 expiresAt = block.timestamp + EPOCH_DURATION + 10;
@@ -2449,6 +2470,37 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         }
 
         votingEngine.settleRound(contentId, roundId);
+    }
+
+    function _revealRoundWith(address[] memory voters, uint256 contentId, bool[] memory directions)
+        internal
+        returns (uint256 roundId)
+    {
+        bytes32[] memory salts = new bytes32[](voters.length);
+        bytes32[] memory commitKeys = new bytes32[](voters.length);
+
+        for (uint256 i = 0; i < voters.length; i++) {
+            salts[i] = keccak256(abi.encodePacked("reveal-only", voters[i], contentId, directions[i], i));
+            commitKeys[i] = _commitTestVote(
+                DirectTestCommitRequest({
+                    engine: votingEngine,
+                    hrepToken: hrepToken,
+                    voter: voters[i],
+                    contentId: contentId,
+                    isUp: directions[i],
+                    stake: STAKE,
+                    frontend: address(0),
+                    salt: salts[i]
+                })
+            );
+        }
+
+        roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH_DURATION);
+
+        for (uint256 i = 0; i < voters.length; i++) {
+            votingEngine.revealVoteByCommitKey(contentId, roundId, commitKeys[i], directions[i], salts[i]);
+        }
     }
 
     function _settleRoundWithOneUnrevealed(uint256 contentId) internal returns (uint256 roundId) {
