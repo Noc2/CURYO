@@ -489,7 +489,7 @@ export function VotingQuestionCard({
       position="bottom"
       className="pointer-events-auto cursor-help rounded-full"
     >
-      <RatingOrb rating={currentRating} size={orbSize} showGlow={!(isDockVariant && compact)} />
+      <RatingOrb rating={currentRating} size={orbSize} />
     </TooltipAnchor>
   );
   const addRewardPoolLink = <AddRewardPoolLink onFundQuestion={() => setShowFundQuestionModal(true)} />;
@@ -592,7 +592,7 @@ export function VotingQuestionCard({
               position="bottom"
               className="pointer-events-auto cursor-help rounded-full"
             >
-              <RatingOrb rating={currentRating} size={orbSize} showGlow={compact} className={mobileOrbClassName} />
+              <RatingOrb rating={currentRating} size={orbSize} className={mobileOrbClassName} />
             </TooltipAnchor>
           </div>
 

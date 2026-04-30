@@ -24,10 +24,9 @@ interface RatingOrbProps {
   rating: number;
   size?: number;
   className?: string;
-  showGlow?: boolean;
 }
 
-export function RatingOrb({ rating, size = 196, className = "", showGlow = true }: RatingOrbProps) {
+export function RatingOrb({ rating, size = 196, className = "" }: RatingOrbProps) {
   const orbId = useId().replace(/:/g, "");
   const clampedRating = clampContentRating(rating);
   const [animatedRating, setAnimatedRating] = useState(0);
@@ -117,17 +116,8 @@ export function RatingOrb({ rating, size = 196, className = "", showGlow = true 
             <stop offset="72%" stopColor="rgba(245,240,235,0.02)" />
             <stop offset="100%" stopColor="rgba(245,240,235,0)" />
           </radialGradient>
-          <filter id={`${orbId}-glow`} x="-35%" y="-35%" width="170%" height="170%">
-            <feGaussianBlur stdDeviation="9" />
-          </filter>
         </defs>
 
-        <circle
-          cx={center}
-          cy={center}
-          r={trackRadius + trackWidth * 0.95}
-          fill={showGlow ? "rgba(245,240,235,0.03)" : "transparent"}
-        />
         <circle
           cx={center}
           cy={center}
@@ -155,19 +145,6 @@ export function RatingOrb({ rating, size = 196, className = "", showGlow = true 
 
         {progress >= 1 ? (
           <>
-            {showGlow ? (
-              <circle
-                cx={center}
-                cy={center}
-                r={trackRadius}
-                fill="none"
-                stroke={PROGRESS_STROKE}
-                strokeWidth={trackWidth}
-                strokeLinecap="round"
-                filter={`url(#${orbId}-glow)`}
-                opacity="0.46"
-              />
-            ) : null}
             <circle
               cx={center}
               cy={center}
@@ -190,21 +167,6 @@ export function RatingOrb({ rating, size = 196, className = "", showGlow = true 
           </>
         ) : progress > 0 ? (
           <>
-            {showGlow ? (
-              <circle
-                cx={center}
-                cy={center}
-                r={trackRadius}
-                fill="none"
-                stroke={PROGRESS_STROKE}
-                strokeWidth={trackWidth}
-                strokeLinecap="round"
-                filter={`url(#${orbId}-glow)`}
-                opacity="0.46"
-                strokeDasharray={`${progressLength} ${circumference}`}
-                transform={`rotate(-90 ${center} ${center})`}
-              />
-            ) : null}
             <circle
               cx={center}
               cy={center}
@@ -229,7 +191,6 @@ export function RatingOrb({ rating, size = 196, className = "", showGlow = true 
               transform={`rotate(-90 ${center} ${center})`}
             />
             <circle cx={endPoint.x} cy={endPoint.y} r={trackWidth * 0.3} fill={PROGRESS_STROKE} />
-            <circle cx={endPoint.x} cy={endPoint.y} r={trackWidth * 0.62} fill="rgba(255,255,255,0.2)" />
           </>
         ) : null}
 
