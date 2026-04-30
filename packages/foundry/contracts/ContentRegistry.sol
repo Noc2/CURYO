@@ -1040,13 +1040,10 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         require(c.dormantCount < MAX_REVIVALS, "Max revivals reached");
 
         bytes32 submissionKey = contentSubmissionKey[contentId];
-        if (submissionKey != bytes32(0)) {
-            require(submissionKeyUsed[submissionKey], "Dormant key released");
-            require(
-                contentSubmitterIdentity[contentId] == _resolveSubmitterIdentity(msg.sender), "Not original submitter"
-            );
-            require(block.timestamp <= dormantKeyReleasableAt[contentId], "Revival window elapsed");
-        }
+        require(submissionKey != bytes32(0), "Dormant key released");
+        require(submissionKeyUsed[submissionKey], "Dormant key released");
+        require(contentSubmitterIdentity[contentId] == _resolveSubmitterIdentity(msg.sender), "Not original submitter");
+        require(block.timestamp <= dormantKeyReleasableAt[contentId], "Revival window elapsed");
 
         // M-1/M-2 fix: send revival stake to treasury instead of leaving it unaccounted
         require(treasury != address(0), "Treasury not set");
@@ -1070,11 +1067,10 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
         bytes32 submissionKey = contentSubmissionKey[contentId];
         require(submissionKey != bytes32(0), "No submission key");
-        require(dormantKeyReleasableAt[contentId] != 0, "Key already released");
-        require(submissionKeyUsed[submissionKey], "Key already released");
         require(block.timestamp > dormantKeyReleasableAt[contentId], "Revival window active");
 
         submissionKeyUsed[submissionKey] = false;
+        delete contentSubmissionKey[contentId];
         delete dormantKeyReleasableAt[contentId];
 
         emit DormantSubmissionKeyReleased(contentId, submissionKey);

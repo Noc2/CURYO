@@ -2209,7 +2209,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         (,,,,, ContentRegistry.ContentStatus status,,,,) = registry.contents(2);
         assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Active));
 
-        vm.expectRevert("Key already released");
+        vm.expectRevert("No submission key");
         registry.releaseDormantSubmissionKey(1);
 
         (, bytes32 submissionKey) =
