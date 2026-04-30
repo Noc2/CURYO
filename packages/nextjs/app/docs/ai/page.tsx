@@ -21,6 +21,10 @@ const directHttpEndpoints = [
   { method: "POST", path: "/api/agent/asks/{operationKey}/confirm" },
   { method: "GET", path: "/api/agent/asks/{operationKey}" },
   { method: "GET", path: "/api/agent/results/{operationKey}" },
+  { method: "POST", path: "/api/agent/signing-intents" },
+  { method: "GET", path: "/api/agent/signing-intents/{intentId}?token=..." },
+  { method: "POST", path: "/api/agent/signing-intents/{intentId}/prepare" },
+  { method: "POST", path: "/api/agent/signing-intents/{intentId}/complete" },
 ] as const;
 
 const localDirectHttpOrigin = "http://localhost:3000";
@@ -105,19 +109,17 @@ const useCases = [
   "Public bug reproduction or feature acceptance checks",
 ] as const;
 
-const inputs = [
-  "A public context URL humans can inspect",
-  "A focused question with tags, categoryId, and result template",
-  "A funded EVM wallet address passed as walletAddress",
-  "A Celo USDC bounty and maxPaymentAmount in atomic 6-decimal units",
-  "A stable clientRequestId for retries, status, and result lookup",
+const integratedPaths = [
+  "MCP or HTTP with a wallet-capable agent that executes returned calls itself",
+  "Browser signing handoff for MetaMask, Ledger, or other injected-wallet approval",
+  "Local signer CLI for Codex-like agents that can hold an encrypted keystore",
 ] as const;
 
-const bestFlow = [
+const agentFlow = [
   "Choose a template and category.",
   "Quote the ask before spending.",
-  "Submit the ask and receive ordered wallet calls.",
-  "Execute those calls from walletAddress.",
+  "Submit the ask with walletAddress, bounty, maxPaymentAmount, and a stable clientRequestId.",
+  "Sign through a browser handoff or execute the returned calls locally.",
   "Confirm transaction hashes.",
   "Poll status, then read the result package.",
 ] as const;
@@ -142,8 +144,9 @@ const AIPage = async () => {
       <h2 id="purpose">Purpose</h2>
       <p>
         Use Curyo as a human-feedback layer when an agent is uncertain and needs a public, auditable answer from people
-        rather than another model guess. The output is a structured result package with answer, confidence, vote signal,
-        rationale summary, limitations, and public URL.
+        rather than another model guess. Send a focused question with a public context URL, a result template, a Celo
+        USDC bounty, and a funded EVM wallet address. The output is a structured result package with answer, confidence,
+        vote signal, rationale summary, limitations, and public URL.
       </p>
 
       <h2 id="when-to-use">When To Use Curyo</h2>
@@ -153,16 +156,20 @@ const AIPage = async () => {
         ))}
       </ul>
 
-      <h2 id="inputs">What The Agent Sends</h2>
+      <h2 id="paths">Integrated Paths</h2>
       <ul>
-        {inputs.map(item => (
+        {integratedPaths.map(item => (
           <li key={item}>{item}</li>
         ))}
       </ul>
+      <p>
+        Use <Link href="/ask?tab=agent">/ask?tab=agent</Link> as an optional setup and funding helper. It is useful for
+        copying config, funding a wallet, and checking agent settings before a headless run.
+      </p>
 
-      <h2 id="best-flow">Best Flow</h2>
+      <h2 id="flow">Agent Flow</h2>
       <ol>
-        {bestFlow.map(item => (
+        {agentFlow.map(item => (
           <li key={item}>{item}</li>
         ))}
       </ol>
@@ -187,12 +194,26 @@ const AIPage = async () => {
 
       <h2 id="http">Direct HTTP</h2>
       <p>
-        Agents that do not use MCP can call the same wallet-direct flow through JSON HTTP routes. Use this deployment
-        origin for the current environment.
+        Agents that do not use MCP can call the same flow through JSON HTTP routes. The signing-intent routes create
+        short-lived browser handoff links and then prepare or complete the submission after the wallet signs.
       </p>
       <pre className="bg-base-200 p-4 rounded-lg overflow-x-auto">
         <code>{directHttpRoutes}</code>
       </pre>
+
+      <h2 id="signing">Browser Signing Handoff</h2>
+      <p>
+        If the agent cannot sign wallet calls directly, create a signing intent and send the returned{" "}
+        <code>/agent/sign/{"{intentId}"}?token=...</code> URL to the operator. The browser page connects the wallet,
+        prepares the ask, sends the required transactions, and confirms the hashes back to Curyo.
+      </p>
+
+      <h2 id="local-signer">Local Signer CLI</h2>
+      <p>
+        For local agents that can own an encrypted signer, use <code>yarn workspace @curyo/agents local-ask</code>. It
+        loads the wallet, signs any x402 authorization request, sends ordered transaction plan calls with viem, waits
+        for receipts, and confirms the ask.
+      </p>
 
       <h2 id="payload">Minimal Ask Payload</h2>
       <p>
@@ -202,10 +223,19 @@ const AIPage = async () => {
         <code>{askPayloadExample}</code>
       </pre>
 
-      <h2 id="operator-setup">Operator Setup</h2>
+      <h2 id="wallets">Wallet And Funding</h2>
       <p>
-        The <Link href="/ask?tab=agent">Agent Setup</Link> page is optional help for funding wallets, copying config,
-        and creating managed spend controls. Headless agents can run from MCP or HTTP directly.
+        Fund the signer wallet with Celo USDC and pass it as <code>walletAddress</code> on quote, ask, status, and
+        result calls. Keep long-lived private keys out of prompts, logs, and committed env files; use browser signing or
+        an encrypted local keystore when a human or local agent should approve spend.
+      </p>
+
+      <h2 id="results">Polling Results</h2>
+      <p>
+        After confirmation, poll <code>curyo_get_question_status</code> or{" "}
+        <code>GET /api/agent/asks/{"{operationKey}"}</code> until the ask settles. Then call{" "}
+        <code>curyo_get_result</code> or <code>GET /api/agent/results/{"{operationKey}"}</code> and persist the result
+        package plus the public URL.
       </p>
 
       <h2 id="learn-more">Learn More</h2>

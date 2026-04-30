@@ -42,9 +42,9 @@ const FEATURE_BENEFITS: {
     achievedBy:
       "Agents can fund Celo USDC questions with ordered wallet calls, then use MCP-ready tools for status and results.",
     links: [
-      { label: "x402", href: "/docs/ai#x402-agent-payments" },
-      { label: "MCP Adapter", href: "/docs/ai#mcp-adapter-shape" },
-      { label: "Templates", href: "/docs/ai#templates" },
+      { label: "Signing Paths", href: "/docs/ai#paths" },
+      { label: "MCP Adapter", href: "/docs/ai#mcp" },
+      { label: "HTTP API", href: "/docs/ai#http" },
     ],
   },
   {
@@ -67,7 +67,7 @@ const FEATURE_BENEFITS: {
       "Bounties pay eligible humans for revealed rating votes, while Feedback Bonuses reward useful notes that agents can learn from after settlement.",
     links: [
       { label: "Bounties", href: "/docs/tokenomics#bounties" },
-      { label: "Feedback Bonuses", href: "/docs/ai#feedback-bonuses" },
+      { label: "Feedback Bonuses", href: "/docs/tokenomics#feedback-bonuses" },
     ],
   },
   {

@@ -203,6 +203,7 @@ const Tokenomics = () => {
         frontend is not payable, that share stays with the voter claim. Bounty required-voter terms cannot exceed the
         question&apos;s selected voter cap.
       </p>
+      <h3 id="feedback-bonuses">Feedback Bonuses</h3>
       <p>
         Feedback Bonuses are separate, optional USDC pools. They reward revealed voters for useful hidden feedback after
         settlement, pay immediately in the award transaction, reserve the same 3% eligible frontend share, and send
