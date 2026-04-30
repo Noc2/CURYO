@@ -210,7 +210,7 @@ export function RatingOrb({ rating, size = 196, className = "" }: RatingOrbProps
           className="display-metric inline-flex items-end justify-center text-base-content tabular-nums"
           style={{ maxWidth: scoreMaxWidth }}
         >
-          <span className="font-semibold tracking-normal" style={{ fontSize: ratingFontSize }}>
+          <span className="font-semibold tracking-normal text-primary" style={{ fontSize: ratingFontSize }}>
             {displayedScore}
           </span>
           <span
