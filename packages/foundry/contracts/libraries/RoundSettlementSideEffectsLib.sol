@@ -29,7 +29,7 @@ library RoundSettlementSideEffectsLib {
         uint256 contentId,
         uint256 roundId,
         uint16 referenceRatingBps,
-        bool upWins,
+        uint256 weightedWinningStake,
         uint64 upPool,
         uint64 downPool
     ) external {
@@ -64,10 +64,9 @@ library RoundSettlementSideEffectsLib {
 
         if (participationPoolAddress != address(0) && hasParticipationRate) {
             if (rewardDistributor != address(0)) {
-                uint256 winningStake = upWins ? upPool : downPool;
                 try IRoundRewardDistributor(rewardDistributor)
                     .snapshotParticipationRewards(
-                        contentId, roundId, participationPoolAddress, participationRateBps, winningStake
+                        contentId, roundId, participationPoolAddress, participationRateBps, weightedWinningStake
                     ) { }
                 catch {
                     emit SettlementSideEffectFailed(

@@ -813,7 +813,7 @@ contract RoundVotingEngine is
             contentId,
             roundId,
             _getRoundReferenceRatingBps(contentId, roundId),
-            upWins,
+            weightedWinningStake,
             round.upPool,
             round.downPool
         );

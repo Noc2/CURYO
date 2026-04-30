@@ -3002,6 +3002,27 @@ contract RoundIntegrationTest is VotingTestBase {
         roundId = _settleRoundWith(voters, contentId, dirs, STAKE);
     }
 
+    function _settleMixedEpochWinningRound() internal returns (uint256 contentId, uint256 roundId) {
+        contentId = _submitContent();
+        uint256 roundStart = block.timestamp;
+
+        bytes32 salt1 = keccak256("epoch-1-up");
+        bytes32 salt2 = keccak256("epoch-2-up");
+        bytes32 salt3 = keccak256("epoch-1-down");
+        (, bytes32 ck1) = _commitWithSalt(voter1, contentId, true, STAKE, salt1);
+        (, bytes32 ck3) = _commitWithSalt(voter3, contentId, false, STAKE, salt3);
+
+        _warpPastTlockRevealTime(roundStart + EPOCH_DURATION);
+        (, bytes32 ck2) = _commitWithSalt(voter2, contentId, true, STAKE, salt2);
+        roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
+
+        _warpPastTlockRevealTime(roundStart + 2 * EPOCH_DURATION);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, ck1, true, salt1);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, ck3, false, salt3);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, ck2, true, salt2);
+        votingEngine.settleRound(contentId, roundId);
+    }
+
     function test_ClaimParticipationReward_HappyPath() public {
         (uint256 contentId, uint256 roundId) = _settleRoundWithParticipation();
 
@@ -3013,6 +3034,46 @@ contract RoundIntegrationTest is VotingTestBase {
 
         uint256 expectedReward = STAKE * 9000 / 10000;
         assertEq(balAfter - balBefore, expectedReward, "Should receive 90% of stake as participation reward");
+    }
+
+    function test_ClaimParticipationReward_UsesEpochWeightedStakeForLateWinner() public {
+        vm.startPrank(owner);
+        ParticipationPool pool = new ParticipationPool(address(hrepToken), owner);
+        pool.setAuthorizedCaller(address(rewardDistributor), true);
+        hrepToken.mint(owner, 1_000_000e6);
+        hrepToken.approve(address(pool), 1_000_000e6);
+        pool.depositPool(1_000_000e6);
+        ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(address(pool));
+        vm.stopPrank();
+
+        (uint256 contentId, uint256 roundId) = _settleMixedEpochWinningRound();
+        assertEq(rewardDistributor.roundParticipationRewardOwed(contentId, roundId), 5_625_000);
+
+        uint256 voter1Before = hrepToken.balanceOf(voter1);
+        vm.prank(voter1);
+        rewardDistributor.claimParticipationReward(contentId, roundId);
+        assertEq(hrepToken.balanceOf(voter1) - voter1Before, 4_500_000);
+
+        uint256 voter2Before = hrepToken.balanceOf(voter2);
+        vm.prank(voter2);
+        rewardDistributor.claimParticipationReward(contentId, roundId);
+        assertEq(hrepToken.balanceOf(voter2) - voter2Before, 1_125_000);
+    }
+
+    function test_BackfillParticipationReward_UsesEpochWeightedWinningStake() public {
+        (uint256 contentId, uint256 roundId) = _settleMixedEpochWinningRound();
+
+        ParticipationPool pool = new ParticipationPool(address(hrepToken), owner);
+        pool.setAuthorizedCaller(address(rewardDistributor), true);
+        vm.startPrank(owner);
+        hrepToken.mint(owner, 1_000_000e6);
+        hrepToken.approve(address(pool), 1_000_000e6);
+        pool.depositPool(1_000_000e6);
+        rewardDistributor.backfillParticipationRewards(contentId, roundId, address(pool), 9000);
+        vm.stopPrank();
+
+        assertEq(rewardDistributor.roundParticipationRewardOwed(contentId, roundId), 5_625_000);
+        assertEq(rewardDistributor.roundParticipationRewardReserved(contentId, roundId), 5_625_000);
     }
 
     function test_ClaimParticipationReward_UsesSettledRoundPoolAfterRotation() public {

@@ -439,12 +439,12 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         uint256 roundId,
         address rewardPool,
         uint256 rewardRateBps,
-        uint256 winningStake
+        uint256 weightedWinningStake
     ) external nonReentrant {
         if (msg.sender != address(votingEngine)) revert UnauthorizedCaller();
 
         (uint256 totalReward, uint256 reservedReward, bool fullyReserved) =
-            _syncParticipationRewardSnapshot(contentId, roundId, rewardPool, rewardRateBps, winningStake, false);
+            _syncParticipationRewardSnapshot(contentId, roundId, rewardPool, rewardRateBps, weightedWinningStake, false);
         if (!fullyReserved) {
             emit ParticipationRewardSnapshotFailed(contentId, roundId, rewardPool, rewardRateBps, totalReward);
             return;
@@ -465,7 +465,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         if (round.state != RoundLib.RoundState.Settled) revert RoundNotSettled();
         _requireNoPendingUnrevealedCleanup(contentId, roundId);
 
-        uint256 winningStake = round.upWins ? round.upPool : round.downPool;
+        uint256 winningStake = round.upWins ? round.weightedUpPool : round.weightedDownPool;
         uint256 totalReward;
         bool fullyReserved;
         (totalReward, reservedReward, fullyReserved) =
@@ -512,7 +512,8 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         if (commit.isUp != round.upWins) revert NotWinningSide();
         if (rateBps == 0) revert NoParticipationRate();
 
-        uint256 reward = commit.stakeAmount * rateBps / 10000;
+        uint256 effectiveStake = (commit.stakeAmount * RoundLib.epochWeightBps(commit.epochIndex)) / 10000;
+        uint256 reward = effectiveStake * rateBps / 10000;
         if (reward == 0) {
             participationRewardCommitClaimed[contentId][roundId][commitKey] = true;
             participationRewardClaimed[contentId][roundId][commit.voter] = true;

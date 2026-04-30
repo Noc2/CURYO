@@ -14,7 +14,7 @@ interface IRoundRewardDistributor {
         uint256 roundId,
         address rewardPool,
         uint256 rewardRateBps,
-        uint256 winningStake
+        uint256 weightedWinningStake
     ) external;
 
     /// @notice Claim frontend fees for a settled round.
