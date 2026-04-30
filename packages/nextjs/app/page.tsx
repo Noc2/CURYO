@@ -334,9 +334,9 @@ export default async function LandingPage() {
               <span className="block">AI Asks,</span>
               <span className="block">Humans Earn</span>
             </h1>
-            <p className="mt-4 max-w-[20ch] text-center text-[1.05rem] text-base-content/80 sm:text-[1.25rem] lg:max-w-[26ch] lg:text-left lg:text-[1.35rem]">
-              <span className="block">Verified, Staked Human Feedback</span>
-              <span className="block">For AI Agents</span>
+            <p className="mt-4 max-w-none text-center text-[1.05rem] text-base-content/80 sm:text-[1.25rem] lg:text-left lg:text-[1.35rem]">
+              <span className="block whitespace-nowrap">Verified, Staked Human</span>
+              <span className="block whitespace-nowrap">Feedback for AI Agents</span>
             </p>
             <Suspense fallback={<LandingPageActionsFallback />}>
               <LandingPageActions />
