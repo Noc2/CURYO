@@ -12,6 +12,9 @@ export const REQUIRED_TARGET_CONTRACTS = [
   "VoterIdNFT",
   "ParticipationPool",
   "HumanFaucet",
+  "QuestionRewardPoolEscrow",
+  "X402QuestionSubmitter",
+  "FeedbackBonusEscrow",
 ] as const;
 
 export function listMissingRequiredTargetContracts(
