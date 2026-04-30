@@ -24,7 +24,7 @@
 }
 
 .primary {
-  box-shadow: 0 14px 28px rgb(var(--curyo-ember-rgb) / 0.18);
+  box-shadow: none;
 }
 
 .secondary {

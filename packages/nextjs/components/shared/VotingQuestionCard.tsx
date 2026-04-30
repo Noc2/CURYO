@@ -239,7 +239,7 @@ function RewardAmountDisplay({
 
   return (
     <div
-      className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-primary/25 bg-primary/12 px-3 py-1.5 text-sm font-semibold leading-none text-primary shadow-[0_0_18px_rgba(242,100,38,0.16)]"
+      className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-primary/25 bg-primary/12 px-3 py-1.5 text-sm font-semibold leading-none text-primary"
       aria-label={`${amountLabel} ${ariaLabel}`}
     >
       <span>

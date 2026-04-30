@@ -44,7 +44,7 @@ export function VotingFlowDiagram() {
             <span className="mb-2 inline-flex min-h-8 items-center rounded-full border border-primary/20 bg-primary/15 px-4 text-sm font-medium text-primary">
               {step.label}
             </span>
-            <span className="mb-2 inline-flex h-14 w-14 items-center justify-center rounded-full border border-primary/15 bg-primary/10 shadow-[0_0_24px_rgba(242,100,38,0.12)]">
+            <span className="mb-2 inline-flex h-14 w-14 items-center justify-center rounded-full border border-primary/15 bg-primary/10">
               <step.Icon className="h-7 w-7 text-primary/90" aria-hidden="true" />
             </span>
             <span className="text-base text-base-content/60 leading-tight">{step.description}</span>

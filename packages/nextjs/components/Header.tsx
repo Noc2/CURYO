@@ -48,8 +48,7 @@ type HeaderNavLinkProps = {
   label: string;
 };
 
-const navIndicatorClassName =
-  "absolute right-2 top-2 bottom-2 w-1 rounded-full bg-[#F26426] shadow-[0_0_18px_rgba(242,100,38,0.45)]";
+const navIndicatorClassName = "absolute right-2 top-2 bottom-2 w-1 rounded-full bg-[#F26426]";
 const headerChromeSurfaceClassName = "bg-[#000]";
 const headerChromeBorderClassName = "border-[color:var(--curyo-shell-border-strong)]";
 

@@ -1239,7 +1239,7 @@ export function VoteFeedStage({
             >
               <div className="absolute inset-y-0 left-1/2 w-[3px] -translate-x-1/2 rounded-full bg-white/18" />
               <div
-                className="absolute left-1/2 w-[3px] -translate-x-1/2 rounded-full bg-primary shadow-[0_0_18px_rgba(242,100,38,0.85)]"
+                className="absolute left-1/2 w-[3px] -translate-x-1/2 rounded-full bg-primary"
                 style={{
                   top: `${scrollIndicatorState.thumbOffset}px`,
                   height: `${scrollIndicatorState.thumbHeight}px`,
