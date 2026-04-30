@@ -272,7 +272,7 @@ contract QuestionRewardPoolEscrow is
         votingEngine = RoundVotingEngine(votingEngine_);
         voterIdNFT = IVoterIdNFT(voterIdNFT_);
         nextRewardPoolId = 1;
-        defaultFrontendFeeBps = DEFAULT_FRONTEND_FEE_BPS.toUint16();
+        defaultFrontendFeeBps = uint16(DEFAULT_FRONTEND_FEE_BPS);
     }
 
     function createRewardPool(
@@ -360,9 +360,9 @@ contract QuestionRewardPoolEscrow is
         bundle.funder = funder;
         bundle.funderIdentity = funderIdentity;
         bundle.asset = asset;
-        bundle.questionCount = contentIds.length.toUint32();
-        bundle.requiredCompleters = requiredCompleters.toUint32();
-        bundle.requiredSettledRounds = requiredSettledRounds.toUint32();
+        bundle.questionCount = uint32(contentIds.length);
+        bundle.requiredCompleters = uint32(requiredCompleters);
+        bundle.requiredSettledRounds = uint32(requiredSettledRounds);
         bundle.frontendFeeBps = defaultFrontendFeeBps;
         bundle.funderNullifier = funderNullifier;
         bundle.fundedAmount = fundedAmount;
@@ -533,7 +533,7 @@ contract QuestionRewardPoolEscrow is
         }
 
         if (skipped > 0) {
-            rewardPool.nextRoundToEvaluate = nextRoundToEvaluate.toUint64();
+            rewardPool.nextRoundToEvaluate = uint64(nextRoundToEvaluate);
         }
     }
 
@@ -633,12 +633,16 @@ contract QuestionRewardPoolEscrow is
         uint256 roundSetIndex = bundleQuestionRecordedRounds[bundleId][bundleIndex];
         if (roundSetIndex >= bundle.requiredSettledRounds) return;
         if (roundSetIndex < bundle.completedRoundSets) return;
+        if (roundSetIndex != 0) {
+            unchecked {
+                if (roundId <= bundleRoundIds[bundleId][bundleIndex][roundSetIndex - 1]) return;
+            }
+        }
 
-        bool settledWithinWindow = settled && _bundleRoundSettledWithinWindow(bundle, contentId, roundId);
-        if (!settledWithinWindow) return;
+        if (!settled || !_bundleRoundSettledWithinWindow(bundle, contentId, roundId)) return;
 
-        bundleRoundIds[bundleId][bundleIndex][roundSetIndex] = roundId.toUint64();
-        bundleQuestionRecordedRounds[bundleId][bundleIndex] = (roundSetIndex + 1).toUint32();
+        bundleRoundIds[bundleId][bundleIndex][roundSetIndex] = uint64(roundId);
+        bundleQuestionRecordedRounds[bundleId][bundleIndex] = uint32(roundSetIndex + 1);
         emit QuestionBundleRoundRecorded(bundleId, contentId, roundId, bundleIndex, roundSetIndex);
 
         if (roundSetIndex == bundle.completedRoundSets && _isBundleRoundSetComplete(bundleId, roundSetIndex)) {
@@ -1133,7 +1137,7 @@ contract QuestionRewardPoolEscrow is
         bundleRoundSetSnapshots[bundleId][roundSetIndex] = BundleRoundSetSnapshot({
             qualified: true,
             claimedCount: 0,
-            eligibleCompleters: completerCount.toUint32(),
+            eligibleCompleters: uint32(completerCount),
             allocation: allocation,
             frontendFeeAllocation: frontendFeeAllocation
         });
@@ -1211,7 +1215,7 @@ contract QuestionRewardPoolEscrow is
                 }
                 delete bundleRoundIds[bundleId][i][recordedRoundSets];
             }
-            bundleQuestionRecordedRounds[bundleId][i] = roundSetIndex.toUint32();
+            bundleQuestionRecordedRounds[bundleId][i] = uint32(roundSetIndex);
             unchecked {
                 ++i;
             }
@@ -1302,12 +1306,12 @@ contract QuestionRewardPoolEscrow is
         if (settledAt > rewardPool.claimDeadline) {
             rewardPool.claimDeadline = uint64(settledAt);
         }
-        rewardPool.nextRoundToEvaluate = (roundId + 1).toUint64();
+        rewardPool.nextRoundToEvaluate = uint64(roundId + 1);
         rewardPool.unallocatedAmount -= allocation;
 
         roundSnapshots[rewardPoolId][roundId] = RoundSnapshot({
             qualified: true,
-            eligibleVoters: eligibleVoters.toUint32(),
+            eligibleVoters: uint32(eligibleVoters),
             allocation: allocation,
             claimedCount: 0,
             frontendFeeAllocation: frontendFeeAllocation

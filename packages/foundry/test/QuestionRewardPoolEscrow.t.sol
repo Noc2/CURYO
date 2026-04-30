@@ -767,6 +767,26 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(usdc.balanceOf(voter2), 1_000e6 + firstReward + secondReward);
     }
 
+    function testSyncBundleQuestionTerminalDoesNotReplaySameRoundIntoLaterRoundSet() public {
+        uint256[] memory contentIds = _submitBundleQuestions();
+        uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, 120e6, 3, 2);
+
+        address[] memory voters = new address[](3);
+        voters[0] = voter2;
+        voters[1] = voter3;
+        voters[2] = voter4;
+        bool[] memory directions = _directions(true, true, false);
+
+        uint256 firstQuestionRoundId = _settleRoundWith(voters, contentIds[0], directions);
+        uint256 secondQuestionRoundId = _settleRoundWith(voters, contentIds[1], directions);
+        assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter2), 20e6);
+
+        rewardPoolEscrow.syncBundleQuestionTerminal(contentIds[0], firstQuestionRoundId);
+        rewardPoolEscrow.syncBundleQuestionTerminal(contentIds[1], secondQuestionRoundId);
+
+        assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 1, voter2), 0);
+    }
+
     function testBundleRewardCannotReplayAfterVoterIdRemintWithSameNullifier() public {
         uint256[] memory contentIds = _submitBundleQuestions();
         uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, REWARD_POOL_AMOUNT, 3);
