@@ -254,6 +254,7 @@ test("signing intent helpers use direct browser-handoff routes", async () => {
       question: {
         categoryId: 7n,
         contextUrl: "https://example.com/context",
+        tags: ["agent", "browser-signing"],
         title: "Browser sign?",
       },
       signatureMode: "browser_link",
