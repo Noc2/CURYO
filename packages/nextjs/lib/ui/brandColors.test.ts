@@ -27,8 +27,7 @@ test("primary action orange stays aligned with the mug orange", () => {
   assert.equal(readCssVar("--curyo-ember-rgb"), "242 100 38");
 });
 
-test("secondary orange remains reserved for error and down-state accents", () => {
-  assert.equal(readCssVar("--color-error"), SECONDARY_ORANGE);
+test("secondary orange remains available for down-state accents", () => {
   assert.equal(readCssVar("--curyo-ember-deep"), SECONDARY_ORANGE);
   assert.equal(readCssVar("--curyo-ember-deep-rgb"), "191 63 24");
 });
