@@ -42,41 +42,18 @@ const CELO_MAINNET_CHAIN_ID = 42220;
 const DEFAULT_FUNDING_AMOUNT_USDC = "10";
 const DEFAULT_PER_ASK_CAP_ATOMIC = 2_000_000n;
 const DEFAULT_AGENT_SCOPES = ["curyo:ask", "curyo:read", "curyo:quote", "curyo:balance"];
-const MANAGED_SETUP_STEP_ORDER = ["wallet", "fund", "payment", "policy", "mcp"] as const;
-const WALLET_DIRECT_SETUP_STEP_ORDER = ["wallet", "fund", "payment", "mcp"] as const;
+const MANAGED_SETUP_STEP_ORDER = ["wallet", "fund", "policy", "mcp"] as const;
+const WALLET_DIRECT_SETUP_STEP_ORDER = ["wallet", "fund", "mcp"] as const;
 const AGENT_WALLET_HELP_TEXT =
   "The agent wallet is the address your client passes as walletAddress when it pays USDC for asks.";
 const AGENT_FUND_HELP_TEXT =
-  "Add Celo USDC to the agent wallet. Runtime wallet-call plans include the exact approval needed when the agent submits an ask.";
-const AGENT_PAYMENT_HELP_TEXT =
-  "Both modes fund protocol escrow directly. Choose the shape your agent client can execute today.";
+  "Add Celo USDC to the agent wallet. Agent clients automatically use the compatible payment path when submitting asks.";
 const AGENT_POLICY_HELP_TEXT =
   "These limits are signed by the connected owner wallet and enforced by the managed MCP policy.";
 const AGENT_MCP_HELP_TEXT = "Use public MCP without a token, or create a managed token after saving a policy.";
 
 type AgentSetupStep = (typeof MANAGED_SETUP_STEP_ORDER)[number];
 type AgentAccessMode = "wallet_direct" | "managed_policy";
-type PaymentMode = "wallet_calls" | "x402_authorization";
-
-const PAYMENT_MODE_OPTIONS: Array<{
-  description: string;
-  id: PaymentMode;
-  label: string;
-  note: string;
-}> = [
-  {
-    description: "The MCP ask returns ordered approval and submission calls for the scoped wallet to execute.",
-    id: "wallet_calls",
-    label: "Wallet calls",
-    note: "Best for agents that can operate an EVM wallet directly.",
-  },
-  {
-    description: "The client prepares a native x402-style USDC authorization that funds protocol escrow directly.",
-    id: "x402_authorization",
-    label: "Native X402 authorization",
-    note: "Best for clients or facilitators that already speak x402 payment authorization.",
-  },
-];
 
 type AgentPolicyFormState = {
   agentId: string;
@@ -179,7 +156,6 @@ export function AgentSubmissionPanel() {
   const [activeSetupStep, setActiveSetupStep] = useState<AgentSetupStep>("wallet");
   const [agentAccessMode, setAgentAccessMode] = useState<AgentAccessMode>("wallet_direct");
   const [isSetupMode, setIsSetupMode] = useState(false);
-  const [paymentMode, setPaymentMode] = useState<PaymentMode>("wallet_calls");
   const [generatedToken, setGeneratedToken] = useState<string | null>(null);
   const [generatedMcpConfig, setGeneratedMcpConfig] = useState<string | null>(null);
   const [publicAgentApiBaseUrl, setPublicAgentApiBaseUrl] = useState("");
@@ -256,11 +232,6 @@ export function AgentSubmissionPanel() {
       complete: Boolean(agentWalletAddress && fundingReady),
       id: "fund",
       label: "Fund wallet",
-    },
-    {
-      complete: true,
-      id: "payment",
-      label: "Payment mode",
     },
     {
       complete: Boolean(selectedPolicy),
@@ -1194,73 +1165,6 @@ export function AgentSubmissionPanel() {
             <button type="button" className="btn btn-outline btn-sm" onClick={() => setActiveSetupStep("wallet")}>
               Back
             </button>
-            <button type="button" className="btn btn-primary btn-sm" onClick={() => setActiveSetupStep("payment")}>
-              Continue
-            </button>
-          </div>
-        </div>
-      ) : null}
-
-      {activeSetupStep === "payment" ? (
-        <div className="surface-card rounded-lg p-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-wide text-base-content/50">
-                Step {activeStepNumber} of {activeSetupStepOrder.length}
-              </p>
-              <h3 className="mt-1 flex items-center gap-2 text-xl font-semibold">
-                Pick the payment mode
-                <InfoTooltip text={AGENT_PAYMENT_HELP_TEXT} position="right" />
-              </h3>
-            </div>
-            <Link href="/docs/ai#x402-agent-payments" className="btn btn-outline btn-sm self-start">
-              Payment docs
-              <ArrowTopRightOnSquareIcon className="h-4 w-4" />
-            </Link>
-          </div>
-
-          <div className="mt-5 grid gap-3 md:grid-cols-2">
-            {PAYMENT_MODE_OPTIONS.map(option => {
-              const selected = paymentMode === option.id;
-              return (
-                <button
-                  key={option.id}
-                  type="button"
-                  className={`rounded-lg border p-4 text-left transition-colors ${
-                    selected
-                      ? "border-primary/40 bg-primary/10 text-base-content"
-                      : "border-base-300 bg-base-100/50 hover:border-primary/30"
-                  }`}
-                  onClick={() => setPaymentMode(option.id)}
-                >
-                  <span className="flex items-center gap-2 text-base font-semibold">
-                    <input type="radio" className="radio radio-primary radio-sm" checked={selected} readOnly />
-                    {option.label}
-                  </span>
-                  <span className="mt-3 block text-sm leading-relaxed text-base-content/65">{option.description}</span>
-                  <span className="mt-3 block text-sm text-base-content/55">{option.note}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {paymentMode === "wallet_calls" ? (
-            <p className="mt-4 text-sm leading-relaxed text-base-content/65">
-              Wallet-call mode requires the agent wallet to keep enough USDC balance. Each returned transaction plan
-              includes the exact USDC approval needed for that ask.
-            </p>
-          ) : (
-            <p className="mt-4 text-sm leading-relaxed text-base-content/65">
-              {agentAccessMode === "managed_policy"
-                ? "Native X402 authorization is configured in the agent client; the managed policy still limits categories, scopes, and spend."
-                : "Native X402 authorization is configured in the agent client and spends from the wallet address included with the ask."}
-            </p>
-          )}
-
-          <div className="mt-5 flex flex-wrap gap-2">
-            <button type="button" className="btn btn-outline btn-sm" onClick={() => setActiveSetupStep("fund")}>
-              Back
-            </button>
             <button
               type="button"
               className="btn btn-primary btn-sm"
@@ -1361,7 +1265,7 @@ export function AgentSubmissionPanel() {
           </div>
 
           <div className="mt-5 flex flex-wrap gap-2">
-            <button type="button" className="btn btn-outline btn-sm" onClick={() => setActiveSetupStep("payment")}>
+            <button type="button" className="btn btn-outline btn-sm" onClick={() => setActiveSetupStep("fund")}>
               Back
             </button>
             <button
@@ -1394,7 +1298,7 @@ export function AgentSubmissionPanel() {
               </h3>
               <p className="mt-2 max-w-2xl text-sm leading-relaxed text-base-content/65">
                 {agentAccessMode === "wallet_direct"
-                  ? "Your agent can submit asks as long as it controls the wallet and signs the returned payment calls or authorization."
+                  ? "Your agent can submit asks as long as it controls the wallet and lets the client use the compatible payment path."
                   : selectedPolicy
                     ? "Your agent can now submit asks within these limits. Create an access token when you are ready to connect it to an AI client."
                     : "Save a policy before creating agent access."}
@@ -1504,7 +1408,7 @@ export function AgentSubmissionPanel() {
             <button
               type="button"
               className="btn btn-outline btn-sm"
-              onClick={() => setActiveSetupStep(agentAccessMode === "managed_policy" ? "policy" : "payment")}
+              onClick={() => setActiveSetupStep(agentAccessMode === "managed_policy" ? "policy" : "fund")}
             >
               Back
             </button>
