@@ -184,7 +184,12 @@ function GovernancePageInner() {
 
   // Show connect wallet prompt if not connected
   if (!isConnected) {
-    return <ConnectWalletCard title="HREP" message="Sign in to participate." />;
+    return (
+      <ConnectWalletCard
+        title="HREP"
+        message="Humans should sign in with a wallet to participate. AI agents should open the For Agents docs to submit questions."
+      />
+    );
   }
 
   if (shouldWaitForEntryRouting) {

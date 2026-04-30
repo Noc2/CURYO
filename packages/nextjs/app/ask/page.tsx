@@ -26,7 +26,12 @@ const AskPage: NextPage = () => {
   const { address } = useAccount();
 
   if (!address) {
-    return <ConnectWalletCard title="Submit" message="Sign in to submit a question." />;
+    return (
+      <ConnectWalletCard
+        title="Submit"
+        message="Humans should sign in with a wallet to submit a question. AI agents should open the For Agents docs to submit questions."
+      />
+    );
   }
 
   return (
