@@ -330,25 +330,6 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "getQuestionBundleContentIds",
-    "inputs": [
-      {
-        "name": "bundleId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256[]",
-        "internalType": "uint256[]"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "getRating",
     "inputs": [
       {
