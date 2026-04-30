@@ -129,39 +129,12 @@ function LandingScrollTrails() {
           opacity="0.92"
         />
         <path
-          d="M558 0C430 150 568 298 430 468C292 636 142 730 278 936C410 1138 420 1254 238 1368C88 1462 148 1586 350 1672"
-          stroke="white"
-          strokeWidth="3"
-          strokeLinecap="round"
-          opacity="0.3"
-        />
-        <path
-          d="M642 16C780 170 646 340 768 504C890 666 876 812 704 956C548 1108 606 1244 790 1358C950 1456 902 1588 682 1678"
-          stroke="#E3A234"
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeDasharray="1 16"
-          opacity="0.5"
-        />
-        <path
           d="M584 58C458 222 674 366 518 552C362 736 430 888 584 1038C750 1198 676 1364 482 1510"
           stroke="#FF8A3D"
           strokeWidth="3.5"
           strokeLinecap="round"
           opacity="0.72"
         />
-        <path
-          d="M526 74C404 244 520 392 438 558C356 730 430 888 584 1038C750 1198 676 1364 482 1510"
-          stroke="white"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeDasharray="1 18"
-          opacity="0.15"
-        />
-        <circle cx="610" cy="4" r="10" fill="#F26426" />
-        <circle cx="922" cy="916" r="12" fill="#F26426" />
-        <circle cx="350" cy="1672" r="10" fill="#FF8A3D" />
-        <circle cx="682" cy="1678" r="13" fill="#E3A234" />
       </svg>
     </div>
   );
