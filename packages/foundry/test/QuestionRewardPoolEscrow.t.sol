@@ -1449,6 +1449,47 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(reward, REWARD_POOL_AMOUNT / 3);
     }
 
+    function testRewardPoolAboveQuorumQualifiesWhenRequiredVotersRevealBeforeClose() public {
+        RoundLib.RoundConfig memory roundConfig = RoundLib.RoundConfig({
+            epochDuration: uint32(EPOCH_DURATION), maxDuration: uint32(7 days), minVoters: 3, maxVoters: 4
+        });
+        uint256 contentId =
+            _submitQuestionWithRoundConfig("https://example.com/above-quorum-before-close.jpg", roundConfig);
+        uint256 expiresAt = block.timestamp + EPOCH_DURATION + 10;
+        uint256 rewardPoolId = _createRewardPoolWithExpiry(contentId, REWARD_POOL_AMOUNT, 4, 1, expiresAt);
+
+        uint256 roundId = _settleRoundWith(_fourVoters(), contentId, _directions(true, true, false, true));
+
+        assertEq(rewardPoolEscrow.claimableQuestionReward(rewardPoolId, roundId, voter1), REWARD_POOL_AMOUNT / 4);
+    }
+
+    function testRewardPoolAboveQuorumDoesNotQualifyWhenRequiredVoterRevealsAfterClose() public {
+        RoundLib.RoundConfig memory roundConfig = RoundLib.RoundConfig({
+            epochDuration: uint32(EPOCH_DURATION), maxDuration: uint32(7 days), minVoters: 3, maxVoters: 4
+        });
+        uint256 contentId =
+            _submitQuestionWithRoundConfig("https://example.com/above-quorum-after-close.jpg", roundConfig);
+        uint256 expiresAt = block.timestamp + EPOCH_DURATION + 10;
+        uint256 rewardPoolId = _createRewardPoolWithExpiry(contentId, REWARD_POOL_AMOUNT, 4, 1, expiresAt);
+
+        (uint256 roundId, bytes32 lateCommitKey, bytes32 lateSalt, bool lateDirection) =
+            _revealThresholdAndReturnUnrevealed(contentId);
+        assertLe(RoundEngineReadHelpers.round(votingEngine, contentId, roundId).thresholdReachedAt, expiresAt);
+
+        vm.warp(expiresAt + 1);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, lateCommitKey, lateDirection, lateSalt);
+        votingEngine.settleRound(contentId, roundId);
+
+        assertEq(rewardPoolEscrow.claimableQuestionReward(rewardPoolId, roundId, voter1), 0);
+
+        rewardPoolEscrow.advanceQualificationCursor(rewardPoolId, 1);
+        uint256 funderBalanceBefore = usdc.balanceOf(funder);
+        vm.prank(funder);
+        uint256 refundAmount = rewardPoolEscrow.refundExpiredRewardPool(rewardPoolId);
+        assertEq(refundAmount, REWARD_POOL_AMOUNT);
+        assertEq(usdc.balanceOf(funder), funderBalanceBefore + refundAmount);
+    }
+
     function testCompletedPoolRefundRequiresGraceAndSweepsUnclaimedRewards() public {
         uint256 contentId = _submitQuestion("");
         uint256 expiresAt = block.timestamp + EPOCH_DURATION + 10;
@@ -2590,6 +2631,44 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         }
     }
 
+    function _revealThresholdAndReturnUnrevealed(uint256 contentId)
+        internal
+        returns (uint256 roundId, bytes32 lateCommitKey, bytes32 lateSalt, bool lateDirection)
+    {
+        address[] memory voters = _fourVoters();
+        bool[] memory directions = _directions(true, true, false, true);
+        bytes32[] memory salts = new bytes32[](voters.length);
+        bytes32[] memory commitKeys = new bytes32[](voters.length);
+
+        for (uint256 i = 0; i < voters.length; i++) {
+            salts[i] = keccak256(abi.encodePacked("late-required", voters[i], contentId, directions[i], i));
+            commitKeys[i] = _commitTestVote(
+                DirectTestCommitRequest({
+                    engine: votingEngine,
+                    hrepToken: hrepToken,
+                    voter: voters[i],
+                    contentId: contentId,
+                    isUp: directions[i],
+                    stake: STAKE,
+                    frontend: address(0),
+                    salt: salts[i]
+                })
+            );
+        }
+
+        roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
+        _warpPastTlockRevealTime(uint256(round.startTime) + EPOCH_DURATION);
+
+        for (uint256 i = 0; i < voters.length - 1; i++) {
+            votingEngine.revealVoteByCommitKey(contentId, roundId, commitKeys[i], directions[i], salts[i]);
+        }
+
+        lateCommitKey = commitKeys[voters.length - 1];
+        lateSalt = salts[voters.length - 1];
+        lateDirection = directions[voters.length - 1];
+    }
+
     function _mockSettledRound(uint256 contentId, uint256 roundId, uint16 revealedCount) internal {
         vm.mockCall(
             address(votingEngine),
@@ -2738,10 +2817,11 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         bool[] memory directions = _directions(true, true, false);
         uint256 firstRoundId = _revealRoundWith(voters, contentIds[0], directions);
         uint256 secondRoundId = _revealRoundWith(voters, contentIds[1], directions);
-        assertLe(RoundEngineReadHelpers.round(votingEngine, contentIds[0], firstRoundId).thresholdReachedAt, bountyClosesAt);
         assertLe(
-            RoundEngineReadHelpers.round(votingEngine, contentIds[1], secondRoundId).thresholdReachedAt,
-            bountyClosesAt
+            RoundEngineReadHelpers.round(votingEngine, contentIds[0], firstRoundId).thresholdReachedAt, bountyClosesAt
+        );
+        assertLe(
+            RoundEngineReadHelpers.round(votingEngine, contentIds[1], secondRoundId).thresholdReachedAt, bountyClosesAt
         );
 
         vm.warp(bountyClosesAt + BUNDLE_CLAIM_GRACE + 1);
@@ -2767,10 +2847,11 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         vm.warp(bountyClosesAt - 1 days);
         uint256 firstRoundId = _revealThresholdWithOneUnrevealed(contentIds[0]);
         uint256 secondRoundId = _revealThresholdWithOneUnrevealed(contentIds[1]);
-        assertLe(RoundEngineReadHelpers.round(votingEngine, contentIds[0], firstRoundId).thresholdReachedAt, bountyClosesAt);
         assertLe(
-            RoundEngineReadHelpers.round(votingEngine, contentIds[1], secondRoundId).thresholdReachedAt,
-            bountyClosesAt
+            RoundEngineReadHelpers.round(votingEngine, contentIds[0], firstRoundId).thresholdReachedAt, bountyClosesAt
+        );
+        assertLe(
+            RoundEngineReadHelpers.round(votingEngine, contentIds[1], secondRoundId).thresholdReachedAt, bountyClosesAt
         );
 
         vm.warp(bountyClosesAt + (2 * BUNDLE_CLAIM_GRACE) + 1);
