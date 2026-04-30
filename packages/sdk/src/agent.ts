@@ -90,6 +90,7 @@ export interface AskHumansRequest extends CuryoAgentQuestionRequest {
     [key: string]: unknown;
   };
   paymentMode?: "wallet_calls" | "x402_authorization";
+  signatureMode?: "agent_signs" | "browser_link";
   transport?: "http" | "mcp";
 }
 
@@ -103,6 +104,25 @@ export interface QuestionStatusLookup {
   chainId?: number;
   clientRequestId?: string;
   walletAddress?: `0x${string}` | string;
+}
+
+export interface CreateSigningIntentRequest {
+  request: AskHumansRequest;
+  ttlMs?: number;
+}
+
+export interface SigningIntentLookup {
+  intentId: string;
+  token: string;
+}
+
+export interface PrepareSigningIntentRequest extends SigningIntentLookup {
+  walletAddress: `0x${string}` | string;
+  paymentAuthorization?: AskHumansRequest["paymentAuthorization"];
+}
+
+export interface CompleteSigningIntentRequest extends SigningIntentLookup {
+  transactionHashes: (`0x${string}` | string)[];
 }
 
 export interface CuryoAgentPayment {
@@ -212,6 +232,13 @@ export interface AskHumansResponse {
   [key: string]: unknown;
 }
 
+export interface SigningIntentResponse extends AskHumansResponse {
+  id: string;
+  signingUrl?: string;
+  expiresAt: string;
+  requestBody?: JsonRecord;
+}
+
 export interface CallbackDeliveryStatus {
   attemptCount: number;
   callbackUrl: string;
@@ -318,6 +345,16 @@ export interface ListResultTemplatesResponse {
 export interface CuryoAgentClient {
   quoteQuestion(params: QuoteQuestionRequest): Promise<QuoteQuestionResponse>;
   askHumans(params: AskHumansRequest): Promise<AskHumansResponse>;
+  createSigningIntent(
+    params: CreateSigningIntentRequest,
+  ): Promise<SigningIntentResponse>;
+  getSigningIntent(params: SigningIntentLookup): Promise<SigningIntentResponse>;
+  prepareSigningIntent(
+    params: PrepareSigningIntentRequest,
+  ): Promise<SigningIntentResponse>;
+  completeSigningIntent(
+    params: CompleteSigningIntentRequest,
+  ): Promise<SigningIntentResponse>;
   confirmAskTransactions(
     params: ConfirmAskTransactionsRequest,
   ): Promise<QuestionStatusResponse>;
@@ -415,6 +452,10 @@ export function createCuryoAgentClient(
   return {
     quoteQuestion: (params) => quoteQuestion(params, config),
     askHumans: (params) => askHumans(params, config),
+    createSigningIntent: (params) => createSigningIntent(params, config),
+    getSigningIntent: (params) => getSigningIntent(params, config),
+    prepareSigningIntent: (params) => prepareSigningIntent(params, config),
+    completeSigningIntent: (params) => completeSigningIntent(params, config),
     confirmAskTransactions: (params) => confirmAskTransactions(params, config),
     getQuestionStatus: (params) => getQuestionStatus(params, config),
     getResult: (params) => getResult(params, config),
@@ -465,6 +506,76 @@ export async function askHumans(
   }
 
   throw new CuryoSdkError(AGENT_AUTH_REQUIRED_MESSAGE);
+}
+
+export async function createSigningIntent(
+  params: CreateSigningIntentRequest,
+  options: CuryoAgentClientOptions = {},
+): Promise<SigningIntentResponse> {
+  const config = normalizeAgentConfig(options);
+  if (!hasDirectAgentHttp(config)) {
+    throw new CuryoSdkError("apiBaseUrl is required to create browser signing links");
+  }
+
+  return requestJson<SigningIntentResponse>(config, agentSigningIntentsUrl(config), {
+    body: stringifyJson(params),
+    headers: jsonAgentHeaders(config),
+    method: "POST",
+  });
+}
+
+export async function getSigningIntent(
+  params: SigningIntentLookup,
+  options: CuryoAgentClientOptions = {},
+): Promise<SigningIntentResponse> {
+  const config = normalizeAgentConfig(options);
+  if (!hasDirectAgentHttp(config)) {
+    throw new CuryoSdkError("apiBaseUrl is required to read browser signing links");
+  }
+
+  return requestJson<SigningIntentResponse>(config, agentSigningIntentUrl(config, params), {
+    headers: agentHeaders(config),
+    method: "GET",
+  });
+}
+
+export async function prepareSigningIntent(
+  params: PrepareSigningIntentRequest,
+  options: CuryoAgentClientOptions = {},
+): Promise<SigningIntentResponse> {
+  const config = normalizeAgentConfig(options);
+  if (!hasDirectAgentHttp(config)) {
+    throw new CuryoSdkError("apiBaseUrl is required to prepare browser signing links");
+  }
+
+  return requestJson<SigningIntentResponse>(config, agentSigningIntentActionUrl(config, params, "prepare"), {
+    body: stringifyJson({
+      paymentAuthorization: params.paymentAuthorization,
+      token: params.token,
+      walletAddress: params.walletAddress,
+    }),
+    headers: jsonAgentHeaders(config),
+    method: "POST",
+  });
+}
+
+export async function completeSigningIntent(
+  params: CompleteSigningIntentRequest,
+  options: CuryoAgentClientOptions = {},
+): Promise<SigningIntentResponse> {
+  const config = normalizeAgentConfig(options);
+  if (!hasDirectAgentHttp(config)) {
+    throw new CuryoSdkError("apiBaseUrl is required to complete browser signing links");
+  }
+
+  return requestJson<SigningIntentResponse>(config, agentSigningIntentActionUrl(config, params, "complete"), {
+    body: stringifyJson({
+      token: params.token,
+      transactionHashes: params.transactionHashes,
+    }),
+    headers: jsonAgentHeaders(config),
+    method: "POST",
+  });
 }
 
 export async function confirmAskTransactions(
@@ -1313,6 +1424,33 @@ function agentQuoteUrl(config: NormalizedAgentConfig) {
 
 function agentAsksUrl(config: NormalizedAgentConfig) {
   return new URL("./asks", `${agentBaseUrl(config)}/`).toString();
+}
+
+function agentSigningIntentsUrl(config: NormalizedAgentConfig) {
+  return new URL("./signing-intents", `${agentBaseUrl(config)}/`).toString();
+}
+
+function agentSigningIntentUrl(config: NormalizedAgentConfig, params: SigningIntentLookup) {
+  if (!params.intentId.trim()) {
+    throw new CuryoSdkError("intentId is required");
+  }
+  if (!params.token.trim()) {
+    throw new CuryoSdkError("token is required");
+  }
+  const url = new URL(`./signing-intents/${params.intentId.trim()}`, `${agentBaseUrl(config)}/`);
+  url.searchParams.set("token", params.token);
+  return url.toString();
+}
+
+function agentSigningIntentActionUrl(
+  config: NormalizedAgentConfig,
+  params: SigningIntentLookup,
+  action: "complete" | "prepare",
+) {
+  if (!params.intentId.trim()) {
+    throw new CuryoSdkError("intentId is required");
+  }
+  return new URL(`./signing-intents/${params.intentId.trim()}/${action}`, `${agentBaseUrl(config)}/`).toString();
 }
 
 function agentConfirmAskUrl(config: NormalizedAgentConfig, operationKey: string) {

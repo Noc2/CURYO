@@ -19,6 +19,9 @@ type AgentAsksRouteModule = typeof import("./asks/route");
 type AgentQuoteRouteModule = typeof import("./quote/route");
 type AgentResultsByClientRouteModule = typeof import("./results/by-client-request/route");
 type AgentResultsOperationRouteModule = typeof import("./results/[operationKey]/route");
+type AgentSigningIntentRouteModule = typeof import("./signing-intents/[intentId]/route");
+type AgentSigningIntentPrepareRouteModule = typeof import("./signing-intents/[intentId]/prepare/route");
+type AgentSigningIntentsRouteModule = typeof import("./signing-intents/route");
 type AgentTemplatesRouteModule = typeof import("./templates/route");
 type CallbackDeliveryModule = typeof import("~~/lib/agent-callbacks/delivery");
 type CallbackEventsModule = typeof import("~~/lib/agent-callbacks/events");
@@ -50,6 +53,9 @@ let mcpToolsModule: McpToolsModule;
 let quoteRoute: AgentQuoteRouteModule;
 let resultsByClientRoute: AgentResultsByClientRouteModule;
 let resultsOperationRoute: AgentResultsOperationRouteModule;
+let signingIntentRoute: AgentSigningIntentRouteModule;
+let signingIntentPrepareRoute: AgentSigningIntentPrepareRouteModule;
+let signingIntentsRoute: AgentSigningIntentsRouteModule;
 let templatesRoute: AgentTemplatesRouteModule;
 let urlSafetyModule: UrlSafetyModule;
 
@@ -463,6 +469,9 @@ before(async () => {
   quoteRoute = await import("./quote/route");
   resultsByClientRoute = await import("./results/by-client-request/route");
   resultsOperationRoute = await import("./results/[operationKey]/route");
+  signingIntentRoute = await import("./signing-intents/[intentId]/route");
+  signingIntentPrepareRoute = await import("./signing-intents/[intentId]/prepare/route");
+  signingIntentsRoute = await import("./signing-intents/route");
   templatesRoute = await import("./templates/route");
 });
 
@@ -481,6 +490,7 @@ beforeEach(async () => {
   await dbModule.dbClient.execute("DELETE FROM api_rate_limit_maintenance");
   await dbModule.dbClient.execute("DELETE FROM mcp_agent_ask_audit_records");
   await dbModule.dbClient.execute("DELETE FROM mcp_agent_budget_reservations");
+  await dbModule.dbClient.execute("DELETE FROM agent_signing_intents");
   await dbModule.dbClient.execute("DELETE FROM x402_question_submissions");
 });
 
@@ -592,6 +602,54 @@ test("agent asks route returns a tokenless wallet transaction plan response", as
   assert.equal(body.walletPolicyRequired, false);
   assert.equal(body.managedBudget, null);
   assert.equal((body.transactionPlan as { calls: unknown[] }).calls.length, 1);
+});
+
+test("agent signing intent routes create and prepare browser handoff asks", async () => {
+  installAskOverrides();
+
+  const createResponse = await signingIntentsRoute.POST(
+    makePublicPost("https://curyo.xyz/api/agent/signing-intents", {
+      request: {
+        ...questionPayload("browser-handoff"),
+        maxPaymentAmount: "1500000",
+        signatureMode: "browser_link",
+      },
+      ttlMs: 300000,
+    }),
+  );
+  const createBody = (await createResponse.json()) as Record<string, unknown>;
+  const intentId = String(createBody.id);
+  const token = new URL(String(createBody.signingUrl)).searchParams.get("token");
+
+  assert.equal(createResponse.status, 200);
+  assert.match(intentId, /^asi_/);
+  assert.ok(token);
+  assert.equal(createBody.status, "pending");
+
+  const readResponse = await signingIntentRoute.GET(
+    makePublicGet(`https://curyo.xyz/api/agent/signing-intents/${intentId}?token=${token}`),
+    { params: Promise.resolve({ intentId }) },
+  );
+  const readBody = (await readResponse.json()) as Record<string, unknown>;
+
+  assert.equal(readResponse.status, 200);
+  assert.equal(readBody.id, intentId);
+  assert.equal(readBody.clientRequestId, "browser-handoff");
+
+  const prepareResponse = await signingIntentPrepareRoute.POST(
+    makePublicPost(`https://curyo.xyz/api/agent/signing-intents/${intentId}/prepare`, {
+      token,
+      walletAddress: "0x00000000000000000000000000000000000000aa",
+    }),
+    { params: Promise.resolve({ intentId }) },
+  );
+  const prepareBody = (await prepareResponse.json()) as Record<string, unknown>;
+
+  assert.equal(prepareResponse.status, 200);
+  assert.equal(prepareBody.id, intentId);
+  assert.equal(prepareBody.operationKey, OPERATION_KEY);
+  assert.equal(prepareBody.status, "awaiting_wallet_signature");
+  assert.equal((prepareBody.transactionPlan as { calls: unknown[] }).calls.length, 1);
 });
 
 test("agent asks route requires walletAddress for tokenless asks", async () => {

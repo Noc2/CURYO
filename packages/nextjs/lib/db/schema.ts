@@ -312,6 +312,36 @@ export const x402QuestionSubmissions = pgTable(
 export type X402QuestionSubmission = typeof x402QuestionSubmissions.$inferSelect;
 export type NewX402QuestionSubmission = typeof x402QuestionSubmissions.$inferInsert;
 
+export const agentSigningIntents = pgTable(
+  "agent_signing_intents",
+  {
+    id: text("id").primaryKey(),
+    tokenHash: text("token_hash").notNull(),
+    status: text("status").notNull(),
+    chainId: integer("chain_id"),
+    clientRequestId: text("client_request_id"),
+    paymentMode: text("payment_mode").notNull(),
+    walletAddress: text("wallet_address"),
+    operationKey: text("operation_key"),
+    payloadHash: text("payload_hash"),
+    requestBody: text("request_body").notNull(),
+    transactionHashes: text("transaction_hashes"),
+    error: text("error"),
+    expiresAt: timestamp("expires_at", { mode: "date", withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).notNull(),
+    completedAt: timestamp("completed_at", { mode: "date", withTimezone: true }),
+  },
+  table => ({
+    tokenHashUnique: uniqueIndex("agent_signing_intents_token_hash_unique").on(table.tokenHash),
+    statusExpiresIdx: index("agent_signing_intents_status_expires_idx").on(table.status, table.expiresAt),
+    operationKeyIdx: index("agent_signing_intents_operation_key_idx").on(table.operationKey),
+  }),
+);
+
+export type AgentSigningIntent = typeof agentSigningIntents.$inferSelect;
+export type NewAgentSigningIntent = typeof agentSigningIntents.$inferInsert;
+
 export const mcpAgentBudgetReservations = pgTable(
   "mcp_agent_budget_reservations",
   {

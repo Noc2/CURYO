@@ -92,6 +92,13 @@
       "when": 1776788800000,
       "tag": "0012_drop_x402_legacy_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1776792400000,
+      "tag": "0013_agent_signing_intents",
+      "breakpoints": true
     }
   ]
 }

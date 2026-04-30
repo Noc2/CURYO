@@ -204,6 +204,88 @@ test("askHumans supports tokenless direct agent HTTP with a wallet address", asy
   assert.equal(response.status, "awaiting_wallet_signature");
 });
 
+test("signing intent helpers use direct browser-handoff routes", async () => {
+  const requestedUrls: string[] = [];
+  const requestedBodies: any[] = [];
+  const agent = createCuryoAgentClient({
+    apiBaseUrl: API_BASE_URL,
+    fetchImpl: async (input: URL | RequestInfo, init?: RequestInit) => {
+      requestedUrls.push(String(input));
+      requestedBodies.push(init?.body ? JSON.parse(String(init.body)) : null);
+      const url = String(input);
+      if (url.endsWith("/api/agent/signing-intents")) {
+        return jsonResponse({
+          expiresAt: "2026-04-30T12:00:00.000Z",
+          id: "asi_test",
+          signingUrl: "https://curyo.example/agent/sign/asi_test?token=secret",
+          status: "pending",
+        });
+      }
+      if (url.includes("/prepare")) {
+        return jsonResponse({
+          expiresAt: "2026-04-30T12:00:00.000Z",
+          id: "asi_test",
+          operationKey: `0x${"67".repeat(32)}`,
+          status: "awaiting_wallet_signature",
+        });
+      }
+      if (url.includes("/complete")) {
+        return jsonResponse({
+          expiresAt: "2026-04-30T12:00:00.000Z",
+          id: "asi_test",
+          status: "submitted",
+          transactionHashes: [`0x${"68".repeat(32)}`],
+        });
+      }
+      return jsonResponse({
+        expiresAt: "2026-04-30T12:00:00.000Z",
+        id: "asi_test",
+        status: "pending",
+      });
+    },
+  });
+
+  const createResponse = await agent.createSigningIntent({
+    request: {
+      bounty: { amount: 1_000_000n },
+      chainId: 42220,
+      clientRequestId: "browser-signing",
+      maxPaymentAmount: 1_000_000n,
+      question: {
+        categoryId: 7n,
+        contextUrl: "https://example.com/context",
+        title: "Browser sign?",
+      },
+      signatureMode: "browser_link",
+    },
+    ttlMs: 300_000,
+  });
+  const readResponse = await agent.getSigningIntent({ intentId: "asi_test", token: "secret" });
+  const prepareResponse = await agent.prepareSigningIntent({
+    intentId: "asi_test",
+    token: "secret",
+    walletAddress: "0x00000000000000000000000000000000000000aa",
+  });
+  const completeResponse = await agent.completeSigningIntent({
+    intentId: "asi_test",
+    token: "secret",
+    transactionHashes: [`0x${"68".repeat(32)}`],
+  });
+
+  assert.equal(requestedUrls[0], "https://curyo.example/api/agent/signing-intents");
+  assert.equal(requestedUrls[1], "https://curyo.example/api/agent/signing-intents/asi_test?token=secret");
+  assert.equal(requestedUrls[2], "https://curyo.example/api/agent/signing-intents/asi_test/prepare");
+  assert.equal(requestedUrls[3], "https://curyo.example/api/agent/signing-intents/asi_test/complete");
+  assert.equal(requestedBodies[0].request.bounty.amount, "1000000");
+  assert.equal(requestedBodies[0].request.signatureMode, "browser_link");
+  assert.equal(requestedBodies[2].walletAddress, "0x00000000000000000000000000000000000000aa");
+  assert.deepEqual(requestedBodies[3].transactionHashes, [`0x${"68".repeat(32)}`]);
+  assert.equal(createResponse.signingUrl, "https://curyo.example/agent/sign/asi_test?token=secret");
+  assert.equal(readResponse.id, "asi_test");
+  assert.equal(prepareResponse.operationKey, `0x${"67".repeat(32)}`);
+  assert.equal(completeResponse.status, "submitted");
+});
+
 test("askHumans prefers direct authenticated agent HTTP before MCP framing", async () => {
   let requestedUrl = "";
   let requestedHeaders: Headers | undefined;
