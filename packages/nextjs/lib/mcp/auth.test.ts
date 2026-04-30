@@ -182,3 +182,20 @@ test("agent policy token rotation does not revive paused or revoked policies", a
     (error: unknown) => error instanceof AgentPolicyLifecycleError,
   );
 });
+
+test("normalizeAgentPolicyInput defaults blank agent ids to the agent wallet", () => {
+  const agentWalletAddress = "0x00000000000000000000000000000000000000bb";
+  const normalized = normalizeAgentPolicyInput({
+    agentId: "",
+    agentWalletAddress,
+    categories: [],
+    dailyBudgetAtomic: "0",
+    perAskLimitAtomic: "0",
+    scopes: [],
+  });
+
+  assert.equal(normalized.agentId, agentWalletAddress);
+  assert.equal(normalized.dailyBudgetAtomic, "0");
+  assert.equal(normalized.perAskLimitAtomic, "0");
+  assert.deepEqual(normalized.scopes, [MCP_SCOPES.ask, MCP_SCOPES.balance, MCP_SCOPES.quote, MCP_SCOPES.read].sort());
+});

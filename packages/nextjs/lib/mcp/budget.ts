@@ -63,13 +63,7 @@ function dailyBudgetKey(agentId: string, budgetDate: string) {
 }
 
 function assertAgentMaySpend(params: { agent: McpAgentAuth; amount: bigint; categoryId: string }) {
-  if (params.agent.perAskLimitAtomic <= 0n) {
-    throw new McpBudgetError("MCP agent per-ask budget is not configured.", 503);
-  }
-  if (params.agent.dailyBudgetAtomic <= 0n) {
-    throw new McpBudgetError("MCP agent daily budget is not configured.", 503);
-  }
-  if (params.amount > params.agent.perAskLimitAtomic) {
+  if (params.agent.perAskLimitAtomic > 0n && params.amount > params.agent.perAskLimitAtomic) {
     throw new McpBudgetError("Question exceeds this MCP agent's per-ask budget.");
   }
   if (params.agent.allowedCategoryIds && !params.agent.allowedCategoryIds.has(params.categoryId)) {
@@ -178,6 +172,8 @@ async function reserveDailyBudgetCapacity(
     now: Date;
   },
 ) {
+  if (params.agent.dailyBudgetAtomic <= 0n) return;
+
   const budgetKey = dailyBudgetKey(params.agent.id, params.budgetDate);
   const values = [
     budgetKey,

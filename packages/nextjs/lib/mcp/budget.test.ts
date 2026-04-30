@@ -289,6 +289,35 @@ test("reserveMcpAgentBudget enforces category and spend caps", async () => {
   );
 });
 
+test("reserveMcpAgentBudget treats zero policy caps as unrestricted", async () => {
+  const unrestrictedAgent: McpAgentAuth = {
+    ...AGENT,
+    allowedCategoryIds: null,
+    dailyBudgetAtomic: 0n,
+    id: "agent-unrestricted",
+    perAskLimitAtomic: 0n,
+  };
+
+  const reservation = await budget.reserveMcpAgentBudget({
+    agent: unrestrictedAgent,
+    amount: 9_000_000n,
+    categoryId: "99",
+    chainId: 42220,
+    clientRequestId: "ask-unrestricted",
+    operationKey: `0x${"c".repeat(64)}`,
+    payloadHash: "payload-unrestricted",
+  });
+
+  assert.equal(reservation.agentId, "agent-unrestricted");
+  assert.equal(reservation.paymentAmount, "9000000");
+
+  const summary = await budget.getMcpAgentBudgetSummary(unrestrictedAgent);
+  assert.equal(summary.dailyBudgetAtomic, "0");
+  assert.equal(summary.perAskLimitAtomic, "0");
+  assert.equal(summary.remainingDailyBudgetAtomic, "0");
+  assert.equal(summary.spentTodayAtomic, "9000000");
+});
+
 test("reserveMcpAgentBudget enforces daily caps and releases failed reservations", async () => {
   const first = await budget.reserveMcpAgentBudget({
     agent: AGENT,

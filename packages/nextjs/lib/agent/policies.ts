@@ -113,8 +113,9 @@ function normalizeAtomicAmount(value: unknown, fieldName: string) {
   return BigInt(raw).toString();
 }
 
-function normalizeAgentId(value: unknown) {
-  const raw = typeof value === "string" ? value.trim().toLowerCase() : "";
+function normalizeAgentId(value: unknown, fallbackWalletAddress: `0x${string}`) {
+  const rawInput = typeof value === "string" ? value.trim().toLowerCase() : "";
+  const raw = rawInput || fallbackWalletAddress.toLowerCase();
   if (!/^[a-z0-9][a-z0-9_-]{1,63}$/.test(raw)) {
     throw new Error("Agent id must be 2-64 lowercase letters, numbers, dashes, or underscores.");
   }
@@ -133,6 +134,7 @@ export function normalizeAgentPolicyInput(input: AgentPolicyInput): NormalizedAg
   if (!isValidWalletAddress(input.agentWalletAddress)) {
     throw new Error("Agent wallet must be a valid EVM address.");
   }
+  const agentWalletAddress = normalizeWalletAddress(input.agentWalletAddress);
 
   const allowedScopes = new Set<string>(MCP_SCOPE_VALUES);
   const scopes = normalizeStringList(input.scopes?.length ? input.scopes : DEFAULT_AGENT_SCOPES, {
@@ -143,8 +145,8 @@ export function normalizeAgentPolicyInput(input: AgentPolicyInput): NormalizedAg
   }
 
   return {
-    agentId: normalizeAgentId(input.agentId),
-    agentWalletAddress: normalizeWalletAddress(input.agentWalletAddress),
+    agentId: normalizeAgentId(input.agentId, agentWalletAddress),
+    agentWalletAddress,
     categories: normalizeStringList(input.categories ?? [], { allowNumericOnly: true }),
     dailyBudgetAtomic: normalizeAtomicAmount(input.dailyBudgetAtomic, "Daily budget"),
     expiresAt: normalizeExpiresAt(input.expiresAt),
