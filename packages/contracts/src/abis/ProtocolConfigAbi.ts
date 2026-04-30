@@ -468,6 +468,30 @@ export const ProtocolConfigAbi = [
   },
   {
     "type": "function",
+    "name": "isRewardDistributorForEngine",
+    "inputs": [
+      {
+        "name": "value",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "engine",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "minSubmissionHrepPool",
     "inputs": [],
     "outputs": [
@@ -644,6 +668,44 @@ export const ProtocolConfigAbi = [
     "type": "function",
     "name": "rewardDistributor",
     "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "rewardDistributorForVotingEngine",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "rewardDistributorVotingEngine",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
     "outputs": [
       {
         "name": "",

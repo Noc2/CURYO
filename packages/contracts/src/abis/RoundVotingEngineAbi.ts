@@ -730,6 +730,13 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "function",
+    "name": "recoverSurplusHrep",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "renounceRole",
     "inputs": [
       {
@@ -2039,17 +2046,7 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "error",
-    "name": "ReferenceRatingMismatch",
-    "inputs": []
-  },
-  {
-    "type": "error",
     "name": "RevealGraceActive",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "RoundNotAccepting",
     "inputs": []
   },
   {
@@ -2126,11 +2123,6 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "error",
-    "name": "UnexpectedRoundId",
-    "inputs": []
-  },
-  {
-    "type": "error",
     "name": "UnrevealedPastEpochVotes",
     "inputs": []
   },
@@ -2142,11 +2134,6 @@ export const RoundVotingEngineAbi = [
   {
     "type": "error",
     "name": "VoterIdRequired",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "ZeroAmount",
     "inputs": []
   }
 ] as const;
