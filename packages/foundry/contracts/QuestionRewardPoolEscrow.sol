@@ -614,7 +614,7 @@ contract QuestionRewardPoolEscrow is
     }
 
     function syncBundleQuestionTerminal(uint256 contentId, uint256 roundId) external {
-        (RoundLib.RoundState state, uint48 settledAt) = _roundTerminalState(contentId, roundId);
+        (RoundLib.RoundState state, uint48 settledAt,) = _roundTerminalState(contentId, roundId);
         require(settledAt != 0, "Round not terminal");
         _recordBundleQuestionTerminal(contentId, roundId, state == RoundLib.RoundState.Settled);
     }
@@ -747,7 +747,7 @@ contract QuestionRewardPoolEscrow is
         BundleReward storage bundle = _getExistingBundleReward(bundleId);
         require(!bundle.refunded, "Already refunded");
         require(bundle.bountyClosesAt != 0 && block.timestamp > bundle.bountyClosesAt, "Bundle active");
-        require(block.timestamp > uint256(bundle.bountyClosesAt) + BUNDLE_CLAIM_GRACE, "Grace");
+        require(block.timestamp > uint256(bundle.bountyClosesAt) + (2 * BUNDLE_CLAIM_GRACE), "Grace");
         if (bundle.completedRoundSets != 0) {
             _requireBundleCleanupComplete(bundleId);
         }
@@ -1032,17 +1032,17 @@ contract QuestionRewardPoolEscrow is
         view
         returns (bool)
     {
-        (RoundLib.RoundState state, uint48 settledAt) = _roundTerminalState(contentId, roundId);
-        return state == RoundLib.RoundState.Settled && settledAt != 0
-            && (bundle.bountyClosesAt == 0 || settledAt <= bundle.bountyClosesAt);
+        (RoundLib.RoundState state, uint48 settledAt, uint48 thresholdReachedAt) = _roundTerminalState(contentId, roundId);
+        uint48 qualifiedAt = thresholdReachedAt == 0 ? settledAt : thresholdReachedAt;
+        return state == RoundLib.RoundState.Settled && qualifiedAt != 0 && qualifiedAt <= bundle.bountyClosesAt;
     }
 
     function _roundTerminalState(uint256 contentId, uint256 roundId)
         internal
         view
-        returns (RoundLib.RoundState state, uint48 settledAt)
+        returns (RoundLib.RoundState state, uint48 settledAt, uint48 thresholdReachedAt)
     {
-        (, state,,,,,,,,, settledAt,,,) = votingEngine.rounds(contentId, roundId);
+        (, state,,,,,,,,, settledAt, thresholdReachedAt,,) = votingEngine.rounds(contentId, roundId);
     }
 
     function _requireCompletedBundleRoundSet(uint256 bundleId, uint256 roundSetIndex, address account)

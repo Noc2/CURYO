@@ -2677,15 +2677,43 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
 
     // --- Security fix: BUNDLE_CLAIM_GRACE ---
 
-    function testBundleRefund_NoRecordedRoundSetStillWaitsForGraceAtBountyClose() public {
+    function testBundleRefundWindowAllowsThresholdReachedRoundsToSettleAfterClose() public {
         uint256[] memory contentIds = _submitBundleQuestions();
         uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, REWARD_POOL_AMOUNT, 3);
+        uint256 bountyClosesAt = block.timestamp + 30 days;
 
-        vm.warp(block.timestamp + 31 days);
+        address[] memory voters = _threeVoters();
+        bool[] memory directions = _directions(true, true, false);
+        uint256 firstRoundId = _revealRoundWith(voters, contentIds[0], directions);
+        uint256 secondRoundId = _revealRoundWith(voters, contentIds[1], directions);
+        assertLe(RoundEngineReadHelpers.round(votingEngine, contentIds[0], firstRoundId).thresholdReachedAt, bountyClosesAt);
+        assertLe(
+            RoundEngineReadHelpers.round(votingEngine, contentIds[1], secondRoundId).thresholdReachedAt,
+            bountyClosesAt
+        );
+
+        vm.warp(bountyClosesAt + BUNDLE_CLAIM_GRACE + 1);
         vm.expectRevert("Grace");
         rewardPoolEscrow.refundQuestionBundleReward(bundleId);
 
-        vm.warp(block.timestamp + BUNDLE_CLAIM_GRACE + 1);
+        votingEngine.settleRound(contentIds[0], firstRoundId);
+        votingEngine.settleRound(contentIds[1], secondRoundId);
+
+        assertGt(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter1), 0);
+        vm.prank(voter1);
+        assertGt(rewardPoolEscrow.claimQuestionBundleReward(bundleId, 0), 0);
+    }
+
+    function testBundleRefund_NoRecordedRoundSetStillWaitsForGraceAtBountyClose() public {
+        uint256[] memory contentIds = _submitBundleQuestions();
+        uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, REWARD_POOL_AMOUNT, 3);
+        uint256 bountyClosesAt = block.timestamp + 30 days;
+
+        vm.warp(bountyClosesAt + 1);
+        vm.expectRevert("Grace");
+        rewardPoolEscrow.refundQuestionBundleReward(bundleId);
+
+        vm.warp(bountyClosesAt + (2 * BUNDLE_CLAIM_GRACE) + 1);
         uint256 treasuryBalanceBefore = usdc.balanceOf(treasury);
         uint256 refundAmount = rewardPoolEscrow.refundQuestionBundleReward(bundleId);
         assertEq(refundAmount, REWARD_POOL_AMOUNT);
@@ -2695,6 +2723,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
     function testBundleRefund_ClaimGraceBlocksRaceAtBountyClose() public {
         uint256[] memory contentIds = _submitBundleQuestions();
         uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, REWARD_POOL_AMOUNT, 3);
+        uint256 bountyClosesAt = block.timestamp + 30 days;
 
         address[] memory voters = new address[](3);
         voters[0] = voter2;
@@ -2712,13 +2741,13 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertGt(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter3), 0);
 
         // Jump past bountyClosesAt (helper sets +30 days).
-        vm.warp(block.timestamp + 31 days);
+        vm.warp(bountyClosesAt + 1);
         vm.expectRevert("Grace");
         rewardPoolEscrow.refundQuestionBundleReward(bundleId);
 
-        // Jump past the 7-day grace; refund now allowed (forfeits to treasury since
+        // Jump past the second grace; refund now allowed (forfeits to treasury since
         // registry-initiated bundles are nonRefundable).
-        vm.warp(block.timestamp + 7 days + 1);
+        vm.warp(bountyClosesAt + (2 * BUNDLE_CLAIM_GRACE) + 1);
         uint256 treasuryBalanceBefore = usdc.balanceOf(treasury);
         uint256 refundAmount = rewardPoolEscrow.refundQuestionBundleReward(bundleId);
         assertGt(refundAmount, 0);
@@ -2728,6 +2757,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
     function testBundleRefund_WaitsForUnrevealedCleanupAfterGrace() public {
         uint256[] memory contentIds = _submitBundleQuestions();
         uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, REWARD_POOL_AMOUNT, 3);
+        uint256 bountyClosesAt = block.timestamp + 30 days;
 
         uint256 cleanupRoundId = _settleRoundWithOneUnrevealed(contentIds[0]);
 
@@ -2738,7 +2768,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         bool[] memory directions = _directions(true, true, false);
         _settleRoundWith(voters, contentIds[1], directions);
 
-        vm.warp(block.timestamp + 31 days + BUNDLE_CLAIM_GRACE + 1);
+        vm.warp(bountyClosesAt + (2 * BUNDLE_CLAIM_GRACE) + 1);
         vm.expectRevert("Cleanup pending");
         rewardPoolEscrow.refundQuestionBundleReward(bundleId);
 
