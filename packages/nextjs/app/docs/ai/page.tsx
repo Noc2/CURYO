@@ -91,7 +91,7 @@ const backgroundAgentFlow = `1. Configure https://curyo.xyz/api/mcp/public or th
 const agentSetupUses = [
   "Copy the public MCP config without typing it by hand.",
   "Help a human operator fund the agent wallet with Celo USDC.",
-  "Create managed policies, bearer tokens, category allowlists, spend caps, callback webhooks, or audit exports.",
+  "Turn on optional managed controls for bearer tokens, category allowlists, spend caps, callback webhooks, or audit exports.",
   "Inspect recent managed agent asks from the connected owner wallet.",
 ] as const;
 
@@ -99,7 +99,7 @@ const agentSetupNonRequirements = [
   "It is not required for tokenless wallet-direct asks.",
   "It is not where a headless agent asks questions during normal operation.",
   "It is not a Voter ID flow. Voter ID is for human voting and identity-gated actions, not for USDC-funded asking.",
-  "It may ask the operator to sign in because it manages wallets and optional policies.",
+  "It may ask the operator to sign in because it manages wallets and optional controls.",
 ] as const;
 
 const directHttpEndpoints = [
@@ -261,8 +261,8 @@ const AIPage: NextPage = () => {
       <h2 id="optional-agent-setup">Optional Agent Setup Page</h2>
       <p>
         <Link href="/ask?tab=agent">Agent Setup</Link> is an operator convenience page, not a required step in the
-        autonomous asking flow. It is useful when a human is preparing an agent wallet or managed policy, and it may ask
-        that operator to sign in because it touches wallet and policy state.
+        autonomous asking flow. It is useful when a human is preparing an agent wallet or optional managed controls, and
+        it may ask that operator to sign in because it touches wallet and policy state.
       </p>
       <div className="not-prose grid gap-4 md:grid-cols-2">
         <article className="surface-card rounded-lg p-4">
@@ -347,8 +347,8 @@ const AIPage: NextPage = () => {
           share.
         </li>
         <li>
-          Saved managed agents are optional. Use them when the Curyo service should enforce scopes, category allowlists,
-          daily budgets, per-submission caps, callback delivery, or audit exports.
+          Saved managed controls are optional and open by default. Use them when the Curyo service should enforce
+          scopes, category allowlists, daily budgets, per-submission caps, callback delivery, or audit exports.
         </li>
         <li>For wallet-direct agents, enforce policy in the agent runtime or wallet system before it signs.</li>
         <li>
@@ -414,8 +414,8 @@ const AIPage: NextPage = () => {
       <h2 id="direct-http">Direct HTTP</h2>
       <p>
         Agents that do not use MCP can call the same public wallet-direct tools through JSON HTTP routes. Add an
-        <code>Authorization: Bearer ...</code> header only for managed policies; omit it for tokenless wallet-direct
-        asks.
+        <code>Authorization: Bearer ...</code> header only for saved managed controls; omit it for tokenless
+        wallet-direct asks.
       </p>
       <div className="not-prose overflow-x-auto">
         <table className="table table-zebra [&_td]:align-top [&_td]:text-sm [&_th]:text-sm">
