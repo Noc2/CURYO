@@ -1208,7 +1208,7 @@ contract ContentRegistryCoverageTest is VotingTestBase {
     function test_UpdateActivityOnlyVotingEngine() public {
         uint256 id = _submitContent(submitter, "https://example.com/activity");
         vm.prank(other);
-        vm.expectRevert("Only VotingEngine");
+        vm.expectRevert(ContentRegistry.OnlyVotingEngine.selector);
         registry.updateActivity(id);
     }
 

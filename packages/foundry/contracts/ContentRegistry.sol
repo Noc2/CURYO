@@ -51,6 +51,8 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     using SafeCast for uint256;
     using TransientSlot for *;
 
+    error OnlyVotingEngine();
+
     // --- Access Control Roles ---
     bytes32 public constant CONFIG_ROLE = keccak256("CONFIG_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
@@ -1081,14 +1083,14 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     /// @notice Called by VotingEngine to update raw activity timestamp after commits.
     /// @dev Vote commits refresh UI-facing activity without extending the dormancy window.
     function updateActivity(uint256 contentId) external {
-        require(msg.sender == votingEngine, "Only VotingEngine");
+        if (msg.sender != votingEngine) revert OnlyVotingEngine();
         contentHasVotes[contentId] = true;
         contents[contentId].lastActivityAt = uint48(block.timestamp);
     }
 
     /// @notice Called by VotingEngine when content reaches milestone 0 through a settled round.
     function recordMeaningfulActivity(uint256 contentId) external {
-        require(votingEngineCallbackGeneration[msg.sender] != 0, "Only VotingEngine");
+        if (votingEngineCallbackGeneration[msg.sender] == 0) revert OnlyVotingEngine();
         contents[contentId].lastActivityAt = uint48(block.timestamp);
         dormancyAnchorAt[contentId] = block.timestamp;
     }
@@ -1100,8 +1102,8 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         RatingLib.RatingState calldata nextState
     ) external {
         uint256 callerGeneration = votingEngineCallbackGeneration[msg.sender];
-        require(callerGeneration != 0, "Only VotingEngine");
-        require(callerGeneration >= contentSettlementEngineGeneration[contentId], "Stale VotingEngine");
+        if (callerGeneration == 0) revert OnlyVotingEngine();
+        if (callerGeneration < contentSettlementEngineGeneration[contentId]) return;
 
         Content storage c = contents[contentId];
         require(c.id != 0, "Content does not exist");
@@ -1396,6 +1398,10 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
     function _hasOpenRound(uint256 contentId) internal view returns (bool) {
         if (votingEngine == address(0)) return false;
+        if (
+            votingEngineGeneration > 1 && contentHasVotes[contentId]
+                && contentSettlementEngineGeneration[contentId] < votingEngineGeneration
+        ) return true;
 
         uint256 activeRoundId = IRoundVotingEngine(votingEngine).currentRoundId(contentId);
         if (activeRoundId == 0) return false;

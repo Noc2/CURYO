@@ -1893,7 +1893,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.stopPrank();
 
         vm.prank(address(votingEngine));
-        vm.expectRevert("Only VotingEngine");
+        vm.expectRevert(ContentRegistry.OnlyVotingEngine.selector);
         registry.updateActivity(1);
 
         _warpPastTlockRevealTime(block.timestamp + 1 hours);
@@ -1905,7 +1905,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         assertGt(registry.getRating(1), 5000);
     }
 
-    function test_SetVotingEngine_OldEngineCannotSettleAfterReplacementSettlement() public {
+    function test_SetVotingEngine_OldEngineCanSettleAfterReplacementSettlement() public {
         vm.startPrank(submitter);
         hrepToken.approve(address(registry), 10e6);
         _submitContentWithReservation(registry, "https://example.com/out-of-order-engine", "goal", "goal", "tags", 0);
@@ -1936,13 +1936,12 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         votingEngine.revealVoteByCommitKey(1, roundId, ck2, true, salt2);
         votingEngine.revealVoteByCommitKey(1, roundId, ck3, false, salt3);
 
-        vm.expectRevert("Stale VotingEngine");
         votingEngine.settleRound(1, roundId);
 
         assertEq(registry.getRating(1), 5200);
         assertEq(
             uint8(RoundEngineReadHelpers.round(votingEngine, 1, roundId).state),
-            uint8(RoundLib.RoundState.Open)
+            uint8(RoundLib.RoundState.Settled)
         );
     }
 
@@ -2126,6 +2125,26 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.warp(T0 + 31 days);
         assertFalse(registry.isDormancyEligible(1), "open rounds should block dormancy eligibility");
+    }
+
+    function test_MarkDormant_AfterEngineRotationWithHistoricalVotes_Reverts() public {
+        vm.startPrank(submitter);
+        hrepToken.approve(address(registry), 10e6);
+        _submitContentWithReservation(registry, "https://example.com/rotated-open-round", "goal", "goal", "tags", 0);
+        vm.stopPrank();
+
+        _commit(voter1, 1, true);
+
+        RoundVotingEngine replacementEngine = _deployReplacementVotingEngine();
+        vm.startPrank(owner);
+        registry.pause();
+        registry.setVotingEngine(address(replacementEngine));
+        registry.unpause();
+        vm.stopPrank();
+
+        vm.warp(T0 + 31 days);
+        vm.expectRevert("Content has active round");
+        registry.markDormant(1);
     }
 
     function test_MarkDormant_CancelledRound_UsesDormancyAnchor() public {
