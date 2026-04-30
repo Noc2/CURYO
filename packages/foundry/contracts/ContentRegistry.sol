@@ -683,10 +683,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         }
     }
 
-    function getQuestionBundleContentIds(uint256 bundleId) external view returns (uint256[] memory) {
-        return questionBundleContentIds[bundleId];
-    }
-
     /// @notice Cancel content before any votes. Attached submission bounties stay non-refundable.
     /// @dev Only callable by the submitter. VotingEngine must confirm 0 votes.
     function cancelContent(uint256 contentId) external nonReentrant whenNotPaused {
@@ -1084,7 +1080,10 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     /// @dev Vote commits refresh UI-facing activity without extending the dormancy window.
     function updateActivity(uint256 contentId) external {
         if (msg.sender != votingEngine) revert OnlyVotingEngine();
-        if (contentRoundTrackingEngine[contentId] == address(0)) contentRoundTrackingEngine[contentId] = msg.sender;
+        address trackedEngine = contentRoundTrackingEngine[contentId];
+        if (trackedEngine == address(0) || trackedEngine == msg.sender || !_engineHasOpenRound(trackedEngine, contentId)) {
+            contentRoundTrackingEngine[contentId] = msg.sender;
+        }
         contents[contentId].lastActivityAt = uint48(block.timestamp);
     }
 
@@ -1093,7 +1092,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         uint256 callerGeneration = votingEngineCallbackGeneration[msg.sender];
         if (callerGeneration == 0) revert OnlyVotingEngine();
         if (callerGeneration < contentSettlementEngineGeneration[contentId]) return;
-        contentRoundTrackingEngine[contentId] = msg.sender;
         contents[contentId].lastActivityAt = uint48(block.timestamp);
         dormancyAnchorAt[contentId] = block.timestamp;
     }
@@ -1401,11 +1399,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
     function _hasOpenRound(uint256 contentId) internal view returns (bool) {
         address trackedEngine = contentRoundTrackingEngine[contentId];
-        if (trackedEngine != address(0) && _engineHasOpenRound(trackedEngine, contentId)) return true;
-
-        address currentEngine = votingEngine;
-        if (currentEngine == address(0) || currentEngine == trackedEngine) return false;
-        return _engineHasOpenRound(currentEngine, contentId);
+        return trackedEngine != address(0) && _engineHasOpenRound(trackedEngine, contentId);
     }
 
     function _engineHasOpenRound(address engine, uint256 contentId) internal view returns (bool) {
