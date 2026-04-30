@@ -2,6 +2,7 @@
 
 import { Suspense } from "react";
 import dynamic from "next/dynamic";
+import { useSearchParams } from "next/navigation";
 import type { NextPage } from "next";
 import { useAccount } from "wagmi";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
@@ -24,8 +25,10 @@ function AskSectionLoading() {
 
 const AskPage: NextPage = () => {
   const { address } = useAccount();
+  const searchParams = useSearchParams();
+  const isAgentTab = searchParams?.get("tab") === "agent";
 
-  if (!address) {
+  if (!address && !isAgentTab) {
     return (
       <ConnectWalletCard
         title="Submit"

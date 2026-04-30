@@ -527,11 +527,41 @@ export function AgentSubmissionPanel() {
   const publicAgentOrigin = publicAgentApiBaseUrl || "https://curyo.example";
   const publicMcpUrl = `${publicAgentOrigin}/api/mcp/public`;
   const publicAgentHttpUrl = `${publicAgentOrigin}/api/agent`;
+  const publicSigningIntentUrl = `${publicAgentHttpUrl}/signing-intents`;
+  const localSignerSnippet = [
+    "export CURYO_API_BASE_URL=" + publicAgentOrigin,
+    "export CURYO_RPC_URL=https://forno.celo.org",
+    "export CURYO_CHAIN_ID=42220",
+    "export CURYO_LOCAL_SIGNER_KEYSTORE_PATH=$HOME/.curyo/local-signer.json",
+    "yarn workspace @curyo/agents wallet --generate",
+    "yarn workspace @curyo/agents local-ask --file ./ask.json",
+  ].join("\n");
+  const browserSigningPayload = JSON.stringify(
+    {
+      request: {
+        chainId: targetNetwork.id,
+        clientRequestId: "agent-design-review-001",
+        signatureMode: "browser_link",
+        walletAddress: agentWalletAddress ?? "0x...",
+        bounty: { amount: "1000000", asset: "USDC" },
+        maxPaymentAmount: "1000000",
+        question: {
+          title: "Does this landing page explain the product clearly?",
+          contextUrl: "https://example.com/public-preview",
+          categoryId: "5",
+          tags: ["design", "landing-page"],
+        },
+      },
+    },
+    null,
+    2,
+  );
   const publicMcpConfig = useMemo(() => {
     return JSON.stringify(
       {
         mcpServers: {
           curyo: {
+            transport: "streamable-http",
             headers: {
               "MCP-Protocol-Version": "2025-11-25",
             },
@@ -896,7 +926,7 @@ export function AgentSubmissionPanel() {
                   <h3 className="mt-1 text-lg font-semibold">Access token</h3>
                 </div>
                 <div className="flex flex-wrap items-center justify-end gap-2">
-                  <Link href={`${DOCS_AI_ROUTE}#mcp-adapter-shape`} className="link link-primary text-sm">
+                  <Link href={`${DOCS_AI_ROUTE}#mcp`} className="link link-primary text-sm">
                     For Agents
                   </Link>
                 </div>
@@ -948,10 +978,14 @@ export function AgentSubmissionPanel() {
       <div className="surface-card rounded-lg p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className={surfaceSectionHeadingClassName}>Agent Setup</h1>
+            <h1 className={surfaceSectionHeadingClassName}>For Agents</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-base-content/65">
+              Choose how an AI agent will pay for asks: send a browser signing link to a user, run a local signer CLI,
+              or add managed controls for production agents.
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Link href={`${DOCS_AI_ROUTE}#get-started`} className="btn btn-outline btn-sm">
+            <Link href={`${DOCS_AI_ROUTE}#paths`} className="btn btn-outline btn-sm">
               For Agents
               <ArrowTopRightOnSquareIcon className="h-4 w-4" />
             </Link>
@@ -1019,24 +1053,38 @@ export function AgentSubmissionPanel() {
 
           <div className="mt-5 grid gap-3 md:grid-cols-3">
             <div className="rounded-lg border border-base-300 bg-base-100/50 p-4">
-              <h4 className="text-sm font-semibold">Programmatic wallet</h4>
+              <h4 className="text-sm font-semibold">User signs in browser</h4>
               <p className="mt-2 text-sm leading-relaxed text-base-content/60">
-                Generate a dedicated EVM key in your agent runtime or wallet service and paste only its public address
-                here.
+                The agent creates a signing link. The user opens Curyo, connects the wallet, and approves the exact ask
+                calls in the browser.
               </p>
+              <button type="button" className="btn btn-outline btn-xs mt-3" onClick={() => setActiveSetupStep("mcp")}>
+                View handoff API
+              </button>
             </div>
             <div className="rounded-lg border border-base-300 bg-base-100/50 p-4">
-              <h4 className="text-sm font-semibold">Smart wallet</h4>
+              <h4 className="text-sm font-semibold">Local signer CLI</h4>
               <p className="mt-2 text-sm leading-relaxed text-base-content/60">
-                Use an embedded or account-abstraction wallet when your agent signs through a managed wallet provider.
+                Generate an encrypted local signer, paste its public address here, fund it with Celo USDC, then run
+                <span className="font-mono"> local-ask</span>.
               </p>
+              <button type="button" className="btn btn-outline btn-xs mt-3" onClick={() => setActiveSetupStep("fund")}>
+                Fund signer
+              </button>
             </div>
             <div className="rounded-lg border border-base-300 bg-base-100/50 p-4">
-              <h4 className="text-sm font-semibold">Key custody</h4>
+              <h4 className="text-sm font-semibold">Managed policy token</h4>
               <p className="mt-2 text-sm leading-relaxed text-base-content/60">
-                Keep the private key in the agent vault or runtime. Curyo only stores controls after you enable and save
-                them.
+                Save optional spend/category controls and create a bearer token for agents that need callbacks, audit
+                history, or operator-managed limits.
               </p>
+              <button
+                type="button"
+                className="btn btn-outline btn-xs mt-3"
+                onClick={() => handlePolicyControlsChange(true)}
+              >
+                Use controls
+              </button>
             </div>
           </div>
 
@@ -1067,6 +1115,10 @@ export function AgentSubmissionPanel() {
                 Fund the wallet
                 <InfoTooltip text={AGENT_FUND_HELP_TEXT} position="right" />
               </h3>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-base-content/65">
+                For browser signing, fund the wallet that will open the signing link. For the local signer CLI, paste
+                the generated signer address above and fund that address here.
+              </p>
 
               <div className="mt-4 grid gap-3">
                 <div className="rounded-lg border border-base-300 bg-base-100/50 p-4">
@@ -1315,7 +1367,7 @@ export function AgentSubmissionPanel() {
                     : "Save optional controls before creating managed agent access."}
               </p>
             </div>
-            <Link href={`${DOCS_AI_ROUTE}#generic-mcp-config`} className="link link-primary text-sm">
+            <Link href={`${DOCS_AI_ROUTE}#mcp`} className="link link-primary text-sm">
               Setup guide
             </Link>
           </div>
@@ -1363,6 +1415,46 @@ export function AgentSubmissionPanel() {
                 <p className="mt-3 text-sm leading-relaxed text-base-content/60">
                   Include walletAddress on quote, ask, status, and result calls that use clientRequestId lookups.
                 </p>
+              </div>
+
+              <div className="mt-5 grid gap-4 lg:grid-cols-2">
+                <div className="rounded-lg border border-base-300 bg-base-100/50 p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="font-semibold">Browser signing link</h4>
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-xs"
+                      onClick={() => void handleCopy(publicSigningIntentUrl)}
+                    >
+                      Copy endpoint
+                    </button>
+                  </div>
+                  <p className="mt-2 text-sm leading-relaxed text-base-content/60">
+                    Create a short-lived signing link when a user should approve spend in their wallet.
+                  </p>
+                  <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap break-words rounded bg-black p-3 text-xs text-white">
+                    {`POST ${publicSigningIntentUrl}\n\n${browserSigningPayload}`}
+                  </pre>
+                </div>
+
+                <div className="rounded-lg border border-base-300 bg-base-100/50 p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="font-semibold">Local signer CLI</h4>
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-xs"
+                      onClick={() => void handleCopy(localSignerSnippet)}
+                    >
+                      Copy commands
+                    </button>
+                  </div>
+                  <p className="mt-2 text-sm leading-relaxed text-base-content/60">
+                    Use this path when a local agent owns an encrypted signer and can execute Curyo wallet calls.
+                  </p>
+                  <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap break-words rounded bg-black p-3 text-xs text-white">
+                    {localSignerSnippet}
+                  </pre>
+                </div>
               </div>
             </>
           ) : selectedPolicy ? (
