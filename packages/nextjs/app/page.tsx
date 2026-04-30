@@ -122,14 +122,14 @@ function LandingScrollTrails() {
         className="absolute left-1/2 top-0 h-full w-[125%] -translate-x-1/2 opacity-64 sm:w-[116%] lg:w-full"
       >
         <path
-          d="M610 4C742 156 588 314 724 472C860 632 1052 728 922 916C794 1102 856 1242 1018 1344C1152 1438 1088 1578 902 1680"
+          d="M588 4C676 56 714 126 664 214C586 354 724 472 860 632C1052 728 922 916 794 1102C856 1242 1018 1344 1152 1438C1088 1578 902 1680 902 1680"
           stroke="#F26426"
           strokeWidth="4"
           strokeLinecap="round"
           opacity="0.92"
         />
         <path
-          d="M584 58C458 222 674 366 518 552C362 736 430 888 584 1038C750 1198 676 1364 482 1510"
+          d="M650 4C562 58 518 130 572 220C660 366 458 438 518 552C362 736 430 888 584 1038C750 1198 676 1364 482 1510"
           stroke="#FF8A3D"
           strokeWidth="3.5"
           strokeLinecap="round"
