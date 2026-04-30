@@ -607,6 +607,55 @@ export function AgentSubmissionPanel() {
       </select>
     ) : null;
 
+  const accessModeSelector = (
+    <div className="mt-5 grid gap-3 md:grid-cols-2">
+      <button
+        type="button"
+        className={`rounded-lg border p-4 text-left transition-colors ${
+          agentAccessMode === "wallet_direct"
+            ? "border-primary/40 bg-primary/10 text-base-content"
+            : "border-base-300 bg-base-100/50 hover:border-primary/30"
+        }`}
+        onClick={() => handleAccessModeChange("wallet_direct")}
+      >
+        <span className="flex items-center gap-2 text-base font-semibold">
+          <input
+            type="radio"
+            className="radio radio-primary radio-sm"
+            checked={agentAccessMode === "wallet_direct"}
+            readOnly
+          />
+          Wallet direct
+        </span>
+        <span className="mt-2 block text-sm leading-relaxed text-base-content/65">
+          Use a wallet with USDC to quote, submit, confirm, and read asks without saving a Curyo policy or token.
+        </span>
+      </button>
+      <button
+        type="button"
+        className={`rounded-lg border p-4 text-left transition-colors ${
+          agentAccessMode === "managed_policy"
+            ? "border-primary/40 bg-primary/10 text-base-content"
+            : "border-base-300 bg-base-100/50 hover:border-primary/30"
+        }`}
+        onClick={() => handleAccessModeChange("managed_policy")}
+      >
+        <span className="flex items-center gap-2 text-base font-semibold">
+          <input
+            type="radio"
+            className="radio radio-primary radio-sm"
+            checked={agentAccessMode === "managed_policy"}
+            readOnly
+          />
+          Managed policy
+        </span>
+        <span className="mt-2 block text-sm leading-relaxed text-base-content/65">
+          Add Curyo-enforced category, scope, and spend limits, then issue a bearer token for managed agents.
+        </span>
+      </button>
+    </div>
+  );
+
   const renderUnlockAgentPoliciesButton = (size: "sm" | "xs" = "sm") => (
     <button
       type="button"
@@ -941,53 +990,6 @@ export function AgentSubmissionPanel() {
           </div>
         </div>
 
-        <div className="mt-5 grid gap-3 md:grid-cols-2">
-          <button
-            type="button"
-            className={`rounded-lg border p-4 text-left transition-colors ${
-              agentAccessMode === "wallet_direct"
-                ? "border-primary/40 bg-primary/10 text-base-content"
-                : "border-base-300 bg-base-100/50 hover:border-primary/30"
-            }`}
-            onClick={() => handleAccessModeChange("wallet_direct")}
-          >
-            <span className="flex items-center gap-2 text-base font-semibold">
-              <input
-                type="radio"
-                className="radio radio-primary radio-sm"
-                checked={agentAccessMode === "wallet_direct"}
-                readOnly
-              />
-              Wallet direct
-            </span>
-            <span className="mt-2 block text-sm leading-relaxed text-base-content/65">
-              Use a wallet with USDC to quote, submit, confirm, and read asks without saving a Curyo policy or token.
-            </span>
-          </button>
-          <button
-            type="button"
-            className={`rounded-lg border p-4 text-left transition-colors ${
-              agentAccessMode === "managed_policy"
-                ? "border-primary/40 bg-primary/10 text-base-content"
-                : "border-base-300 bg-base-100/50 hover:border-primary/30"
-            }`}
-            onClick={() => handleAccessModeChange("managed_policy")}
-          >
-            <span className="flex items-center gap-2 text-base font-semibold">
-              <input
-                type="radio"
-                className="radio radio-primary radio-sm"
-                checked={agentAccessMode === "managed_policy"}
-                readOnly
-              />
-              Managed policy
-            </span>
-            <span className="mt-2 block text-sm leading-relaxed text-base-content/65">
-              Add Curyo-enforced category, scope, and spend limits, then issue a bearer token for managed agents.
-            </span>
-          </button>
-        </div>
-
         <div className="mt-5 flex flex-wrap items-center gap-2 text-sm font-medium text-base-content/55">
           {setupSteps.map((step, index) => (
             <Fragment key={step.id}>
@@ -1022,6 +1024,8 @@ export function AgentSubmissionPanel() {
               <InfoTooltip text={AGENT_WALLET_HELP_TEXT} position="right" />
             </h3>
           </div>
+
+          {accessModeSelector}
 
           <div className={`mt-5 grid gap-3 ${agentAccessMode === "managed_policy" ? "md:grid-cols-2" : ""}`}>
             {agentAccessMode === "managed_policy" ? (
