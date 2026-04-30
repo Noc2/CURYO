@@ -52,7 +52,7 @@ magick -size 512x512 xc:none \
   -draw "circle 412.3,407.4 430.5,407.4" \
   -fill "#F26426" \
   -stroke none \
-  -draw "circle 276,256 377.9,256" \
+  -draw "circle 276,256 400,256" \
   "$PUBLIC_DIR/favicon.png"
 magick "$HERO_SOURCE" -resize 900x506 "$HERO_SOCIAL"
 magick "$HERO_SOURCE" -resize 900x506 "$HERO_BANNER"
