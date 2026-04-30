@@ -122,18 +122,25 @@ function LandingScrollTrails() {
         className="absolute left-1/2 top-0 h-full w-[125%] -translate-x-1/2 opacity-64 sm:w-[116%] lg:w-full"
       >
         <path
-          d="M360 0C190 210 540 360 430 560S640 900 510 1100S240 1360 420 1680"
+          d="M270 0C150 180 438 312 394 500S666 730 716 902S510 1160 464 1324S522 1554 624 1680"
           stroke="#F26426"
           strokeWidth="4"
           strokeLinecap="round"
           opacity="0.92"
         />
         <path
-          d="M820 0C1010 220 650 350 760 560S530 910 700 1110S1040 1370 810 1680"
+          d="M918 0C1042 184 760 318 816 506S570 748 498 936S746 1194 728 1384S574 1582 494 1680"
           stroke="#FF8A3D"
           strokeWidth="3.5"
           strokeLinecap="round"
           opacity="0.72"
+        />
+        <path
+          d="M620 0C746 174 536 346 626 540S886 812 774 986S458 1218 610 1398S836 1586 742 1680"
+          stroke="#FFB15C"
+          strokeWidth="3"
+          strokeLinecap="round"
+          opacity="0.78"
         />
       </svg>
     </div>
