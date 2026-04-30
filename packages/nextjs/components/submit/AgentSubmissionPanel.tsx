@@ -33,6 +33,7 @@ import {
   formatSubmissionRewardAmount,
   getConfiguredQuestionRewardPoolEscrowAddress,
   getDefaultUsdcAddress,
+  getDefaultUsdcDisplayName,
   parseSubmissionRewardAmount,
 } from "~~/lib/questionRewardPools";
 import { thirdwebClient } from "~~/services/thirdweb/client";
@@ -47,7 +48,7 @@ const WALLET_DIRECT_SETUP_STEP_ORDER = ["wallet", "fund", "mcp"] as const;
 const AGENT_WALLET_HELP_TEXT =
   "The agent wallet is the address your client passes as walletAddress when it pays USDC for asks.";
 const AGENT_FUND_HELP_TEXT =
-  "Add Celo USDC to the agent wallet. Agent clients automatically use the compatible payment path when submitting asks.";
+  "Add USDC to the agent wallet. Agent clients automatically use the compatible payment path when submitting asks.";
 const AGENT_POLICY_HELP_TEXT =
   "These limits are signed by the connected owner wallet and enforced by the managed MCP policy.";
 const AGENT_MCP_HELP_TEXT = "Use public MCP without a token, or create a managed token after saving a policy.";
@@ -161,6 +162,7 @@ export function AgentSubmissionPanel() {
   const [publicAgentApiBaseUrl, setPublicAgentApiBaseUrl] = useState("");
   const escrowAddress = getConfiguredQuestionRewardPoolEscrowAddress(targetNetwork.id);
   const usdcAddress = getDefaultUsdcAddress(targetNetwork.id);
+  const usdcDisplayName = getDefaultUsdcDisplayName(targetNetwork.id);
   const thirdwebTargetChain = useMemo(() => defineChain(targetNetwork), [targetNetwork]);
   const { categories, isLoading: categoriesLoading } = useCategoryRegistry();
   const allCategoryIds = useMemo(() => categories.map(category => category.id.toString()), [categories]);
@@ -1082,7 +1084,7 @@ export function AgentSubmissionPanel() {
                 <div className="rounded-lg border border-base-300 bg-base-100/50 p-4">
                   <div className="flex items-center gap-2 text-sm font-medium text-base-content/60">
                     <CpuChipIcon className="h-4 w-4" />
-                    <span>Celo USDC</span>
+                    <span>{usdcDisplayName}</span>
                   </div>
                   <p className="mt-2 text-lg font-semibold">{formatUsdc(balance)}</p>
                   <p className="mt-1 text-sm text-base-content/55">

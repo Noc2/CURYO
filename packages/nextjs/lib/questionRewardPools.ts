@@ -61,6 +61,8 @@ const CELO_USDC_BY_CHAIN_ID: Record<number, `0x${string}`> = {
   11142220: "0x01C5C0122039549AD1493B8220cABEdD739BC44E",
 };
 
+const LOCAL_MOCK_USDC_CONTRACT_NAME = "MockERC20";
+
 function normalizeAddress(value: string | undefined): `0x${string}` | undefined {
   const trimmed = value?.trim();
   return trimmed && isAddress(trimmed) ? (trimmed as `0x${string}`) : undefined;
@@ -99,7 +101,22 @@ export function getConfiguredQuestionRewardPoolEscrowAddress(chainId: number): `
 }
 
 export function getDefaultUsdcAddress(chainId: number): `0x${string}` | undefined {
-  return normalizeAddress(process.env.NEXT_PUBLIC_CELO_USDC_ADDRESS) ?? CELO_USDC_BY_CHAIN_ID[chainId];
+  return (
+    normalizeAddress(process.env.NEXT_PUBLIC_CELO_USDC_ADDRESS) ??
+    getDeployedContractAddress(chainId, LOCAL_MOCK_USDC_CONTRACT_NAME) ??
+    CELO_USDC_BY_CHAIN_ID[chainId]
+  );
+}
+
+export function getDefaultUsdcDisplayName(chainId: number): string {
+  if (
+    !normalizeAddress(process.env.NEXT_PUBLIC_CELO_USDC_ADDRESS) &&
+    getDeployedContractAddress(chainId, LOCAL_MOCK_USDC_CONTRACT_NAME)
+  ) {
+    return "Mock USDC";
+  }
+
+  return "Celo USDC";
 }
 
 export function parseUsdRewardPoolAmount(value: string): bigint | null {

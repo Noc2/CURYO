@@ -1,6 +1,12 @@
-import { getConfiguredQuestionRewardPoolEscrowAddress, parseUsdRewardPoolAmount } from "./questionRewardPools";
+import {
+  getConfiguredQuestionRewardPoolEscrowAddress,
+  getDefaultUsdcAddress,
+  getDefaultUsdcDisplayName,
+  parseUsdRewardPoolAmount,
+} from "./questionRewardPools";
 import assert from "node:assert/strict";
 import test from "node:test";
+import { contracts } from "~~/utils/scaffold-eth/contract";
 
 test("parseUsdRewardPoolAmount accepts plain decimal USDC amounts", () => {
   assert.equal(parseUsdRewardPoolAmount("10"), 10_000_000n);
@@ -54,6 +60,27 @@ test("getConfiguredQuestionRewardPoolEscrowAddress rejects mismatched production
       delete env.NEXT_PUBLIC_QUESTION_REWARD_POOL_ESCROW_ADDRESS;
     } else {
       env.NEXT_PUBLIC_QUESTION_REWARD_POOL_ESCROW_ADDRESS = originalOverride;
+    }
+  }
+});
+
+test("getDefaultUsdcAddress uses local MockERC20 before Celo defaults", () => {
+  const env = process.env as Record<string, string | undefined>;
+  const originalOverride = env.NEXT_PUBLIC_CELO_USDC_ADDRESS;
+  assert.ok(contracts);
+  const localMockUsdcAddress = (contracts[31337] as Record<string, { address?: string }>).MockERC20.address;
+  assert.ok(localMockUsdcAddress);
+
+  try {
+    delete env.NEXT_PUBLIC_CELO_USDC_ADDRESS;
+    assert.equal(getDefaultUsdcAddress(31337)?.toLowerCase(), localMockUsdcAddress.toLowerCase());
+    assert.equal(getDefaultUsdcDisplayName(31337), "Mock USDC");
+    assert.equal(getDefaultUsdcAddress(42220), "0xcebA9300f2b948710d2653dD7B07f33A8B32118C");
+  } finally {
+    if (originalOverride === undefined) {
+      delete env.NEXT_PUBLIC_CELO_USDC_ADDRESS;
+    } else {
+      env.NEXT_PUBLIC_CELO_USDC_ADDRESS = originalOverride;
     }
   }
 });
