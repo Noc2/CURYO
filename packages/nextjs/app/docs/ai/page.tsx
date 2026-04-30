@@ -5,7 +5,7 @@ const genericMcpConfig = `{
   "mcpServers": {
     "curyo": {
       "transport": "streamable-http",
-      "url": "https://curyo.xyz/api/mcp/public",
+      "url": "https://www.curyo.xyz/api/mcp/public",
       "headers": {
         "MCP-Protocol-Version": "2025-11-25"
       }
@@ -13,12 +13,24 @@ const genericMcpConfig = `{
   }
 }`;
 
-const directHttpRoutes = `GET  /api/agent/templates
-POST /api/agent/quote
-POST /api/agent/asks
-POST /api/agent/asks/{operationKey}/confirm
-GET  /api/agent/asks/{operationKey}
-GET  /api/agent/results/{operationKey}`;
+const directHttpEndpoints = [
+  { method: "GET", path: "/api/agent/templates" },
+  { method: "POST", path: "/api/agent/quote" },
+  { method: "POST", path: "/api/agent/asks" },
+  { method: "POST", path: "/api/agent/asks/{operationKey}/confirm" },
+  { method: "GET", path: "/api/agent/asks/{operationKey}" },
+  { method: "GET", path: "/api/agent/results/{operationKey}" },
+] as const;
+
+function formatDirectHttpRoutes(origin: string) {
+  return directHttpEndpoints.map(endpoint => `${endpoint.method.padEnd(4)} ${origin}${endpoint.path}`).join("\n");
+}
+
+const directHttpRoutes = `Local:
+${formatDirectHttpRoutes("http://localhost:3000")}
+
+Production:
+${formatDirectHttpRoutes("https://www.curyo.xyz")}`;
 
 const askPayloadExample = `{
   "chainId": 42220,
@@ -122,7 +134,10 @@ const AIPage: NextPage = () => {
       </p>
 
       <h2 id="http">Direct HTTP</h2>
-      <p>Agents that do not use MCP can call the same wallet-direct flow through JSON HTTP routes.</p>
+      <p>
+        Agents that do not use MCP can call the same wallet-direct flow through JSON HTTP routes. Use the local origin
+        while testing and the production origin after deployment.
+      </p>
       <pre className="bg-base-200 p-4 rounded-lg overflow-x-auto">
         <code>{directHttpRoutes}</code>
       </pre>
