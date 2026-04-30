@@ -109,49 +109,52 @@ function WorkflowHeading({
   );
 }
 
-type LandingOrbitDividerVariant = "hero-to-how" | "how-to-why" | "why-to-faq";
-
-function LandingOrbitDivider({ variant }: { variant: LandingOrbitDividerVariant }) {
-  const variantClassName =
-    variant === "how-to-why"
-      ? "-translate-x-1/2 scale-x-[-1]"
-      : variant === "why-to-faq"
-        ? "-translate-x-[52%] rotate-[1deg]"
-        : "-translate-x-[48%]";
-
+function LandingScrollTrails() {
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none relative z-0 mt-8 h-24 w-full overflow-hidden sm:mt-10 sm:h-28 lg:mt-12 lg:h-32"
+      className="pointer-events-none absolute inset-x-0 top-[36rem] bottom-8 z-0 overflow-hidden sm:top-[40rem] lg:top-[31rem]"
     >
       <svg
-        viewBox="0 0 1180 150"
+        viewBox="0 0 1180 1680"
         fill="none"
-        className={`absolute left-1/2 top-0 h-full w-full max-w-6xl ${variantClassName}`}
+        preserveAspectRatio="none"
+        className="absolute left-1/2 top-0 h-full w-[125%] -translate-x-1/2 opacity-55 sm:w-[116%] lg:w-full"
       >
         <path
-          d="M66 122C214 22 372 18 540 76C704 132 842 124 1056 30"
+          d="M930 0C1054 172 958 306 1042 470C1120 622 1016 770 900 918C774 1082 854 1230 1018 1344C1152 1438 1088 1578 902 1680"
           stroke="#F26426"
-          strokeWidth="4.5"
-          strokeLinecap="round"
-        />
-        <path
-          d="M182 34C338 102 480 126 652 82C802 44 918 56 1098 116"
-          stroke="#FF8A3D"
           strokeWidth="4"
           strokeLinecap="round"
-          strokeDasharray="1 15"
+          opacity="0.92"
         />
         <path
-          d="M322 112C476 20 642 8 800 66C926 112 1012 102 1134 54"
-          stroke="#E3A234"
-          strokeWidth="3.5"
+          d="M290 8C154 178 264 318 206 478C142 652 246 808 378 944C522 1090 420 1254 238 1368C88 1462 148 1586 350 1672"
+          stroke="white"
+          strokeWidth="3"
           strokeLinecap="round"
-          opacity="0.86"
+          opacity="0.32"
         />
-        <circle cx="292" cy="93" r="13" fill="#F26426" />
-        <circle cx="784" cy="60" r="10" fill="#FF8A3D" />
-        <circle cx="1034" cy="40" r="14" fill="#E3A234" />
+        <path
+          d="M760 40C866 194 760 338 842 504C920 660 850 814 704 956C548 1108 606 1244 790 1358C950 1456 902 1588 682 1678"
+          stroke="#E3A234"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeDasharray="1 16"
+          opacity="0.48"
+        />
+        <path
+          d="M548 80C432 248 518 392 438 558C356 730 430 888 584 1038C750 1198 676 1364 482 1510"
+          stroke="white"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeDasharray="1 18"
+          opacity="0.16"
+        />
+        <circle cx="930" cy="0" r="10" fill="#F26426" />
+        <circle cx="900" cy="918" r="12" fill="#F26426" />
+        <circle cx="350" cy="1672" r="10" fill="#FF8A3D" />
+        <circle cx="682" cy="1678" r="13" fill="#E3A234" />
       </svg>
     </div>
   );
@@ -181,7 +184,7 @@ function AskWorkflowSection() {
   const [agentStep, mcpStep, resultStep] = ASK_STEPS;
 
   return (
-    <section className="mt-8 w-full sm:mt-10 lg:mt-12">
+    <section className="relative z-10 mt-4 w-full sm:mt-6 lg:mt-8">
       <WorkflowHeading title="How It Works" />
       <div className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-3 lg:gap-6">
         <AskFlowPanel {...agentStep} />
@@ -230,7 +233,7 @@ function FeatureBenefitCard({
 
 function FeaturesBenefitsSection() {
   return (
-    <section className="mt-8 w-full sm:mt-10">
+    <section className="relative z-10 mt-14 w-full sm:mt-16">
       <WorkflowHeading title="Why It Works" />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-6">
         {FEATURE_BENEFITS.map((feature, index) => (
@@ -325,7 +328,9 @@ export default async function LandingPage() {
 
   return (
     <div className="flex flex-col items-center grow px-4 pt-8 pb-16 sm:pt-12 lg:pt-16">
-      <div className="w-full max-w-6xl flex flex-col items-center">
+      <div className="relative w-full max-w-6xl flex flex-col items-center">
+        <LandingScrollTrails />
+
         {/* Hero: stacked on mobile, oversized background illustration on large screens */}
         <div className="relative z-0 flex w-full flex-col lg:min-h-[34rem] lg:items-center lg:justify-center xl:min-h-[38rem]">
           {/* Animation: regular stack on mobile, oversized background layer on large screens */}
@@ -360,13 +365,10 @@ export default async function LandingPage() {
           </div>
         </div>
 
-        <LandingOrbitDivider variant="hero-to-how" />
         <AskWorkflowSection />
 
-        <LandingOrbitDivider variant="how-to-why" />
         <FeaturesBenefitsSection />
 
-        <LandingOrbitDivider variant="why-to-faq" />
         <LandingFaq />
       </div>
     </div>

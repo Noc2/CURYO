@@ -4,7 +4,7 @@ import { landingFaqItems } from "~~/lib/docs/landingFaq";
 
 export function LandingFaq() {
   return (
-    <section className="mt-8 w-full sm:mt-10">
+    <section className="relative z-10 mt-14 w-full sm:mt-16">
       <div className="mx-auto w-full">
         <h2 className="display-section mb-4 text-center text-4xl text-base-content sm:text-5xl">FAQ</h2>
 
