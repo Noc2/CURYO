@@ -6,6 +6,7 @@ import { clampContentRating, formatCommunityRatingAriaLabel, formatRatingScoreOu
 const START_ANGLE = 0;
 const MIN_ANIMATION_MS = 500;
 const MAX_ANIMATION_MS = 1200;
+const PROGRESS_STROKE = "#ffffff";
 
 function easeOutCubic(progress: number) {
   return 1 - Math.pow(1 - progress, 3);
@@ -38,22 +39,25 @@ export function RatingOrb({ rating, size = 196, className = "", showGlow = true 
   const progress = displayedRating / 100;
   const circumference = 2 * Math.PI * trackRadius;
   const progressLength = circumference * progress;
-  const flareStroke = `url(#${orbId}-flare)`;
-  const coreStroke = `url(#${orbId}-core)`;
   const endPoint = polarToCartesian(center, trackRadius, START_ANGLE + progress * 360);
   const isTinyOrb = size <= 64;
+  const isCompactOrb = size <= 88;
   const isSmallOrb = size <= 100;
   const trackWidth = isTinyOrb ? Math.max(3, size * 0.065) : Math.max(8, size * 0.034);
   const ratingFontSize = isTinyOrb
-    ? Math.max(13, size * 0.3)
-    : isSmallOrb
-      ? Math.max(30, size * 0.32)
-      : Math.max(36, size * 0.25);
+    ? Math.max(12, size * 0.26)
+    : isCompactOrb
+      ? Math.max(21, size * 0.235)
+      : isSmallOrb
+        ? Math.max(24, size * 0.26)
+        : Math.max(34, size * 0.23);
   const scaleFontSize = isTinyOrb
-    ? Math.max(6, ratingFontSize * 0.38)
-    : isSmallOrb
-      ? Math.max(12, ratingFontSize * 0.36)
-      : Math.max(16, ratingFontSize * 0.4);
+    ? Math.max(6, ratingFontSize * 0.36)
+    : isCompactOrb
+      ? Math.max(8, ratingFontSize * 0.32)
+      : isSmallOrb
+        ? Math.max(10, ratingFontSize * 0.34)
+        : Math.max(15, ratingFontSize * 0.38);
   const scoreGapClassName = isTinyOrb ? "ml-0.5" : isSmallOrb ? "ml-1" : "ml-2";
   const scoreMaxWidth = isTinyOrb ? size * 0.84 : trackRadius * 1.7;
 
@@ -108,15 +112,6 @@ export function RatingOrb({ rating, size = 196, className = "", showGlow = true 
     >
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="absolute inset-0 overflow-visible">
         <defs>
-          <linearGradient id={`${orbId}-flare`} x1="0%" y1="10%" x2="100%" y2="90%">
-            <stop offset="0%" stopColor="#B3341B" />
-            <stop offset="58%" stopColor="#F26426" />
-            <stop offset="100%" stopColor="#F5F0EB" />
-          </linearGradient>
-          <linearGradient id={`${orbId}-core`} x1="10%" y1="8%" x2="94%" y2="92%">
-            <stop offset="0%" stopColor="#F26426" />
-            <stop offset="100%" stopColor="#F5F0EB" />
-          </linearGradient>
           <radialGradient id={`${orbId}-fill`} cx="50%" cy="42%" r="66%">
             <stop offset="0%" stopColor="rgba(245,240,235,0.07)" />
             <stop offset="72%" stopColor="rgba(245,240,235,0.02)" />
@@ -166,11 +161,11 @@ export function RatingOrb({ rating, size = 196, className = "", showGlow = true 
                 cy={center}
                 r={trackRadius}
                 fill="none"
-                stroke={flareStroke}
+                stroke={PROGRESS_STROKE}
                 strokeWidth={trackWidth}
                 strokeLinecap="round"
                 filter={`url(#${orbId}-glow)`}
-                opacity="0.56"
+                opacity="0.46"
               />
             ) : null}
             <circle
@@ -178,7 +173,7 @@ export function RatingOrb({ rating, size = 196, className = "", showGlow = true 
               cy={center}
               r={trackRadius}
               fill="none"
-              stroke={flareStroke}
+              stroke={PROGRESS_STROKE}
               strokeWidth={trackWidth * 0.6}
               strokeLinecap="round"
             />
@@ -187,9 +182,10 @@ export function RatingOrb({ rating, size = 196, className = "", showGlow = true 
               cy={center}
               r={trackRadius}
               fill="none"
-              stroke={coreStroke}
+              stroke={PROGRESS_STROKE}
               strokeWidth={Math.max(2, trackWidth * 0.22)}
               strokeLinecap="round"
+              opacity="0.82"
             />
           </>
         ) : progress > 0 ? (
@@ -200,11 +196,11 @@ export function RatingOrb({ rating, size = 196, className = "", showGlow = true 
                 cy={center}
                 r={trackRadius}
                 fill="none"
-                stroke={flareStroke}
+                stroke={PROGRESS_STROKE}
                 strokeWidth={trackWidth}
                 strokeLinecap="round"
                 filter={`url(#${orbId}-glow)`}
-                opacity="0.56"
+                opacity="0.46"
                 strokeDasharray={`${progressLength} ${circumference}`}
                 transform={`rotate(-90 ${center} ${center})`}
               />
@@ -214,7 +210,7 @@ export function RatingOrb({ rating, size = 196, className = "", showGlow = true 
               cy={center}
               r={trackRadius}
               fill="none"
-              stroke={flareStroke}
+              stroke={PROGRESS_STROKE}
               strokeWidth={trackWidth * 0.6}
               strokeLinecap="round"
               strokeDasharray={`${progressLength} ${circumference}`}
@@ -225,14 +221,15 @@ export function RatingOrb({ rating, size = 196, className = "", showGlow = true 
               cy={center}
               r={trackRadius}
               fill="none"
-              stroke={coreStroke}
+              stroke={PROGRESS_STROKE}
               strokeWidth={Math.max(2, trackWidth * 0.22)}
               strokeLinecap="round"
+              opacity="0.82"
               strokeDasharray={`${progressLength} ${circumference}`}
               transform={`rotate(-90 ${center} ${center})`}
             />
-            <circle cx={endPoint.x} cy={endPoint.y} r={trackWidth * 0.3} fill="#F5F0EB" />
-            <circle cx={endPoint.x} cy={endPoint.y} r={trackWidth * 0.62} fill="rgba(242,100,38,0.22)" />
+            <circle cx={endPoint.x} cy={endPoint.y} r={trackWidth * 0.3} fill={PROGRESS_STROKE} />
+            <circle cx={endPoint.x} cy={endPoint.y} r={trackWidth * 0.62} fill="rgba(255,255,255,0.2)" />
           </>
         ) : null}
 
