@@ -193,8 +193,8 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     ///      and milestone-0 settlement move the dormancy window forward.
     mapping(uint256 => uint256) internal dormancyAnchorAt;
 
-    /// @notice Content that has ever received a commit from any authorized voting engine.
-    mapping(uint256 => bool) internal contentHasVotes;
+    /// @notice Voting engine whose current round may still need to block dormancy for this content.
+    mapping(uint256 => address) internal contentRoundTrackingEngine;
 
     /// @notice ProtocolConfig used for governance-tunable rating and slash parameters.
     ProtocolConfig public protocolConfig;
@@ -214,7 +214,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     SubmissionMediaValidator internal immutable SUBMISSION_MEDIA_VALIDATOR;
 
     /// @dev Reserved storage gap for future upgrades
-    uint256[43] private __gap;
+    uint256[42] private __gap;
 
     // --- Events ---
     event ContentSubmitted(
@@ -694,7 +694,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         Content storage c = contents[contentId];
         require(contentSubmitterIdentity[contentId] == _resolveOptionalSubmitterIdentity(msg.sender), "Not submitter");
         require(c.status == ContentStatus.Active, "Not active");
-        require(!contentHasVotes[contentId], "Content has votes");
+        require(contentRoundTrackingEngine[contentId] == address(0), "Content has votes");
         if (votingEngine != address(0)) {
             require(!IRoundVotingEngine(votingEngine).hasCommits(contentId), "Content has votes");
         }
@@ -1084,13 +1084,16 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     /// @dev Vote commits refresh UI-facing activity without extending the dormancy window.
     function updateActivity(uint256 contentId) external {
         if (msg.sender != votingEngine) revert OnlyVotingEngine();
-        contentHasVotes[contentId] = true;
+        if (contentRoundTrackingEngine[contentId] == address(0)) contentRoundTrackingEngine[contentId] = msg.sender;
         contents[contentId].lastActivityAt = uint48(block.timestamp);
     }
 
     /// @notice Called by VotingEngine when content reaches milestone 0 through a settled round.
     function recordMeaningfulActivity(uint256 contentId) external {
-        if (votingEngineCallbackGeneration[msg.sender] == 0) revert OnlyVotingEngine();
+        uint256 callerGeneration = votingEngineCallbackGeneration[msg.sender];
+        if (callerGeneration == 0) revert OnlyVotingEngine();
+        if (callerGeneration < contentSettlementEngineGeneration[contentId]) return;
+        contentRoundTrackingEngine[contentId] = msg.sender;
         contents[contentId].lastActivityAt = uint48(block.timestamp);
         dormancyAnchorAt[contentId] = block.timestamp;
     }
@@ -1397,17 +1400,20 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     }
 
     function _hasOpenRound(uint256 contentId) internal view returns (bool) {
-        if (votingEngine == address(0)) return false;
-        if (
-            votingEngineGeneration > 1 && contentHasVotes[contentId]
-                && contentSettlementEngineGeneration[contentId] < votingEngineGeneration
-        ) return true;
+        address trackedEngine = contentRoundTrackingEngine[contentId];
+        if (trackedEngine != address(0) && _engineHasOpenRound(trackedEngine, contentId)) return true;
 
-        uint256 activeRoundId = IRoundVotingEngine(votingEngine).currentRoundId(contentId);
+        address currentEngine = votingEngine;
+        if (currentEngine == address(0) || currentEngine == trackedEngine) return false;
+        return _engineHasOpenRound(currentEngine, contentId);
+    }
+
+    function _engineHasOpenRound(address engine, uint256 contentId) internal view returns (bool) {
+        uint256 activeRoundId = IRoundVotingEngine(engine).currentRoundId(contentId);
         if (activeRoundId == 0) return false;
 
         (, RoundLib.RoundState roundState,,,,,,,,,,,,) =
-            IRoundVotingEngine(votingEngine).rounds(contentId, activeRoundId);
+            IRoundVotingEngine(engine).rounds(contentId, activeRoundId);
         return roundState == RoundLib.RoundState.Open;
     }
 

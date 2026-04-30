@@ -1943,6 +1943,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             uint8(RoundEngineReadHelpers.round(votingEngine, 1, roundId).state),
             uint8(RoundLib.RoundState.Settled)
         );
+
+        vm.warp(T0 + 30 days + 30 minutes);
+        assertTrue(registry.isDormancyEligible(1), "stale settlement must not refresh dormancy anchor");
     }
 
     function test_CancelContent_VotingEngineNotSet_AllowsCancel() public {
@@ -2145,6 +2148,33 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.warp(T0 + 31 days);
         vm.expectRevert("Content has active round");
         registry.markDormant(1);
+    }
+
+    function test_MarkDormant_AfterRotatedOldRoundCancelled_AllowsDormant() public {
+        vm.startPrank(submitter);
+        hrepToken.approve(address(registry), 10e6);
+        _submitContentWithReservation(registry, "https://example.com/rotated-cancelled-round", "goal", "goal", "tags", 0);
+        vm.stopPrank();
+
+        _commit(voter1, 1, true);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, 1);
+
+        RoundVotingEngine replacementEngine = _deployReplacementVotingEngine();
+        vm.startPrank(owner);
+        registry.pause();
+        registry.setVotingEngine(address(replacementEngine));
+        registry.unpause();
+        vm.stopPrank();
+
+        vm.warp(T0 + 7 days + 1);
+        votingEngine.cancelExpiredRound(1, roundId);
+
+        vm.warp(T0 + 31 days);
+        assertTrue(registry.isDormancyEligible(1), "terminal old round should not pin dormancy");
+        registry.markDormant(1);
+
+        (,,,,, ContentRegistry.ContentStatus status,,,,) = registry.contents(1);
+        assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Dormant));
     }
 
     function test_MarkDormant_CancelledRound_UsesDormancyAnchor() public {
