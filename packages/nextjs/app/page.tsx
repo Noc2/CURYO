@@ -109,6 +109,54 @@ function WorkflowHeading({
   );
 }
 
+type LandingOrbitDividerVariant = "hero-to-how" | "how-to-why" | "why-to-faq";
+
+function LandingOrbitDivider({ variant }: { variant: LandingOrbitDividerVariant }) {
+  const variantClassName =
+    variant === "how-to-why"
+      ? "-translate-x-1/2 scale-x-[-1]"
+      : variant === "why-to-faq"
+        ? "-translate-x-[52%] rotate-[1deg]"
+        : "-translate-x-[48%]";
+
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none relative z-0 mt-8 h-24 w-full overflow-hidden sm:mt-10 sm:h-28 lg:mt-12 lg:h-32"
+    >
+      <svg
+        viewBox="0 0 1180 150"
+        fill="none"
+        className={`absolute left-1/2 top-0 h-full w-full max-w-6xl ${variantClassName}`}
+      >
+        <path
+          d="M66 122C214 22 372 18 540 76C704 132 842 124 1056 30"
+          stroke="#F26426"
+          strokeWidth="4.5"
+          strokeLinecap="round"
+        />
+        <path
+          d="M182 34C338 102 480 126 652 82C802 44 918 56 1098 116"
+          stroke="#FF8A3D"
+          strokeWidth="4"
+          strokeLinecap="round"
+          strokeDasharray="1 15"
+        />
+        <path
+          d="M322 112C476 20 642 8 800 66C926 112 1012 102 1134 54"
+          stroke="#E3A234"
+          strokeWidth="3.5"
+          strokeLinecap="round"
+          opacity="0.86"
+        />
+        <circle cx="292" cy="93" r="13" fill="#F26426" />
+        <circle cx="784" cy="60" r="10" fill="#FF8A3D" />
+        <circle cx="1034" cy="40" r="14" fill="#E3A234" />
+      </svg>
+    </div>
+  );
+}
+
 function AskFlowPanel({
   icon: Icon,
   title,
@@ -133,7 +181,7 @@ function AskWorkflowSection() {
   const [agentStep, mcpStep, resultStep] = ASK_STEPS;
 
   return (
-    <section className="mt-20 w-full sm:mt-24 lg:mt-28">
+    <section className="mt-8 w-full sm:mt-10 lg:mt-12">
       <WorkflowHeading title="How It Works" />
       <div className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-3 lg:gap-6">
         <AskFlowPanel {...agentStep} />
@@ -182,7 +230,7 @@ function FeatureBenefitCard({
 
 function FeaturesBenefitsSection() {
   return (
-    <section className="mt-14 w-full sm:mt-16">
+    <section className="mt-8 w-full sm:mt-10">
       <WorkflowHeading title="Why It Works" />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-6">
         {FEATURE_BENEFITS.map((feature, index) => (
@@ -311,10 +359,13 @@ export default async function LandingPage() {
           </div>
         </div>
 
+        <LandingOrbitDivider variant="hero-to-how" />
         <AskWorkflowSection />
 
+        <LandingOrbitDivider variant="how-to-why" />
         <FeaturesBenefitsSection />
 
+        <LandingOrbitDivider variant="why-to-faq" />
         <LandingFaq />
       </div>
     </div>
