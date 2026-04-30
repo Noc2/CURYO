@@ -5163,6 +5163,11 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "error",
+          name: "OnlyVotingEngine",
+          inputs: [],
+        },
+        {
+          type: "error",
           name: "ReentrancyGuardReentrantCall",
           inputs: [],
         },
@@ -8577,7 +8582,7 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "uint256",
             },
             {
-              name: "winningStake",
+              name: "weightedWinningStake",
               type: "uint256",
               internalType: "uint256",
             },

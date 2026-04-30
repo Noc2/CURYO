@@ -1190,7 +1190,7 @@ export const RoundRewardDistributorAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "winningStake",
+        "name": "weightedWinningStake",
         "type": "uint256",
         "internalType": "uint256"
       }

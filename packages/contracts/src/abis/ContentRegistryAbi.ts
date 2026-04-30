@@ -2338,6 +2338,11 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "error",
+    "name": "OnlyVotingEngine",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "ReentrancyGuardReentrantCall",
     "inputs": []
   },
