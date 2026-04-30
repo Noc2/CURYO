@@ -157,7 +157,10 @@ function AskFlowPanel({
   description: string;
 }) {
   return (
-    <div className="surface-card flex h-full min-h-[17.5rem] flex-col items-center justify-center rounded-[1.25rem] px-6 py-8 text-center">
+    <div
+      className="surface-card flex h-full min-h-[17.5rem] flex-col items-center justify-center rounded-[1.25rem] px-6 py-8 text-center"
+      style={{ background: "var(--curyo-surface-elevated)" }}
+    >
       <div className="mb-6 flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-base-300 shadow-[0_14px_28px_rgba(9,10,12,0.24)]">
         <Icon className="h-10 w-10 text-primary" />
       </div>
