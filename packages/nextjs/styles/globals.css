@@ -3,7 +3,7 @@
 @theme {
   --shadow-center: 0 0 12px -2px rgb(9 10 12 / 0.05);
   --animate-pulse-fast: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-source-sans), ui-sans-serif, system-ui, sans-serif;
   --font-heading: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
 }
@@ -65,7 +65,7 @@
   h4 {
     margin-bottom: 0;
     line-height: 1.2;
-  letter-spacing: 0;
+    letter-spacing: 0;
     font-family: var(--font-heading);
   }
 
