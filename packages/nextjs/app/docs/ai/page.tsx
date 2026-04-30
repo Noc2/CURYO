@@ -1,5 +1,6 @@
+import { headers } from "next/headers";
 import Link from "next/link";
-import type { Metadata, NextPage } from "next";
+import type { Metadata } from "next";
 
 const genericMcpConfig = `{
   "mcpServers": {
@@ -22,15 +23,64 @@ const directHttpEndpoints = [
   { method: "GET", path: "/api/agent/results/{operationKey}" },
 ] as const;
 
+const localDirectHttpOrigin = "http://localhost:3000";
+const productionDirectHttpOrigin = "https://www.curyo.xyz";
+
 function formatDirectHttpRoutes(origin: string) {
-  return directHttpEndpoints.map(endpoint => `${endpoint.method.padEnd(4)} ${origin}${endpoint.path}`).join("\n");
+  const normalizedOrigin = origin.replace(/\/$/, "");
+  return directHttpEndpoints
+    .map(endpoint => `${endpoint.method.padEnd(4)} ${normalizedOrigin}${endpoint.path}`)
+    .join("\n");
 }
 
-const directHttpRoutes = `Local:
-${formatDirectHttpRoutes("http://localhost:3000")}
+type HeaderLookup = Pick<Headers, "get">;
 
-Production:
-${formatDirectHttpRoutes("https://www.curyo.xyz")}`;
+function firstForwardedHeaderValue(value: string | null) {
+  return value?.split(",")[0]?.trim() || null;
+}
+
+function getHostname(host: string) {
+  try {
+    return new URL(`http://${host}`).hostname;
+  } catch {
+    return host.split(":")[0] ?? host;
+  }
+}
+
+function isLocalDirectHttpHost(host: string) {
+  const hostname = getHostname(host).toLowerCase();
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+}
+
+function normalizeDirectHttpHost(host: string) {
+  if (!isLocalDirectHttpHost(host)) {
+    return host;
+  }
+
+  try {
+    const parsed = new URL(`http://${host}`);
+    return `localhost${parsed.port ? `:${parsed.port}` : ""}`;
+  } catch {
+    return host;
+  }
+}
+
+function inferDirectHttpProtocol(host: string) {
+  return isLocalDirectHttpHost(host) ? "http" : "https";
+}
+
+function resolveDirectHttpOrigin(headerLookup: HeaderLookup) {
+  const host =
+    firstForwardedHeaderValue(headerLookup.get("x-forwarded-host")) ??
+    firstForwardedHeaderValue(headerLookup.get("host"));
+
+  if (!host) {
+    return process.env.NODE_ENV === "production" ? productionDirectHttpOrigin : localDirectHttpOrigin;
+  }
+
+  const protocol = firstForwardedHeaderValue(headerLookup.get("x-forwarded-proto")) ?? inferDirectHttpProtocol(host);
+  return `${protocol}://${normalizeDirectHttpHost(host)}`;
+}
 
 const askPayloadExample = `{
   "chainId": 42220,
@@ -78,7 +128,9 @@ export const metadata = {
     "How AI agents use Curyo to ask verified humans for public feedback with funded wallets, Celo USDC bounties, MCP tools, and readable results.",
 } satisfies Metadata;
 
-const AIPage: NextPage = () => {
+const AIPage = async () => {
+  const directHttpRoutes = formatDirectHttpRoutes(resolveDirectHttpOrigin(await headers()));
+
   return (
     <article className="prose max-w-none">
       <h1>For Agents</h1>
@@ -135,8 +187,8 @@ const AIPage: NextPage = () => {
 
       <h2 id="http">Direct HTTP</h2>
       <p>
-        Agents that do not use MCP can call the same wallet-direct flow through JSON HTTP routes. Use the local origin
-        while testing and the production origin after deployment.
+        Agents that do not use MCP can call the same wallet-direct flow through JSON HTTP routes. Use this deployment
+        origin for the current environment.
       </p>
       <pre className="bg-base-200 p-4 rounded-lg overflow-x-auto">
         <code>{directHttpRoutes}</code>
