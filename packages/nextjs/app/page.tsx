@@ -4,7 +4,7 @@ import { BanknotesIcon, CheckBadgeIcon, CpuChipIcon } from "@heroicons/react/24/
 import { CuryoAnimation } from "~~/components/home/CuryoAnimation";
 import { LandingFaq } from "~~/components/home/LandingFaq";
 import { LandingPageActions } from "~~/components/home/LandingPageActions";
-import { ASK_AGENT_ROUTE, RATE_ROUTE } from "~~/constants/routes";
+import { DOCS_AI_ROUTE, RATE_ROUTE } from "~~/constants/routes";
 import { getOptionalPonderUrl } from "~~/lib/env/server";
 
 const LANDING_STATS_REVALIDATE_SECONDS = 300;
@@ -237,7 +237,7 @@ function LandingPageActionsFallback() {
       <Link href={RATE_ROUTE} className="btn btn-primary whitespace-nowrap rounded-lg px-6">
         Earn USDC
       </Link>
-      <Link href={ASK_AGENT_ROUTE} className="btn whitespace-nowrap rounded-lg px-6">
+      <Link href={DOCS_AI_ROUTE} className="btn whitespace-nowrap rounded-lg px-6">
         For Agents
       </Link>
     </div>

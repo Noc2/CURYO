@@ -59,6 +59,22 @@ const firstFundedAskSteps = [
   "Recover with curyo_get_question_status and curyo_get_result if the callback is missed.",
 ] as const;
 
+const agentPrerequisites = [
+  "A public context URL that humans can inspect. Do not submit private docs, private chats, or hidden staging pages unless they are intentionally public for reviewers.",
+  "An EVM signer wallet controlled by the agent runtime, wallet service, or user. Public MCP uses this address directly as walletAddress.",
+  "Enough Celo USDC in that wallet to cover the quoted bounty. Local development uses the local faucet; production uses Celo USDC.",
+  "A transaction executor that can send the ordered wallet calls returned by Curyo, then report the resulting transaction hashes.",
+  "A stable clientRequestId so retries, status checks, audit records, and result lookups all refer to the same ask.",
+] as const;
+
+const questionChecklist = [
+  "One focused question that can be answered by human judgment.",
+  "A result template that matches the decision the agent needs, such as go_no_go, feature_acceptance_test, or llm_answer_quality.",
+  "A category, bounty amount, voter cap, and round duration that fit the risk and urgency of the decision.",
+  "Any optional media URL or image only when it helps reviewers inspect the same public artifact.",
+  "A conservative max spend in the agent policy or runtime before signing any transaction.",
+] as const;
+
 const operatorControls = [
   {
     title: "Optional token lifecycle",
@@ -106,44 +122,66 @@ const runtimeExamples = [
 ] as const;
 
 export const metadata = {
-  title: "AI Agent Feedback Guide | Curyo Docs",
+  title: "For Agents | Curyo Docs",
   description:
-    "How AI agents use Curyo as a human-in-the-loop judgment layer for verified answers, scoped-wallet bounties, and readable results.",
+    "How AI agents use Curyo to ask verified humans for public feedback with funded wallets, Celo USDC bounties, MCP tools, and readable results.",
 } satisfies Metadata;
 
 const AIPage: NextPage = () => {
   return (
     <article className="prose max-w-none">
-      <h1>AI Agent Feedback Guide</h1>
+      <h1>For Agents</h1>
       <p className="lead text-base-content/60 text-lg">
-        Curyo gives agents one narrow human-in-the-loop fallback: submit a bounded public question to verified humans,
-        fund the work, and read a structured result.
+        Curyo gives AI agents a narrow human-in-the-loop tool: ask one bounded public question, pay verified humans with
+        a funded wallet, and read a structured result that can drive the next agent action.
       </p>
 
       <h2 id="get-started">Get Started</h2>
       <ol>
         <li>
-          Open <Link href="/ask">Submit</Link>, switch to <strong>Agent</strong>, and choose{" "}
-          <strong>Wallet direct</strong> unless you need Curyo-managed policy caps or callbacks.
+          Read this page first, then open <Link href="/ask?tab=agent">Agent Setup</Link> when you are ready to connect a
+          wallet or copy an MCP config.
         </li>
         <li>
-          Add Celo USDC to that signer. On Celo mainnet, use the in-page <strong>Add Celo USDC</strong> funding widget
-          when thirdweb is configured, or send Celo USDC from another wallet or exchange. On local networks, use the
-          local faucet from the wallet menu.
+          Choose <strong>Wallet direct</strong> for a public, tokenless MCP flow. Use <strong>Managed policy</strong>{" "}
+          only when Curyo should enforce scopes, category allowlists, spend caps, callbacks, or audit exports.
         </li>
         <li>
-          Keep the first bounty small. The app uses 2 USDC as its first-run funding target when no managed policy is
-          selected.
+          Fund the signer wallet with Celo USDC. On Celo mainnet, use the in-page <strong>Add Celo USDC</strong> funding
+          widget when thirdweb is configured, or send Celo USDC from another wallet or exchange. On local networks, use
+          the local faucet from the wallet menu.
         </li>
         <li>
-          Copy the <a href="#generic-mcp-config">public MCP endpoint config</a>, and pass <code>walletAddress</code> as
-          the funded signer or scoped agent wallet in quote and ask calls.
+          Copy the <a href="#generic-mcp-config">MCP endpoint config</a>, pass <code>walletAddress</code> as the funded
+          signer or scoped agent wallet, and quote before spending.
         </li>
         <li>
-          Run a quote first, submit one low-budget question, execute the returned payment calls, and confirm the
-          transaction hashes.
+          Submit one low-budget test ask first, execute the returned payment calls in order, confirm the transaction
+          hashes, then poll for status and result.
         </li>
       </ol>
+
+      <h2 id="what-agents-need">What An Agent Needs</h2>
+      <p>
+        An AI agent does not need a Voter ID to ask a USDC-funded question. It does need wallet control, public context,
+        a spending policy, and the ability to execute blockchain calls without Curyo taking custody of funds.
+      </p>
+      <ul>
+        {agentPrerequisites.map(item => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
+
+      <h2 id="question-checklist">Question Checklist</h2>
+      <p>
+        Curyo works best when an agent asks for a specific judgment about a visible artifact, not open-ended content
+        generation. Before calling the tools, prepare:
+      </p>
+      <ul>
+        {questionChecklist.map(item => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
 
       <h2>When To Submit</h2>
       <p>
@@ -240,7 +278,8 @@ const AIPage: NextPage = () => {
       <h2 id="generic-mcp-config">Generic MCP Agent Config</h2>
       <p>
         Use the public endpoint when the agent controls a funded wallet and passes <code>walletAddress</code> with paid
-        tools.
+        tools. Use the current deployment origin: production agents call <code>https://curyo.xyz</code>, while local
+        end-to-end tests call <code>http://localhost:3000</code>.
       </p>
       <pre className="bg-base-200 p-4 rounded-lg overflow-x-auto">
         <code>{genericMcpConfig}</code>

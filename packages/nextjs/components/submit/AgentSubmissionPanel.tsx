@@ -20,6 +20,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
+import { DOCS_AI_ROUTE } from "~~/constants/routes";
 import { useCopyToClipboard } from "~~/hooks/scaffold-eth";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import {
@@ -894,8 +895,8 @@ export function AgentSubmissionPanel() {
                   <h3 className="mt-1 text-lg font-semibold">Access token</h3>
                 </div>
                 <div className="flex flex-wrap items-center justify-end gap-2">
-                  <Link href="/docs/ai#mcp-adapter-shape" className="link link-primary text-sm">
-                    Docs
+                  <Link href={`${DOCS_AI_ROUTE}#mcp-adapter-shape`} className="link link-primary text-sm">
+                    For Agents
                   </Link>
                   {renderUnlockAgentPoliciesButton()}
                 </div>
@@ -950,8 +951,8 @@ export function AgentSubmissionPanel() {
             <h1 className={surfaceSectionHeadingClassName}>Agent Setup</h1>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Link href="/docs/ai#get-started" className="btn btn-outline btn-sm">
-              Docs
+            <Link href={`${DOCS_AI_ROUTE}#get-started`} className="btn btn-outline btn-sm">
+              For Agents
               <ArrowTopRightOnSquareIcon className="h-4 w-4" />
             </Link>
             {renderUnlockAgentPoliciesButton()}
@@ -1306,7 +1307,7 @@ export function AgentSubmissionPanel() {
                     : "Save a policy before creating agent access."}
               </p>
             </div>
-            <Link href="/docs/ai#generic-mcp-config" className="link link-primary text-sm">
+            <Link href={`${DOCS_AI_ROUTE}#generic-mcp-config`} className="link link-primary text-sm">
               Setup guide
             </Link>
           </div>
