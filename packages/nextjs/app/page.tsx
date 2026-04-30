@@ -109,39 +109,45 @@ function WorkflowHeading({
   );
 }
 
-function LandingScrollTrails() {
+type LandingOrbitDividerVariant = "how-to-why" | "why-to-faq";
+
+function LandingOrbitDivider({ variant }: { variant: LandingOrbitDividerVariant }) {
+  const variantClassName =
+    variant === "how-to-why" ? "-translate-x-1/2 scale-x-[-1]" : "-translate-x-[52%] rotate-[1deg]";
+
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none absolute inset-x-0 top-[36rem] bottom-8 z-0 overflow-hidden sm:top-[40rem] lg:top-[31rem]"
+      className="pointer-events-none relative z-0 mt-8 h-24 w-full overflow-hidden sm:mt-10 sm:h-28 lg:mt-12 lg:h-32"
     >
       <svg
-        viewBox="0 0 1180 1680"
+        viewBox="0 0 1180 150"
         fill="none"
-        preserveAspectRatio="none"
-        className="absolute left-1/2 top-0 h-full w-[125%] -translate-x-1/2 opacity-64 sm:w-[116%] lg:w-full"
+        className={`absolute left-1/2 top-0 h-full w-full max-w-6xl ${variantClassName}`}
       >
         <path
-          d="M270 0C150 180 438 312 394 500S666 730 716 902S510 1160 464 1324S522 1554 624 1680"
+          d="M66 122C214 22 372 18 540 76C704 132 842 124 1056 30"
           stroke="#F26426"
+          strokeWidth="4.5"
+          strokeLinecap="round"
+        />
+        <path
+          d="M182 34C338 102 480 126 652 82C802 44 918 56 1098 116"
+          stroke="#FF8A3D"
           strokeWidth="4"
           strokeLinecap="round"
-          opacity="0.92"
+          strokeDasharray="1 15"
         />
         <path
-          d="M918 0C1042 184 760 318 816 506S570 748 498 936S746 1194 728 1384S574 1582 494 1680"
-          stroke="#FF8A3D"
+          d="M322 112C476 20 642 8 800 66C926 112 1012 102 1134 54"
+          stroke="#E3A234"
           strokeWidth="3.5"
           strokeLinecap="round"
-          opacity="0.72"
+          opacity="0.86"
         />
-        <path
-          d="M620 0C746 174 536 346 626 540S886 812 774 986S458 1218 610 1398S836 1586 742 1680"
-          stroke="#FFB15C"
-          strokeWidth="3"
-          strokeLinecap="round"
-          opacity="0.78"
-        />
+        <circle cx="292" cy="93" r="13" fill="#F26426" />
+        <circle cx="784" cy="60" r="10" fill="#FF8A3D" />
+        <circle cx="1034" cy="40" r="14" fill="#E3A234" />
       </svg>
     </div>
   );
@@ -223,7 +229,7 @@ function FeatureBenefitCard({
 
 function FeaturesBenefitsSection() {
   return (
-    <section className="relative z-10 mt-14 w-full sm:mt-16">
+    <section className="relative z-10 mt-8 w-full sm:mt-10">
       <WorkflowHeading title="Why It Works" />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-6">
         {FEATURE_BENEFITS.map((feature, index) => (
@@ -319,8 +325,6 @@ export default async function LandingPage() {
   return (
     <div className="flex flex-col items-center grow px-4 pt-8 pb-16 sm:pt-12 lg:pt-16">
       <div className="relative w-full max-w-6xl flex flex-col items-center">
-        <LandingScrollTrails />
-
         {/* Hero: stacked on mobile, oversized background illustration on large screens */}
         <div className="relative z-0 flex w-full flex-col lg:min-h-[34rem] lg:items-center lg:justify-center xl:min-h-[38rem]">
           {/* Animation: regular stack on mobile, oversized background layer on large screens */}
@@ -357,8 +361,10 @@ export default async function LandingPage() {
 
         <AskWorkflowSection />
 
+        <LandingOrbitDivider variant="how-to-why" />
         <FeaturesBenefitsSection />
 
+        <LandingOrbitDivider variant="why-to-faq" />
         <LandingFaq />
       </div>
     </div>
