@@ -131,7 +131,7 @@ export const rewardSplitChartSlices = [
     label: "Consensus subsidy reserve",
     value: effectiveRawSharePercent(REWARD_SPLIT_BPS.consensus),
     displayValue: protocolDocFacts.consensusShortLabel,
-    color: "#B3341B",
+    color: "#BF3F18",
   },
   {
     label: "Frontend operators",

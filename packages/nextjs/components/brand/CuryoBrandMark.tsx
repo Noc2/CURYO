@@ -134,7 +134,7 @@ export function CuryoBrandMark({
             <stop offset="0.18" stopColor="#F8E1D0" />
             <stop offset="0.34" stopColor="#F7B070" />
             <stop offset="0.56" stopColor="#F26426" />
-            <stop offset="0.78" stopColor="#B23C3B" />
+            <stop offset="0.78" stopColor="#F26426" />
             <stop offset="1" stopColor="#6A345F" />
           </radialGradient>
           <radialGradient
@@ -192,8 +192,8 @@ export function CuryoBrandMark({
             gradientTransform="translate(620 760) rotate(8) scale(320 180)"
           >
             <stop stopColor="#8C4A53" stopOpacity="0.36" />
-            <stop offset="0.58" stopColor="#C46A4A" stopOpacity="0.22" />
-            <stop offset="1" stopColor="#C46A4A" stopOpacity="0" />
+            <stop offset="0.58" stopColor="#F26426" stopOpacity="0.22" />
+            <stop offset="1" stopColor="#F26426" stopOpacity="0" />
           </radialGradient>
           <linearGradient id={foldSheenId} x1="290" y1="820" x2="1036" y2="650" gradientUnits="userSpaceOnUse">
             <stop stopColor="#FFF7F0" stopOpacity="0" />
@@ -203,7 +203,7 @@ export function CuryoBrandMark({
             <stop offset="1" stopColor="#FFD7B2" stopOpacity="0" />
           </linearGradient>
           <linearGradient id={flareGradientId} x1="860" y1="260" x2="1050" y2="736" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#F45C4D" />
+            <stop stopColor="#F26426" />
             <stop offset="0.24" stopColor="#FF8A5D" />
             <stop offset="0.56" stopColor="#FFC37A" />
             <stop offset="0.82" stopColor="#FFE1A7" />
@@ -303,7 +303,7 @@ export function CuryoBrandMark({
                     cx="700"
                     cy="700"
                     r={flareRadius}
-                    stroke="#F45C4D"
+                    stroke="#F26426"
                     strokeOpacity={flareGlowOpacity}
                     strokeWidth={flareGlowStrokeWidth}
                     strokeLinecap="round"

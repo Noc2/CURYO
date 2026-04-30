@@ -28,7 +28,7 @@ import {
 
 // ── Brand colors ──
 const EMBER = "#F26426";
-const EMBER_DEEP = "#B3341B";
+const EMBER_DEEP = "#BF3F18";
 const STEEL = "#7E8996";
 const DARK = "#090A0C";
 const GRAY = STEEL;
@@ -64,7 +64,7 @@ function describeCoverLogoArcPath(startDegrees: number, sweepDegrees: number) {
 }
 
 const coverLogoFlareSegments = [
-  { start: -94, sweep: 26, stroke: "#F45C4D" },
+  { start: -94, sweep: 26, stroke: "#F26426" },
   { start: -70, sweep: 28, stroke: "#FF7254" },
   { start: -44, sweep: 30, stroke: "#FF8A5D" },
   { start: -16, sweep: 27, stroke: "#FFC37A" },
@@ -152,7 +152,7 @@ function CoverLogo() {
           <Stop offset={0.18} stopColor="#F8E1D0" />
           <Stop offset={0.34} stopColor="#F7B070" />
           <Stop offset={0.56} stopColor="#F26426" />
-          <Stop offset={0.78} stopColor="#B23C3B" />
+          <Stop offset={0.78} stopColor="#F26426" />
           <Stop offset={1} stopColor="#6A345F" />
         </RadialGradient>
         <RadialGradient id="cover-orb-rim" cx={438} cy={516} r={540} gradientUnits="userSpaceOnUse">
@@ -175,8 +175,8 @@ function CoverLogo() {
         </RadialGradient>
         <RadialGradient id="cover-blue-pocket" cx={620} cy={760} r={320} gradientUnits="userSpaceOnUse">
           <Stop offset={0} stopColor="#8C4A53" stopOpacity={0.36} />
-          <Stop offset={0.58} stopColor="#C46A4A" stopOpacity={0.22} />
-          <Stop offset={1} stopColor="#C46A4A" stopOpacity={0} />
+          <Stop offset={0.58} stopColor="#F26426" stopOpacity={0.22} />
+          <Stop offset={1} stopColor="#F26426" stopOpacity={0} />
         </RadialGradient>
         <LinearGradient id="cover-fold-sheen" x1="290" y1="820" x2="1036" y2="650" gradientUnits="userSpaceOnUse">
           <Stop offset={0} stopColor="#FFF7F0" stopOpacity={0} />

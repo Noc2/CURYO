@@ -41,7 +41,7 @@ const tokenDistributionEntries: readonly TokenDistributionEntry[] = [
     label: "Consensus Subsidy Reserve",
     amount: 4_000_000,
     purpose: "Pre-funded reserve for unanimous agreement rewards, replenished by 5% of each round's losing stakes",
-    color: "#B3341B",
+    color: "#BF3F18",
   },
 ] as const;
 

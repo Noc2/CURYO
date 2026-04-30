@@ -32,7 +32,7 @@
   --color-success-content: #000000;
   --color-warning: #ffc071;
   --color-warning-content: #000000;
-  --color-error: #dc4f30;
+  --color-error: #bf3f18;
   --color-error-content: #000000;
 
   --radius-selector: 0.5rem;
@@ -78,9 +78,9 @@
   background: #000000;
   --curyo-ember: #f26426;
   --curyo-ember-hover: #ff7a3d;
-  --curyo-ember-deep: #d94d1f;
-  --curyo-action-orange: #bf3f18;
-  --curyo-action-orange-hover: #a93712;
+  --curyo-ember-deep: #bf3f18;
+  --curyo-action-orange: #f26426;
+  --curyo-action-orange-hover: #ff7a3d;
   --curyo-action-content: #ffffff;
   --curyo-warm-white: #f5f0eb;
   --curyo-steel: #8b858e;
@@ -95,7 +95,7 @@
   --curyo-control-idle-muted-hover: rgb(245 240 235 / 0.17);
   --curyo-ember-rgb: 242 100 38;
   --curyo-ember-hover-rgb: 255 122 61;
-  --curyo-ember-deep-rgb: 217 77 31;
+  --curyo-ember-deep-rgb: 191 63 24;
   --curyo-warm-white-rgb: 245 240 235;
   --curyo-steel-rgb: 139 133 142;
   --curyo-surface-rgb: 0 0 0;
