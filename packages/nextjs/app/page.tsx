@@ -278,15 +278,15 @@ export default async function LandingPage() {
   return (
     <div className="flex flex-col items-center grow px-4 pt-8 pb-16 sm:pt-12 lg:pt-16">
       <div className="w-full max-w-6xl flex flex-col items-center">
-        {/* Hero: stacked on mobile, side-by-side on large screens */}
-        <div className="relative z-0 flex w-full flex-col lg:flex-row-reverse lg:items-center lg:gap-8 xl:gap-10">
-          {/* Animation (right on large screens) */}
-          <div className="relative z-0 lg:flex-[1.15] xl:flex-[1.22]">
+        {/* Hero: stacked on mobile, oversized background illustration on large screens */}
+        <div className="relative z-0 flex w-full flex-col lg:min-h-[34rem] lg:items-center lg:justify-center xl:min-h-[38rem]">
+          {/* Animation: regular stack on mobile, oversized background layer on large screens */}
+          <div className="relative z-0 lg:pointer-events-none lg:absolute lg:bottom-[-2.5rem] lg:left-[25rem] lg:right-0 lg:top-[-2.5rem] xl:bottom-[-3.5rem] xl:left-[23rem] xl:right-0 xl:top-[-3.5rem]">
             <CuryoAnimation />
           </div>
 
           {/* Title (left on large screens) */}
-          <div className="relative z-10 flex flex-col items-center lg:max-w-[32rem] lg:flex-[0.85] lg:items-start">
+          <div className="relative z-10 flex flex-col items-center lg:mr-auto lg:max-w-[32rem] lg:items-start lg:py-24 xl:py-28">
             <h1 className="hero-headline max-w-[14ch] text-center text-[2.35rem] text-base-content sm:max-w-[11ch] sm:text-[3.05rem] lg:max-w-none lg:text-left lg:text-[3.2rem] xl:text-[3.55rem]">
               <span className="block">AI Asks,</span>
               <span className="block">Humans Earn</span>
