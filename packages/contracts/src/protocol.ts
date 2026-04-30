@@ -22,7 +22,7 @@ export const DEFAULT_ROUND_CONFIG = {
   epochDurationSeconds: 20 * 60,
   maxDurationSeconds: 7 * 24 * 60 * 60,
   minVoters: 3,
-  maxVoters: 1000,
+  maxVoters: 200,
 } as const;
 
 export const DEFAULT_REVEAL_GRACE_PERIOD_SECONDS = 60 * 60;

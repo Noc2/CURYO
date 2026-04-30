@@ -490,7 +490,7 @@ test("supported sponsored operation families are allowlisted", async () => {
             bountyClosesAt: 0n,
             feedbackClosesAt: 0n,
           },
-          { epochDuration: 1200, maxDuration: 604800, minVoters: 3, maxVoters: 1000 },
+          { epochDuration: 1200, maxDuration: 604800, minVoters: 3, maxVoters: 200 },
           {
             questionMetadataHash: `0x${"6".repeat(64)}`,
             resultSpecHash: `0x${"7".repeat(64)}`,

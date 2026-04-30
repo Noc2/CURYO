@@ -1340,7 +1340,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             epochDuration: uint32(20 minutes),
             maxDuration: uint32(7 days),
             minVoters: uint16(3),
-            maxVoters: uint16(1000)
+            maxVoters: uint16(200)
         });
     }
 

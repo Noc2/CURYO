@@ -110,7 +110,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         registry.setTreasury(treasury);
         ProtocolConfig(address(votingEngine.protocolConfig())).setRewardDistributor(address(rewardDistributor));
         ProtocolConfig(address(votingEngine.protocolConfig())).setTreasury(treasury);
-        _setTlockRoundConfig(ProtocolConfig(address(votingEngine.protocolConfig())), 1 hours, 7 days, 3, 1000);
+        _setTlockRoundConfig(ProtocolConfig(address(votingEngine.protocolConfig())), 1 hours, 7 days, 3, 200);
 
         mockVoterIdNFT = new MockVoterIdNFT();
         mockCategoryRegistry = new MockCategoryRegistry();
@@ -238,7 +238,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             feedbackClosesAt: rewardPoolExpiresAt
         });
         reservation.roundConfig =
-            RoundLib.RoundConfig({ epochDuration: 1 hours, maxDuration: 7 days, minVoters: 3, maxVoters: 1000 });
+            RoundLib.RoundConfig({ epochDuration: 1 hours, maxDuration: 7 days, minVoters: 3, maxVoters: 200 });
         return _reserveQuestionSubmission(reservation);
     }
 
@@ -288,7 +288,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     }
 
     function _defaultContentRoundConfig() internal pure returns (RoundLib.RoundConfig memory) {
-        return RoundLib.RoundConfig({ epochDuration: 1 hours, maxDuration: 7 days, minVoters: 3, maxVoters: 1000 });
+        return RoundLib.RoundConfig({ epochDuration: 1 hours, maxDuration: 7 days, minVoters: 3, maxVoters: 200 });
     }
 
     function _bundleContentRoundConfig() internal pure returns (RoundLib.RoundConfig memory) {
@@ -1940,8 +1940,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         assertEq(registry.getRating(1), 5200);
         assertEq(
-            uint8(RoundEngineReadHelpers.round(votingEngine, 1, roundId).state),
-            uint8(RoundLib.RoundState.Settled)
+            uint8(RoundEngineReadHelpers.round(votingEngine, 1, roundId).state), uint8(RoundLib.RoundState.Settled)
         );
 
         vm.warp(T0 + 30 days + 30 minutes);
@@ -2153,7 +2152,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     function test_MarkDormant_AfterRotatedOldRoundCancelled_AllowsDormant() public {
         vm.startPrank(submitter);
         hrepToken.approve(address(registry), 10e6);
-        _submitContentWithReservation(registry, "https://example.com/rotated-cancelled-round", "goal", "goal", "tags", 0);
+        _submitContentWithReservation(
+            registry, "https://example.com/rotated-cancelled-round", "goal", "goal", "tags", 0
+        );
         vm.stopPrank();
 
         _commit(voter1, 1, true);

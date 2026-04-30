@@ -44,7 +44,7 @@ const DEFAULT_SUBMISSION_ROUND_CONFIG: SubmissionRoundConfig = {
   epochDuration: 20 * 60,
   maxDuration: 7 * 24 * 60 * 60,
   minVoters: 3,
-  maxVoters: 1000,
+  maxVoters: 200,
 };
 const DIRECT_IMAGE_URL_PATTERN = /^https:\/\/\S+\.(?:avif|gif|jpe?g|png|webp)(?:[?#]\S*)?$/i;
 

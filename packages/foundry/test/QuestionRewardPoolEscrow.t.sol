@@ -363,6 +363,23 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         vm.stopPrank();
     }
 
+    function testRewardPoolRejectsQuestionVoterCapAboveQualificationLimit() public {
+        uint256 contentId = _submitQuestion("");
+        vm.mockCall(
+            address(registry),
+            abi.encodeWithSelector(ContentRegistry.getContentRoundConfig.selector, contentId),
+            abi.encode(
+                RoundLib.RoundConfig({ epochDuration: 10 minutes, maxDuration: 1 hours, minVoters: 3, maxVoters: 201 })
+            )
+        );
+
+        vm.startPrank(funder);
+        usdc.approve(address(rewardPoolEscrow), REWARD_POOL_AMOUNT);
+        vm.expectRevert("Voters exceed max");
+        rewardPoolEscrow.createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1, block.timestamp + 30 days, 0);
+        vm.stopPrank();
+    }
+
     function testEligibleFrontendReceivesThreePercentFromQuestionRewardClaims() public {
         _registerFrontend(frontend1);
 

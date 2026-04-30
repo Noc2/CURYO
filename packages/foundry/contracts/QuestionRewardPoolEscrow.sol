@@ -36,6 +36,7 @@ contract QuestionRewardPoolEscrow is
     uint256 internal constant MIN_REQUIRED_VOTERS = 3;
     uint256 internal constant MIN_REQUIRED_SETTLED_ROUNDS = 1;
     uint256 internal constant MAX_REQUIRED_SETTLED_ROUNDS = 16;
+    uint256 internal constant MAX_REWARD_POOL_ROUND_VOTERS = 200;
     uint256 internal constant BPS_SCALE = 10_000;
     uint256 internal constant DEFAULT_FRONTEND_FEE_BPS = 300;
     uint256 internal constant MAX_FRONTEND_FEE_BPS = 500;
@@ -454,6 +455,7 @@ contract QuestionRewardPoolEscrow is
         uint256 normalizedFeedbackClosesAt = _normalizeFeedbackClosesAt(bountyClosesAt, feedbackClosesAt);
         RoundLib.RoundConfig memory contentCfg = registry.getContentRoundConfig(contentId);
         require(requiredVoters <= contentCfg.maxVoters, "Voters exceed max");
+        require(contentCfg.maxVoters <= MAX_REWARD_POOL_ROUND_VOTERS, "Voters exceed max");
         if (!nonRefundable) {
             require(amount >= requiredSettledRounds * uint256(contentCfg.maxVoters), "Amount too small");
             require(bountyClosesAt > block.timestamp, "Bad close");
@@ -483,8 +485,8 @@ contract QuestionRewardPoolEscrow is
             fundedAmount: fundedAmount,
             unallocatedAmount: fundedAmount,
             claimedAmount: 0,
-            requiredVoters: requiredVoters.toUint32(),
-            requiredSettledRounds: requiredSettledRounds.toUint32(),
+            requiredVoters: uint32(requiredVoters),
+            requiredSettledRounds: uint32(requiredSettledRounds),
             qualifiedRounds: 0,
             refunded: false,
             unallocatedRefunded: false,
