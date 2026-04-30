@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { useQuery } from "@tanstack/react-query";
 import { decodeEventLog, toHex } from "viem";
 import { useAccount, useConfig, useReadContract } from "wagmi";
-import { getPublicClient, waitForTransactionReceipt, writeContract } from "wagmi/actions";
+import { getPublicClient, readContract, waitForTransactionReceipt, writeContract } from "wagmi/actions";
 import { ChevronDownIcon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { ContentEmbed } from "~~/components/content/ContentEmbed";
 import { GasBalanceWarning } from "~~/components/shared/GasBalanceWarning";
@@ -1232,6 +1232,45 @@ export function ContentSubmissionSection() {
       return;
     }
 
+    let verifiedRewardTokenAddress = rewardTokenAddress;
+    try {
+      const [wiredHrepAddress, wiredUsdcAddress, wiredRegistryAddress] = (await readContract(wagmiConfig, {
+        address: rewardEscrowAddress,
+        abi: QUESTION_REWARD_POOL_ESCROW_WIRING_ABI,
+        functionName: "getWiring",
+      })) as readonly [`0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`];
+
+      if (wiredRegistryAddress.toLowerCase() !== registryAddress.toLowerCase()) {
+        notification.error("Bounty escrow is not wired to this registry.");
+        return;
+      }
+      if (wiredHrepAddress.toLowerCase() !== hrepAddress.toLowerCase()) {
+        notification.error("Bounty escrow HREP token does not match this network.");
+        return;
+      }
+
+      const registryEscrowAddress = (await readContract(wagmiConfig, {
+        address: registryAddress,
+        abi: QUESTION_SUBMISSION_ABI,
+        functionName: "questionRewardPoolEscrow",
+      })) as `0x${string}`;
+
+      if (registryEscrowAddress.toLowerCase() !== rewardEscrowAddress.toLowerCase()) {
+        notification.error("Bounty escrow is not active for this registry.");
+        return;
+      }
+
+      verifiedRewardTokenAddress = rewardAsset === "hrep" ? hrepAddress : wiredUsdcAddress;
+    } catch {
+      notification.error("Could not verify bounty escrow wiring.");
+      return;
+    }
+
+    if (!verifiedRewardTokenAddress) {
+      notification.error(`${rewardAsset === "hrep" ? "HREP" : "USDC"} funding is unavailable right now.`);
+      return;
+    }
+
     const accepted = await requireAcceptance("submit");
     if (!accepted) return;
 
@@ -1434,7 +1473,7 @@ export function ContentSubmissionSection() {
           [
             {
               abi: ERC20_APPROVAL_ABI,
-              address: rewardTokenAddress,
+              address: verifiedRewardTokenAddress,
               args: [rewardEscrowAddress, selectedRewardAmount],
               functionName: "approve",
             },
@@ -1470,7 +1509,7 @@ export function ContentSubmissionSection() {
         submittedContentIds = extractSubmittedContentIds((callsResult.receipts ?? []).flatMap(receipt => receipt.logs));
       } else {
         const approveWrite = {
-          address: rewardTokenAddress,
+          address: verifiedRewardTokenAddress,
           abi: ERC20_APPROVAL_ABI,
           functionName: "approve",
           args: [rewardEscrowAddress, selectedRewardAmount],
