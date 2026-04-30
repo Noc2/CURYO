@@ -171,7 +171,7 @@ export function AgentSubmissionPanel() {
     allCategoryIds.length > 0 &&
     (policyForm.categories.length === 0 ||
       allCategoryIds.every(categoryId => policyForm.categories.includes(categoryId)));
-  const agentPolicies = useAgentPolicies(address, { autoRead: true });
+  const agentPolicies = useAgentPolicies(address, { autoRead: false });
   const selectedPolicy = useMemo(
     () => agentPolicies.policies.find(policy => policy.id === selectedPolicyId) ?? null,
     [agentPolicies.policies, selectedPolicyId],
@@ -283,18 +283,16 @@ export function AgentSubmissionPanel() {
     [copyToClipboard],
   );
 
-  const handleUnlockAgentPolicies = useCallback(async () => {
+  const handleLoadManagedAgentPolicies = useCallback(async () => {
+    if (!address || agentPolicies.hasReadSession || agentPolicies.isReadSessionBusy) return;
     const result = await agentPolicies.unlock();
-    if (result.ok) {
-      notification.success("Managed agent controls unlocked.");
-      return;
-    }
+    if (result.ok) return;
     if (result.reason === "rejected") {
-      notification.warning("Signature rejected. Managed agents stay locked.");
+      notification.warning("Signature rejected. Managed agent policies were not loaded.");
       return;
     }
-    notification.error(result.error || "Failed to unlock managed agents.");
-  }, [agentPolicies]);
+    notification.error(result.error || "Failed to load managed agent policies.");
+  }, [address, agentPolicies]);
 
   const handleTransferUsdc = useCallback(async () => {
     if (!address) {
@@ -536,6 +534,9 @@ export function AgentSubmissionPanel() {
     setGeneratedToken(null);
     setGeneratedMcpConfig(null);
     setIsSetupMode(true);
+    if (mode === "managed_policy") {
+      void handleLoadManagedAgentPolicies();
+    }
     if (mode === "wallet_direct" && activeSetupStep === "policy") {
       setActiveSetupStep("mcp");
     }
@@ -630,18 +631,6 @@ export function AgentSubmissionPanel() {
     </div>
   );
 
-  const renderUnlockAgentPoliciesButton = (size: "sm" | "xs" = "sm") => (
-    <button
-      type="button"
-      className={`btn btn-outline ${size === "xs" ? "btn-xs" : "btn-sm"}`}
-      disabled={!address || agentPolicies.isLoading || agentPolicies.isReadSessionBusy}
-      onClick={() => void handleUnlockAgentPolicies()}
-    >
-      <KeyIcon className="h-4 w-4" />
-      {agentPolicies.hasReadSession ? "Refresh" : "Unlock"}
-    </button>
-  );
-
   const tokenAccessPanel = selectedPolicy ? (
     <>
       <dl className="mt-4 space-y-3 text-sm">
@@ -710,7 +699,7 @@ export function AgentSubmissionPanel() {
     </>
   ) : (
     <p className="mt-4 text-sm leading-relaxed text-base-content/65">
-      Save or unlock a managed agent policy to create an access token.
+      Save a managed agent policy to create an access token.
     </p>
   );
 
@@ -718,8 +707,9 @@ export function AgentSubmissionPanel() {
     <div className="space-y-3">
       {!agentPolicies.hasReadSession ? (
         <div className="flex flex-wrap items-center gap-2">
-          <p className="text-sm text-base-content/60">Unlock managed agents to view recent ask operations.</p>
-          {renderUnlockAgentPoliciesButton("xs")}
+          <p className="text-sm text-base-content/60">
+            Recent ask operations appear after your wallet session is active.
+          </p>
         </div>
       ) : recentAsksLoading ? (
         <span className="loading loading-spinner loading-sm" />
@@ -790,7 +780,6 @@ export function AgentSubmissionPanel() {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {policySelector}
-              {renderUnlockAgentPoliciesButton()}
               <button type="button" className="btn btn-outline btn-sm" onClick={handleEditSelectedPolicy}>
                 Edit setup
               </button>
@@ -898,7 +887,6 @@ export function AgentSubmissionPanel() {
                   <Link href={`${DOCS_AI_ROUTE}#mcp-adapter-shape`} className="link link-primary text-sm">
                     For Agents
                   </Link>
-                  {renderUnlockAgentPoliciesButton()}
                 </div>
               </div>
               {tokenAccessPanel}
@@ -955,7 +943,6 @@ export function AgentSubmissionPanel() {
               For Agents
               <ArrowTopRightOnSquareIcon className="h-4 w-4" />
             </Link>
-            {renderUnlockAgentPoliciesButton()}
             {agentAccessMode === "managed_policy" && selectedPolicy ? (
               <button type="button" className="btn btn-outline btn-sm" onClick={() => setIsSetupMode(false)}>
                 Manage agent
@@ -1400,10 +1387,9 @@ export function AgentSubmissionPanel() {
             <div className="mt-5 rounded-lg border border-warning/30 bg-warning/10 p-4">
               <h4 className="font-semibold text-warning">No saved agent policy selected</h4>
               <p className="mt-2 text-sm leading-relaxed text-base-content/70">
-                Go back to Policy and save your agent policy first. If you already saved one, unlock managed agents and
-                select it here.
+                Go back to Policy and save your agent policy first. If you already saved one, choose Managed policy
+                again to load saved agent policies.
               </p>
-              <div className="mt-3">{renderUnlockAgentPoliciesButton("xs")}</div>
             </div>
           )}
 

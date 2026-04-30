@@ -178,7 +178,7 @@ export function useAgentPolicies(address?: string, options?: UseAgentPoliciesOpt
       return {
         ok: false,
         reason: "request_failed",
-        error: error instanceof Error ? error.message : "Failed to unlock managed agents",
+        error: error instanceof Error ? error.message : "Failed to load managed agent policies",
       };
     } finally {
       setIsReadSessionBusy(false);
