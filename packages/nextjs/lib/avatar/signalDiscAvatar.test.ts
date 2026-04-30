@@ -119,7 +119,7 @@ test("signal-disc geometry stays fixed across HREP balances", () => {
   );
 
   assert.equal(lowBalance.core.radius, highBalance.core.radius);
-  assert.equal(lowBalance.rail.radius, highBalance.rail.radius);
+  assert.equal(lowBalance.progress?.radius, highBalance.progress?.radius);
   assert.equal(lowBalance.badgeRadius, highBalance.badgeRadius);
 });
 
@@ -141,9 +141,8 @@ test("signal disc stays inside the square crop", () => {
 
   assert.ok(model.progress);
   assert.ok(model.badgeRadius < 256);
-  assert.ok(model.rail.radius + model.rail.width / 2 < 256);
   assert.ok(model.progress.radius + model.progress.width / 2 < 256);
-  assert.ok(model.core.shadowRadius < model.progress.radius - model.progress.width / 2);
+  assert.ok(model.core.radius < model.progress.radius - model.progress.width / 2);
 });
 
 test("accuracy directly controls white line coverage", () => {
@@ -330,7 +329,7 @@ test("renderer returns svg markup for the no-accuracy fallback", () => {
   );
 
   assert.match(svg, /signal-disc-avatar-core/);
-  assert.match(svg, /signal-disc-avatar-rail/);
+  assert.doesNotMatch(svg, /signal-disc-avatar-rail/);
   assert.doesNotMatch(svg, /signal-disc-avatar-progress/);
 });
 

@@ -7,16 +7,8 @@ interface Point {
 
 interface SignalDiscAvatarCore {
   radius: number;
-  shadowRadius: number;
   color: string;
-  highlightColor: string;
-  ringColor: string;
-}
-
-interface SignalDiscAvatarRail {
-  radius: number;
-  width: number;
-  color: string;
+  edgeColor: string;
 }
 
 interface SignalDiscAvatarProgress {
@@ -30,8 +22,6 @@ interface SignalDiscAvatarProgress {
 interface SignalDiscAvatarModel {
   badgeRadius: number;
   badgeColor: string;
-  badgeStrokeColor: string;
-  rail: SignalDiscAvatarRail;
   core: SignalDiscAvatarCore;
   progress: SignalDiscAvatarProgress | null;
 }
@@ -39,12 +29,9 @@ interface SignalDiscAvatarModel {
 const VIEWBOX_SIZE = 512;
 const CENTER = VIEWBOX_SIZE / 2;
 const BADGE_RADIUS = 245;
-const BADGE_STROKE_RADIUS = 229;
 const RAIL_RADIUS = 197;
-const RAIL_WIDTH = 43;
-const CORE_RADIUS = 120;
-const CORE_SHADOW_RADIUS = 132;
-const CORE_HIGHLIGHT_RADIUS = 38;
+const RAIL_WIDTH = 38;
+const CORE_RADIUS = 138;
 const ACCURACY_START_DEGREES = -48;
 const CONFIDENCE_SETTLED_VOTES = 25;
 
@@ -171,8 +158,7 @@ function getAvatarPalette(payload: ReputationAvatarPayload) {
 
   return {
     coreColor: hslToHex(baseHue, saturation, lightness),
-    coreHighlightColor: hslToHex(baseHue - 4, Math.max(44, saturation - 12), Math.min(78, lightness + 18)),
-    coreRingColor: hslToHex(baseHue, Math.max(40, saturation - 18), Math.min(74, lightness + 10)),
+    coreEdgeColor: hslToHex(baseHue, Math.max(42, saturation - 18), Math.max(30, lightness - 14)),
   };
 }
 
@@ -206,19 +192,11 @@ export function buildSignalDiscAvatarModel(
 
   return {
     badgeRadius: BADGE_RADIUS,
-    badgeColor: "#11151D",
-    badgeStrokeColor: "#FFFFFF",
-    rail: {
-      radius: RAIL_RADIUS,
-      width: RAIL_WIDTH,
-      color: "#2A303A",
-    },
+    badgeColor: "#05070B",
     core: {
       radius: CORE_RADIUS,
-      shadowRadius: CORE_SHADOW_RADIUS,
       color: palette.coreColor,
-      highlightColor: palette.coreHighlightColor,
-      ringColor: palette.coreRingColor,
+      edgeColor: palette.coreEdgeColor,
     },
     progress: buildProgress(payload),
   };
@@ -244,15 +222,8 @@ export function renderSignalDiscAvatarSvg(
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}" fill="none">
   <circle class="signal-disc-avatar-badge" cx="${CENTER}" cy="${CENTER}" r="${model.badgeRadius.toFixed(2)}" fill="${model.badgeColor}"/>
-  <circle cx="${CENTER}" cy="${CENTER}" r="${BADGE_STROKE_RADIUS.toFixed(2)}" fill="none" stroke="${model.badgeStrokeColor}" stroke-width="7" stroke-opacity="0.045"/>
-  <circle class="signal-disc-avatar-rail-glow" cx="${CENTER}" cy="${CENTER}" r="${model.rail.radius.toFixed(2)}" fill="none" stroke="#FFFFFF" stroke-width="${(model.rail.width + 8).toFixed(2)}" stroke-opacity="0.018"/>
-  <circle class="signal-disc-avatar-rail" cx="${CENTER}" cy="${CENTER}" r="${model.rail.radius.toFixed(2)}" fill="none" stroke="${model.rail.color}" stroke-width="${model.rail.width.toFixed(2)}"/>
-  <circle cx="${CENTER}" cy="${CENTER}" r="${model.rail.radius.toFixed(2)}" fill="none" stroke="#05070B" stroke-width="4" stroke-opacity="0.55"/>
   ${model.progress ? renderProgress(model.progress) : ""}
-  <circle class="signal-disc-avatar-core-shadow" cx="${CENTER}" cy="${CENTER}" r="${model.core.shadowRadius.toFixed(2)}" fill="#000000" fill-opacity="0.22"/>
   <circle class="signal-disc-avatar-core" cx="${CENTER}" cy="${CENTER}" r="${model.core.radius.toFixed(2)}" fill="${model.core.color}"/>
-  <circle class="signal-disc-avatar-core-highlight" cx="${(CENTER - 42).toFixed(2)}" cy="${(CENTER - 50).toFixed(2)}" r="${CORE_HIGHLIGHT_RADIUS.toFixed(2)}" fill="${model.core.highlightColor}" fill-opacity="0.54"/>
-  <circle class="signal-disc-avatar-core-ring" cx="${CENTER}" cy="${CENTER}" r="${model.core.radius.toFixed(2)}" fill="none" stroke="${model.core.ringColor}" stroke-width="8" stroke-opacity="0.42"/>
-  <circle cx="${CENTER}" cy="${CENTER}" r="${model.core.radius.toFixed(2)}" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-opacity="0.12"/>
+  <circle class="signal-disc-avatar-core-edge" cx="${CENTER}" cy="${CENTER}" r="${model.core.radius.toFixed(2)}" fill="none" stroke="${model.core.edgeColor}" stroke-width="7" stroke-opacity="0.32"/>
 </svg>`;
 }

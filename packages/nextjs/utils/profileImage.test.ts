@@ -21,7 +21,7 @@ test("getFallbackReputationAvatarDataUrl returns an inline no-accuracy signal-di
 
   const svg = decodeURIComponent(dataUrl!.split(",")[1] ?? "");
   assert.match(svg, /signal-disc-avatar-core/);
-  assert.match(svg, /signal-disc-avatar-rail/);
+  assert.doesNotMatch(svg, /signal-disc-avatar-rail/);
   assert.doesNotMatch(svg, /signal-disc-avatar-progress/);
   assert.doesNotMatch(svg, /orbital-avatar/);
 });
