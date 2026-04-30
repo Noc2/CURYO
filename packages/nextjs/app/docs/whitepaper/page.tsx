@@ -14,7 +14,7 @@ const WhitepaperPage: NextPage = () => {
         <a
           href="/curyo-whitepaper.pdf"
           download="Curyo-Whitepaper.pdf"
-          className="btn btn-lg btn-primary gap-2 !text-primary-content border-none no-underline"
+          className="btn btn-lg btn-primary gap-2 !text-white border-none no-underline"
         >
           <ArrowDownTrayIcon className="w-5 h-5" />
           Download Whitepaper (PDF)

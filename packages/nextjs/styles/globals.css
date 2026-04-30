@@ -79,6 +79,9 @@
   --curyo-ember: #f26426;
   --curyo-ember-hover: #ff7a3d;
   --curyo-ember-deep: #d94d1f;
+  --curyo-action-orange: #bf3f18;
+  --curyo-action-orange-hover: #a93712;
+  --curyo-action-content: #ffffff;
   --curyo-warm-white: #f5f0eb;
   --curyo-steel: #8b858e;
   --curyo-surface: #000000;
@@ -284,26 +287,26 @@ body {
 }
 
 .btn-primary {
-  color: var(--color-primary-content);
-  background: var(--curyo-ember);
+  color: var(--curyo-action-content);
+  background: var(--curyo-action-orange);
   border: none;
   box-shadow: none;
 }
 
 .btn-primary:hover {
-  background: var(--curyo-ember-hover);
+  background: var(--curyo-action-orange-hover);
   box-shadow: none;
 }
 
 .btn-submit {
-  color: var(--color-primary-content);
-  background: var(--curyo-ember);
+  color: var(--curyo-action-content);
+  background: var(--curyo-action-orange);
   border: none;
   box-shadow: none;
 }
 
 .btn-submit:hover {
-  background: var(--curyo-ember-hover);
+  background: var(--curyo-action-orange-hover);
   box-shadow: none;
 }
 
