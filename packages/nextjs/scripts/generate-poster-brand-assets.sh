@@ -42,18 +42,18 @@ else
   magick "$HERO_SOURCE" -strip -quality 92 "$HERO_WEBP"
 fi
 
-magick -size 512x512 xc:"#000000" \
+magick -size 512x512 xc:none \
   -fill none \
   -stroke "#ffffff" \
-  -strokewidth 20 \
-  -draw "path 'M 330.9,172.8 C 285,131.4 214.2,135.1 172.8,181.1 C 131.4,227 135.1,297.8 181.1,339.2 C 223.7,377.6 288.3,377.6 330.9,339.2'" \
+  -strokewidth 36.4 \
+  -draw "path 'M 412.3,104.6 C 328.8,29.2 199.9,36 124.6,119.7 C 49.2,203.2 56,332.1 139.7,407.4 C 217.2,477.3 334.8,477.3 412.3,407.4'" \
   -fill "#ffffff" \
   -stroke none \
-  -draw "circle 330.9,172.8 340.9,172.8" \
-  -draw "circle 330.9,339.2 340.9,339.2" \
+  -draw "circle 412.3,104.6 430.5,104.6" \
+  -draw "circle 412.3,407.4 430.5,407.4" \
   -fill "#F26426" \
   -stroke none \
-  -draw "circle 256,256 312,256" \
+  -draw "circle 276,256 377.9,256" \
   "$PUBLIC_DIR/favicon.png"
 magick "$PUBLIC_DIR/favicon.png" -resize 92x92 "$LOGO_SOURCE"
 magick "$HERO_SOURCE" -resize 900x506 "$HERO_SOCIAL"
