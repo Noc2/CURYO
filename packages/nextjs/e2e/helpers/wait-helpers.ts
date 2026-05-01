@@ -107,6 +107,7 @@ export async function gotoWithRetry(
   options: {
     attempts?: number;
     ensureWalletConnected?: boolean;
+    skipInjectedWalletConnectionCheck?: boolean;
     timeout?: number;
     waitUntil?: "load" | "domcontentloaded" | "networkidle" | "commit";
   } = {},
@@ -114,6 +115,7 @@ export async function gotoWithRetry(
   const {
     attempts = 3,
     ensureWalletConnected = false,
+    skipInjectedWalletConnectionCheck = false,
     timeout = DEFAULT_E2E_TIMEOUT_MS,
     waitUntil = "domcontentloaded",
   } = options;
@@ -129,7 +131,7 @@ export async function gotoWithRetry(
         await page.reload({ timeout: effectiveTimeout, waitUntil: "domcontentloaded" });
       }
 
-      if (ensureWalletConnected || (await hasInjectedLocalTestWallet(page))) {
+      if (ensureWalletConnected || (!skipInjectedWalletConnectionCheck && (await hasInjectedLocalTestWallet(page)))) {
         await ensureInjectedWalletConnected(page, effectiveTimeout);
       }
 

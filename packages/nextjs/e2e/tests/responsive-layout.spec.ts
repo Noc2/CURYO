@@ -14,6 +14,7 @@ const VIEWPORTS = [
 ];
 
 const ROUTES = ["/", "/rate", "/ask", "/governance", "/docs", "/legal"];
+const WALLET_ROUTES = new Set(["/rate", "/ask", "/governance"]);
 const VOTE_UP_BUTTON = /^Vote up\b/i;
 const VOTE_DOWN_BUTTON = /^Vote down\b/i;
 
@@ -83,7 +84,12 @@ test.describe("Responsive layout", () => {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
 
       for (const path of ROUTES) {
-        await gotoWithRetry(page, path, { ensureWalletConnected: true, timeout: 45_000 });
+        const needsWallet = WALLET_ROUTES.has(path);
+        await gotoWithRetry(page, path, {
+          ensureWalletConnected: needsWallet,
+          skipInjectedWalletConnectionCheck: !needsWallet,
+          timeout: 45_000,
+        });
         await expectNoNextErrorOverlay(page);
 
         const main = page.locator("main");
