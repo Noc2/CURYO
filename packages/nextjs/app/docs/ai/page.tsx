@@ -29,6 +29,10 @@ const directHttpEndpoints = [
 
 const localDirectHttpOrigin = "http://localhost:3000";
 const productionDirectHttpOrigin = "https://www.curyo.xyz";
+const agentsPackageHref = "https://github.com/Noc2/CURYO/tree/codex/curyo-2-bounties-research/packages/agents";
+const agentsCliHref = "https://github.com/Noc2/CURYO/blob/codex/curyo-2-bounties-research/packages/agents/src/cli.ts";
+const agentsCliDocsHref =
+  "https://github.com/Noc2/CURYO/tree/codex/curyo-2-bounties-research/packages/agents#local-signer-cli";
 
 function formatDirectHttpRoutes(origin: string) {
   const normalizedOrigin = origin.replace(/\/$/, "");
@@ -214,6 +218,21 @@ const AIPage = async () => {
         loads the wallet, signs any x402 authorization request, sends ordered transaction plan calls with viem, waits
         for receipts, and confirms the ask.
       </p>
+      <p>
+        External agents should start from the{" "}
+        <a href={agentsPackageHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
+          agents package
+        </a>
+        , especially the{" "}
+        <a href={agentsCliDocsHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
+          Local Signer CLI notes
+        </a>{" "}
+        and{" "}
+        <a href={agentsCliHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
+          CLI source
+        </a>
+        .
+      </p>
 
       <h2 id="payload">Minimal Ask Payload</h2>
       <p>
@@ -240,8 +259,12 @@ const AIPage = async () => {
 
       <h2 id="learn-more">Learn More</h2>
       <p>
-        Continue with <Link href="/docs/sdk">SDK</Link>, <Link href="/docs/ai/errors">AI Agent Errors</Link>, and{" "}
-        <Link href="/docs/how-it-works">How It Works</Link>.
+        Continue with <Link href="/docs/sdk">SDK</Link>, <Link href="/docs/ai/errors">AI Agent Errors</Link>,{" "}
+        <Link href="/docs/how-it-works">How It Works</Link>, and the{" "}
+        <a href={agentsPackageHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
+          agents package
+        </a>
+        .
       </p>
     </article>
   );
