@@ -15,6 +15,7 @@ import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
 import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { Eip3009Authorization, X402QuestionSubmitter } from "../contracts/X402QuestionSubmitter.sol";
+import { MockQuestionRewardPoolEscrow } from "./mocks/MockQuestionRewardPoolEscrow.sol";
 import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
 
 contract QuestionRewardPoolEscrowTest is VotingTestBase {
@@ -1203,6 +1204,71 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         vm.warp(block.timestamp + 2 days);
         _settleRoundWith(staleCompleters, contentIds[1], directions);
         assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 1, staleCompleter1), 0);
+    }
+
+    function testBundleRoundSetResetClearsPoisonedFutureFloor() public {
+        uint256[] memory contentIds = _submitBundleQuestions();
+        uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, 120e6, 3, 2);
+
+        address[12] memory extraVoters = [
+            address(30),
+            address(31),
+            address(32),
+            address(33),
+            address(34),
+            address(35),
+            address(36),
+            address(37),
+            address(38),
+            address(39),
+            address(40),
+            address(41)
+        ];
+        address[] memory firstQuestionSet0 = _voters(voter1, voter2, voter3);
+        address[] memory retrySet0 = _voters(extraVoters[0], extraVoters[1], extraVoters[2]);
+        address[] memory retrySet1 = _voters(extraVoters[3], extraVoters[4], extraVoters[5]);
+        address[] memory poisonedFuture = _voters(extraVoters[6], extraVoters[7], extraVoters[8]);
+        bool[] memory directions = _directions(true, true, false);
+
+        _settleRoundWith(firstQuestionSet0, contentIds[0], directions);
+
+        vm.startPrank(owner);
+        for (uint256 i = 0; i < extraVoters.length; i++) {
+            voterIdNFT.setHolder(extraVoters[i]);
+            hrepToken.mint(extraVoters[i], 10_000e6);
+        }
+        MockQuestionRewardPoolEscrow mockEscrow = new MockQuestionRewardPoolEscrow();
+        registry.pause();
+        registry.setQuestionRewardPoolEscrow(address(mockEscrow));
+        registry.unpause();
+        vm.stopPrank();
+
+        vm.warp(block.timestamp + 2 days);
+        uint256 retryQuestion0Round = _settleRoundWith(retrySet0, contentIds[0], directions);
+        vm.warp(block.timestamp + 2 days);
+        uint256 secondQuestion0Round = _settleRoundWith(retrySet1, contentIds[0], directions);
+        vm.warp(block.timestamp + 2 days);
+        uint256 poisonedQuestion0Round = _settleRoundWith(poisonedFuture, contentIds[0], directions);
+
+        vm.startPrank(owner);
+        registry.pause();
+        registry.setQuestionRewardPoolEscrow(address(rewardPoolEscrow));
+        registry.unpause();
+        vm.stopPrank();
+        rewardPoolEscrow.syncBundleQuestionTerminal(contentIds[0], poisonedQuestion0Round);
+
+        _settleRoundWith(_voters(extraVoters[9], extraVoters[10], extraVoters[11]), contentIds[1], directions);
+        assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter1), 0);
+
+        rewardPoolEscrow.syncBundleQuestionTerminal(contentIds[0], retryQuestion0Round);
+        vm.warp(block.timestamp + 2 days);
+        _settleRoundWith(retrySet0, contentIds[1], directions);
+        assertGt(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, extraVoters[0]), 0);
+
+        rewardPoolEscrow.syncBundleQuestionTerminal(contentIds[0], secondQuestion0Round);
+        vm.warp(block.timestamp + 2 days);
+        _settleRoundWith(retrySet1, contentIds[1], directions);
+        assertGt(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 1, extraVoters[3]), 0);
     }
 
     function testBundleRoundSetCountsDelegateCommitAfterDelegateRemoval() public {
@@ -2909,6 +2975,13 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         voters[0] = voter1;
         voters[1] = voter2;
         voters[2] = voter3;
+    }
+
+    function _voters(address voterA, address voterB, address voterC) internal pure returns (address[] memory voters) {
+        voters = new address[](3);
+        voters[0] = voterA;
+        voters[1] = voterB;
+        voters[2] = voterC;
     }
 
     function _ineligibleVoters() internal view returns (address[] memory voters) {

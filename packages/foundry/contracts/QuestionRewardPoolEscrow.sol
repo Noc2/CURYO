@@ -1219,6 +1219,13 @@ contract QuestionRewardPoolEscrow is
     function _resetBundleRoundSet(uint256 bundleId, uint256 roundSetIndex) internal {
         BundleQuestion[] storage questions = bundleQuestions[bundleId];
         for (uint256 i = 0; i < questions.length;) {
+            uint256 recordedRounds = bundleQuestionRecordedRounds[bundleId][i];
+            for (uint256 j = roundSetIndex + 1; j < recordedRounds;) {
+                delete bundleRoundIds[bundleId][i][j];
+                unchecked {
+                    ++j;
+                }
+            }
             bundleQuestionRecordedRounds[bundleId][i] = uint32(roundSetIndex);
             unchecked {
                 ++i;
