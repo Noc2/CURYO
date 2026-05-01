@@ -435,20 +435,21 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
         feedbackBonusEscrow.awardFeedbackBonus(poolId, voter1, FEEDBACK_HASH, 10e6);
     }
 
-    function testStoredFunderVoterIdDoesNotExcludeDifferentSnapshotHolder() public {
-        uint256 contentId = _submitQuestion("");
-        uint256 poolId = _createFeedbackBonusPool(contentId);
-        uint256 oldFunderVoterId = voterIdNFT.getTokenId(funder);
+    function testVoterIdMigrationRejectedAfterInitialWiring() public {
+        MockVoterIdNFT migratedVoterIdNFT = new MockVoterIdNFT();
+        migratedVoterIdNFT.setHolder(voter1);
 
-        MockVoterIdNFT migratedVoterIdNFT = _migrateVoterIdsWithVoter1AtOldFunderId();
-        assertEq(migratedVoterIdNFT.getTokenId(voter1), oldFunderVoterId);
-        assertNotEq(migratedVoterIdNFT.getTokenId(funder), oldFunderVoterId);
+        vm.prank(owner);
+        vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
+        protocolConfig.setVoterIdNFT(address(migratedVoterIdNFT));
+    }
 
-        _settleRoundWith(_threeVoters(), contentId, _directions(true, true, false));
+    function testSetVoterIdNFTRejectsRegistryOrProtocolMismatch() public {
+        MockVoterIdNFT replacementVoterIdNFT = new MockVoterIdNFT();
 
-        vm.prank(funder);
-        uint256 recipientAmount = feedbackBonusEscrow.awardFeedbackBonus(poolId, voter1, FEEDBACK_HASH, 10e6);
-        assertEq(recipientAmount, 10e6);
+        vm.prank(owner);
+        vm.expectRevert("Voter ID mismatch");
+        feedbackBonusEscrow.setVoterIdNFT(address(replacementVoterIdNFT));
     }
 
     function testAwardRequiresRevealedVote() public {
@@ -720,19 +721,4 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
         directions[3] = d;
     }
 
-    function _migrateVoterIdsWithVoter1AtOldFunderId() internal returns (MockVoterIdNFT migratedVoterIdNFT) {
-        migratedVoterIdNFT = new MockVoterIdNFT();
-        address[7] memory migratedHumans = [submitter, voter1, voter2, voter3, funder, voter4, frontend1];
-        for (uint256 i = 0; i < migratedHumans.length; i++) {
-            migratedVoterIdNFT.setHolder(migratedHumans[i]);
-        }
-
-        vm.startPrank(owner);
-        protocolConfig.setVoterIdNFT(address(migratedVoterIdNFT));
-        registry.setVoterIdNFT(address(migratedVoterIdNFT));
-        frontendRegistry.setVoterIdNFT(address(migratedVoterIdNFT));
-        questionRewardPoolEscrow.setVoterIdNFT(address(migratedVoterIdNFT));
-        feedbackBonusEscrow.setVoterIdNFT(address(migratedVoterIdNFT));
-        vm.stopPrank();
-    }
 }

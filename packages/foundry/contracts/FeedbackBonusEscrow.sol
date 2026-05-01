@@ -251,6 +251,11 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
 
     function setVoterIdNFT(address voterIdNFT_) external onlyRole(CONFIG_ROLE) {
         require(voterIdNFT_ != address(0), "Invalid Voter ID");
+        require(
+            voterIdNFT_ == address(registry.voterIdNFT())
+                && voterIdNFT_ == votingEngine.protocolConfig().voterIdNFT(),
+            "Voter ID mismatch"
+        );
         voterIdNFT = IVoterIdNFT(voterIdNFT_);
         emit VoterIdNFTUpdated(voterIdNFT_);
     }

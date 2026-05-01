@@ -430,8 +430,15 @@ abstract contract ContentSubmissionTestBase {
             return;
         }
 
-        MockVoterIdNFT mockVoterIdNFT = new MockVoterIdNFT();
-        mockVoterIdNFT.setHolder(submitter);
+        ProtocolConfig config = registry.protocolConfig();
+        address voterIdNFT = address(config) == address(0) ? address(0) : config.voterIdNFT();
+        if (voterIdNFT == address(0)) {
+            MockVoterIdNFT mockVoterIdNFT = new MockVoterIdNFT();
+            mockVoterIdNFT.setHolder(submitter);
+            voterIdNFT = address(mockVoterIdNFT);
+        } else {
+            try MockVoterIdNFT(voterIdNFT).setHolder(submitter) { } catch { }
+        }
 
         bytes32 configRole = registry.CONFIG_ROLE();
         address[8] memory candidates = [
@@ -440,7 +447,7 @@ abstract contract ContentSubmissionTestBase {
         for (uint256 i = 0; i < candidates.length; i++) {
             if (registry.hasRole(configRole, candidates[i])) {
                 HEVM.prank(candidates[i]);
-                registry.setVoterIdNFT(address(mockVoterIdNFT));
+                registry.setVoterIdNFT(voterIdNFT);
                 return;
             }
         }
