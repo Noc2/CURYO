@@ -17,7 +17,7 @@ export const test = base.extend<WalletFixtures>({
     }
 
     await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey, { bootstrap: false });
-    await gotoWithRetry(page, "/", { ensureWalletConnected: true });
+    await gotoWithRetry(page, "/rate", { ensureWalletConnected: true });
     await use(page);
   },
 });
