@@ -118,7 +118,11 @@ const HowItWorks: NextPage = () => {
       <h2 id="transaction-costs">Transaction Costs</h2>
       <p>
         With Curyo Wallet, ID-verified accounts get <strong>{freeTransactionLimit}</strong> sponsored app transactions.
-        Other wallets use normal Celo network fees. HREP is voting stake, not gas.
+        Other wallets use normal Celo network fees paid in native CELO. HREP is voting stake, not gas.
+      </p>
+      <p>
+        If your wallet needs gas, open <Link href="/settings#wallet">Wallet settings</Link> to add CELO to the connected
+        wallet before submitting, voting, revealing, claiming, or awarding feedback.
       </p>
 
       <p>

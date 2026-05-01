@@ -245,8 +245,13 @@ const AIPage = async () => {
       <h2 id="wallets">Wallet And Funding</h2>
       <p>
         Fund the signer wallet with Celo USDC and pass it as <code>walletAddress</code> on quote, ask, status, and
-        result calls. Keep long-lived private keys out of prompts, logs, and committed env files; use browser signing or
-        an encrypted local keystore when a human or local agent should approve spend.
+        result calls. Self-funded agent wallets also need a small native CELO balance for network fees unless their
+        transaction path is sponsored. Keep long-lived private keys out of prompts, logs, and committed env files; use
+        browser signing or an encrypted local keystore when a human or local agent should approve spend.
+      </p>
+      <p>
+        Operators using the browser helper can open <Link href="/settings#wallet">Wallet settings</Link> to add CELO for
+        gas, then use <Link href="/ask?tab=agent">/ask?tab=agent</Link> to add Celo USDC for bounties.
       </p>
 
       <h2 id="results">Polling Results</h2>

@@ -68,7 +68,7 @@ Key environment variables (see `.env.example` for the full list):
 | `NEXT_PUBLIC_RPC_URL_11142220`                    | Optional browser RPC override for Celo Sepolia                                                                                           |
 | `NEXT_PUBLIC_RPC_URL_42220`                       | Optional browser RPC override for Celo mainnet                                                                                           |
 | `NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID`           | Optional WalletConnect project ID for external wallet discovery                                                                          |
-| `NEXT_PUBLIC_THIRDWEB_CLIENT_ID`                  | thirdweb client ID for in-app wallets and sponsored transactions                                                                         |
+| `NEXT_PUBLIC_THIRDWEB_CLIENT_ID`                  | thirdweb client ID for in-app wallets, sponsored transactions, and settings wallet top-ups                                               |
 | `NEXT_PUBLIC_TARGET_NETWORKS`                     | Comma-separated deployed chain IDs exposed in the UI (required in production)                                                            |
 | `DATABASE_URL`                                    | PostgreSQL URL for the Next app logical database                                                                                         |
 | `RESEND_API_KEY`                                  | Resend API key for email notification delivery                                                                                           |
@@ -97,6 +97,7 @@ Notes:
 
 - Browser RPC reads prefer `NEXT_PUBLIC_RPC_URL_<chainId>` overrides first, then `NEXT_PUBLIC_ALCHEMY_API_KEY`, then the chain's default public RPC list.
 - Mainnet is not a supported `NEXT_PUBLIC_TARGET_NETWORKS` entry. The browser can still add mainnet for wallet tooling when you provide a mainnet-capable RPC via `NEXT_PUBLIC_ALCHEMY_API_KEY` or a mainnet RPC override, but the target-network parser only accepts `31337`, `11142220`, and `42220`.
+- The Wallet settings tab uses thirdweb's BuyWidget to add native CELO for Celo gas. Configure the thirdweb client ID's allowed domains for the production and preview origins that will render `/settings#wallet`.
 - `/api/mcp/public` exposes tokenless quote, ask, confirm, status, result, template, and category tools for agents that already control a funded wallet. `/api/mcp` remains the managed endpoint for bearer-token policies, balances, signed callbacks, and audit surfaces.
 - Agent clients should follow the AI docs flow: list templates, quote with `walletAddress`, ask with a stable client request ID, execute and confirm wallet calls, wait for a status read or signed managed callback, then fetch the structured result. Operator token lifecycle, scopes, budgets, category allowlists, callback recovery, and audit history belong in `/settings?tab=agents` for managed agents; static `CURYO_MCP_AGENTS` remains supported for server-configured policies.
 - Private artifacts, embargoed asks, restricted voter-only context, and delayed result disclosure are deferred. Current agent flows should assume public context URLs, public submitted questions, and public settled result pages.
