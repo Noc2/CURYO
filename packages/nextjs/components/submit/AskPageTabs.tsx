@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { AgentSubmissionPanel } from "~~/components/submit/AgentSubmissionPanel";
-import { ContentSubmissionSection } from "~~/components/submit/ContentSubmissionSection";
 import {
   ASK_AGENT_ROUTE_TAB,
   ASK_MANUAL_ROUTE_TAB,
@@ -11,6 +10,30 @@ import {
   type AskRouteTab,
   parseAskRouteTab,
 } from "~~/constants/routes";
+
+const ContentSubmissionSection = dynamic(
+  () => import("~~/components/submit/ContentSubmissionSection").then(mod => mod.ContentSubmissionSection),
+  {
+    loading: () => <AskTabPanelLoading />,
+  },
+);
+const AgentSubmissionPanel = dynamic(
+  () => import("~~/components/submit/AgentSubmissionPanel").then(mod => mod.AgentSubmissionPanel),
+  {
+    loading: () => <AskTabPanelLoading />,
+  },
+);
+
+function AskTabPanelLoading() {
+  return (
+    <div className="surface-card rounded-2xl p-6">
+      <div className="flex items-center gap-3 text-base-content/50">
+        <span className="loading loading-spinner loading-sm text-primary" />
+        <span>Loading...</span>
+      </div>
+    </div>
+  );
+}
 
 export function AskPageTabs() {
   const pathname = usePathname();
