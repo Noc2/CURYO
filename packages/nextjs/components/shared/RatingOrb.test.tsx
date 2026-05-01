@@ -9,10 +9,11 @@ const { renderToStaticMarkup } = require("react-dom/server") as {
   renderToStaticMarkup: (element: React.ReactElement) => string;
 };
 
-test("RatingOrb uses a white score over the separated orange center", () => {
+test("RatingOrb uses a black score over the separated orange center", () => {
   const html = renderToStaticMarkup(<RatingOrb rating={0} size={96} />).replace(/\s+/g, " ");
 
-  assert.match(html, /text-base-content/);
+  assert.match(html, /text-black/);
+  assert.doesNotMatch(html, /text-base-content/);
   assert.doesNotMatch(html, /text-primary/);
   assert.match(html, /stop-color="var\(--curyo-ember\)"/);
 });

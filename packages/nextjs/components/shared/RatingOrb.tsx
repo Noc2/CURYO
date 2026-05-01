@@ -187,14 +187,14 @@ export function RatingOrb({ rating, size = 196, className = "" }: RatingOrbProps
 
       <div className="relative z-10 flex flex-col items-center justify-center text-center">
         <span
-          className="display-metric inline-flex items-end justify-center text-base-content tabular-nums"
+          className="display-metric inline-flex items-end justify-center text-black tabular-nums"
           style={{ maxWidth: scoreMaxWidth }}
         >
-          <span className="font-semibold tracking-normal text-base-content" style={{ fontSize: ratingFontSize }}>
+          <span className="font-semibold tracking-normal text-black" style={{ fontSize: ratingFontSize }}>
             {displayedScore}
           </span>
           <span
-            className={`${scoreGapClassName} mb-[0.12em] shrink-0 font-medium leading-[0.92] text-base-content/60`}
+            className={`${scoreGapClassName} mb-[0.12em] shrink-0 font-medium leading-[0.92] text-black/60`}
             style={{ fontSize: scaleFontSize }}
           >
             /10
