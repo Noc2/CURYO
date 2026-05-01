@@ -1399,7 +1399,9 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
     function _hasOpenRound(uint256 contentId) internal view returns (bool) {
         address trackedEngine = contentRoundTrackingEngine[contentId];
-        return trackedEngine != address(0) && _engineHasOpenRound(trackedEngine, contentId);
+        if (trackedEngine != address(0) && _engineHasOpenRound(trackedEngine, contentId)) return true;
+        address currentEngine = votingEngine;
+        return currentEngine != trackedEngine && _engineHasOpenRound(currentEngine, contentId);
     }
 
     function _engineHasOpenRound(address engine, uint256 contentId) internal view returns (bool) {

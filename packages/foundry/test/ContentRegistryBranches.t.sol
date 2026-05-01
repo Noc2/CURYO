@@ -173,6 +173,16 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         internal
         returns (bytes32 commitKey, bytes32 salt)
     {
+        return _commitWithStakeToEngine(votingEngine, voter, contentId, isUp, stake);
+    }
+
+    function _commitWithStakeToEngine(
+        RoundVotingEngine engine,
+        address voter,
+        uint256 contentId,
+        bool isUp,
+        uint256 stake
+    ) internal returns (bytes32 commitKey, bytes32 salt) {
         salt = keccak256(abi.encodePacked(voter, block.timestamp));
         uint16 referenceRatingBps = _currentRatingReferenceBps(contentId);
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
@@ -187,9 +197,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             ciphertext
         );
         vm.startPrank(voter);
-        hrepToken.approve(address(votingEngine), stake);
-        uint256 cachedRoundContext1 = _roundContext(votingEngine.previewCommitRoundId(contentId), referenceRatingBps);
-        votingEngine.commitVote(
+        hrepToken.approve(address(engine), stake);
+        uint256 cachedRoundContext1 = _roundContext(engine.previewCommitRoundId(contentId), referenceRatingBps);
+        engine.commitVote(
             contentId,
             cachedRoundContext1,
             _tlockCommitTargetRound(),
@@ -2176,6 +2186,35 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         (,,,,, ContentRegistry.ContentStatus status,,,,) = registry.contents(1);
         assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Dormant));
+    }
+
+    function test_MarkDormant_AfterRotationChecksCurrentEngineOpenRound() public {
+        vm.startPrank(submitter);
+        hrepToken.approve(address(registry), 10e6);
+        _submitContentWithReservation(
+            registry, "https://example.com/rotated-current-open-round", "goal", "goal", "tags", 0
+        );
+        vm.stopPrank();
+
+        _commit(voter1, 1, true);
+        uint256 oldRoundId = RoundEngineReadHelpers.activeRoundId(votingEngine, 1);
+
+        RoundVotingEngine replacementEngine = _deployReplacementVotingEngine();
+        vm.startPrank(owner);
+        _setTlockRoundConfig(ProtocolConfig(address(replacementEngine.protocolConfig())), 1 hours, 7 days, 3, 200);
+        registry.pause();
+        registry.setVotingEngine(address(replacementEngine));
+        registry.unpause();
+        vm.stopPrank();
+
+        _commitWithStakeToEngine(replacementEngine, voter2, 1, true, STAKE);
+        vm.warp(T0 + 7 days + 1);
+        votingEngine.cancelExpiredRound(1, oldRoundId);
+
+        vm.warp(T0 + 31 days);
+        assertFalse(registry.isDormancyEligible(1), "current replacement round should block dormancy");
+        vm.expectRevert("Content has active round");
+        registry.markDormant(1);
     }
 
     function test_MarkDormant_CancelledRound_UsesDormancyAnchor() public {
