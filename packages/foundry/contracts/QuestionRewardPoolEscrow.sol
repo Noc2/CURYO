@@ -635,7 +635,7 @@ contract QuestionRewardPoolEscrow is
         uint256 roundSetIndex = bundleQuestionRecordedRounds[bundleId][bundleIndex];
         if (roundSetIndex >= bundle.requiredSettledRounds) return;
         if (roundSetIndex < bundle.completedRoundSets) return;
-        if (roundId <= bundleRoundIds[bundleId][bundleIndex][MAX_REQUIRED_SETTLED_ROUNDS]) return;
+        if (roundId <= bundleRoundIds[bundleId][bundleIndex][roundSetIndex]) return;
         if (roundSetIndex != 0) {
             unchecked {
                 if (roundId <= bundleRoundIds[bundleId][bundleIndex][roundSetIndex - 1]) return;
@@ -1111,7 +1111,7 @@ contract QuestionRewardPoolEscrow is
     function _isBundleRoundSetComplete(uint256 bundleId, uint256 roundSetIndex) internal view returns (bool) {
         BundleQuestion[] storage questions = bundleQuestions[bundleId];
         for (uint256 i = 0; i < questions.length;) {
-            if (bundleRoundIds[bundleId][i][roundSetIndex] == 0) return false;
+            if (bundleQuestionRecordedRounds[bundleId][i] <= roundSetIndex) return false;
             unchecked {
                 ++i;
             }
@@ -1214,19 +1214,6 @@ contract QuestionRewardPoolEscrow is
     function _resetBundleRoundSet(uint256 bundleId, uint256 roundSetIndex) internal {
         BundleQuestion[] storage questions = bundleQuestions[bundleId];
         for (uint256 i = 0; i < questions.length;) {
-            uint256 recordedRoundSets = bundleQuestionRecordedRounds[bundleId][i];
-            uint64 retiredRoundIdFloor = bundleRoundIds[bundleId][i][MAX_REQUIRED_SETTLED_ROUNDS];
-            while (recordedRoundSets > roundSetIndex) {
-                unchecked {
-                    --recordedRoundSets;
-                }
-                uint64 recordedRoundId = bundleRoundIds[bundleId][i][recordedRoundSets];
-                if (recordedRoundId > retiredRoundIdFloor) {
-                    retiredRoundIdFloor = recordedRoundId;
-                }
-                delete bundleRoundIds[bundleId][i][recordedRoundSets];
-            }
-            bundleRoundIds[bundleId][i][MAX_REQUIRED_SETTLED_ROUNDS] = retiredRoundIdFloor;
             bundleQuestionRecordedRounds[bundleId][i] = uint32(roundSetIndex);
             unchecked {
                 ++i;
