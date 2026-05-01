@@ -59,6 +59,18 @@ contract ProtocolConfigBranchesTest is Test {
         assertEq(config.drandPeriod(), 3);
     }
 
+    function test_SetVoterIdNFT_RejectsRotationAfterInitialSet() public {
+        ProtocolConfig config = deployInitializedProtocolConfig(address(this));
+        address voterIdNFT = address(0xA11CE);
+        address replacementVoterIdNFT = address(0xB0B);
+
+        config.setVoterIdNFT(voterIdNFT);
+        config.setVoterIdNFT(voterIdNFT);
+
+        vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
+        config.setVoterIdNFT(replacementVoterIdNFT);
+    }
+
     function test_InitializeWithTreasury_GovernanceCanRecoverTreasuryRoles() public {
         address admin = address(0xA11CE);
         address governance = address(0xB0B);

@@ -909,6 +909,11 @@ contract QuestionRewardPoolEscrow is
 
     function setVoterIdNFT(address voterIdNFT_) external onlyRole(CONFIG_ROLE) {
         require(voterIdNFT_ != address(0), "Invalid Voter ID");
+        require(
+            voterIdNFT_ == address(registry.voterIdNFT())
+                && voterIdNFT_ == votingEngine.protocolConfig().voterIdNFT(),
+            "Voter ID mismatch"
+        );
         voterIdNFT = IVoterIdNFT(voterIdNFT_);
     }
 

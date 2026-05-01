@@ -161,6 +161,25 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         assertEq(registry.questionRewardPoolEscrow(), address(replacementEscrow));
     }
 
+    function test_SetVoterIdNFT_RejectsProtocolMismatch() public {
+        MockVoterIdNFT replacementVoterIdNFT = new MockVoterIdNFT();
+
+        vm.prank(owner);
+        vm.expectRevert("Voter ID mismatch");
+        registry.setVoterIdNFT(address(replacementVoterIdNFT));
+    }
+
+    function test_SetProtocolConfig_RejectsVoterIdMismatch() public {
+        ProtocolConfig replacementConfig = _deployProtocolConfig(owner);
+        MockVoterIdNFT replacementVoterIdNFT = new MockVoterIdNFT();
+
+        vm.startPrank(owner);
+        replacementConfig.setVoterIdNFT(address(replacementVoterIdNFT));
+        vm.expectRevert("Voter ID mismatch");
+        registry.setProtocolConfig(address(replacementConfig));
+        vm.stopPrank();
+    }
+
     function _vote(address voter, uint256 contentId, bool isUp) internal {
         _commit(voter, contentId, isUp);
     }

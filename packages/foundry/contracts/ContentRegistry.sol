@@ -347,6 +347,9 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
     function setProtocolConfig(address _protocolConfig) external onlyRole(CONFIG_ROLE) {
         require(_protocolConfig != address(0), "Invalid address");
+        if (address(voterIdNFT) != address(0)) {
+            require(ProtocolConfig(_protocolConfig).voterIdNFT() == address(voterIdNFT), "Voter ID mismatch");
+        }
         protocolConfig = ProtocolConfig(_protocolConfig);
         emit ProtocolConfigUpdated(_protocolConfig);
     }
@@ -355,6 +358,11 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     /// @param _voterIdNFT The Voter ID NFT contract address
     function setVoterIdNFT(address _voterIdNFT) external onlyRole(CONFIG_ROLE) {
         require(_voterIdNFT != address(0), "Invalid address");
+        require(
+            address(protocolConfig) == address(0) || protocolConfig.voterIdNFT() == address(0)
+                || protocolConfig.voterIdNFT() == _voterIdNFT,
+            "Voter ID mismatch"
+        );
         voterIdNFT = IVoterIdNFT(_voterIdNFT);
         emit VoterIdNFTUpdated(_voterIdNFT);
     }

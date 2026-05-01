@@ -235,6 +235,14 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(usdc.balanceOf(address(rewardPoolEscrow)), 0);
     }
 
+    function testSetVoterIdNFTRejectsRegistryOrProtocolMismatch() public {
+        MockVoterIdNFT replacementVoterIdNFT = new MockVoterIdNFT();
+
+        vm.prank(owner);
+        vm.expectRevert("Voter ID mismatch");
+        rewardPoolEscrow.setVoterIdNFT(address(replacementVoterIdNFT));
+    }
+
     function testCreateRewardPoolRejectsStaleRegistryEscrow() public {
         uint256 contentId = _submitQuestion("");
         QuestionRewardPoolEscrow replacementEscrow = QuestionRewardPoolEscrow(
@@ -716,7 +724,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertNotEq(migratedVoterIdNFT.getTokenId(voter2), voterIdNFT.getTokenId(voter2));
 
         uint256 secondRoundId = _settleRoundWith(voters, contentIds[1], directions);
-        assertEq(votingEngine.roundVoterIdNFTSnapshot(contentIds[1], secondRoundId), address(migratedVoterIdNFT));
+        assertEq(votingEngine.roundVoterIdNFTSnapshot(contentIds[1], secondRoundId), address(voterIdNFT));
 
         assertGt(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter2), 0);
 
@@ -2878,10 +2886,8 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         }
 
         vm.startPrank(owner);
+        vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
         protocolConfig.setVoterIdNFT(address(migratedVoterIdNFT));
-        registry.setVoterIdNFT(address(migratedVoterIdNFT));
-        frontendRegistry.setVoterIdNFT(address(migratedVoterIdNFT));
-        rewardPoolEscrow.setVoterIdNFT(address(migratedVoterIdNFT));
         vm.stopPrank();
     }
 
@@ -2893,10 +2899,8 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         }
 
         vm.startPrank(owner);
+        vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
         protocolConfig.setVoterIdNFT(address(migratedVoterIdNFT));
-        registry.setVoterIdNFT(address(migratedVoterIdNFT));
-        frontendRegistry.setVoterIdNFT(address(migratedVoterIdNFT));
-        rewardPoolEscrow.setVoterIdNFT(address(migratedVoterIdNFT));
         vm.stopPrank();
     }
 
