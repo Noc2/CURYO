@@ -12,7 +12,13 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
         >
           {DOCS_NAV.map(group => (
             <div key={group.section} className="min-w-44 shrink-0 lg:min-w-0">
-              <p className="mb-2 text-xs font-semibold uppercase text-base-content/50">{group.section}</p>
+              <Link
+                href={group.links[0]?.href ?? "/docs"}
+                prefetch={false}
+                className="mb-2 block text-xs font-semibold uppercase text-base-content/50 transition-colors hover:text-base-content/80"
+              >
+                {group.section}
+              </Link>
               <ul className="space-y-1">
                 {group.links.map(link => (
                   <li key={link.href}>
