@@ -9,6 +9,7 @@
     "dev": "node scripts/dev-preflight.mjs",
     "format": "prettier --write . '!(node_modules|.next|contracts)/**/*'",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx,.mjs --ignore-pattern public --ignore-pattern .next --ignore-pattern out --ignore-pattern contracts",
+    "perf:pages": "node scripts/measure-pages-performance.mjs",
     "serve": "next start",
     "start": "node scripts/dev-preflight.mjs",
     "vercel": "vercel --build-env YARN_ENABLE_IMMUTABLE_INSTALLS=false --build-env ENABLE_EXPERIMENTAL_COREPACK=1 --build-env VERCEL_TELEMETRY_DISABLED=1",
