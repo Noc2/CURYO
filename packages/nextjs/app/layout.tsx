@@ -1,7 +1,6 @@
 import { Manrope, Source_Sans_3 } from "next/font/google";
 import Script from "next/script";
 import "@scaffold-ui/components/styles.css";
-import { ScaffoldEthAppWithProviders } from "~~/components/ScaffoldEthAppWithProviders";
 import "~~/styles/globals.css";
 import { getMetadata } from "~~/utils/scaffold-eth/getMetadata";
 
@@ -26,7 +25,7 @@ const sourceSans = Source_Sans_3({
   weight: ["400", "500", "600", "700"],
 });
 
-const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
+const RootLayout = ({ children }: { children: React.ReactNode }) => {
   return (
     <html
       lang="en"
@@ -35,15 +34,11 @@ const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
       style={{ colorScheme: "dark" }}
     >
       <body suppressHydrationWarning>
-        <ScaffoldEthAppWithProviders>
-          <main id="main-content" className="relative flex min-h-0 flex-1 flex-col overflow-x-hidden">
-            {children}
-          </main>
-        </ScaffoldEthAppWithProviders>
+        {children}
         {isProduction ? <Script src="https://scripts.simpleanalyticscdn.com/latest.js" /> : null}
       </body>
     </html>
   );
 };
 
-export default ScaffoldEthApp;
+export default RootLayout;

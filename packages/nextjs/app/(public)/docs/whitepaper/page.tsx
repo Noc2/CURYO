@@ -1,4 +1,4 @@
-import { META, SECTIONS } from "../../../scripts/whitepaper/content";
+import { META, SECTIONS } from "../../../../scripts/whitepaper/content";
 import type { NextPage } from "next";
 import { ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 

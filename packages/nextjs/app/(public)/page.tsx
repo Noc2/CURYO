@@ -217,6 +217,7 @@ function FeatureBenefitCard({
           <Link
             key={`${title}-${link.href}`}
             href={link.href}
+            prefetch={false}
             className="rounded-md border border-primary/18 bg-base-100/35 px-3 py-1.5 text-xs font-semibold text-primary transition hover:border-accent/35 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {link.label}
@@ -243,10 +244,10 @@ function FeaturesBenefitsSection() {
 function LandingPageActionsFallback() {
   return (
     <div className="mt-6 flex flex-wrap justify-center gap-3 lg:justify-start">
-      <Link href={RATE_ROUTE} className="btn btn-primary whitespace-nowrap rounded-lg px-6">
+      <Link href={RATE_ROUTE} prefetch={false} className="btn btn-primary whitespace-nowrap rounded-lg px-6">
         Earn USDC
       </Link>
-      <Link href={DOCS_AI_ROUTE} className="btn whitespace-nowrap rounded-lg px-6">
+      <Link href={DOCS_AI_ROUTE} prefetch={false} className="btn whitespace-nowrap rounded-lg px-6">
         For Agents
       </Link>
     </div>
