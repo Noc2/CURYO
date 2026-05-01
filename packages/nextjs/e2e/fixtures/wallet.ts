@@ -8,9 +8,15 @@ type WalletFixtures = {
   connectedPage: Page;
 };
 
+const CONNECTED_PAGE_SETUP_TIMEOUT_MS = 120_000;
+
 export const test = base.extend<WalletFixtures>({
-  connectedPage: async ({ page }, use) => {
-    await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey);
+  connectedPage: async ({ page }, use, testInfo) => {
+    if (testInfo.timeout < CONNECTED_PAGE_SETUP_TIMEOUT_MS) {
+      testInfo.setTimeout(CONNECTED_PAGE_SETUP_TIMEOUT_MS);
+    }
+
+    await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey, { bootstrap: false });
     await gotoWithRetry(page, "/", { ensureWalletConnected: true });
     await use(page);
   },
