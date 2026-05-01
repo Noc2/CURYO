@@ -7,17 +7,19 @@ import { useAccount } from "wagmi";
 import { DelegationSection } from "~~/components/profile/DelegationSection";
 import { CuryoConnectButton } from "~~/components/scaffold-eth";
 import { NotificationSettingsPanel } from "~~/components/settings/NotificationSettingsPanel";
+import { WalletSettingsPanel } from "~~/components/settings/WalletSettingsPanel";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
 import { SETTINGS_FRONTEND_HASH, SETTINGS_ROUTE } from "~~/constants/routes";
 
-type SettingsTab = "delegation" | "notifications" | typeof SETTINGS_FRONTEND_HASH;
+type SettingsTab = "delegation" | "notifications" | "wallet" | typeof SETTINGS_FRONTEND_HASH;
 
-const settingsTabs: SettingsTab[] = ["notifications", "delegation", SETTINGS_FRONTEND_HASH];
+const settingsTabs: SettingsTab[] = ["wallet", "notifications", "delegation", SETTINGS_FRONTEND_HASH];
 
 const SETTINGS_TAB_LABELS: Record<SettingsTab, string> = {
   delegation: "Delegation",
   frontend: "Frontend",
   notifications: "Notifications",
+  wallet: "Wallet",
 };
 
 function SettingsSectionLoading() {
@@ -41,7 +43,7 @@ function parseSettingsTab(value: string | null): SettingsTab | null {
 }
 
 function getSettingsHash(tab: SettingsTab) {
-  return tab === SETTINGS_FRONTEND_HASH || tab === "delegation" ? `#${tab}` : "";
+  return tab === "notifications" ? "" : `#${tab}`;
 }
 
 function buildSettingsTabUrl(pathname: string, searchParams: URLSearchParams, tab: SettingsTab) {
@@ -117,6 +119,7 @@ function SettingsPageInner() {
       {activeTab === "delegation" && <DelegationSection />}
       {activeTab === SETTINGS_FRONTEND_HASH && <FrontendRegistration />}
       {activeTab === "notifications" && <NotificationSettingsPanel address={address} />}
+      {activeTab === "wallet" && <WalletSettingsPanel address={address} />}
     </AppPageShell>
   );
 }
