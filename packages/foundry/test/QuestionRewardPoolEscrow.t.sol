@@ -236,14 +236,6 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(usdc.balanceOf(address(rewardPoolEscrow)), 0);
     }
 
-    function testSetVoterIdNFTRejectsRegistryOrProtocolMismatch() public {
-        MockVoterIdNFT replacementVoterIdNFT = new MockVoterIdNFT();
-
-        vm.prank(owner);
-        vm.expectRevert("Voter ID mismatch");
-        rewardPoolEscrow.setVoterIdNFT(address(replacementVoterIdNFT));
-    }
-
     function testCreateRewardPoolRejectsStaleRegistryEscrow() public {
         uint256 contentId = _submitQuestion("");
         QuestionRewardPoolEscrow replacementEscrow = QuestionRewardPoolEscrow(
@@ -356,7 +348,6 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         uint256 rewardPoolId = _createRewardPool(contentId, 4, 3, 1);
 
         assertEq(rewardPoolId, 2);
-        assertEq(rewardPoolEscrow.nextRewardPoolId(), 3);
         assertEq(usdc.balanceOf(address(rewardPoolEscrow)), 4);
     }
 
@@ -1688,7 +1679,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
 
     function testCompletedOpenEndedSubmissionPoolCanForfeitUnclaimedRewardsAfterGrace() public {
         uint256 contentId = _submitQuestion("");
-        uint256 rewardPoolId = rewardPoolEscrow.nextRewardPoolId() - 1;
+        uint256 rewardPoolId = contentId;
         uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
 
         address[] memory voters = _threeVoters();
@@ -2047,12 +2038,12 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
     function testUndelegatedAgentQuestionSubmissionWithUsdcRewardRequiresVoterId() public {
         address agentWallet = address(0xA11CE);
         uint256 nextContentIdBefore = registry.nextContentId();
-        uint256 nextRewardPoolIdBefore = rewardPoolEscrow.nextRewardPoolId();
+        uint256 escrowBalanceBefore = usdc.balanceOf(address(rewardPoolEscrow));
 
         _submitAgentQuestionWithUsdcReward(agentWallet, "agent-undelegated-no-voter-id", true);
 
         assertEq(registry.nextContentId(), nextContentIdBefore);
-        assertEq(rewardPoolEscrow.nextRewardPoolId(), nextRewardPoolIdBefore);
+        assertEq(usdc.balanceOf(address(rewardPoolEscrow)), escrowBalanceBefore);
     }
 
     function testX402QuestionSubmissionRequiresVoterId() public {
@@ -2610,7 +2601,6 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         usdc.approve(address(rewardPoolEscrow), rewardTerms.amount);
         registry.reserveSubmission(revealCommitment);
         vm.warp(block.timestamp + 1);
-        rewardPoolId = rewardPoolEscrow.nextRewardPoolId();
         if (expectVoterIdRevert) {
             vm.expectRevert("Voter ID required");
         }
@@ -2627,6 +2617,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
             roundConfig,
             _defaultQuestionSpec()
         );
+        rewardPoolId = contentId;
         vm.stopPrank();
     }
 

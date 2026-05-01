@@ -131,7 +131,7 @@ contract QuestionRewardPoolEscrow is
     ContentRegistry internal registry;
     RoundVotingEngine internal votingEngine;
     IVoterIdNFT internal voterIdNFT;
-    uint256 public nextRewardPoolId;
+    uint256 internal nextRewardPoolId;
 
     mapping(uint256 => RewardPool) private rewardPools;
     mapping(uint256 => mapping(uint256 => RoundSnapshot)) private roundSnapshots;
@@ -905,16 +905,6 @@ contract QuestionRewardPoolEscrow is
         returns (address hrep, address usdc, address registry_, address votingEngine_, address voterIdNft_)
     {
         return (address(hrepToken), address(usdcToken), address(registry), address(votingEngine), address(voterIdNFT));
-    }
-
-    function setVoterIdNFT(address voterIdNFT_) external onlyRole(CONFIG_ROLE) {
-        require(voterIdNFT_ != address(0), "Invalid Voter ID");
-        require(
-            voterIdNFT_ == address(registry.voterIdNFT())
-                && voterIdNFT_ == votingEngine.protocolConfig().voterIdNFT(),
-            "Voter ID mismatch"
-        );
-        voterIdNFT = IVoterIdNFT(voterIdNFT_);
     }
 
     function setDefaultFrontendFeeBps(uint256 frontendFeeBps_) external onlyRole(CONFIG_ROLE) {

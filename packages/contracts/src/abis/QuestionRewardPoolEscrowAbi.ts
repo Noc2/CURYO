@@ -456,19 +456,6 @@ export const QuestionRewardPoolEscrowAbi = [
   },
   {
     "type": "function",
-    "name": "nextRewardPoolId",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "pause",
     "inputs": [],
     "outputs": [],
@@ -629,19 +616,6 @@ export const QuestionRewardPoolEscrowAbi = [
         "name": "frontendFeeBps_",
         "type": "uint256",
         "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "setVoterIdNFT",
-    "inputs": [
-      {
-        "name": "voterIdNFT_",
-        "type": "address",
-        "internalType": "address"
       }
     ],
     "outputs": [],

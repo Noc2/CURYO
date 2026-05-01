@@ -149,25 +149,6 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "contentBundleId",
-    "inputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "contentSubmitterNullifier",
     "inputs": [
       {
@@ -264,25 +245,6 @@ export const ContentRegistryAbi = [
         "name": "",
         "type": "uint256",
         "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getConservativeRating",
-    "inputs": [
-      {
-        "name": "contentId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint16",
-        "internalType": "uint16"
       }
     ],
     "stateMutability": "view"
@@ -636,19 +598,6 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "nextQuestionBundleId",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "pause",
     "inputs": [],
     "outputs": [],
@@ -663,35 +612,6 @@ export const ContentRegistryAbi = [
         "name": "",
         "type": "bool",
         "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "pendingSubmissions",
-    "inputs": [
-      {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "submitter",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "reservedAt",
-        "type": "uint48",
-        "internalType": "uint48"
-      },
-      {
-        "name": "expiresAt",
-        "type": "uint48",
-        "internalType": "uint48"
       }
     ],
     "stateMutability": "view"
@@ -1815,19 +1735,6 @@ export const ContentRegistryAbi = [
     "inputs": [
       {
         "name": "account",
-        "type": "address",
-        "indexed": false,
-        "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "ProtocolConfigUpdated",
-    "inputs": [
-      {
-        "name": "protocolConfig",
         "type": "address",
         "indexed": false,
         "internalType": "address"

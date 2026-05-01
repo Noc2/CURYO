@@ -1802,11 +1802,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         (,,,,,,,, uint256 rating,) = registry.contents(contentId);
         RatingLib.RatingState memory ratingState = registry.getRatingState(contentId);
-        assertLt(
-            registry.getConservativeRating(contentId),
-            4_000,
-            "conservative rating should fall below the tuned threshold"
-        );
+        assertLt(ratingState.conservativeRatingBps, 4_000, "conservative rating should fall below the tuned threshold");
         assertGt(uint256(ratingState.lowSince), 0, "first low settlement should start the low-rating dwell timer");
         assertEq(
             hrepToken.balanceOf(treasury), treasuryBalanceBefore, "treasury should not be paid before the dwell window"

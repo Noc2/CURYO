@@ -159,7 +159,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     address public bonusPool; // Cancellation fee sink (anti-spam), typically the treasury
     address public treasury; // Receives 100% of slashed stakes (governance timelock)
     uint256 public nextContentId;
-    uint256 public nextQuestionBundleId;
+    uint256 internal nextQuestionBundleId;
     mapping(uint256 => Content) public contents;
     mapping(bytes32 => bool) public submissionKeyUsed; // Canonical submission keys prevent duplicate content variants
     IVoterIdNFT public voterIdNFT; // Voter ID NFT for sybil resistance
@@ -182,11 +182,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     /// @notice Per-question round settings selected at submission and bounded by governance.
     mapping(uint256 => RoundLib.RoundConfig) internal contentRoundConfig;
 
-    /// @notice Ordered content IDs for a submitted question bundle.
-    mapping(uint256 => uint256[]) internal questionBundleContentIds;
-
-    mapping(uint256 => uint256) public contentBundleId;
-    mapping(uint256 => uint256) internal contentBundleIndex;
+    mapping(uint256 => uint256) internal contentBundleId;
 
     /// @notice Meaningful-activity anchor used for dormancy checks.
     /// @dev Vote commits still update `lastActivityAt` for UI/analytics, but only submission, revival,
@@ -200,7 +196,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     ProtocolConfig public protocolConfig;
 
     /// @notice Hidden, time-bounded reservations for future content reveals.
-    mapping(bytes32 => PendingSubmission) public pendingSubmissions;
+    mapping(bytes32 => PendingSubmission) internal pendingSubmissions;
 
     /// @notice Timestamp after which a dormant content key may be publicly released for replacement.
     mapping(uint256 => uint256) public dormantKeyReleasableAt;
@@ -273,7 +269,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         uint32 settledRounds
     );
     event VoterIdNFTUpdated(address voterIdNFT);
-    event ProtocolConfigUpdated(address protocolConfig);
     event QuestionRewardPoolEscrowUpdated(address rewardPoolEscrow);
     event ContentRoundConfigSet(
         uint256 indexed contentId, uint32 epochDuration, uint32 maxDuration, uint16 minVoters, uint16 maxVoters
@@ -351,7 +346,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             require(ProtocolConfig(_protocolConfig).voterIdNFT() == address(voterIdNFT), "Voter ID mismatch");
         }
         protocolConfig = ProtocolConfig(_protocolConfig);
-        emit ProtocolConfigUpdated(_protocolConfig);
     }
 
     /// @notice Set the Voter ID NFT contract for sybil resistance
@@ -469,9 +463,8 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     ) private returns (uint256) {
         _enterQuestionSubmissionGuard();
         _requireNotPaused();
-        uint256 contentId = _submitValidatedQuestionWithMedia(
-            metadata, imageUrls, videoUrl, salt, rewardTerms, roundConfig, 0, 0, spec
-        );
+        uint256 contentId =
+            _submitValidatedQuestionWithMedia(metadata, imageUrls, videoUrl, salt, rewardTerms, roundConfig, 0, spec);
         _exitQuestionSubmissionGuard();
         return contentId;
     }
@@ -564,11 +557,9 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
                 contentHash,
                 resolvedCategoryIds[i],
                 validatedRoundConfig,
-                bundleId,
-                i
+                bundleId
             );
             contentIds[i] = contentId;
-            questionBundleContentIds[bundleId].push(contentId);
 
             emit ContentSubmitted(
                 contentId,
@@ -678,7 +669,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             rewardTerms,
             validatedRoundConfig,
             0,
-            0,
             spec
         );
         _exitQuestionSubmissionGuard();
@@ -753,7 +743,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         SubmissionRewardTerms memory rewardTerms,
         RoundLib.RoundConfig memory roundConfig,
         uint256 bundleId,
-        uint256 bundleIndex,
         QuestionSpecCommitment memory spec
     ) internal returns (uint256 contentId) {
         (uint256 resolvedCategoryId, bytes32 submissionKey, PendingSubmission memory pending) = _prepareQuestionMediaSubmission(
@@ -771,7 +760,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             rewardTerms,
             roundConfig,
             bundleId,
-            bundleIndex,
             spec
         );
     }
@@ -905,8 +893,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         bytes32 contentHash,
         uint256 resolvedCategoryId,
         RoundLib.RoundConfig memory roundConfig,
-        uint256 bundleId,
-        uint256 bundleIndex
+        uint256 bundleId
     ) internal returns (uint256 contentId) {
         contentId = nextContentId++;
         contentSubmissionKey[contentId] = submissionKey;
@@ -929,7 +916,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         });
         if (bundleId != 0) {
             contentBundleId[contentId] = bundleId;
-            contentBundleIndex[contentId] = bundleIndex;
         }
         emit ContentRoundConfigSet(
             contentId, roundConfig.epochDuration, roundConfig.maxDuration, roundConfig.minVoters, roundConfig.maxVoters
@@ -961,7 +947,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         SubmissionRewardTerms memory rewardTerms,
         RoundLib.RoundConfig memory roundConfig,
         uint256 bundleId,
-        uint256 bundleIndex,
         QuestionSpecCommitment memory spec
     ) internal returns (uint256 contentId) {
         bytes32 contentHash = _questionContentHash(metadata, imageUrls, videoUrl, resolvedCategoryId, spec);
@@ -972,8 +957,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             contentHash,
             resolvedCategoryId,
             roundConfig,
-            bundleId,
-            bundleIndex
+            bundleId
         );
         require(questionRewardPoolEscrow != address(0), "Bounty escrow not set");
         uint256 rewardPoolId = IQuestionRewardPoolEscrow(questionRewardPoolEscrow)
@@ -1175,12 +1159,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         uint16 ratingBps = ratingState[contentId].ratingBps;
         if (ratingBps == 0) return uint16(uint256(contents[contentId].rating) * 100);
         return ratingBps;
-    }
-
-    function getConservativeRating(uint256 contentId) external view returns (uint16) {
-        uint16 conservativeRatingBps = ratingState[contentId].conservativeRatingBps;
-        if (conservativeRatingBps == 0) return uint16(uint256(contents[contentId].rating) * 100);
-        return conservativeRatingBps;
     }
 
     function isContentActive(uint256 contentId) external view returns (bool) {
