@@ -46,4 +46,14 @@ test.describe("Settings page", () => {
     await expect(page.getByRole("button", { name: "Frontend", exact: true })).toHaveClass(/pill-active/);
     await expect(page.getByRole("heading", { name: "Frontend Registration" })).toBeVisible({ timeout: 15_000 });
   });
+
+  test("wallet tab shows the CELO gas top-up surface", async ({ connectedPage: page }) => {
+    await gotoWithRetry(page, "/settings#wallet");
+
+    await expect(page).toHaveURL(/\/settings#wallet$/);
+    await expect(page.getByRole("button", { name: "Wallet", exact: true })).toHaveClass(/pill-active/);
+    await expect(page.getByRole("heading", { name: "Gas and wallet funding" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Top up network fees" })).toBeVisible();
+    await expect(page.getByText("CELO top-up is available on Celo mainnet deployments.")).toBeVisible();
+  });
 });
