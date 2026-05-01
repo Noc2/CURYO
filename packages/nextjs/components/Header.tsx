@@ -66,6 +66,7 @@ const HeaderNavLink = ({
   return (
     <Link
       href={href}
+      prefetch={false}
       className={`group relative flex w-full items-center gap-3 overflow-hidden rounded-xl ${
         compact ? "px-3 py-2.5" : "px-4 py-3"
       } ${className ?? ""} transition-colors duration-200 ${
@@ -125,6 +126,7 @@ const HeaderMenuLinks = ({ variant = "mobile" }: { variant?: "mobile" | "desktop
                       <h3 className="mb-1.5 w-full">
                         <Link
                           href={sectionHref}
+                          prefetch={false}
                           className={`block w-full rounded-lg px-3 text-base font-semibold uppercase tracking-wider transition-colors ${isSectionActive ? "text-base-content/80" : "text-base-content/55 hover:text-base-content/80"}`}
                         >
                           {group.section}
@@ -137,6 +139,7 @@ const HeaderMenuLinks = ({ variant = "mobile" }: { variant?: "mobile" | "desktop
                             <Link
                               key={link.href}
                               href={link.href}
+                              prefetch={false}
                               className={`block w-full px-3 py-1.5 text-base rounded-lg transition-colors ${
                                 isLinkActive
                                   ? "bg-primary/10 text-primary font-medium"

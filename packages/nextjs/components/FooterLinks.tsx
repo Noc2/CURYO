@@ -52,7 +52,7 @@ export function FooterLinks({
                     {item.label}
                   </a>
                 ) : (
-                  <Link href={item.href} className={linkClassName}>
+                  <Link href={item.href} prefetch={false} className={linkClassName}>
                     {item.label}
                   </Link>
                 )}
