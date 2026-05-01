@@ -804,7 +804,7 @@ contract RoundVotingEngine is
         }
 
         IParticipationPool currentParticipationPool = _getParticipationPool();
-        address currentRewardDistributor = protocolConfig.rewardDistributor();
+        address currentRewardDistributor = protocolConfig.rewardDistributorForVotingEngine(address(this));
         RoundSettlementSideEffectsLib.recordSettlement(
             registry,
             _getRoundRatingConfig(contentId, roundId),
