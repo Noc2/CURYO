@@ -805,6 +805,49 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter1), 0);
     }
 
+    function testBundleIgnoresExtraCompleterRevealedAfterClose() public {
+        RoundLib.RoundConfig memory roundConfig = RoundLib.RoundConfig({
+            epochDuration: uint32(EPOCH_DURATION), maxDuration: uint32(7 days), minVoters: 3, maxVoters: 4
+        });
+        uint256[] memory contentIds = new uint256[](2);
+        contentIds[0] = _submitQuestionWithContextAndRoundConfig(
+            "https://example.com/bundle-late-extra-a", "https://example.com/bundle-late-extra-a.jpg", roundConfig
+        );
+        contentIds[1] = _submitQuestionWithContextAndRoundConfig(
+            "https://example.com/bundle-late-extra-b", "https://example.com/bundle-late-extra-b.jpg", roundConfig
+        );
+        uint256 closesAt = block.timestamp + 2 * EPOCH_DURATION + 20;
+        uint256 bundleId =
+            _createSubmissionBundleWithClose(contentIds, funder, REWARD_ASSET_USDC, REWARD_POOL_AMOUNT, 3, closesAt);
+
+        (uint256 firstRoundId, bytes32 firstLateCommitKey, bytes32 firstLateSalt, bool firstLateDirection) =
+            _revealThresholdAndReturnUnrevealed(contentIds[0]);
+        (uint256 secondRoundId, bytes32 secondLateCommitKey, bytes32 secondLateSalt, bool secondLateDirection) =
+            _revealThresholdAndReturnUnrevealed(contentIds[1]);
+        assertLe(RoundEngineReadHelpers.round(votingEngine, contentIds[0], firstRoundId).thresholdReachedAt, closesAt);
+        assertLe(RoundEngineReadHelpers.round(votingEngine, contentIds[1], secondRoundId).thresholdReachedAt, closesAt);
+
+        vm.warp(closesAt + 1);
+        votingEngine.revealVoteByCommitKey(
+            contentIds[0], firstRoundId, firstLateCommitKey, firstLateDirection, firstLateSalt
+        );
+        votingEngine.revealVoteByCommitKey(
+            contentIds[1], secondRoundId, secondLateCommitKey, secondLateDirection, secondLateSalt
+        );
+        votingEngine.settleRound(contentIds[0], firstRoundId);
+        votingEngine.settleRound(contentIds[1], secondRoundId);
+
+        assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter1), REWARD_POOL_AMOUNT / 3);
+        assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter4), 0);
+
+        vm.prank(voter4);
+        vm.expectRevert("Bundle incomplete");
+        rewardPoolEscrow.claimQuestionBundleReward(bundleId, 0);
+
+        vm.prank(voter1);
+        assertEq(rewardPoolEscrow.claimQuestionBundleReward(bundleId, 0), REWARD_POOL_AMOUNT / 3);
+    }
+
     function testBundleClaimSupportsMultipleRoundSets() public {
         uint256[] memory contentIds = _submitBundleQuestions();
         uint256 bundleAmount = 120e6;
@@ -1652,6 +1695,34 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         uint256 refundAmount = rewardPoolEscrow.refundExpiredRewardPool(rewardPoolId);
         assertEq(refundAmount, REWARD_POOL_AMOUNT);
         assertEq(usdc.balanceOf(funder), funderBalanceBefore + refundAmount);
+    }
+
+    function testRewardPoolIgnoresExtraVoterRevealedAfterClose() public {
+        RoundLib.RoundConfig memory roundConfig = RoundLib.RoundConfig({
+            epochDuration: uint32(EPOCH_DURATION), maxDuration: uint32(7 days), minVoters: 3, maxVoters: 4
+        });
+        uint256 contentId =
+            _submitQuestionWithRoundConfig("https://example.com/min-quorum-late-extra.jpg", roundConfig);
+        uint256 expiresAt = block.timestamp + EPOCH_DURATION + 10;
+        uint256 rewardPoolId = _createRewardPoolWithExpiry(contentId, REWARD_POOL_AMOUNT, 3, 1, expiresAt);
+
+        (uint256 roundId, bytes32 lateCommitKey, bytes32 lateSalt, bool lateDirection) =
+            _revealThresholdAndReturnUnrevealed(contentId);
+        assertLe(RoundEngineReadHelpers.round(votingEngine, contentId, roundId).thresholdReachedAt, expiresAt);
+
+        vm.warp(expiresAt + 1);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, lateCommitKey, lateDirection, lateSalt);
+        votingEngine.settleRound(contentId, roundId);
+
+        assertEq(rewardPoolEscrow.claimableQuestionReward(rewardPoolId, roundId, voter1), REWARD_POOL_AMOUNT / 3);
+        assertEq(rewardPoolEscrow.claimableQuestionReward(rewardPoolId, roundId, voter4), 0);
+
+        vm.prank(voter4);
+        vm.expectRevert("Late reveal");
+        rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
+
+        vm.prank(voter1);
+        assertEq(rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId), REWARD_POOL_AMOUNT / 3);
     }
 
     function testCompletedPoolRefundRequiresGraceAndSweepsUnclaimedRewards() public {

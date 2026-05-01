@@ -1159,6 +1159,7 @@ contract RoundVotingEngine is
         );
         roundStakeWithEligibleFrontend[contentId][roundId] = eligibleFrontendStake;
         roundEligibleFrontendCount[contentId][roundId] = eligibleFrontendCount;
+        commitRevealedAt[contentId][roundId][commitKey] = uint48(block.timestamp);
 
         emit VoteRevealed(contentId, roundId, voter, isUp);
     }
@@ -1230,6 +1231,9 @@ contract RoundVotingEngine is
     // Commit-time frontend eligibility snapshot to prevent retroactive fee eligibility changes.
     mapping(uint256 => mapping(uint256 => mapping(bytes32 => bool))) public frontendEligibleAtCommit;
 
+    // Commit reveal timestamp snapshot for bounty/reward deadline accounting.
+    mapping(uint256 => mapping(uint256 => mapping(bytes32 => uint48))) public commitRevealedAt;
+
     // Frontend registry snapshot per round so historical fee claims do not depend on live registry replacement.
     mapping(uint256 => mapping(uint256 => address)) public roundFrontendRegistrySnapshot;
 
@@ -1240,5 +1244,5 @@ contract RoundVotingEngine is
     mapping(uint256 => mapping(uint256 => uint256)) public roundUnrevealedCleanupRemaining;
 
     // --- Storage gap reserved for future upgrades ---
-    uint256[44] private __gap;
+    uint256[43] private __gap;
 }

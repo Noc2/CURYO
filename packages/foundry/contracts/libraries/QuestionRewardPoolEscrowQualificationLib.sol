@@ -97,7 +97,7 @@ library QuestionRewardPoolEscrowQualificationLib {
         for (uint256 i = 0; i < commitCount;) {
             bytes32 commitKey = ctx.votingEngine.getRoundCommitKey(ctx.contentId, ctx.roundId, i);
             (address voter,,,, bool revealed,,) = ctx.votingEngine.commitCore(ctx.contentId, ctx.roundId, commitKey);
-            if (voter != address(0) && revealed) {
+            if (voter != address(0) && revealed && _revealedByBountyClose(ctx, commitKey)) {
                 uint256 voterId = ctx.votingEngine.commitVoterId(ctx.contentId, ctx.roundId, commitKey);
                 if (!_isExcludedVoter(
                         ctx.voterIdNft,
@@ -117,6 +117,12 @@ library QuestionRewardPoolEscrowQualificationLib {
                 ++i;
             }
         }
+    }
+
+    function _revealedByBountyClose(QualificationContext memory ctx, bytes32 commitKey) private view returns (bool) {
+        if (ctx.bountyClosesAt == 0) return true;
+        uint256 revealedAt = ctx.votingEngine.commitRevealedAt(ctx.contentId, ctx.roundId, commitKey);
+        return revealedAt != 0 && revealedAt <= ctx.bountyClosesAt;
     }
 
     function _isExcludedVoter(
