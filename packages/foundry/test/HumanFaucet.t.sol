@@ -5,6 +5,7 @@ import { Test, console } from "forge-std/Test.sol";
 import { HumanFaucet } from "../contracts/HumanFaucet.sol";
 import { MockIdentityVerificationHub } from "../contracts/mocks/MockIdentityVerificationHub.sol";
 import { HumanReputation } from "../contracts/HumanReputation.sol";
+import { VoterIdNFT } from "../contracts/VoterIdNFT.sol";
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import { IERC1271 } from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
@@ -228,6 +229,73 @@ contract HumanFaucetTest is Test {
         assertTrue(faucet.hasClaimed(user));
         assertEq(faucet.recipientAuthorizationNonces(user), 1);
         assertEq(hrepToken.balanceOf(user), TIER_0_AMOUNT);
+    }
+
+    function test_RecipientAuthorizationRequiredRejectsVoterIdRemintWithoutSignature() public {
+        uint256 oldKey = 0xA11CE;
+        uint256 newKey = 0xB0B;
+        address oldUser = vm.addr(oldKey);
+        address newUser = vm.addr(newKey);
+        uint256 nullifier = 333333;
+        VoterIdNFT realVoterIdNFT = _deployRealVoterIdNFT();
+
+        vm.startPrank(admin);
+        faucet.setVoterIdNFT(address(realVoterIdNFT));
+        faucet.setRecipientAuthorizationRequired(true);
+        vm.stopPrank();
+
+        mockHub.setVerifiedWithNullifier(oldUser, nullifier);
+        mockHub.simulateVerificationWithUserData(
+            address(faucet),
+            oldUser,
+            _buildClaimAuthorizationUserData(oldUser, address(0), block.timestamp + 1 hours, oldKey)
+        );
+
+        vm.prank(admin);
+        realVoterIdNFT.revokeVoterId(oldUser);
+        vm.prank(admin);
+        realVoterIdNFT.resetNullifier(nullifier);
+
+        mockHub.setVerifiedWithNullifier(newUser, nullifier);
+        vm.expectRevert(HumanFaucet.MissingClaimAuthorization.selector);
+        mockHub.simulateVerificationWithUserData(address(faucet), newUser, abi.encodePacked(bytes4("HFVR")));
+    }
+
+    function test_RecipientAuthorizationRequiredAcceptsVoterIdRemintSignature() public {
+        uint256 oldKey = 0xA11CE;
+        uint256 newKey = 0xB0B;
+        address oldUser = vm.addr(oldKey);
+        address newUser = vm.addr(newKey);
+        uint256 nullifier = 444444;
+        VoterIdNFT realVoterIdNFT = _deployRealVoterIdNFT();
+
+        vm.startPrank(admin);
+        faucet.setVoterIdNFT(address(realVoterIdNFT));
+        faucet.setRecipientAuthorizationRequired(true);
+        vm.stopPrank();
+
+        mockHub.setVerifiedWithNullifier(oldUser, nullifier);
+        mockHub.simulateVerificationWithUserData(
+            address(faucet),
+            oldUser,
+            _buildClaimAuthorizationUserData(oldUser, address(0), block.timestamp + 1 hours, oldKey)
+        );
+
+        vm.prank(admin);
+        realVoterIdNFT.revokeVoterId(oldUser);
+        vm.prank(admin);
+        realVoterIdNFT.resetNullifier(nullifier);
+
+        mockHub.setVerifiedWithNullifier(newUser, nullifier);
+        bytes memory remintUserData = _buildRemintAuthorizationUserData(newUser, block.timestamp + 1 hours, newKey);
+        mockHub.simulateVerificationWithUserData(address(faucet), newUser, remintUserData);
+
+        assertFalse(realVoterIdNFT.hasVoterId(oldUser));
+        assertTrue(realVoterIdNFT.hasVoterId(newUser));
+        assertEq(hrepToken.balanceOf(newUser), 0);
+        assertTrue(faucet.hasClaimed(newUser));
+        assertEq(faucet.claimNullifier(newUser), nullifier);
+        assertEq(faucet.recipientAuthorizationNonces(newUser), 1);
     }
 
     function test_BootstrapMigratedClaims_RejectsOversizedBatch() public {
@@ -1085,6 +1153,24 @@ contract HumanFaucetTest is Test {
         bytes memory signature =
             _signClaimAuthorization(privateKey, user, referrer, faucet.recipientAuthorizationNonces(user), deadline);
         return abi.encode(bytes4("HFCA"), referrer, deadline, signature);
+    }
+
+    function _buildRemintAuthorizationUserData(address user, uint256 deadline, uint256 privateKey)
+        internal
+        view
+        returns (bytes memory)
+    {
+        bytes memory signature = _signClaimAuthorization(
+            privateKey, user, address(0), faucet.recipientAuthorizationNonces(user), deadline
+        );
+        return abi.encode(bytes4("HFVR"), deadline, signature);
+    }
+
+    function _deployRealVoterIdNFT() internal returns (VoterIdNFT realVoterIdNFT) {
+        vm.startPrank(admin);
+        realVoterIdNFT = new VoterIdNFT(admin, admin);
+        realVoterIdNFT.addMinter(address(faucet));
+        vm.stopPrank();
     }
 
     function _signClaimAuthorization(

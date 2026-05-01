@@ -575,7 +575,12 @@ contract HumanFaucet is SelfVerificationRoot, EIP712, Ownable, Pausable {
 
         // A reset Voter ID nullifier can remint the SBT without reopening the HREP faucet reward.
         if (nullifierUsed[output.nullifier]) {
-            if (_isVoterIdRemintRequest(userData)) {
+            (bool remintRequest, uint256 remintDeadline, bytes memory remintSignature) =
+                _decodeVoterIdRemintUserData(userData);
+            if (remintRequest) {
+                if (recipientAuthorizationRequired) {
+                    _requireClaimAuthorization(user, address(0), remintDeadline, remintSignature);
+                }
                 _remintVoterId(user, output.nullifier);
                 _claiming = false;
                 return;
@@ -834,9 +839,31 @@ contract HumanFaucet is SelfVerificationRoot, EIP712, Ownable, Pausable {
             && payload[3] == bytes1("A");
     }
 
-    function _isVoterIdRemintRequest(bytes memory userData) internal pure returns (bool) {
-        return userData.length == 4 && userData[0] == bytes1("H") && userData[1] == bytes1("F")
-            && userData[2] == bytes1("V") && userData[3] == bytes1("R");
+    function _decodeVoterIdRemintUserData(bytes memory userData)
+        internal
+        pure
+        returns (bool remintRequest, uint256 deadline, bytes memory signature)
+    {
+        bytes memory payload = userData;
+        if (_isHexData(userData)) {
+            bytes memory decoded = _decodeHexBytes(userData);
+            if (decoded.length == 4 || (decoded.length >= 128 && _hasVoterIdRemintMagic(decoded))) {
+                payload = decoded;
+            }
+        }
+        if (!_hasVoterIdRemintMagic(payload)) return (false, 0, "");
+        if (payload.length == 4) return (true, 0, "");
+        if (payload.length >= 128) {
+            (bytes4 magic, uint256 encodedDeadline, bytes memory encodedSignature) =
+                abi.decode(payload, (bytes4, uint256, bytes));
+            if (magic == bytes4("HFVR")) return (true, encodedDeadline, encodedSignature);
+        }
+        return (false, 0, "");
+    }
+
+    function _hasVoterIdRemintMagic(bytes memory payload) internal pure returns (bool) {
+        return payload.length >= 4 && payload[0] == bytes1("H") && payload[1] == bytes1("F")
+            && payload[2] == bytes1("V") && payload[3] == bytes1("R");
     }
 
     function _decodeHexBytes(bytes memory userData) internal pure returns (bytes memory) {
