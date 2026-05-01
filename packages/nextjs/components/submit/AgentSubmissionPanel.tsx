@@ -979,10 +979,6 @@ export function AgentSubmissionPanel() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className={surfaceSectionHeadingClassName}>For Agents</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-base-content/65">
-              Choose how an AI agent will pay for asks: send a browser signing link to a user, run a local signer CLI,
-              or add managed controls for production agents.
-            </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Link href={`${DOCS_AI_ROUTE}#paths`} className="btn btn-outline btn-sm">
