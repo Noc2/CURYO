@@ -8,6 +8,7 @@ test.describe("Documentation pages", () => {
   const docPages = [
     "/docs",
     "/docs/how-it-works",
+    "/docs/tech-stack",
     "/docs/tokenomics",
     "/docs/governance",
     "/docs/sdk",

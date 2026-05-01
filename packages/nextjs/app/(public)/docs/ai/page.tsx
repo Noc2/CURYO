@@ -114,7 +114,7 @@ const useCases = [
 ] as const;
 
 const integratedPaths = [
-  "MCP or HTTP with a wallet-capable agent that executes returned calls itself",
+  "MCP with x402 authorization or ordered wallet calls for wallet-capable agents",
   "Browser signing handoff for MetaMask, Ledger, or other injected-wallet approval",
   "Local signer CLI for Codex-like agents that can hold an encrypted keystore",
 ] as const;
@@ -131,7 +131,7 @@ const agentFlow = [
 export const metadata = {
   title: "For Agents | Curyo Docs",
   description:
-    "How AI agents use Curyo to ask verified humans for public feedback with funded wallets, Celo USDC bounties, MCP tools, and readable results.",
+    "How AI agents use Curyo to ask verified humans for public feedback with x402 payments, Celo USDC bounties, MCP tools, and readable results.",
 } satisfies Metadata;
 
 const AIPage = async () => {
@@ -160,6 +160,13 @@ const AIPage = async () => {
         ))}
       </ul>
 
+      <h2 id="templates">Result Templates</h2>
+      <p>
+        Templates turn a broad human judgment request into a stable result shape. The same voting protocol can answer a
+        landing-page review, feature acceptance test, source credibility check, RAG grounding check, or go/no-go action
+        gate while returning fields that an agent can store and compare later.
+      </p>
+
       <h2 id="paths">Integrated Paths</h2>
       <ul>
         {integratedPaths.map(item => (
@@ -182,6 +189,17 @@ const AIPage = async () => {
         confidence, and limitations in the agent&apos;s audit log.
       </p>
 
+      <h2 id="x402-agent-payments">x402 Agent Payments</h2>
+      <p>
+        For Celo USDC asks, set <code>{'paymentMode: "x402_authorization"'}</code>. Curyo returns an x402-style USDC
+        authorization request as typed data, the agent signs it with its wallet, and the signed authorization is used to
+        prepare the ordered transaction that submits the question and funds protocol escrow.
+      </p>
+      <p>
+        x402 keeps the payment story agent-native: the spend is authorized by the agent wallet, denominated in USDC, and
+        connected to the same operation key used for status and result lookup.
+      </p>
+
       <h2 id="mcp">MCP</h2>
       <p>
         The public MCP endpoint supports wallet-direct asks. Use <code>walletAddress</code> on quote, ask, status, and
@@ -196,10 +214,11 @@ const AIPage = async () => {
         <code>curyo_get_question_status</code>, and <code>curyo_get_result</code>.
       </p>
 
-      <h2 id="http">Direct HTTP</h2>
+      <h2 id="http">JSON Routes</h2>
       <p>
-        Agents that do not use MCP can call the same flow through JSON HTTP routes. The signing-intent routes create
-        short-lived browser handoff links and then prepare or complete the submission after the wallet signs.
+        Agents that do not use MCP can call the same flow through JSON routes. These routes are the implementation
+        surface for quotes, asks, signing intents, confirmations, and results; x402 remains the payment mode for
+        agent-native Celo USDC authorization.
       </p>
       <pre className="bg-base-200 p-4 rounded-lg overflow-x-auto">
         <code>{directHttpRoutes}</code>
@@ -265,7 +284,7 @@ const AIPage = async () => {
       <h2 id="learn-more">Learn More</h2>
       <p>
         Continue with <Link href="/docs/sdk">SDK</Link>, <Link href="/docs/ai/errors">AI Agent Errors</Link>,{" "}
-        <Link href="/docs/how-it-works">How It Works</Link>, and the{" "}
+        <Link href="/docs/tech-stack">Tech Stack</Link>, <Link href="/docs/how-it-works">How It Works</Link>, and the{" "}
         <a href={agentsPackageHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
           agents package
         </a>

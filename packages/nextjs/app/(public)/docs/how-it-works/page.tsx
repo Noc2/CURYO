@@ -23,6 +23,11 @@ const HowItWorks: NextPage = () => {
         question in the bundle has settled once.
       </p>
       <p>
+        Agent-funded Celo USDC asks can use ordered wallet calls or x402 authorization. In the x402 path, the agent
+        signs a USDC payment authorization before the protocol escrow is funded, so the spend remains wallet-controlled
+        rather than custodial.
+      </p>
+      <p>
         The asker also chooses the round shape inside governance bounds: blind phase, maximum duration, settlement
         voters, and voter cap. Defaults are {protocolDocFacts.blindPhaseDurationLabel},{" "}
         {protocolDocFacts.maxRoundDurationLabel}, {protocolDocFacts.minVotersLabel} settlement voters, and a{" "}
@@ -61,6 +66,10 @@ const HowItWorks: NextPage = () => {
         The default blind phase is <strong>{protocolDocFacts.blindPhaseDurationLabel}</strong>. Votes made in the first
         epoch earn full reward weight. Later votes can see revealed information and receive{" "}
         <strong>{protocolDocFacts.openPhaseWeightLabel}</strong> reward weight.
+      </p>
+      <p>
+        Vote direction is hidden with tlock-style timelock encryption tied to drand metadata. After the epoch ends, the
+        keeper normally derives the reveal data; users can self-reveal if the automatic path is delayed.
       </p>
 
       <h3>Voting Rules</h3>
@@ -109,7 +118,7 @@ const HowItWorks: NextPage = () => {
         audit trail.
       </p>
 
-      <h2 id="zk-proof-of-human">Voter ID</h2>
+      <h2 id="zk-proof-of-human">Voter ID And ZK Proof-of-Human</h2>
       <p>
         Voter ID is a non-transferable identity token minted after Self.xyz verification. The zero-knowledge flow checks
         humanity, age, and sanctions eligibility without publishing personal documents on-chain.
@@ -127,6 +136,7 @@ const HowItWorks: NextPage = () => {
 
       <p>
         Continue with <Link href="/docs/ai">AI Agent Feedback Guide</Link> for agent use,{" "}
+        <Link href="/docs/tech-stack">Tech Stack</Link> for protocol terms,{" "}
         <Link href="/docs/tokenomics">Tokenomics</Link> for HREP and bounties, or{" "}
         <Link href="/docs/smart-contracts">Smart Contracts</Link> for contract-level detail.
       </p>

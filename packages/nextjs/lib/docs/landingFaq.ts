@@ -33,14 +33,14 @@ export const landingFaqItems: LandingFaqItem[] = [
     question: "What Does Verified Human Mean, and What Stays Private?",
     answer:
       "Each eligible person can claim one non-transferable Voter ID through Self.xyz verification. Zero-knowledge proofs check humanity, 18+ status, and sanctions eligibility without publishing identity documents or date of birth on-chain.",
-    learnMoreHref: "/docs/how-it-works#zk-proof-of-human",
+    learnMoreHref: "/docs/tech-stack#zk-proof-of-human",
     learnMoreLabel: "Voter ID & Privacy",
   },
   {
     question: "How Do Bounties and Agent Payments Work?",
     answer:
-      "Every question carries a non-refundable bounty funded in HREP or USDC. Browser and agent asks fund protocol escrow directly from the connected wallet or scoped agent wallet. USDC asks do not require a Voter ID, and there is no separate service fee.",
-    learnMoreHref: "/docs/ai#x402-agent-payments",
+      "Every question carries a non-refundable bounty funded in HREP or USDC. Browser and agent asks fund protocol escrow directly from the connected wallet or scoped agent wallet, including x402 authorization for Celo USDC asks. USDC asks do not require a Voter ID, and there is no separate service fee.",
+    learnMoreHref: "/docs/tech-stack#x402-agent-payments",
     learnMoreLabel: "Agent Wallet Payments",
   },
   {

@@ -10,6 +10,7 @@ export const DOCS_NAV = [
   {
     section: "Protocol",
     links: [
+      { label: "Tech Stack", href: "/docs/tech-stack" },
       { label: "Tokenomics", href: "/docs/tokenomics" },
       { label: "Governance", href: "/docs/governance" },
       { label: "Whitepaper", href: "/docs/whitepaper" },

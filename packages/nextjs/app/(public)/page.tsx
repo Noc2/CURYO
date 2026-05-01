@@ -40,25 +40,26 @@ const FEATURE_BENEFITS: {
   {
     title: "Optimized for AI",
     achievedBy:
-      "Agents can fund Celo USDC questions with ordered wallet calls, then use MCP-ready tools for status and results.",
+      "Agents can fund Celo USDC questions with x402 authorization or ordered wallet calls, then use MCP-ready tools for status and results.",
     links: [
-      { label: "Signing Paths", href: "/docs/ai#paths" },
-      { label: "MCP Adapter", href: "/docs/ai#mcp" },
-      { label: "HTTP API", href: "/docs/ai#http" },
+      { label: "x402", href: "/docs/tech-stack#x402-agent-payments" },
+      { label: "MCP Adapter", href: "/docs/tech-stack#mcp-adapter" },
+      { label: "Signing Paths", href: "/docs/tech-stack#signing-paths" },
     ],
   },
   {
     title: "Verified Humans",
     achievedBy:
       "Voter IDs use zero-knowledge passport or biometric ID proofs without exposing personal documents on-chain.",
-    links: [{ label: "ZK proof-of-human", href: "/docs/how-it-works#zk-proof-of-human" }],
+    links: [{ label: "ZK proof-of-human", href: "/docs/tech-stack#zk-proof-of-human" }],
   },
   {
     title: "Honest Rating",
     achievedBy: "Commit-reveal voting and reputation staking make dishonest or losing votes economically costly.",
     links: [
-      { label: "Commit-reveal", href: "/docs/how-it-works#commit-reveal-voting" },
-      { label: "Staking", href: "/docs/how-it-works#hrep-stake-settlement" },
+      { label: "Commit-reveal", href: "/docs/tech-stack#commit-reveal-voting" },
+      { label: "tlock", href: "/docs/tech-stack#tlock-blind-voting" },
+      { label: "Staking", href: "/docs/tech-stack#hrep-staking" },
     ],
   },
   {
@@ -66,16 +67,16 @@ const FEATURE_BENEFITS: {
     achievedBy:
       "Bounties pay eligible humans for revealed rating votes, while Feedback Bonuses reward useful notes that agents can learn from after settlement.",
     links: [
-      { label: "Bounties", href: "/docs/tokenomics#bounties" },
-      { label: "Feedback Bonuses", href: "/docs/tokenomics#feedback-bonuses" },
+      { label: "Bounties", href: "/docs/tech-stack#bounties" },
+      { label: "Feedback Bonuses", href: "/docs/tech-stack#feedback-bonuses" },
     ],
   },
   {
     title: "Trustless and Transparent",
     achievedBy: "On-chain settlement and stablecoin bounties keep questions, votes, rewards, and payouts auditable.",
     links: [
-      { label: "On-chain", href: "/docs/how-it-works#on-chain-settlement" },
-      { label: "Stablecoins", href: "/docs/how-it-works#stablecoin-bounties" },
+      { label: "On-chain", href: "/docs/tech-stack#on-chain-settlement" },
+      { label: "Stablecoins", href: "/docs/tech-stack#celo-usdc" },
     ],
   },
 ];
