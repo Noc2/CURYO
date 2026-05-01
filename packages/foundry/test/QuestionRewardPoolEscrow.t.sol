@@ -1718,7 +1718,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(rewardPoolEscrow.claimableQuestionReward(rewardPoolId, roundId, voter4), 0);
 
         vm.prank(voter4);
-        vm.expectRevert("Late reveal");
+        vm.expectRevert("Vote not revealed");
         rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
 
         vm.prank(voter1);
@@ -2987,7 +2987,16 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
             address(votingEngine),
             abi.encodeWithSignature("commits(uint256,uint256,bytes32)", contentId, roundId, commitKey),
             abi.encode(
-                voter, uint64(STAKE), bytes(""), uint64(0), bytes32(0), address(0), uint48(0), true, true, uint8(0)
+                voter,
+                uint64(STAKE),
+                bytes(""),
+                uint64(0),
+                bytes32(0),
+                address(0),
+                uint48(block.timestamp),
+                true,
+                true,
+                uint8(0)
             )
         );
         // Escrow reads via the narrow commitCore getter for gas; mock it too so tests
@@ -2995,7 +3004,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         vm.mockCall(
             address(votingEngine),
             abi.encodeWithSignature("commitCore(uint256,uint256,bytes32)", contentId, roundId, commitKey),
-            abi.encode(voter, uint64(STAKE), address(0), uint48(0), true, true, uint8(0))
+            abi.encode(voter, uint64(STAKE), address(0), uint48(block.timestamp), true, true, uint8(0))
         );
     }
 

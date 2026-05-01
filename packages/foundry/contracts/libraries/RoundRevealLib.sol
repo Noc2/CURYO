@@ -64,6 +64,7 @@ library RoundRevealLib {
         commit.isUp = isUp;
 
         unrevealedCountByEpoch[commit.revealableAfter]--;
+        commit.revealableAfter = block.timestamp.toUint48();
         round.revealedCount++;
 
         if (isUp) {

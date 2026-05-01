@@ -54,7 +54,7 @@ library RoundLib {
         uint64 targetRound; // drand round targeted by the ciphertext
         bytes32 drandChainHash; // drand chain hash bound into the commitment
         address frontend; // Frontend operator address (for fee distribution)
-        uint48 revealableAfter; // Epoch end timestamp — reveals allowed after this time
+        uint48 revealableAfter; // Epoch end before reveal; reveal timestamp after reveal
         bool revealed;
         bool isUp; // Set after reveal
         uint8 epochIndex; // 0 = epoch 1 (blind, 100% weight), 1 = epoch 2+ (saw results, 25% weight)

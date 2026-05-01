@@ -96,8 +96,9 @@ library QuestionRewardPoolEscrowQualificationLib {
         uint256 commitCount = ctx.votingEngine.getRoundCommitCount(ctx.contentId, ctx.roundId);
         for (uint256 i = 0; i < commitCount;) {
             bytes32 commitKey = ctx.votingEngine.getRoundCommitKey(ctx.contentId, ctx.roundId, i);
-            (address voter,,,, bool revealed,,) = ctx.votingEngine.commitCore(ctx.contentId, ctx.roundId, commitKey);
-            if (voter != address(0) && revealed && _revealedByBountyClose(ctx, commitKey)) {
+            (address voter,,, uint48 revealedAt, bool revealed,,) =
+                ctx.votingEngine.commitCore(ctx.contentId, ctx.roundId, commitKey);
+            if (voter != address(0) && revealed && _revealedByBountyClose(ctx.bountyClosesAt, revealedAt)) {
                 uint256 voterId = ctx.votingEngine.commitVoterId(ctx.contentId, ctx.roundId, commitKey);
                 if (!_isExcludedVoter(
                         ctx.voterIdNft,
@@ -119,10 +120,8 @@ library QuestionRewardPoolEscrowQualificationLib {
         }
     }
 
-    function _revealedByBountyClose(QualificationContext memory ctx, bytes32 commitKey) private view returns (bool) {
-        if (ctx.bountyClosesAt == 0) return true;
-        uint256 revealedAt = ctx.votingEngine.commitRevealedAt(ctx.contentId, ctx.roundId, commitKey);
-        return revealedAt != 0 && revealedAt <= ctx.bountyClosesAt;
+    function _revealedByBountyClose(uint64 bountyClosesAt, uint48 revealedAt) private pure returns (bool) {
+        return bountyClosesAt == 0 || revealedAt <= bountyClosesAt;
     }
 
     function _isExcludedVoter(

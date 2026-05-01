@@ -558,9 +558,9 @@ contract QuestionRewardPoolEscrow is
         require(commitKey != bytes32(0), "No commit");
         require(!rewardClaimed[rewardPoolId][roundId][commitKey], "Already claimed");
 
-        (bool revealed, address frontend) = _revealedCommitFrontend(rewardPool.contentId, roundId, commitKey);
+        (bool revealed, address frontend) =
+            _timelyRevealedCommitFrontend(rewardPool.contentId, roundId, commitKey, rewardPool.bountyClosesAt);
         require(revealed, "Vote not revealed");
-        require(_commitRevealedBy(rewardPool.contentId, roundId, commitKey, rewardPool.bountyClosesAt), "Late reveal");
 
         RoundSnapshot storage snapshot = roundSnapshots[rewardPoolId][roundId];
         uint256 grossAmount;
@@ -860,9 +860,9 @@ contract QuestionRewardPoolEscrow is
         bytes32 commitKey = _commitKeyForVoter(rewardPool.contentId, roundId, roundVoterIdNft, voterId);
         if (commitKey == bytes32(0)) return 0;
         if (rewardClaimed[rewardPoolId][roundId][commitKey]) return 0;
-        (bool revealed, address frontend) = _revealedCommitFrontend(rewardPool.contentId, roundId, commitKey);
+        (bool revealed, address frontend) =
+            _timelyRevealedCommitFrontend(rewardPool.contentId, roundId, commitKey, rewardPool.bountyClosesAt);
         if (!revealed) return 0;
-        if (!_commitRevealedBy(rewardPool.contentId, roundId, commitKey, rewardPool.bountyClosesAt)) return 0;
 
         RoundSnapshot storage snapshot = roundSnapshots[rewardPoolId][roundId];
         if (votingEngine.roundUnrevealedCleanupRemaining(rewardPool.contentId, roundId) > 0) return 0;
@@ -1072,7 +1072,7 @@ contract QuestionRewardPoolEscrow is
         returns (bool completed, address frontend, bytes32 firstCommitKey)
     {
         BundleQuestion[] storage questions = bundleQuestions[bundleId];
-        uint256 bountyClosesAt = bundleRewards[bundleId].bountyClosesAt;
+        uint64 bountyClosesAt = bundleRewards[bundleId].bountyClosesAt;
         for (uint256 i = 0; i < questions.length;) {
             BundleQuestion storage question = questions[i];
             uint256 roundId = bundleRoundIds[bundleId][i][roundSetIndex];
@@ -1085,11 +1085,9 @@ contract QuestionRewardPoolEscrow is
             bytes32 commitKey =
                 _commitKeyForVoter(question.contentId, roundId, _roundVoterIdNft(question.contentId, roundId), voterId);
             if (commitKey == bytes32(0)) return (false, address(0), bytes32(0));
-            (bool revealed, address questionFrontend) = _revealedCommitFrontend(question.contentId, roundId, commitKey);
+            (bool revealed, address questionFrontend) =
+                _timelyRevealedCommitFrontend(question.contentId, roundId, commitKey, bountyClosesAt);
             if (!revealed) return (false, address(0), bytes32(0));
-            if (!_commitRevealedBy(question.contentId, roundId, commitKey, bountyClosesAt)) {
-                return (false, address(0), bytes32(0));
-            }
             if (i == 0) {
                 frontend = questionFrontend;
                 firstCommitKey = commitKey;
@@ -1166,21 +1164,18 @@ contract QuestionRewardPoolEscrow is
         uint256 commitCount = votingEngine.getRoundCommitCount(firstContentId, firstRoundId);
         for (uint256 i = 0; i < commitCount;) {
             bytes32 commitKey = votingEngine.getRoundCommitKey(firstContentId, firstRoundId, i);
-            (,,,, bool revealed,,) = votingEngine.commitCore(firstContentId, firstRoundId, commitKey);
-            if (revealed) {
-                uint256 voterId = votingEngine.commitVoterId(firstContentId, firstRoundId, commitKey);
-                address voter = firstRoundVoterIdNft.getHolder(voterId);
-                if (voter == address(0)) {
-                    uint256 nullifier = firstRoundVoterIdNft.getNullifier(voterId);
-                    voter = firstRoundVoterIdNft.getHolder(firstRoundVoterIdNft.getTokenIdForNullifier(nullifier));
-                }
-                if (
-                    voter != address(0) && !_isBundleExcludedVoter(bundle, bundleId, roundSetIndex, voter)
-                        && _completedBundleRoundSetCommitIgnoringCleanup(bundleId, roundSetIndex, voter)
-                ) {
-                    unchecked {
-                        completerCount++;
-                    }
+            uint256 voterId = votingEngine.commitVoterId(firstContentId, firstRoundId, commitKey);
+            address voter = firstRoundVoterIdNft.getHolder(voterId);
+            if (voter == address(0)) {
+                uint256 nullifier = firstRoundVoterIdNft.getNullifier(voterId);
+                voter = firstRoundVoterIdNft.getHolder(firstRoundVoterIdNft.getTokenIdForNullifier(nullifier));
+            }
+            if (
+                voter != address(0) && !_isBundleExcludedVoter(bundle, bundleId, roundSetIndex, voter)
+                    && _completedBundleRoundSetCommitIgnoringCleanup(bundleId, roundSetIndex, voter)
+            ) {
+                unchecked {
+                    completerCount++;
                 }
             }
             unchecked {
@@ -1195,7 +1190,7 @@ contract QuestionRewardPoolEscrow is
         returns (bool completed)
     {
         BundleQuestion[] storage questions = bundleQuestions[bundleId];
-        uint256 bountyClosesAt = bundleRewards[bundleId].bountyClosesAt;
+        uint64 bountyClosesAt = bundleRewards[bundleId].bountyClosesAt;
         for (uint256 i = 0; i < questions.length;) {
             BundleQuestion storage question = questions[i];
             uint256 roundId = bundleRoundIds[bundleId][i][roundSetIndex];
@@ -1204,9 +1199,8 @@ contract QuestionRewardPoolEscrow is
             bytes32 commitKey =
                 _commitKeyForVoter(question.contentId, roundId, _roundVoterIdNft(question.contentId, roundId), voterId);
             if (commitKey == bytes32(0)) return false;
-            (bool revealed,) = _revealedCommitFrontend(question.contentId, roundId, commitKey);
+            (bool revealed,) = _timelyRevealedCommitFrontend(question.contentId, roundId, commitKey, bountyClosesAt);
             if (!revealed) return false;
-            if (!_commitRevealedBy(question.contentId, roundId, commitKey, bountyClosesAt)) return false;
             unchecked {
                 ++i;
             }
@@ -1398,7 +1392,7 @@ contract QuestionRewardPoolEscrow is
         if (allocation > rewardPool.unallocatedAmount) return 0;
     }
 
-    function _revealedCommitFrontend(uint256 contentId, uint256 roundId, bytes32 commitKey)
+    function _timelyRevealedCommitFrontend(uint256 contentId, uint256 roundId, bytes32 commitKey, uint64 closesAt)
         internal
         view
         returns (bool revealed, address frontend)
@@ -1406,20 +1400,12 @@ contract QuestionRewardPoolEscrow is
         // Use the narrow commitCore getter -- this helper is called inside claim/bundle
         // iteration loops, and materializing the full 2 KB ciphertext on every read
         // blows out memory expansion at bounds-limit maxVoters.
-        (address voter, uint64 stakeAmount, address commitFrontend,, bool commitRevealed,,) =
+        (address voter, uint64 stakeAmount, address commitFrontend, uint48 commitRevealedAt, bool commitRevealed,,) =
             votingEngine.commitCore(contentId, roundId, commitKey);
         stakeAmount;
-        return (voter != address(0) && commitRevealed, commitFrontend);
-    }
-
-    function _commitRevealedBy(uint256 contentId, uint256 roundId, bytes32 commitKey, uint256 closesAt)
-        internal
-        view
-        returns (bool)
-    {
-        if (closesAt == 0) return true;
-        uint256 revealedAt = votingEngine.commitRevealedAt(contentId, roundId, commitKey);
-        return revealedAt != 0 && revealedAt <= closesAt;
+        return (
+            voter != address(0) && commitRevealed && (closesAt == 0 || commitRevealedAt <= closesAt), commitFrontend
+        );
     }
 
     function _isExcludedVoter(RewardPool storage rewardPool, uint256 roundId, uint256 voterId)
