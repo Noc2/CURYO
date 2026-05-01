@@ -11,11 +11,14 @@ const RETRIABLE_GOTO_ERROR_PATTERNS = [
   /frame was detached/i,
   /page\.goto: Timeout .*exceeded/i,
   /page\.goto: Navigation to .* is interrupted by another navigation/i,
+  /Timeout .*exceeded/i,
   /Test timeout/i,
 ];
 
 const DEFAULT_E2E_TIMEOUT_MS = 30_000;
 const CI_MIN_E2E_TIMEOUT_MS = 60_000;
+const WALLET_CONNECT_RECOVERY_WAIT_MS = 12_000;
+const WALLET_CONNECT_CLICK_TIMEOUT_MS = 5_000;
 
 function isRetriableGotoError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
@@ -57,6 +60,7 @@ async function hasInjectedLocalTestWallet(page: Page): Promise<boolean> {
 
 export async function ensureInjectedWalletConnected(page: Page, timeout: number): Promise<void> {
   const effectiveTimeout = getEffectiveE2ETimeout(timeout);
+  const recoveryWaitTimeout = Math.min(effectiveTimeout, WALLET_CONNECT_RECOVERY_WAIT_MS);
 
   if (!(await hasInjectedLocalTestWallet(page))) {
     return;
@@ -75,13 +79,13 @@ export async function ensureInjectedWalletConnected(page: Page, timeout: number)
     const connectButton = getVisibleAuthConnectButton(page).first();
     const signInVisible = await connectButton.isVisible().catch(() => false);
     if (!signInVisible) {
-      await connectedWallet.waitFor({ state: "visible", timeout: effectiveTimeout }).catch(() => undefined);
+      await connectedWallet.waitFor({ state: "visible", timeout: recoveryWaitTimeout }).catch(() => undefined);
       if (await connectedWallet.isVisible().catch(() => false)) {
         return;
       }
     } else {
-      await connectButton.click({ timeout: 5_000 }).catch(() => undefined);
-      await connectedWallet.waitFor({ state: "visible", timeout: effectiveTimeout }).catch(() => undefined);
+      await connectButton.click({ timeout: WALLET_CONNECT_CLICK_TIMEOUT_MS }).catch(() => undefined);
+      await connectedWallet.waitFor({ state: "visible", timeout: recoveryWaitTimeout }).catch(() => undefined);
       if (await connectedWallet.isVisible().catch(() => false)) {
         return;
       }
@@ -94,7 +98,7 @@ export async function ensureInjectedWalletConnected(page: Page, timeout: number)
     await page.reload({ waitUntil: "domcontentloaded", timeout: effectiveTimeout });
   }
 
-  await waitForWalletConnected(page, effectiveTimeout);
+  await getVisibleConnectedWallet(page).first().waitFor({ state: "visible", timeout: recoveryWaitTimeout });
 }
 
 export async function gotoWithRetry(
