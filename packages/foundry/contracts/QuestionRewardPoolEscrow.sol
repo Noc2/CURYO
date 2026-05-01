@@ -635,6 +635,7 @@ contract QuestionRewardPoolEscrow is
         uint256 roundSetIndex = bundleQuestionRecordedRounds[bundleId][bundleIndex];
         if (roundSetIndex >= bundle.requiredSettledRounds) return;
         if (roundSetIndex < bundle.completedRoundSets) return;
+        if (roundId <= bundleRoundIds[bundleId][bundleIndex][MAX_REQUIRED_SETTLED_ROUNDS]) return;
         if (roundSetIndex != 0) {
             unchecked {
                 if (roundId <= bundleRoundIds[bundleId][bundleIndex][roundSetIndex - 1]) return;
@@ -1211,12 +1212,18 @@ contract QuestionRewardPoolEscrow is
         BundleQuestion[] storage questions = bundleQuestions[bundleId];
         for (uint256 i = 0; i < questions.length;) {
             uint256 recordedRoundSets = bundleQuestionRecordedRounds[bundleId][i];
+            uint64 retiredRoundIdFloor = bundleRoundIds[bundleId][i][MAX_REQUIRED_SETTLED_ROUNDS];
             while (recordedRoundSets > roundSetIndex) {
                 unchecked {
                     --recordedRoundSets;
                 }
+                uint64 recordedRoundId = bundleRoundIds[bundleId][i][recordedRoundSets];
+                if (recordedRoundId > retiredRoundIdFloor) {
+                    retiredRoundIdFloor = recordedRoundId;
+                }
                 delete bundleRoundIds[bundleId][i][recordedRoundSets];
             }
+            bundleRoundIds[bundleId][i][MAX_REQUIRED_SETTLED_ROUNDS] = retiredRoundIdFloor;
             bundleQuestionRecordedRounds[bundleId][i] = uint32(roundSetIndex);
             unchecked {
                 ++i;
