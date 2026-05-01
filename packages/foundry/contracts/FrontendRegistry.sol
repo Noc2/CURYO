@@ -9,6 +9,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { IFrontendRegistry } from "./interfaces/IFrontendRegistry.sol";
 import { IRoundVotingEngine } from "./interfaces/IRoundVotingEngine.sol";
+import { IRoundRewardDistributor } from "./interfaces/IRoundRewardDistributor.sol";
 import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
 
 /// @title FrontendRegistry
@@ -330,6 +331,7 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
     /// @param _votingEngine New voting engine address
     function setVotingEngine(address _votingEngine) external onlyRole(ADMIN_ROLE) {
         require(_votingEngine != address(0), "Invalid voting engine");
+        if (feeCreditor != address(0)) _requireFeeCreditorForEngine(feeCreditor, _votingEngine);
         votingEngine = IRoundVotingEngine(_votingEngine);
         emit VotingEngineUpdated(_votingEngine);
     }
@@ -342,10 +344,10 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
         emit VoterIdNFTUpdated(_voterIdNFT);
     }
 
-    /// @notice Grant fee creditor role to a contract (e.g., RoundVotingEngine)
+    /// @notice Grant fee creditor role to the reward distributor for the current voting engine.
     /// @param creditor The address to grant the role to
     function addFeeCreditor(address creditor) external onlyRole(GOVERNANCE_ROLE) {
-        require(creditor != address(0), "Invalid fee creditor");
+        _requireFeeCreditorForEngine(creditor, address(votingEngine));
         address oldCreditor = feeCreditor;
         if (oldCreditor != address(0) && oldCreditor != creditor) {
             _revokeRole(FEE_CREDITOR_ROLE, oldCreditor);
@@ -370,7 +372,7 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
     function initializeFeeCreditor(address creditor) external onlyRole(ADMIN_ROLE) {
         require(!initialFeeCreditorConfigured, "Initial fee creditor set");
         require(address(votingEngine) == address(0), "Setup complete");
-        require(creditor != address(0), "Invalid fee creditor");
+        require(creditor.code.length != 0, "Invalid fee creditor");
         initialFeeCreditorConfigured = true;
         feeCreditor = creditor;
         _grantRole(FEE_CREDITOR_ROLE, creditor);
@@ -416,6 +418,16 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
     function _hasActiveOperatorVoterId(address frontend) internal view returns (bool) {
         if (address(voterIdNFT) == address(0)) return false;
         return voterIdNFT.hasVoterId(frontend) && voterIdNFT.resolveHolder(frontend) == frontend;
+    }
+
+    function _requireFeeCreditorForEngine(address creditor, address engine) internal view {
+        require(engine != address(0), "VotingEngine not set");
+        require(creditor.code.length != 0, "Invalid fee creditor");
+        try IRoundRewardDistributor(creditor).votingEngine() returns (address creditorEngine) {
+            require(creditorEngine == engine, "Invalid fee creditor");
+        } catch {
+            revert("Invalid fee creditor");
+        }
     }
 
     function _routeFeesToConsensusReserve(address frontend, uint256 amount) internal {

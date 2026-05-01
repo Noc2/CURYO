@@ -25,6 +25,14 @@ contract MockVotingEngineForFrontendGas {
     function transferReward(address, uint256) external { }
 }
 
+contract MockRewardDistributorForFrontendGas {
+    address public immutable votingEngine;
+
+    constructor(address votingEngine_) {
+        votingEngine = votingEngine_;
+    }
+}
+
 contract UserTransactionGasEstimatesTest is RoundIntegrationTest {
     function _voteTransferPayload(uint256 contentId, TestCommitArtifacts memory artifacts, address frontend)
         internal
@@ -253,11 +261,12 @@ contract FrontendTransactionGasEstimatesTest is Test {
     FrontendRegistry public registry;
     HumanReputation public hrepToken;
     MockVotingEngineForFrontendGas public votingEngine;
+    MockRewardDistributorForFrontendGas public rewardDistributor;
     MockVoterIdNFT public voterIdNFT;
 
     address public admin = address(1);
     address public frontend = address(3);
-    address public feeCreditor = address(5);
+    address public feeCreditor;
 
     uint256 public constant STAKE = 1000e6;
 
@@ -267,6 +276,8 @@ contract FrontendTransactionGasEstimatesTest is Test {
         hrepToken.grantRole(hrepToken.MINTER_ROLE(), admin);
 
         votingEngine = new MockVotingEngineForFrontendGas();
+        rewardDistributor = new MockRewardDistributorForFrontendGas(address(votingEngine));
+        feeCreditor = address(rewardDistributor);
         voterIdNFT = new MockVoterIdNFT();
 
         FrontendRegistry impl = new FrontendRegistry();

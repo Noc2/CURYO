@@ -67,6 +67,14 @@ contract MockVotingEngineForFR is IRoundVotingEngine {
     function transferReward(address, uint256) external override { }
 }
 
+contract MockRewardDistributorForFR {
+    address public immutable votingEngine;
+
+    constructor(address votingEngine_) {
+        votingEngine = votingEngine_;
+    }
+}
+
 // =========================================================================
 // FrontendRegistry Coverage Gap Tests
 // =========================================================================
@@ -91,6 +99,7 @@ contract FrontendRegistryCoverageTest is Test {
         hrep.grantRole(hrep.MINTER_ROLE(), admin);
 
         engine = new MockVotingEngineForFR();
+        creditor = address(new MockRewardDistributorForFR(address(engine)));
         voterNFT = new MockVoterIdNFT();
 
         FrontendRegistry impl = new FrontendRegistry();

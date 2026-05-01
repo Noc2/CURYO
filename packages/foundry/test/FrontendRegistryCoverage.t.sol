@@ -56,6 +56,14 @@ contract MockVotingEngine_FR is IRoundVotingEngine {
     function transferReward(address, uint256) external override { }
 }
 
+contract MockRewardDistributor_FR {
+    address public immutable votingEngine;
+
+    constructor(address votingEngine_) {
+        votingEngine = votingEngine_;
+    }
+}
+
 // =========================================================================
 // TEST CONTRACT: FrontendRegistry Coverage Gaps
 // =========================================================================
@@ -67,6 +75,7 @@ contract FrontendRegistryCoverageTest is Test {
     FrontendRegistry public registry;
     HumanReputation public hrepToken;
     MockVotingEngine_FR public votingEngine;
+    MockRewardDistributor_FR public rewardDistributor;
     MockVoterIdNFT public mockVoterIdNFT;
 
     address public admin = address(1);
@@ -74,7 +83,7 @@ contract FrontendRegistryCoverageTest is Test {
     address public frontend1 = address(3);
     address public frontend2 = address(4);
     address public frontend3 = address(5);
-    address public feeCreditor = address(6);
+    address public feeCreditor;
     address public nonAdmin = address(7);
 
     uint256 public constant STAKE = 1000e6;
@@ -87,6 +96,8 @@ contract FrontendRegistryCoverageTest is Test {
         hrepToken.grantRole(hrepToken.MINTER_ROLE(), admin);
 
         votingEngine = new MockVotingEngine_FR();
+        rewardDistributor = new MockRewardDistributor_FR(address(votingEngine));
+        feeCreditor = address(rewardDistributor);
         mockVoterIdNFT = new MockVoterIdNFT();
 
         FrontendRegistry impl = new FrontendRegistry();
@@ -685,11 +696,14 @@ contract FrontendRegistryCoverageTest is Test {
         splitRoleRegistry.initializeFeeCreditor(address(99));
         vm.stopPrank();
 
+        MockRewardDistributor_FR newCreditor = new MockRewardDistributor_FR(address(votingEngine));
+        vm.prank(admin);
+        splitRoleRegistry.setVotingEngine(address(votingEngine));
         vm.prank(governance);
-        splitRoleRegistry.addFeeCreditor(address(99));
+        splitRoleRegistry.addFeeCreditor(address(newCreditor));
         assertFalse(splitRoleRegistry.hasRole(splitRoleRegistry.FEE_CREDITOR_ROLE(), feeCreditor));
-        assertTrue(splitRoleRegistry.hasRole(splitRoleRegistry.FEE_CREDITOR_ROLE(), address(99)));
-        assertEq(splitRoleRegistry.feeCreditor(), address(99));
+        assertTrue(splitRoleRegistry.hasRole(splitRoleRegistry.FEE_CREDITOR_ROLE(), address(newCreditor)));
+        assertEq(splitRoleRegistry.feeCreditor(), address(newCreditor));
     }
 
     function test_InitialFeeCreditorSetup_AfterVotingEngine_Reverts() public {

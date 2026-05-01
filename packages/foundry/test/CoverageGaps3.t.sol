@@ -67,6 +67,14 @@ contract MockVotingEngine3 is IRoundVotingEngine {
     function transferReward(address, uint256) external override { }
 }
 
+contract MockRewardDistributorForFR3 {
+    address public immutable votingEngine;
+
+    constructor(address votingEngine_) {
+        votingEngine = votingEngine_;
+    }
+}
+
 // =========================================================================
 // 1. FRONTEND REGISTRY — register() / requestDeregister() EDGE CASES
 // =========================================================================
@@ -92,6 +100,7 @@ contract FrontendRegistryEdgeCaseTest is Test {
         hrep.grantRole(hrep.MINTER_ROLE(), admin);
 
         engine = new MockVotingEngine3();
+        creditor = address(new MockRewardDistributorForFR3(address(engine)));
         voterNFT = new MockVoterIdNFT();
 
         FrontendRegistry impl = new FrontendRegistry();

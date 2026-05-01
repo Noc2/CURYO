@@ -53,6 +53,14 @@ contract MockVotingEngine is IRoundVotingEngine {
     function transferReward(address, uint256) external override { }
 }
 
+contract MockRewardDistributor {
+    address public immutable votingEngine;
+
+    constructor(address votingEngine_) {
+        votingEngine = votingEngine_;
+    }
+}
+
 contract FrontendRegistryHarness is FrontendRegistry {
     function forceSetFees(address frontend, uint128 amount) external {
         frontends[frontend].hrepFees = amount;
@@ -64,13 +72,14 @@ contract FrontendRegistryTest is Test {
     FrontendRegistry public registry;
     HumanReputation public hrepToken;
     MockVotingEngine public votingEngine;
+    MockRewardDistributor public rewardDistributor;
     MockVoterIdNFT public mockVoterIdNFT;
 
     address public admin = address(1);
     address public frontend1 = address(3);
     address public frontend2 = address(4);
     address public frontend3 = address(6);
-    address public feeCreditor = address(5);
+    address public feeCreditor;
 
     uint256 public constant STAKE = 1000e6; // Fixed 1,000 HREP
 
@@ -85,6 +94,8 @@ contract FrontendRegistryTest is Test {
 
         // Deploy mock voting engine
         votingEngine = new MockVotingEngine();
+        rewardDistributor = new MockRewardDistributor(address(votingEngine));
+        feeCreditor = address(rewardDistributor);
         mockVoterIdNFT = new MockVoterIdNFT();
 
         // Deploy registry behind an ERC1967 proxy for upgradeable storage behavior
@@ -727,11 +738,22 @@ contract FrontendRegistryTest is Test {
         address newVotingEngine = address(100);
 
         vm.prank(admin);
+        registry.removeFeeCreditor(feeCreditor);
+
+        vm.prank(admin);
         vm.expectEmit(true, true, true, true);
         emit FrontendRegistry.VotingEngineUpdated(newVotingEngine);
         registry.setVotingEngine(newVotingEngine);
 
         assertEq(address(registry.votingEngine()), newVotingEngine);
+    }
+
+    function test_SetVotingEngine_RejectsMismatchedFeeCreditor() public {
+        address newVotingEngine = address(100);
+
+        vm.prank(admin);
+        vm.expectRevert("Invalid fee creditor");
+        registry.setVotingEngine(newVotingEngine);
     }
 
     function test_RevertSetVotingEngineZeroAddress() public {
@@ -771,7 +793,7 @@ contract FrontendRegistryTest is Test {
     }
 
     function test_AddAndRemoveFeeCreditor() public {
-        address newCreditor = address(100);
+        address newCreditor = address(new MockRewardDistributor(address(votingEngine)));
 
         vm.startPrank(admin);
         registry.addFeeCreditor(newCreditor);
@@ -797,6 +819,12 @@ contract FrontendRegistryTest is Test {
         vm.prank(newCreditor);
         vm.expectRevert();
         registry.creditFees(frontend1, 100e6);
+    }
+
+    function test_AddFeeCreditor_RejectsEOA() public {
+        vm.prank(admin);
+        vm.expectRevert("Invalid fee creditor");
+        registry.addFeeCreditor(address(100));
     }
 
     function _completeDeregister(address frontend) internal {
