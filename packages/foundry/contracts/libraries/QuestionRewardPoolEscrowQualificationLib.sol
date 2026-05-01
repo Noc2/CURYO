@@ -31,12 +31,6 @@ library QuestionRewardPoolEscrowQualificationLib {
         if (state != RoundLib.RoundState.Settled) return (false, false, 0, 0);
         settledAt = roundSettledAt;
         uint48 qualifiedAt = thresholdReachedAt == 0 ? settledAt : thresholdReachedAt;
-        if (ctx.bountyClosesAt != 0) {
-            (,, uint16 minVoters,) = ctx.votingEngine.roundConfigSnapshot(ctx.contentId, ctx.roundId);
-            if (ctx.requiredVoters > minVoters) {
-                qualifiedAt = settledAt;
-            }
-        }
         if (qualifiedAt == 0 || (ctx.bountyClosesAt != 0 && qualifiedAt > ctx.bountyClosesAt)) {
             return (true, false, 0, settledAt);
         }

@@ -762,10 +762,20 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         contentIds[1] = _submitQuestionWithContextAndRoundConfig(
             "https://example.com/bundle-above-before-b", "https://example.com/bundle-above-before-b.jpg", roundConfig
         );
-        uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, REWARD_POOL_AMOUNT, 4);
+        uint256 closesAt = block.timestamp + 2 * EPOCH_DURATION + 20;
+        uint256 bundleId =
+            _createSubmissionBundleWithClose(contentIds, funder, REWARD_ASSET_USDC, REWARD_POOL_AMOUNT, 4, closesAt);
 
-        _settleRoundWith(_fourVoters(), contentIds[0], _directions(true, true, false, true));
-        _settleRoundWith(_fourVoters(), contentIds[1], _directions(true, true, false, true));
+        uint256 firstRoundId = _revealRoundWith(_fourVoters(), contentIds[0], _directions(true, true, false, true));
+        uint256 secondRoundId = _revealRoundWith(_fourVoters(), contentIds[1], _directions(true, true, false, true));
+        assertLe(RoundEngineReadHelpers.round(votingEngine, contentIds[0], firstRoundId).thresholdReachedAt, closesAt);
+        assertLe(
+            RoundEngineReadHelpers.round(votingEngine, contentIds[1], secondRoundId).thresholdReachedAt, closesAt
+        );
+
+        vm.warp(closesAt + 1);
+        votingEngine.settleRound(contentIds[0], firstRoundId);
+        votingEngine.settleRound(contentIds[1], secondRoundId);
 
         assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter1), REWARD_POOL_AMOUNT / 4);
     }
@@ -1665,7 +1675,11 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         uint256 expiresAt = block.timestamp + EPOCH_DURATION + 10;
         uint256 rewardPoolId = _createRewardPoolWithExpiry(contentId, REWARD_POOL_AMOUNT, 4, 1, expiresAt);
 
-        uint256 roundId = _settleRoundWith(_fourVoters(), contentId, _directions(true, true, false, true));
+        uint256 roundId = _revealRoundWith(_fourVoters(), contentId, _directions(true, true, false, true));
+        assertLe(RoundEngineReadHelpers.round(votingEngine, contentId, roundId).thresholdReachedAt, expiresAt);
+
+        vm.warp(expiresAt + 1);
+        votingEngine.settleRound(contentId, roundId);
 
         assertEq(rewardPoolEscrow.claimableQuestionReward(rewardPoolId, roundId, voter1), REWARD_POOL_AMOUNT / 4);
     }

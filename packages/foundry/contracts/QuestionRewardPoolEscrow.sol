@@ -1042,8 +1042,6 @@ contract QuestionRewardPoolEscrow is
         (RoundLib.RoundState state, uint48 settledAt, uint48 thresholdReachedAt) =
             _roundTerminalState(contentId, roundId);
         uint48 qualifiedAt = thresholdReachedAt == 0 ? settledAt : thresholdReachedAt;
-        (,, uint16 minVoters,) = votingEngine.roundConfigSnapshot(contentId, roundId);
-        if (bundle.requiredCompleters > minVoters) qualifiedAt = settledAt;
         return state == RoundLib.RoundState.Settled && qualifiedAt != 0 && qualifiedAt <= bundle.bountyClosesAt;
     }
 
