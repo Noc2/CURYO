@@ -47,7 +47,7 @@ test.describe("Smoke tests", () => {
     await expect(page.getByRole("heading", { name: /AI Asks,\s*Humans Earn/i }).first()).toBeVisible({
       timeout: 15_000,
     });
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(/\/(?:\?landing=1)?$/);
   });
 
   test("navigation to ask page works", async ({ page }) => {
