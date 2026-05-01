@@ -3166,6 +3166,12 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         vm.expectRevert("Grace");
         rewardPoolEscrow.refundQuestionBundleReward(bundleId);
 
+        uint256 firstSettlementReadyAt = votingEngine.lastCommitRevealableAfter(contentIds[0], firstRoundId)
+            + protocolConfig.revealGracePeriod() + 1;
+        uint256 secondSettlementReadyAt = votingEngine.lastCommitRevealableAfter(contentIds[1], secondRoundId)
+            + protocolConfig.revealGracePeriod() + 1;
+        vm.warp(firstSettlementReadyAt > secondSettlementReadyAt ? firstSettlementReadyAt : secondSettlementReadyAt);
+
         votingEngine.settleRound(contentIds[0], firstRoundId);
         votingEngine.settleRound(contentIds[1], secondRoundId);
         votingEngine.processUnrevealedVotes(contentIds[0], firstRoundId, 0, 0);
