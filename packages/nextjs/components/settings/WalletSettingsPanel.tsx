@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { defineChain } from "thirdweb";
 import { BuyWidget } from "thirdweb/react";
 import { formatEther, isAddress } from "viem";
@@ -13,6 +12,8 @@ import { thirdwebClient } from "~~/services/thirdweb/client";
 
 const CELO_MAINNET_CHAIN_ID = 42220;
 const DEFAULT_CELO_TOP_UP_AMOUNT = "1";
+const CELO_TOP_UP_PRESET_OPTIONS: [number, number, number] = [5, 10, 20];
+const THIRDWEB_CELO_CHAIN = defineChain(celo);
 
 function formatCeloBalance(value: bigint | undefined) {
   if (value === undefined) return "Loading...";
@@ -32,7 +33,6 @@ export function WalletSettingsPanel({ address }: { address?: string }) {
   const { chain } = useAccount();
   const { targetNetwork } = useTargetNetwork();
   const { switchToChain, switchingChainId } = useCuryoSwitchNetwork();
-  const thirdwebCeloChain = useMemo(() => defineChain(celo), []);
   const walletAddress = address && isAddress(address) ? (address as `0x${string}`) : undefined;
   const targetIsCelo = targetNetwork.id === CELO_MAINNET_CHAIN_ID;
   const connectedToCelo = chain?.id === CELO_MAINNET_CHAIN_ID;
@@ -107,10 +107,10 @@ export function WalletSettingsPanel({ address }: { address?: string }) {
               amount={DEFAULT_CELO_TOP_UP_AMOUNT}
               amountEditable
               buttonLabel="Add CELO"
-              chain={thirdwebCeloChain}
+              chain={THIRDWEB_CELO_CHAIN}
               client={thirdwebClient}
               description="Fund your connected wallet with native CELO for Celo gas costs."
-              presetOptions={[5, 10, 20]}
+              presetOptions={CELO_TOP_UP_PRESET_OPTIONS}
               receiverAddress={walletAddress}
               showThirdwebBranding={false}
               theme="dark"
