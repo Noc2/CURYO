@@ -751,6 +751,60 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(usdc.balanceOf(address(rewardPoolEscrow)), 0);
     }
 
+    function testBundleAboveQuorumQualifiesWhenRequiredCompletersRevealBeforeClose() public {
+        RoundLib.RoundConfig memory roundConfig = RoundLib.RoundConfig({
+            epochDuration: uint32(EPOCH_DURATION), maxDuration: uint32(7 days), minVoters: 3, maxVoters: 4
+        });
+        uint256[] memory contentIds = new uint256[](2);
+        contentIds[0] = _submitQuestionWithContextAndRoundConfig(
+            "https://example.com/bundle-above-before-a", "https://example.com/bundle-above-before-a.jpg", roundConfig
+        );
+        contentIds[1] = _submitQuestionWithContextAndRoundConfig(
+            "https://example.com/bundle-above-before-b", "https://example.com/bundle-above-before-b.jpg", roundConfig
+        );
+        uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, REWARD_POOL_AMOUNT, 4);
+
+        _settleRoundWith(_fourVoters(), contentIds[0], _directions(true, true, false, true));
+        _settleRoundWith(_fourVoters(), contentIds[1], _directions(true, true, false, true));
+
+        assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter1), REWARD_POOL_AMOUNT / 4);
+    }
+
+    function testBundleAboveQuorumDoesNotQualifyWhenRequiredCompleterRevealsAfterClose() public {
+        RoundLib.RoundConfig memory roundConfig = RoundLib.RoundConfig({
+            epochDuration: uint32(EPOCH_DURATION), maxDuration: uint32(7 days), minVoters: 3, maxVoters: 4
+        });
+        uint256[] memory contentIds = new uint256[](2);
+        contentIds[0] = _submitQuestionWithContextAndRoundConfig(
+            "https://example.com/bundle-above-after-a", "https://example.com/bundle-above-after-a.jpg", roundConfig
+        );
+        contentIds[1] = _submitQuestionWithContextAndRoundConfig(
+            "https://example.com/bundle-above-after-b", "https://example.com/bundle-above-after-b.jpg", roundConfig
+        );
+        uint256 closesAt = block.timestamp + 2 * EPOCH_DURATION + 20;
+        uint256 bundleId =
+            _createSubmissionBundleWithClose(contentIds, funder, REWARD_ASSET_USDC, REWARD_POOL_AMOUNT, 4, closesAt);
+
+        (uint256 firstRoundId, bytes32 firstLateCommitKey, bytes32 firstLateSalt, bool firstLateDirection) =
+            _revealThresholdAndReturnUnrevealed(contentIds[0]);
+        (uint256 secondRoundId, bytes32 secondLateCommitKey, bytes32 secondLateSalt, bool secondLateDirection) =
+            _revealThresholdAndReturnUnrevealed(contentIds[1]);
+        assertLe(RoundEngineReadHelpers.round(votingEngine, contentIds[0], firstRoundId).thresholdReachedAt, closesAt);
+        assertLe(RoundEngineReadHelpers.round(votingEngine, contentIds[1], secondRoundId).thresholdReachedAt, closesAt);
+
+        vm.warp(closesAt + 1);
+        votingEngine.revealVoteByCommitKey(
+            contentIds[0], firstRoundId, firstLateCommitKey, firstLateDirection, firstLateSalt
+        );
+        votingEngine.revealVoteByCommitKey(
+            contentIds[1], secondRoundId, secondLateCommitKey, secondLateDirection, secondLateSalt
+        );
+        votingEngine.settleRound(contentIds[0], firstRoundId);
+        votingEngine.settleRound(contentIds[1], secondRoundId);
+
+        assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter1), 0);
+    }
+
     function testBundleClaimSupportsMultipleRoundSets() public {
         uint256[] memory contentIds = _submitBundleQuestions();
         uint256 bundleAmount = 120e6;
@@ -2234,6 +2288,29 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         );
     }
 
+    function _createSubmissionBundleWithClose(
+        uint256[] memory contentIds,
+        address bundleFunder,
+        uint8 asset,
+        uint256 amount,
+        uint256 requiredCompleters,
+        uint256 bountyClosesAt
+    ) internal returns (uint256 bundleId) {
+        bundleId = 1;
+        vm.startPrank(bundleFunder);
+        if (asset == REWARD_ASSET_HREP) {
+            hrepToken.approve(address(rewardPoolEscrow), amount);
+        } else {
+            usdc.approve(address(rewardPoolEscrow), amount);
+        }
+        vm.stopPrank();
+
+        vm.prank(address(registry));
+        rewardPoolEscrow.createSubmissionBundleFromRegistry(
+            bundleId, contentIds, bundleFunder, asset, amount, requiredCompleters, 1, bountyClosesAt, bountyClosesAt
+        );
+    }
+
     function _submitQuestion(string memory url) internal returns (uint256 contentId) {
         string memory mediaUrl = bytes(url).length == 0 ? DEFAULT_MEDIA_URL : url;
         return _submitQuestionWithContext("https://example.com/context", mediaUrl);
@@ -2265,14 +2342,23 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         internal
         returns (uint256 contentId)
     {
-        string[] memory imageUrls = new string[](1);
-        imageUrls[0] = url;
-        activeTlockContentRegistry = registry;
-        bytes32 salt = keccak256(abi.encode(url, QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, submitter, block.timestamp));
+        contentId = _submitQuestionWithContextAndRoundConfig("https://example.com/context", url, roundConfig);
+    }
 
-        (, bytes32 submissionKey) = registry.previewQuestionSubmissionKey(
-            "https://example.com/context", imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID
+    function _submitQuestionWithContextAndRoundConfig(
+        string memory contextUrl,
+        string memory mediaUrl,
+        RoundLib.RoundConfig memory roundConfig
+    ) internal returns (uint256 contentId) {
+        string[] memory imageUrls = new string[](1);
+        imageUrls[0] = mediaUrl;
+        activeTlockContentRegistry = registry;
+        bytes32 salt = keccak256(
+            abi.encode(contextUrl, mediaUrl, QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, submitter, block.timestamp)
         );
+
+        (, bytes32 submissionKey) =
+            registry.previewQuestionSubmissionKey(contextUrl, imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID);
         uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
         bytes32 revealCommitment = _questionRevealCommitment(
             submissionKey,
@@ -2299,7 +2385,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         registry.reserveSubmission(revealCommitment);
         vm.warp(block.timestamp + 1);
         contentId = registry.submitQuestionWithRewardAndRoundConfig(
-            "https://example.com/context",
+            contextUrl,
             imageUrls,
             "",
             QUESTION,
