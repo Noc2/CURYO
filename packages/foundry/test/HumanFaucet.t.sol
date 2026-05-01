@@ -37,6 +37,8 @@ contract HumanFaucetTest is Test {
         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
     bytes32 internal constant FAUCET_CLAIM_AUTHORIZATION_TYPEHASH =
         keccak256("FaucetClaimAuthorization(address recipient,address referrer,uint256 nonce,uint256 deadline)");
+    bytes32 internal constant VOTER_ID_REMINT_AUTHORIZATION_TYPEHASH =
+        keccak256("VoterIdRemintAuthorization(address recipient,uint256 nullifier,uint256 nonce,uint256 deadline)");
 
     HumanFaucet public faucet;
     MockIdentityVerificationHub public mockHub;
@@ -287,7 +289,8 @@ contract HumanFaucetTest is Test {
         realVoterIdNFT.resetNullifier(nullifier);
 
         mockHub.setVerifiedWithNullifier(newUser, nullifier);
-        bytes memory remintUserData = _buildRemintAuthorizationUserData(newUser, block.timestamp + 1 hours, newKey);
+        bytes memory remintUserData =
+            _buildRemintAuthorizationUserData(newUser, nullifier, block.timestamp + 1 hours, newKey);
         mockHub.simulateVerificationWithUserData(address(faucet), newUser, remintUserData);
 
         assertFalse(realVoterIdNFT.hasVoterId(oldUser));
@@ -296,6 +299,41 @@ contract HumanFaucetTest is Test {
         assertTrue(faucet.hasClaimed(newUser));
         assertEq(faucet.claimNullifier(newUser), nullifier);
         assertEq(faucet.recipientAuthorizationNonces(newUser), 1);
+    }
+
+    function test_RecipientAuthorizationRejectsClaimSignatureForVoterIdRemint() public {
+        uint256 oldKey = 0xA11CE;
+        uint256 newKey = 0xB0B;
+        address oldUser = vm.addr(oldKey);
+        address newUser = vm.addr(newKey);
+        uint256 nullifier = 555555;
+        VoterIdNFT realVoterIdNFT = _deployRealVoterIdNFT();
+
+        vm.startPrank(admin);
+        faucet.setVoterIdNFT(address(realVoterIdNFT));
+        faucet.setRecipientAuthorizationRequired(true);
+        vm.stopPrank();
+
+        mockHub.setVerifiedWithNullifier(oldUser, nullifier);
+        mockHub.simulateVerificationWithUserData(
+            address(faucet),
+            oldUser,
+            _buildClaimAuthorizationUserData(oldUser, address(0), block.timestamp + 1 hours, oldKey)
+        );
+
+        vm.prank(admin);
+        realVoterIdNFT.revokeVoterId(oldUser);
+        vm.prank(admin);
+        realVoterIdNFT.resetNullifier(nullifier);
+
+        uint256 deadline = block.timestamp + 1 hours;
+        bytes memory claimSignature =
+            _signClaimAuthorization(newKey, newUser, address(0), faucet.recipientAuthorizationNonces(newUser), deadline);
+        bytes memory remintUserData = abi.encode(bytes4("HFVR"), deadline, claimSignature);
+
+        mockHub.setVerifiedWithNullifier(newUser, nullifier);
+        vm.expectRevert(HumanFaucet.InvalidClaimAuthorization.selector);
+        mockHub.simulateVerificationWithUserData(address(faucet), newUser, remintUserData);
     }
 
     function test_BootstrapMigratedClaims_RejectsOversizedBatch() public {
@@ -1155,14 +1193,13 @@ contract HumanFaucetTest is Test {
         return abi.encode(bytes4("HFCA"), referrer, deadline, signature);
     }
 
-    function _buildRemintAuthorizationUserData(address user, uint256 deadline, uint256 privateKey)
+    function _buildRemintAuthorizationUserData(address user, uint256 nullifier, uint256 deadline, uint256 privateKey)
         internal
         view
         returns (bytes memory)
     {
-        bytes memory signature = _signClaimAuthorization(
-            privateKey, user, address(0), faucet.recipientAuthorizationNonces(user), deadline
-        );
+        bytes memory signature =
+            _signRemintAuthorization(privateKey, user, nullifier, faucet.recipientAuthorizationNonces(user), deadline);
         return abi.encode(bytes4("HFVR"), deadline, signature);
     }
 
@@ -1186,6 +1223,25 @@ contract HumanFaucetTest is Test {
             )
         );
         bytes32 structHash = keccak256(abi.encode(FAUCET_CLAIM_AUTHORIZATION_TYPEHASH, user, referrer, nonce, deadline));
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
+        return abi.encodePacked(r, s, v);
+    }
+
+    function _signRemintAuthorization(
+        uint256 privateKey,
+        address user,
+        uint256 nullifier,
+        uint256 nonce,
+        uint256 deadline
+    ) internal view returns (bytes memory) {
+        bytes32 domainSeparator = keccak256(
+            abi.encode(
+                EIP712_DOMAIN_TYPEHASH, keccak256("Curyo Human Faucet"), keccak256("1"), block.chainid, address(faucet)
+            )
+        );
+        bytes32 structHash =
+            keccak256(abi.encode(VOTER_ID_REMINT_AUTHORIZATION_TYPEHASH, user, nullifier, nonce, deadline));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
         return abi.encodePacked(r, s, v);

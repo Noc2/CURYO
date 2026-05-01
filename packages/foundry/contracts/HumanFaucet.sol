@@ -53,6 +53,8 @@ contract HumanFaucet is SelfVerificationRoot, EIP712, Ownable, Pausable {
     /// @notice EIP-712 type hash for recipient-controlled faucet claim authorization.
     bytes32 public constant FAUCET_CLAIM_AUTHORIZATION_TYPEHASH =
         keccak256("FaucetClaimAuthorization(address recipient,address referrer,uint256 nonce,uint256 deadline)");
+    bytes32 internal constant VOTER_ID_REMINT_AUTHORIZATION_TYPEHASH =
+        keccak256("VoterIdRemintAuthorization(address recipient,uint256 nullifier,uint256 nonce,uint256 deadline)");
 
     struct AttestationPolicy {
         bool enabled;
@@ -579,7 +581,7 @@ contract HumanFaucet is SelfVerificationRoot, EIP712, Ownable, Pausable {
                 _decodeVoterIdRemintUserData(userData);
             if (remintRequest) {
                 if (recipientAuthorizationRequired) {
-                    _requireClaimAuthorization(user, address(0), remintDeadline, remintSignature);
+                    _requireVoterIdRemintAuthorization(user, output.nullifier, remintDeadline, remintSignature);
                 }
                 _remintVoterId(user, output.nullifier);
                 _claiming = false;
@@ -686,6 +688,24 @@ contract HumanFaucet is SelfVerificationRoot, EIP712, Ownable, Pausable {
 
         uint256 nonce = recipientAuthorizationNonces[user];
         bytes32 structHash = keccak256(abi.encode(FAUCET_CLAIM_AUTHORIZATION_TYPEHASH, user, referrer, nonce, deadline));
+        if (!SignatureChecker.isValidSignatureNow(user, _hashTypedDataV4(structHash), signature)) {
+            revert InvalidClaimAuthorization();
+        }
+        recipientAuthorizationNonces[user] = nonce + 1;
+    }
+
+    function _requireVoterIdRemintAuthorization(
+        address user,
+        uint256 nullifier,
+        uint256 deadline,
+        bytes memory signature
+    ) internal {
+        if (signature.length == 0) revert MissingClaimAuthorization();
+        if (deadline < block.timestamp) revert ClaimAuthorizationExpired();
+
+        uint256 nonce = recipientAuthorizationNonces[user];
+        bytes32 structHash =
+            keccak256(abi.encode(VOTER_ID_REMINT_AUTHORIZATION_TYPEHASH, user, nullifier, nonce, deadline));
         if (!SignatureChecker.isValidSignatureNow(user, _hashTypedDataV4(structHash), signature)) {
             revert InvalidClaimAuthorization();
         }
