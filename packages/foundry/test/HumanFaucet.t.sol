@@ -26,6 +26,16 @@ contract MockClaimWallet is IERC1271 {
     }
 }
 
+contract HumanFaucetHarness is HumanFaucet {
+    constructor(address hrepToken_, address identityVerificationHub_, address governance_)
+        HumanFaucet(hrepToken_, identityVerificationHub_, governance_)
+    {}
+
+    function forceUnpauseForTest() external {
+        _unpause();
+    }
+}
+
 /// @title HumanFaucet Test Suite
 contract HumanFaucetTest is Test {
     bytes32 internal constant PASSPORT_ATTESTATION_ID = bytes32(uint256(1));
@@ -75,7 +85,8 @@ contract HumanFaucetTest is Test {
         mockHub = new MockIdentityVerificationHub();
 
         // Deploy HumanFaucet
-        faucet = new HumanFaucet(address(hrepToken), address(mockHub), admin);
+        HumanFaucetHarness faucetHarness = new HumanFaucetHarness(address(hrepToken), address(mockHub), admin);
+        faucet = HumanFaucet(address(faucetHarness));
 
         // Pre-mint tokens to faucet (52M for production, using same for tests)
         uint256 faucetBalance = 52_000_000 * 1e6; // 52M HREP
@@ -86,6 +97,7 @@ contract HumanFaucetTest is Test {
         // Set the mock config ID
         bytes32 mockConfigId = mockHub.MOCK_CONFIG_ID();
         faucet.setConfigId(mockConfigId);
+        faucetHarness.forceUnpauseForTest();
 
         vm.stopPrank();
     }
@@ -99,6 +111,35 @@ contract HumanFaucetTest is Test {
         assertEq(faucet.totalClaimants(), 0);
         assertEq(faucet.getCurrentClaimAmount(), TIER_0_AMOUNT);
         assertEq(faucet.getCurrentTier(), 0);
+    }
+
+    function test_ConstructorStartsPaused() public {
+        HumanFaucet freshFaucet = new HumanFaucet(address(hrepToken), address(mockHub), admin);
+        assertTrue(freshFaucet.paused());
+    }
+
+    function test_UnpauseRequiresLaunchReadiness() public {
+        HumanFaucet freshFaucet = new HumanFaucet(address(hrepToken), address(mockHub), admin);
+
+        vm.expectRevert("Bootstrap open");
+        freshFaucet.unpause();
+
+        freshFaucet.closeMigrationBootstrap();
+        vm.expectRevert("Config not set");
+        freshFaucet.unpause();
+
+        freshFaucet.setConfigId(mockHub.MOCK_CONFIG_ID());
+        vm.expectRevert("VoterIdNFT not set");
+        freshFaucet.unpause();
+
+        VoterIdNFT realVoterIdNFT = new VoterIdNFT(address(this), address(this));
+        freshFaucet.setVoterIdNFT(address(realVoterIdNFT));
+        vm.expectRevert("Recipient auth off");
+        freshFaucet.unpause();
+
+        freshFaucet.setRecipientAuthorizationRequired(true);
+        freshFaucet.unpause();
+        assertFalse(freshFaucet.paused());
     }
 
     function test_ConfigIdSet() public view {
@@ -1118,15 +1159,24 @@ contract HumanFaucetTest is Test {
     }
 
     function test_Unpause_AllowsClaims() public {
+        VoterIdNFT realVoterIdNFT = _deployRealVoterIdNFT();
+
         vm.startPrank(admin);
+        faucet.setVoterIdNFT(address(realVoterIdNFT));
+        faucet.setRecipientAuthorizationRequired(true);
+        faucet.closeMigrationBootstrap();
         faucet.pause();
         faucet.unpause();
         vm.stopPrank();
         assertFalse(faucet.paused());
 
-        mockHub.setVerified(user1);
-        mockHub.simulateVerification(address(faucet), user1);
-        assertEq(hrepToken.balanceOf(user1), TIER_0_AMOUNT);
+        uint256 privateKey = 0xA11CE;
+        address user = vm.addr(privateKey);
+        mockHub.setVerified(user);
+        mockHub.simulateVerificationWithUserData(
+            address(faucet), user, _buildClaimAuthorizationUserData(user, address(0), block.timestamp + 1 hours, privateKey)
+        );
+        assertEq(hrepToken.balanceOf(user), TIER_0_AMOUNT);
     }
 
     function test_Pause_AllowsWithdrawRemaining() public {

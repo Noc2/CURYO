@@ -12,6 +12,16 @@ import { IERC721Errors } from "@openzeppelin/contracts/interfaces/draft-IERC6093
 
 contract NonERC721Receiver { }
 
+contract HumanFaucetCoverageHarness is HumanFaucet {
+    constructor(address hrepToken_, address identityVerificationHub_, address governance_)
+        HumanFaucet(hrepToken_, identityVerificationHub_, governance_)
+    {}
+
+    function forceUnpauseForTest() external {
+        _unpause();
+    }
+}
+
 // =========================================================================
 // TEST CONTRACT: HumanFaucet Coverage Gaps
 // =========================================================================
@@ -43,7 +53,9 @@ contract HumanFaucetCoverageTest is Test {
         mockHub = new MockIdentityVerificationHub();
         mockVoterIdNFT = new MockVoterIdNFT();
 
-        faucet = new HumanFaucet(address(hrepToken), address(mockHub), admin);
+        HumanFaucetCoverageHarness faucetHarness =
+            new HumanFaucetCoverageHarness(address(hrepToken), address(mockHub), admin);
+        faucet = HumanFaucet(address(faucetHarness));
 
         uint256 faucetBalance = 52_000_000 * 1e6;
         hrepToken.grantRole(hrepToken.MINTER_ROLE(), admin);
@@ -52,6 +64,7 @@ contract HumanFaucetCoverageTest is Test {
 
         bytes32 mockConfigId = mockHub.MOCK_CONFIG_ID();
         faucet.setConfigId(mockConfigId);
+        faucetHarness.forceUnpauseForTest();
 
         vm.stopPrank();
     }
@@ -551,7 +564,6 @@ contract HumanFaucetCoverageTest is Test {
         hrepToken.grantRole(hrepToken.MINTER_ROLE(), admin);
         hrepToken.mint(address(splitFaucet), 1_000e6);
         hrepToken.revokeRole(hrepToken.MINTER_ROLE(), admin);
-        splitFaucet.pause();
 
         vm.expectRevert("Governance ownership required");
         splitFaucet.withdrawRemaining(admin, 1e6);

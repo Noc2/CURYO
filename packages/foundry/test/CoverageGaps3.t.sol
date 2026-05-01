@@ -368,6 +368,16 @@ contract FrontendRegistryEdgeCaseTest is Test {
 // 2. HUMAN FAUCET — CLAIM TIER EDGE CASES
 // =========================================================================
 
+contract CoverageGaps3HumanFaucetHarness is HumanFaucet {
+    constructor(address hrepToken_, address identityVerificationHub_, address governance_)
+        HumanFaucet(hrepToken_, identityVerificationHub_, governance_)
+    {}
+
+    function forceUnpauseForTest() external {
+        _unpause();
+    }
+}
+
 contract HumanFaucetTierEdgeCaseTest is Test {
     HumanFaucet public faucet;
     MockIdentityVerificationHub public mockHub;
@@ -386,10 +396,13 @@ contract HumanFaucetTierEdgeCaseTest is Test {
         mockHub = new MockIdentityVerificationHub();
         voterNFT = new MockVoterIdNFT();
 
-        faucet = new HumanFaucet(address(hrep), address(mockHub), governance);
+        CoverageGaps3HumanFaucetHarness faucetHarness =
+            new CoverageGaps3HumanFaucetHarness(address(hrep), address(mockHub), governance);
+        faucet = HumanFaucet(address(faucetHarness));
 
         hrep.mint(address(faucet), 52_000_000e6);
         faucet.setConfigId(mockHub.MOCK_CONFIG_ID());
+        faucetHarness.forceUnpauseForTest();
 
         vm.stopPrank();
     }

@@ -273,6 +273,16 @@ contract FrontendRegistryCoverageTest is Test {
 // HumanFaucet Coverage Gap Tests
 // =========================================================================
 
+contract CoverageGapsHumanFaucetHarness is HumanFaucet {
+    constructor(address hrepToken_, address identityVerificationHub_, address governance_)
+        HumanFaucet(hrepToken_, identityVerificationHub_, governance_)
+    {}
+
+    function forceUnpauseForTest() external {
+        _unpause();
+    }
+}
+
 contract HumanFaucetCoverageTest is Test {
     HumanFaucet public faucet;
     MockIdentityVerificationHub public mockHub;
@@ -293,10 +303,13 @@ contract HumanFaucetCoverageTest is Test {
         mockHub = new MockIdentityVerificationHub();
         voterNFT = new MockVoterIdNFT();
 
-        faucet = new HumanFaucet(address(hrep), address(mockHub), governance);
+        CoverageGapsHumanFaucetHarness faucetHarness =
+            new CoverageGapsHumanFaucetHarness(address(hrep), address(mockHub), governance);
+        faucet = HumanFaucet(address(faucetHarness));
 
         hrep.mint(address(faucet), 52_000_000e6);
         faucet.setConfigId(mockHub.MOCK_CONFIG_ID());
+        faucetHarness.forceUnpauseForTest();
 
         vm.stopPrank();
     }

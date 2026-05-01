@@ -243,6 +243,7 @@ contract HumanFaucet is SelfVerificationRoot, EIP712, Ownable, Pausable {
         _setAttestationPolicy(PASSPORT_ATTESTATION_ID, true, [true, true, true]);
         _setAttestationPolicy(BIOMETRIC_ID_CARD_ATTESTATION_ID, true, [false, true, true]);
         _setAttestationPolicy(KYC_ATTESTATION_ID, true, [false, true, true]);
+        _pause();
     }
 
     /// @notice Update the governance address that ownership may migrate to.
@@ -375,18 +376,23 @@ contract HumanFaucet is SelfVerificationRoot, EIP712, Ownable, Pausable {
 
     /// @notice Unpause the faucet (re-enables claims)
     function unpause() external onlyOwner {
+        _requireLaunchReady();
         _unpause();
     }
 
     /// @notice Final production launch step: open public claims and hand ownership to governance atomically.
     function openClaimsAndTransferOwnership() external onlyOwner {
         require(paused(), "Pause required");
+        _requireLaunchReady();
+        _unpause();
+        transferOwnership(governance);
+    }
+
+    function _requireLaunchReady() internal view {
         require(migrationBootstrapClosed, "Bootstrap open");
         require(verificationConfigId != bytes32(0), "Config not set");
         require(address(voterIdNFT) != address(0), "VoterIdNFT not set");
         require(recipientAuthorizationRequired, "Recipient auth off");
-        _unpause();
-        transferOwnership(governance);
     }
 
     // --- View Functions ---

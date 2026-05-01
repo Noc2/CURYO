@@ -341,6 +341,16 @@ contract FrontendRegistryBranchTest is Test {
 // HumanFaucet Tier & Branch Coverage Tests
 // =========================================================================
 
+contract CoverageGaps2HumanFaucetHarness is HumanFaucet {
+    constructor(address hrepToken_, address identityVerificationHub_, address governance_)
+        HumanFaucet(hrepToken_, identityVerificationHub_, governance_)
+    {}
+
+    function forceUnpauseForTest() external {
+        _unpause();
+    }
+}
+
 contract HumanFaucetBranchTest is Test {
     HumanFaucet public faucet;
     MockIdentityVerificationHub public mockHub;
@@ -359,9 +369,12 @@ contract HumanFaucetBranchTest is Test {
         hrep.grantRole(hrep.MINTER_ROLE(), admin);
         mockHub = new MockIdentityVerificationHub();
         voterNFT = new MockVoterIdNFT();
-        faucet = new HumanFaucet(address(hrep), address(mockHub), governance);
+        CoverageGaps2HumanFaucetHarness faucetHarness =
+            new CoverageGaps2HumanFaucetHarness(address(hrep), address(mockHub), governance);
+        faucet = HumanFaucet(address(faucetHarness));
         hrep.mint(address(faucet), 52_000_000e6);
         faucet.setConfigId(mockHub.MOCK_CONFIG_ID());
+        faucetHarness.forceUnpauseForTest();
         vm.stopPrank();
     }
 
