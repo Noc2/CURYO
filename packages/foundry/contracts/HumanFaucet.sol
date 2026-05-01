@@ -312,6 +312,7 @@ contract HumanFaucet is SelfVerificationRoot, EIP712, Ownable, Pausable {
     /// @param _voterIdNFT The Voter ID NFT contract address
     function setVoterIdNFT(address _voterIdNFT) external onlyOwner {
         require(_voterIdNFT != address(0), "Invalid address");
+        require(address(voterIdNFT) == address(0) || address(voterIdNFT) == _voterIdNFT, "VoterIdNFT already set");
         voterIdNFT = IVoterIdNFT(_voterIdNFT);
         emit VoterIdNFTSet(_voterIdNFT);
     }

@@ -88,6 +88,27 @@ contract HumanFaucetCoverageTest is Test {
         faucet.setVoterIdNFT(address(0));
     }
 
+    function test_SetVoterIdNFT_RejectsReplacement() public {
+        vm.prank(admin);
+        faucet.setVoterIdNFT(address(mockVoterIdNFT));
+
+        MockVoterIdNFT replacement = new MockVoterIdNFT();
+        vm.prank(admin);
+        vm.expectRevert("VoterIdNFT already set");
+        faucet.setVoterIdNFT(address(replacement));
+
+        assertEq(address(faucet.voterIdNFT()), address(mockVoterIdNFT));
+    }
+
+    function test_SetVoterIdNFT_AllowsIdempotentSet() public {
+        vm.startPrank(admin);
+        faucet.setVoterIdNFT(address(mockVoterIdNFT));
+        faucet.setVoterIdNFT(address(mockVoterIdNFT));
+        vm.stopPrank();
+
+        assertEq(address(faucet.voterIdNFT()), address(mockVoterIdNFT));
+    }
+
     function test_SetVoterIdNFT_NonOwner_Reverts() public {
         vm.prank(nonOwner);
         vm.expectRevert();
