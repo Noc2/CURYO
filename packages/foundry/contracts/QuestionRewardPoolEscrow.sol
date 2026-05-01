@@ -347,6 +347,7 @@ contract QuestionRewardPoolEscrow is
         require(requiredSettledRounds >= MIN_REQUIRED_SETTLED_ROUNDS, "Too few rounds");
         require(requiredSettledRounds <= MAX_REQUIRED_SETTLED_ROUNDS, "Too many rounds");
         require(amount >= requiredCompleters * requiredSettledRounds, "Amount too small");
+        _requireBundleFundingCoversMaxCompleters(contentIds, amount, requiredSettledRounds);
         _requireFutureBountyWindow(bountyClosesAt);
         uint256 normalizedFeedbackClosesAt = _normalizeFeedbackClosesAt(bountyClosesAt, feedbackClosesAt);
 
@@ -1146,6 +1147,24 @@ contract QuestionRewardPoolEscrow is
         });
 
         emit QuestionBundleRoundSetQualified(bundleId, roundSetIndex, allocation, frontendFeeAllocation);
+    }
+
+    function _requireBundleFundingCoversMaxCompleters(
+        uint256[] calldata contentIds,
+        uint256 amount,
+        uint256 requiredSettledRounds
+    ) internal view {
+        uint256 maxRoundVoters;
+        for (uint256 i = 0; i < contentIds.length;) {
+            RoundLib.RoundConfig memory cfg = registry.getContentRoundConfig(contentIds[i]);
+            if (cfg.maxVoters > maxRoundVoters) {
+                maxRoundVoters = cfg.maxVoters;
+            }
+            unchecked {
+                ++i;
+            }
+        }
+        require(amount >= maxRoundVoters * requiredSettledRounds, "Amount too small");
     }
 
     function _bundleRoundSetCompleterCount(uint256 bundleId, BundleReward storage bundle, uint256 roundSetIndex)

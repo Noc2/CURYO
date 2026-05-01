@@ -1162,35 +1162,50 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(claimable, REWARD_POOL_AMOUNT / 3);
     }
 
-    function testBundleRoundSetRetriesWhenAllocationCannotPayAllCompleters() public {
-        uint256[] memory contentIds = _submitBundleQuestions();
-        uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, 3, 3);
+    function testSubmissionBundleRequiresFundingForMaxCompleters() public {
+        RoundLib.RoundConfig memory roundConfig = RoundLib.RoundConfig({
+            epochDuration: uint32(EPOCH_DURATION), maxDuration: uint32(7 days), minVoters: 3, maxVoters: 4
+        });
+        uint256[] memory contentIds = new uint256[](2);
+        contentIds[0] = _submitQuestionWithContextAndRoundConfig(
+            "https://example.com/bundle-underfunded-a", "https://example.com/bundle-underfunded-a.jpg", roundConfig
+        );
+        contentIds[1] = _submitQuestionWithContextAndRoundConfig(
+            "https://example.com/bundle-underfunded-b", "https://example.com/bundle-underfunded-b.jpg", roundConfig
+        );
+
+        uint256 amount = 3;
+        vm.prank(funder);
+        usdc.approve(address(rewardPoolEscrow), amount);
+
+        uint256 bountyClosesAt = block.timestamp + 30 days;
+        vm.expectRevert("Amount too small");
+        vm.prank(address(registry));
+        rewardPoolEscrow.createSubmissionBundleFromRegistry(
+            1, contentIds, funder, REWARD_ASSET_USDC, amount, 3, 1, bountyClosesAt, bountyClosesAt
+        );
+    }
+
+    function testSubmissionBundleFundedAtMaxCompletersQualifies() public {
+        RoundLib.RoundConfig memory roundConfig = RoundLib.RoundConfig({
+            epochDuration: uint32(EPOCH_DURATION), maxDuration: uint32(7 days), minVoters: 3, maxVoters: 4
+        });
+        uint256[] memory contentIds = new uint256[](2);
+        contentIds[0] = _submitQuestionWithContextAndRoundConfig(
+            "https://example.com/bundle-funded-a", "https://example.com/bundle-funded-a.jpg", roundConfig
+        );
+        contentIds[1] = _submitQuestionWithContextAndRoundConfig(
+            "https://example.com/bundle-funded-b", "https://example.com/bundle-funded-b.jpg", roundConfig
+        );
+        uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, 4, 3);
 
         address[] memory overfullVoters = _fourVoters();
         bool[] memory overfullDirections = _directions(true, true, false, true);
-
         _settleRoundWith(overfullVoters, contentIds[0], overfullDirections);
         _settleRoundWith(overfullVoters, contentIds[1], overfullDirections);
-        assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter1), 0);
 
-        vm.prank(voter1);
-        vm.expectRevert("Bundle not claimable");
-        rewardPoolEscrow.claimQuestionBundleReward(bundleId, 0);
-
-        vm.warp(block.timestamp + 25 hours);
-        address[] memory retryVoters = new address[](3);
-        retryVoters[0] = voter2;
-        retryVoters[1] = voter3;
-        retryVoters[2] = voter4;
-        bool[] memory retryDirections = _directions(true, true, false);
-
-        _settleRoundWith(retryVoters, contentIds[0], retryDirections);
-        _settleRoundWith(retryVoters, contentIds[1], retryDirections);
-
-        uint256 claimable = rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter2);
-        assertEq(claimable, 1);
-        vm.prank(voter2);
-        assertEq(rewardPoolEscrow.claimQuestionBundleReward(bundleId, 0), claimable);
+        assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter1), 1);
+        assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter4), 1);
     }
 
     function testBundleRoundSetRetryIgnoresFutureRoundsRecordedBeforeReset() public {
