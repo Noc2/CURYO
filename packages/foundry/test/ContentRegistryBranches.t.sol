@@ -1934,6 +1934,53 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         assertGt(registry.getRating(1), 5000);
     }
 
+    function test_SetVotingEngine_ReplacementCannotOpenRoundWhileTrackedOldRoundOpen() public {
+        vm.startPrank(submitter);
+        hrepToken.approve(address(registry), 10e6);
+        _submitContentWithReservation(registry, "https://example.com/tracked-open-engine", "goal", "goal", "tags", 0);
+        vm.stopPrank();
+
+        _commit(voter1, 1, true);
+
+        RoundVotingEngine replacementEngine = _deployReplacementVotingEngine();
+        vm.startPrank(owner);
+        _setTlockRoundConfig(ProtocolConfig(address(replacementEngine.protocolConfig())), 1 hours, 7 days, 3, 200);
+        registry.pause();
+        registry.setVotingEngine(address(replacementEngine));
+        registry.unpause();
+        vm.stopPrank();
+
+        bytes32 salt = keccak256(abi.encodePacked(voter2, block.timestamp));
+        uint16 referenceRatingBps = _currentRatingReferenceBps(1);
+        bytes memory ciphertext = _testCiphertext(true, salt, 1);
+        bytes32 commitHash = _commitHash(
+            true,
+            salt,
+            voter2,
+            1,
+            referenceRatingBps,
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            ciphertext
+        );
+
+        vm.startPrank(voter2);
+        hrepToken.approve(address(replacementEngine), STAKE);
+        uint256 cachedRoundContext = _roundContext(replacementEngine.previewCommitRoundId(1), referenceRatingBps);
+        vm.expectRevert(ContentRegistry.ActiveRoundOnPreviousEngine.selector);
+        replacementEngine.commitVote(
+            1,
+            cachedRoundContext,
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            commitHash,
+            ciphertext,
+            STAKE,
+            address(0)
+        );
+        vm.stopPrank();
+    }
+
     function test_SetVotingEngine_OldEngineCanSettleAfterReplacementSettlement() public {
         vm.startPrank(submitter);
         hrepToken.approve(address(registry), 10e6);
@@ -2282,9 +2329,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         registry.unpause();
         vm.stopPrank();
 
-        _commitWithStakeToEngine(replacementEngine, voter2, 1, true, STAKE);
         vm.warp(T0 + 7 days + 1);
         votingEngine.cancelExpiredRound(1, oldRoundId);
+        _commitWithStakeToEngine(replacementEngine, voter2, 1, true, STAKE);
 
         vm.warp(T0 + 31 days);
         assertFalse(registry.isDormancyEligible(1), "current replacement round should block dormancy");

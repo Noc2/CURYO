@@ -52,6 +52,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     using TransientSlot for *;
 
     error OnlyVotingEngine();
+    error ActiveRoundOnPreviousEngine();
 
     // --- Access Control Roles ---
     bytes32 public constant CONFIG_ROLE = keccak256("CONFIG_ROLE");
@@ -1073,9 +1074,10 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     function updateActivity(uint256 contentId) external {
         if (msg.sender != votingEngine) revert OnlyVotingEngine();
         address trackedEngine = contentRoundTrackingEngine[contentId];
-        if (trackedEngine == address(0) || trackedEngine == msg.sender || !_engineHasOpenRound(trackedEngine, contentId)) {
-            contentRoundTrackingEngine[contentId] = msg.sender;
+        if (trackedEngine != address(0) && trackedEngine != msg.sender && _engineHasOpenRound(trackedEngine, contentId)) {
+            revert ActiveRoundOnPreviousEngine();
         }
+        contentRoundTrackingEngine[contentId] = msg.sender;
         contents[contentId].lastActivityAt = uint48(block.timestamp);
     }
 
