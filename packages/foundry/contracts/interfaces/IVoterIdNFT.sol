@@ -10,6 +10,11 @@ interface IVoterIdNFT {
     /// @return tokenId The minted token ID
     function mint(address to, uint256 nullifier) external returns (uint256 tokenId);
 
+    /// @notice Return whether an address may mint Voter IDs.
+    /// @param minter The address to check
+    /// @return True when the address is authorized to mint
+    function authorizedMinters(address minter) external view returns (bool);
+
     /// @notice Check if an address has a Voter ID
     /// @param holder The address to check
     /// @return True if the address owns a Voter ID

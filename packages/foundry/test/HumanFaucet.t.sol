@@ -138,6 +138,10 @@ contract HumanFaucetTest is Test {
         freshFaucet.unpause();
 
         freshFaucet.setRecipientAuthorizationRequired(true);
+        vm.expectRevert("Faucet not minter");
+        freshFaucet.unpause();
+
+        realVoterIdNFT.addMinter(address(freshFaucet));
         freshFaucet.unpause();
         assertFalse(freshFaucet.paused());
     }

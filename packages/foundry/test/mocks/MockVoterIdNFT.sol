@@ -44,6 +44,10 @@ contract MockVoterIdNFT is IVoterIdNFT {
         return id;
     }
 
+    function authorizedMinters(address) external pure returns (bool) {
+        return true;
+    }
+
     function hasVoterId(address holder) external view returns (bool) {
         if (holders[holder]) return true;
         address delegator = delegateToHolder[holder];

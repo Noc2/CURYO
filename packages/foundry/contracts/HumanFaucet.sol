@@ -394,6 +394,7 @@ contract HumanFaucet is SelfVerificationRoot, EIP712, Ownable, Pausable {
         require(verificationConfigId != bytes32(0), "Config not set");
         require(address(voterIdNFT) != address(0), "VoterIdNFT not set");
         require(recipientAuthorizationRequired, "Recipient auth off");
+        require(voterIdNFT.authorizedMinters(address(this)), "Faucet not minter");
     }
 
     // --- View Functions ---
