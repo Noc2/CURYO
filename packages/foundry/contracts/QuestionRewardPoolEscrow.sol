@@ -122,6 +122,7 @@ contract QuestionRewardPoolEscrow is
         bool qualified;
         uint32 claimedCount;
         uint32 eligibleCompleters;
+        uint64 claimDeadline;
         uint256 allocation;
         uint256 frontendFeeAllocation;
     }
@@ -674,6 +675,9 @@ contract QuestionRewardPoolEscrow is
             _requireCompletedBundleRoundSet(bundleId, roundSetIndex, msg.sender);
         require(!bundleRoundSetRewardClaimed[bundleId][roundSetIndex][firstCommitKey], "Already claimed");
         BundleRoundSetSnapshot storage snapshot = bundleRoundSetSnapshots[bundleId][roundSetIndex];
+        if (snapshot.claimDeadline == 0) {
+            snapshot.claimDeadline = block.timestamp.toUint64();
+        }
         uint256 grossAmount;
         uint256 reservedFrontendFee;
         address frontendRecipient;
@@ -761,7 +765,7 @@ contract QuestionRewardPoolEscrow is
         require(bundle.bountyClosesAt != 0 && block.timestamp > bundle.bountyClosesAt, "Bundle active");
         require(block.timestamp > uint256(bundle.bountyClosesAt) + BUNDLE_REFUND_GRACE, "Grace");
         if (bundle.completedRoundSets != 0) {
-            _requireBundleCleanupComplete(bundleId);
+            if (!_prepareBundleRefundGrace(bundleId, bundle)) return 0;
         }
         refundAmount = bundle.fundedAmount - bundle.claimedAmount;
         require(refundAmount > 0, "No refund");
@@ -1015,18 +1019,32 @@ contract QuestionRewardPoolEscrow is
         return snapshot.qualified && snapshot.claimedCount < snapshot.eligibleCompleters;
     }
 
-    function _requireBundleCleanupComplete(uint256 bundleId) internal view {
+    function _isBundleRoundSetCleanupComplete(uint256 bundleId, uint256 roundSetIndex) internal view returns (bool) {
         BundleQuestion[] storage questions = bundleQuestions[bundleId];
-        BundleReward storage bundle = bundleRewards[bundleId];
+        for (uint256 i = 0; i < questions.length;) {
+            uint256 roundId = bundleRoundIds[bundleId][i][roundSetIndex];
+            if (votingEngine.roundUnrevealedCleanupRemaining(questions[i].contentId, roundId) != 0) {
+                return false;
+            }
+            unchecked {
+                ++i;
+            }
+        }
+        return true;
+    }
+
+    function _prepareBundleRefundGrace(uint256 bundleId, BundleReward storage bundle) internal returns (bool ready) {
+        ready = true;
         for (uint256 roundSetIndex = 0; roundSetIndex < bundle.completedRoundSets;) {
-            for (uint256 i = 0; i < questions.length;) {
-                uint256 roundId = bundleRoundIds[bundleId][i][roundSetIndex];
-                require(
-                    votingEngine.roundUnrevealedCleanupRemaining(questions[i].contentId, roundId) == 0,
-                    "Cleanup pending"
-                );
-                unchecked {
-                    ++i;
+            BundleRoundSetSnapshot storage snapshot = bundleRoundSetSnapshots[bundleId][roundSetIndex];
+            if (snapshot.qualified && snapshot.claimedCount < snapshot.eligibleCompleters) {
+                require(_isBundleRoundSetCleanupComplete(bundleId, roundSetIndex), "Cleanup pending");
+                uint256 claimDeadline = snapshot.claimDeadline;
+                if (claimDeadline == 0) {
+                    snapshot.claimDeadline = block.timestamp.toUint64();
+                    ready = false;
+                } else {
+                    require(block.timestamp > claimDeadline + BUNDLE_CLAIM_GRACE, "Grace");
                 }
             }
             unchecked {
@@ -1142,6 +1160,7 @@ contract QuestionRewardPoolEscrow is
             qualified: true,
             claimedCount: 0,
             eligibleCompleters: uint32(completerCount),
+            claimDeadline: _isBundleRoundSetCleanupComplete(bundleId, roundSetIndex) ? block.timestamp.toUint64() : 0,
             allocation: allocation,
             frontendFeeAllocation: frontendFeeAllocation
         });
@@ -1323,8 +1342,9 @@ contract QuestionRewardPoolEscrow is
         unchecked {
             rewardPool.qualifiedRounds++;
         }
-        if (settledAt > rewardPool.claimDeadline) {
-            rewardPool.claimDeadline = uint64(settledAt);
+        uint256 claimDeadline = block.timestamp > settledAt ? block.timestamp : settledAt;
+        if (claimDeadline > rewardPool.claimDeadline) {
+            rewardPool.claimDeadline = uint64(claimDeadline);
         }
         rewardPool.nextRoundToEvaluate = uint64(roundId + 1);
         rewardPool.unallocatedAmount -= allocation;

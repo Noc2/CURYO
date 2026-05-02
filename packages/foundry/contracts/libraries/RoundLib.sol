@@ -47,6 +47,13 @@ library RoundLib {
         uint64 weightedDownPool; // Epoch-weighted effective stake for DOWN side
     }
 
+    /// @dev `revealableAfter` is dual-purpose to save a storage slot:
+    ///      - while `revealed == false`: epoch-end timestamp (gates the earliest reveal call)
+    ///      - while `revealed == true`:  reveal timestamp (used by bounty/cleanup deadline checks)
+    ///      Every reader MUST gate its interpretation on `revealed`. See:
+    ///        - RoundCleanupLib.processUnrevealedVotes (epoch-end semantics, guarded by !revealed)
+    ///        - QuestionRewardPoolEscrow._timelyRevealedCommitFrontend (reveal-time, guarded by revealed)
+    ///        - QuestionRewardPoolEscrowQualificationLib (reveal-time, guarded by revealed)
     struct Commit {
         address voter;
         uint64 stakeAmount;
@@ -54,7 +61,7 @@ library RoundLib {
         uint64 targetRound; // drand round targeted by the ciphertext
         bytes32 drandChainHash; // drand chain hash bound into the commitment
         address frontend; // Frontend operator address (for fee distribution)
-        uint48 revealableAfter; // Epoch end before reveal; reveal timestamp after reveal
+        uint48 revealableAfter; // Dual-purpose; see struct NatSpec above. Always check `revealed` first.
         bool revealed;
         bool isUp; // Set after reveal
         uint8 epochIndex; // 0 = epoch 1 (blind, 100% weight), 1 = epoch 2+ (saw results, 25% weight)

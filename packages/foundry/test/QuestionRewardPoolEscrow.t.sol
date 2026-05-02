@@ -340,6 +340,27 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(rewardPoolEscrow.claimableQuestionReward(rewardPoolId, roundId, voter1), REWARD_POOL_AMOUNT / 3);
     }
 
+    function testCompletedPoolRefundGraceStartsAfterCleanupQualification() public {
+        uint256 contentId = _submitQuestion("");
+        uint256 expiresAt = block.timestamp + 30 days;
+        uint256 rewardPoolId = _createRewardPoolWithExpiry(contentId, REWARD_POOL_AMOUNT, 3, 1, expiresAt);
+        uint256 roundId = _settleRoundWithOneUnrevealed(contentId);
+
+        vm.warp(expiresAt + BUNDLE_CLAIM_GRACE + 1);
+        vm.expectRevert("Cleanup pending");
+        rewardPoolEscrow.qualifyRound(rewardPoolId, roundId);
+
+        votingEngine.processUnrevealedVotes(contentId, roundId, 0, 0);
+        rewardPoolEscrow.qualifyRound(rewardPoolId, roundId);
+
+        vm.expectRevert("Grace");
+        rewardPoolEscrow.refundExpiredRewardPool(rewardPoolId);
+
+        vm.warp(block.timestamp + BUNDLE_CLAIM_GRACE + 1);
+        uint256 refundAmount = rewardPoolEscrow.refundExpiredRewardPool(rewardPoolId);
+        assertEq(refundAmount, REWARD_POOL_AMOUNT);
+    }
+
     function testRefundableRewardPoolAmountUsesQuestionSelectedVoterCap() public {
         RoundLib.RoundConfig memory roundConfig =
             RoundLib.RoundConfig({ epochDuration: 10 minutes, maxDuration: 1 hours, minVoters: 3, maxVoters: 4 });
@@ -3249,6 +3270,10 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         rewardPoolEscrow.refundQuestionBundleReward(bundleId);
 
         votingEngine.processUnrevealedVotes(contentIds[0], cleanupRoundId, 0, 0);
+        uint256 startedGrace = rewardPoolEscrow.refundQuestionBundleReward(bundleId);
+        assertEq(startedGrace, 0);
+
+        vm.warp(block.timestamp + BUNDLE_CLAIM_GRACE + 1);
         uint256 treasuryBalanceBefore = usdc.balanceOf(treasury);
         uint256 refundAmount = rewardPoolEscrow.refundQuestionBundleReward(bundleId);
         assertGt(refundAmount, 0);
