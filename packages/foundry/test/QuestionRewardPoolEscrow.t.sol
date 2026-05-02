@@ -3245,6 +3245,10 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         // Jump past the refund grace; refund now allowed (forfeits to treasury since
         // registry-initiated bundles are nonRefundable).
         vm.warp(bountyClosesAt + BUNDLE_REFUND_GRACE + 1);
+        uint256 startedGrace = rewardPoolEscrow.refundQuestionBundleReward(bundleId);
+        assertEq(startedGrace, 0);
+
+        vm.warp(block.timestamp + BUNDLE_CLAIM_GRACE + 1);
         uint256 treasuryBalanceBefore = usdc.balanceOf(treasury);
         uint256 refundAmount = rewardPoolEscrow.refundQuestionBundleReward(bundleId);
         assertGt(refundAmount, 0);

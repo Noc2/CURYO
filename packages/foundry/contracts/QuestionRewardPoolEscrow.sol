@@ -99,8 +99,6 @@ contract QuestionRewardPoolEscrow is
         uint32 requiredSettledRounds;
         uint32 completedRoundSets;
         uint32 claimedCount;
-        // Deprecated field retained to preserve proxy storage layout.
-        uint32 eligibleClaimCount;
         uint16 frontendFeeBps;
         uint256 funderNullifier;
         uint256 fundedAmount;
@@ -122,7 +120,6 @@ contract QuestionRewardPoolEscrow is
         bool qualified;
         uint32 claimedCount;
         uint32 eligibleCompleters;
-        uint64 claimDeadline;
         uint256 allocation;
         uint256 frontendFeeAllocation;
     }
@@ -357,7 +354,6 @@ contract QuestionRewardPoolEscrow is
 
         BundleReward storage bundle = bundleRewards[bundleId];
         bundle.id = bundleId.toUint64();
-        bundle.bountyOpensAt = block.timestamp.toUint64();
         bundle.bountyClosesAt = bountyClosesAt.toUint64();
         bundle.feedbackClosesAt = normalizedFeedbackClosesAt.toUint64();
         bundle.funder = funder;
@@ -675,9 +671,6 @@ contract QuestionRewardPoolEscrow is
             _requireCompletedBundleRoundSet(bundleId, roundSetIndex, msg.sender);
         require(!bundleRoundSetRewardClaimed[bundleId][roundSetIndex][firstCommitKey], "Already claimed");
         BundleRoundSetSnapshot storage snapshot = bundleRoundSetSnapshots[bundleId][roundSetIndex];
-        if (snapshot.claimDeadline == 0) {
-            snapshot.claimDeadline = block.timestamp.toUint64();
-        }
         uint256 grossAmount;
         uint256 reservedFrontendFee;
         address frontendRecipient;
@@ -762,10 +755,16 @@ contract QuestionRewardPoolEscrow is
     function refundQuestionBundleReward(uint256 bundleId) external nonReentrant returns (uint256 refundAmount) {
         BundleReward storage bundle = _getExistingBundleReward(bundleId);
         require(!bundle.refunded, "Already refunded");
-        require(bundle.bountyClosesAt != 0 && block.timestamp > bundle.bountyClosesAt, "Bundle active");
+        require(block.timestamp > bundle.bountyClosesAt, "Bundle active");
         require(block.timestamp > uint256(bundle.bountyClosesAt) + BUNDLE_REFUND_GRACE, "Grace");
         if (bundle.completedRoundSets != 0) {
-            if (!_prepareBundleRefundGrace(bundleId, bundle)) return 0;
+            _requireBundleCleanupComplete(bundleId, bundle.completedRoundSets);
+            uint256 claimDeadline = bundle.bountyOpensAt;
+            if (claimDeadline == 0) {
+                bundle.bountyOpensAt = (block.timestamp + BUNDLE_CLAIM_GRACE).toUint64();
+                return 0;
+            }
+            require(block.timestamp > claimDeadline, "Grace");
         }
         refundAmount = bundle.fundedAmount - bundle.claimedAmount;
         require(refundAmount > 0, "No refund");
@@ -1019,32 +1018,17 @@ contract QuestionRewardPoolEscrow is
         return snapshot.qualified && snapshot.claimedCount < snapshot.eligibleCompleters;
     }
 
-    function _isBundleRoundSetCleanupComplete(uint256 bundleId, uint256 roundSetIndex) internal view returns (bool) {
+    function _requireBundleCleanupComplete(uint256 bundleId, uint256 completedRoundSets) internal view {
         BundleQuestion[] storage questions = bundleQuestions[bundleId];
-        for (uint256 i = 0; i < questions.length;) {
-            uint256 roundId = bundleRoundIds[bundleId][i][roundSetIndex];
-            if (votingEngine.roundUnrevealedCleanupRemaining(questions[i].contentId, roundId) != 0) {
-                return false;
-            }
-            unchecked {
-                ++i;
-            }
-        }
-        return true;
-    }
-
-    function _prepareBundleRefundGrace(uint256 bundleId, BundleReward storage bundle) internal returns (bool ready) {
-        ready = true;
-        for (uint256 roundSetIndex = 0; roundSetIndex < bundle.completedRoundSets;) {
-            BundleRoundSetSnapshot storage snapshot = bundleRoundSetSnapshots[bundleId][roundSetIndex];
-            if (snapshot.qualified && snapshot.claimedCount < snapshot.eligibleCompleters) {
-                require(_isBundleRoundSetCleanupComplete(bundleId, roundSetIndex), "Cleanup pending");
-                uint256 claimDeadline = snapshot.claimDeadline;
-                if (claimDeadline == 0) {
-                    snapshot.claimDeadline = block.timestamp.toUint64();
-                    ready = false;
-                } else {
-                    require(block.timestamp > claimDeadline + BUNDLE_CLAIM_GRACE, "Grace");
+        for (uint256 roundSetIndex = 0; roundSetIndex < completedRoundSets;) {
+            for (uint256 i = 0; i < questions.length;) {
+                uint256 roundId = bundleRoundIds[bundleId][i][roundSetIndex];
+                require(
+                    votingEngine.roundUnrevealedCleanupRemaining(questions[i].contentId, roundId) == 0,
+                    "Cleanup pending"
+                );
+                unchecked {
+                    ++i;
                 }
             }
             unchecked {
@@ -1160,11 +1144,9 @@ contract QuestionRewardPoolEscrow is
             qualified: true,
             claimedCount: 0,
             eligibleCompleters: uint32(completerCount),
-            claimDeadline: _isBundleRoundSetCleanupComplete(bundleId, roundSetIndex) ? block.timestamp.toUint64() : 0,
             allocation: allocation,
             frontendFeeAllocation: frontendFeeAllocation
         });
-
         emit QuestionBundleRoundSetQualified(bundleId, roundSetIndex, allocation, frontendFeeAllocation);
     }
 
