@@ -512,8 +512,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         (bool ok,) = address(rewardPoolEscrow).call(abi.encodeWithSignature("setVotingEngine(address)", newEngine));
         assertFalse(ok);
 
-        (,,, address configuredVotingEngine,) = rewardPoolEscrow.getWiring();
-        assertEq(configuredVotingEngine, address(votingEngine));
+        assertEq(rewardPoolEscrow.getWiring(), address(voterIdNFT));
     }
 
     function testRegistrySubmissionRewardRejectsStaleEscrowAfterEngineRotation() public {
@@ -3253,6 +3252,52 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         uint256 refundAmount = rewardPoolEscrow.refundQuestionBundleReward(bundleId);
         assertGt(refundAmount, 0);
         assertEq(usdc.balanceOf(treasury), treasuryBalanceBefore + refundAmount);
+    }
+
+    function testBundleRefund_LateSyncedRoundSetExtendsClaimGrace() public {
+        uint256[] memory contentIds = _submitBundleQuestions();
+        uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, 120e6, 3, 2);
+        uint256 bountyClosesAt = block.timestamp + 30 days;
+
+        address[] memory voters = new address[](3);
+        voters[0] = voter2;
+        voters[1] = voter3;
+        voters[2] = voter4;
+        bool[] memory directions = _directions(true, true, false);
+
+        _settleRoundWith(voters, contentIds[0], directions);
+        _settleRoundWith(voters, contentIds[1], directions);
+
+        vm.startPrank(owner);
+        MockQuestionRewardPoolEscrow mockEscrow = new MockQuestionRewardPoolEscrow();
+        registry.pause();
+        registry.setQuestionRewardPoolEscrow(address(mockEscrow));
+        registry.unpause();
+        vm.stopPrank();
+
+        vm.warp(block.timestamp + 25 hours);
+        uint256 lateFirstRoundId = _settleRoundWith(voters, contentIds[0], directions);
+        uint256 lateSecondRoundId = _settleRoundWith(voters, contentIds[1], directions);
+
+        vm.startPrank(owner);
+        registry.pause();
+        registry.setQuestionRewardPoolEscrow(address(rewardPoolEscrow));
+        registry.unpause();
+        vm.stopPrank();
+
+        vm.warp(bountyClosesAt + BUNDLE_REFUND_GRACE + 1);
+        assertEq(rewardPoolEscrow.refundQuestionBundleReward(bundleId), 0);
+        vm.warp(block.timestamp + BUNDLE_CLAIM_GRACE + 1);
+
+        rewardPoolEscrow.syncBundleQuestionTerminal(contentIds[0], lateFirstRoundId);
+        rewardPoolEscrow.syncBundleQuestionTerminal(contentIds[1], lateSecondRoundId);
+        assertGt(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 1, voter2), 0);
+
+        vm.expectRevert("Grace");
+        rewardPoolEscrow.refundQuestionBundleReward(bundleId);
+
+        vm.prank(voter2);
+        assertGt(rewardPoolEscrow.claimQuestionBundleReward(bundleId, 1), 0);
     }
 
     function testBundleRefund_WaitsForUnrevealedCleanupAfterGrace() public {
