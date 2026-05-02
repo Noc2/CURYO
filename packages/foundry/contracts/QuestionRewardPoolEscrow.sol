@@ -759,12 +759,11 @@ contract QuestionRewardPoolEscrow is
         require(block.timestamp > uint256(bundle.bountyClosesAt) + BUNDLE_REFUND_GRACE, "Grace");
         if (bundle.completedRoundSets != 0) {
             _requireBundleCleanupComplete(bundleId, bundle.completedRoundSets);
-            uint256 claimDeadline = bundle.bountyOpensAt;
-            if (claimDeadline == 0) {
-                _startBundleClaimGrace(bundle);
+            if (bundle.bountyOpensAt == 0) {
+                bundle.bountyOpensAt = (block.timestamp + BUNDLE_CLAIM_GRACE).toUint64();
                 return 0;
             }
-            require(block.timestamp > claimDeadline, "Grace");
+            require(block.timestamp > bundle.bountyOpensAt, "Grace");
         }
         refundAmount = bundle.fundedAmount - bundle.claimedAmount;
         require(refundAmount > 0, "No refund");
@@ -1134,7 +1133,7 @@ contract QuestionRewardPoolEscrow is
         unchecked {
             bundle.completedRoundSets++;
         }
-        if (bundle.bountyOpensAt != 0) _startBundleClaimGrace(bundle);
+        if (bundle.bountyOpensAt != 0) bundle.bountyOpensAt = 0;
         bundle.unallocatedAmount -= allocation;
 
         bundleRoundSetSnapshots[bundleId][roundSetIndex] = BundleRoundSetSnapshot({
@@ -1470,10 +1469,6 @@ contract QuestionRewardPoolEscrow is
     function _roundVoterIdNftAddress(uint256 contentId, uint256 roundId) internal view returns (address) {
         address snapshot = votingEngine.roundVoterIdNFTSnapshot(contentId, roundId);
         return snapshot == address(0) ? address(voterIdNFT) : snapshot;
-    }
-
-    function _startBundleClaimGrace(BundleReward storage bundle) private {
-        bundle.bountyOpensAt = (block.timestamp + BUNDLE_CLAIM_GRACE).toUint64();
     }
 
     uint256[50] private __gap;

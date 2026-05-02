@@ -3293,10 +3293,58 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         rewardPoolEscrow.syncBundleQuestionTerminal(contentIds[1], lateSecondRoundId);
         assertGt(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 1, voter2), 0);
 
+        assertEq(rewardPoolEscrow.refundQuestionBundleReward(bundleId), 0);
         vm.expectRevert("Grace");
         rewardPoolEscrow.refundQuestionBundleReward(bundleId);
 
         vm.prank(voter2);
+        assertGt(rewardPoolEscrow.claimQuestionBundleReward(bundleId, 1), 0);
+    }
+
+    function testBundleRefund_LateSyncedRoundSetWaitsForCleanupBeforeClaimGrace() public {
+        uint256[] memory contentIds = _submitBundleQuestions();
+        uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, 120e6, 3, 2);
+        uint256 bountyClosesAt = block.timestamp + 30 days;
+
+        address[] memory voters = _threeVoters();
+        bool[] memory directions = _directions(true, true, false);
+
+        _settleRoundWith(voters, contentIds[0], directions);
+        _settleRoundWith(voters, contentIds[1], directions);
+
+        vm.startPrank(owner);
+        MockQuestionRewardPoolEscrow mockEscrow = new MockQuestionRewardPoolEscrow();
+        registry.pause();
+        registry.setQuestionRewardPoolEscrow(address(mockEscrow));
+        registry.unpause();
+        vm.stopPrank();
+
+        vm.warp(block.timestamp + 25 hours);
+        uint256 cleanupRoundId = _settleRoundWithOneUnrevealed(contentIds[0]);
+        uint256 lateSecondRoundId = _settleRoundWith(voters, contentIds[1], directions);
+
+        vm.startPrank(owner);
+        registry.pause();
+        registry.setQuestionRewardPoolEscrow(address(rewardPoolEscrow));
+        registry.unpause();
+        vm.stopPrank();
+
+        vm.warp(bountyClosesAt + BUNDLE_REFUND_GRACE + 1);
+        assertEq(rewardPoolEscrow.refundQuestionBundleReward(bundleId), 0);
+        vm.warp(block.timestamp + BUNDLE_CLAIM_GRACE + 1);
+
+        rewardPoolEscrow.syncBundleQuestionTerminal(contentIds[0], cleanupRoundId);
+        rewardPoolEscrow.syncBundleQuestionTerminal(contentIds[1], lateSecondRoundId);
+        assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 1, voter1), 0);
+
+        vm.expectRevert("Cleanup pending");
+        rewardPoolEscrow.refundQuestionBundleReward(bundleId);
+
+        votingEngine.processUnrevealedVotes(contentIds[0], cleanupRoundId, 0, 0);
+        assertEq(rewardPoolEscrow.refundQuestionBundleReward(bundleId), 0);
+        assertGt(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 1, voter1), 0);
+
+        vm.prank(voter1);
         assertGt(rewardPoolEscrow.claimQuestionBundleReward(bundleId, 1), 0);
     }
 
