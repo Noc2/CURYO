@@ -10,6 +10,7 @@ import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { RatingLib } from "../contracts/libraries/RatingLib.sol";
+import { RewardMath } from "../contracts/libraries/RewardMath.sol";
 import { RoundSettlementSideEffectsLib } from "../contracts/libraries/RoundSettlementSideEffectsLib.sol";
 import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { HumanReputation } from "../contracts/HumanReputation.sol";
@@ -652,6 +653,67 @@ contract RoundIntegrationTest is VotingTestBase {
         vm.prank(voter4);
         rewardDistributor.claimReward(contentId, roundId);
         assertEq(hrepToken.balanceOf(voter4) - loser4Before, aggregateRebate - (individualRebate * 2));
+        assertEq(rewardDistributor.roundLoserRebateClaimedCount(contentId, roundId), 3);
+        assertEq(rewardDistributor.roundLoserRebateClaimedAmount(contentId, roundId), aggregateRebate);
+    }
+
+    function test_FinalizeLoserRebateDust_RoutesDustAndPreservesBaseRebates() public {
+        uint256 contentId = _submitContent();
+        uint256 winnerStake = 4_000_000;
+        uint256 loserStake = 1_000_019;
+
+        bytes32 salt1 = keccak256("loser-dust-winner");
+        bytes32 salt2 = keccak256("loser-dust-1");
+        bytes32 salt3 = keccak256("loser-dust-2");
+        bytes32 salt4 = keccak256("loser-dust-3");
+
+        (, bytes32 ck1) = _commitWithSalt(voter1, contentId, true, winnerStake, salt1);
+        (, bytes32 ck2) = _commitWithSalt(voter2, contentId, false, loserStake, salt2);
+        (, bytes32 ck3) = _commitWithSalt(voter3, contentId, false, loserStake, salt3);
+        (, bytes32 ck4) = _commitWithSalt(voter4, contentId, false, loserStake, salt4);
+
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
+        RoundLib.Round memory openRound = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
+        _warpPastTlockRevealTime(uint256(openRound.startTime) + EPOCH_DURATION);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, ck1, true, salt1);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, ck2, false, salt2);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, ck3, false, salt3);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, ck4, false, salt4);
+
+        votingEngine.settleRound(contentId, roundId);
+
+        uint256 individualRebate = RewardMath.calculateRevealedLoserRefund(loserStake);
+        uint256 aggregateRebate = RewardMath.calculateRevealedLoserRefund(loserStake * 3);
+        uint256 expectedDust = aggregateRebate - (individualRebate * 3);
+
+        address[] memory losers = new address[](3);
+        losers[0] = voter2;
+        losers[1] = voter3;
+        losers[2] = voter4;
+
+        vm.expectRevert(RoundRewardDistributor.RewardFinalizationTooEarly.selector);
+        rewardDistributor.finalizeLoserRebateDust(contentId, roundId, losers);
+
+        vm.prank(voter2);
+        rewardDistributor.claimReward(contentId, roundId);
+        vm.prank(voter3);
+        rewardDistributor.claimReward(contentId, roundId);
+
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
+        vm.warp(uint256(round.settledAt) + rewardDistributor.STALE_REWARD_FINALIZATION_DELAY());
+
+        uint256 treasuryBefore = hrepToken.balanceOf(treasury);
+        uint256 releasedDust = rewardDistributor.finalizeLoserRebateDust(contentId, roundId, losers);
+
+        assertEq(releasedDust, expectedDust, "only mathematical loser rebate dust should be finalized");
+        assertEq(hrepToken.balanceOf(treasury), treasuryBefore + releasedDust, "dust should route to protocol");
+        assertTrue(rewardDistributor.roundLoserRebateDustFinalized(contentId, roundId));
+        assertEq(rewardDistributor.roundLoserRebateClaimedCount(contentId, roundId), 2);
+
+        uint256 loser4Before = hrepToken.balanceOf(voter4);
+        vm.prank(voter4);
+        rewardDistributor.claimReward(contentId, roundId);
+        assertEq(hrepToken.balanceOf(voter4) - loser4Before, individualRebate);
         assertEq(rewardDistributor.roundLoserRebateClaimedCount(contentId, roundId), 3);
         assertEq(rewardDistributor.roundLoserRebateClaimedAmount(contentId, roundId), aggregateRebate);
     }

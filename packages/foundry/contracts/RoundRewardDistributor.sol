@@ -152,6 +152,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     );
     event VotingEngineUpdated(address votingEngine);
     event VoterRewardDustFinalized(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
+    event LoserRebateDustFinalized(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
     event FrontendFeeDustFinalized(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
     event FrontendFeeDustBatchProcessed(
         uint256 indexed contentId, uint256 indexed roundId, uint256 processedCount, uint256 expectedTotal
@@ -399,6 +400,51 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         _routeRewardToProtocol(releasedDust);
 
         emit VoterRewardDustFinalized(contentId, roundId, releasedDust);
+    }
+
+    /// @notice Finalize only mathematical loser-rebate dust after stale losers have had time to claim.
+    /// @dev `sortedLosingVoters` must contain every revealed loser exactly once, sorted by address ascending.
+    function finalizeLoserRebateDust(uint256 contentId, uint256 roundId, address[] calldata sortedLosingVoters)
+        external
+        nonReentrant
+        returns (uint256 releasedDust)
+    {
+        if (roundLoserRebateDustFinalized[contentId][roundId]) revert RewardDustAlreadyFinalized();
+
+        RoundLib.Round memory round = _readSettledStaleRound(contentId, roundId);
+        _requireNoPendingUnrevealedCleanup(contentId, roundId);
+
+        uint256 totalLosingClaimants = round.upWins ? round.downCount : round.upCount;
+        if (sortedLosingVoters.length != totalLosingClaimants) revert InvalidFinalizationInput();
+
+        uint256 loserRefundPool =
+            RewardMath.calculateRevealedLoserRefund(round.upWins ? round.downPool : round.upPool);
+        if (totalLosingClaimants == 0 || loserRefundPool == 0) revert NoRewardDust();
+
+        uint256 expectedTotal;
+        address previous;
+        for (uint256 i = 0; i < sortedLosingVoters.length; i++) {
+            address voter = sortedLosingVoters[i];
+            if (voter == address(0) || (i != 0 && voter <= previous)) revert InvalidFinalizationInput();
+            previous = voter;
+
+            RoundLib.Commit memory commit = _findVoterCommit(contentId, roundId, voter);
+            if (commit.voter != voter || !commit.revealed || commit.isUp == round.upWins) {
+                revert InvalidFinalizationInput();
+            }
+
+            expectedTotal += RewardMath.calculateRevealedLoserRefund(commit.stakeAmount);
+        }
+
+        releasedDust =
+            _finalizableDust(loserRefundPool, expectedTotal, roundLoserRebateClaimedAmount[contentId][roundId]);
+        if (releasedDust == 0) revert NoRewardDust();
+
+        roundLoserRebateDustFinalized[contentId][roundId] = true;
+        roundLoserRebateClaimedAmount[contentId][roundId] += releasedDust;
+        _routeRewardToProtocol(releasedDust);
+
+        emit LoserRebateDustFinalized(contentId, roundId, releasedDust);
     }
 
     /// @notice Finalize only mathematical frontend-fee dust after stale frontend operators have had time to claim.
@@ -1018,7 +1064,8 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     mapping(uint256 => mapping(uint256 => uint256)) public roundFrontendFeeDustProcessedCount;
     mapping(uint256 => mapping(uint256 => uint256)) public roundFrontendFeeDustExpectedTotal;
     mapping(uint256 => mapping(uint256 => address)) public roundFrontendFeeDustLastFrontend;
+    mapping(uint256 => mapping(uint256 => bool)) public roundLoserRebateDustFinalized;
 
     // --- Storage Gap for Future Upgrades ---
-    uint256[31] private __gap;
+    uint256[30] private __gap;
 }
