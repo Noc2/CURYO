@@ -26,14 +26,10 @@ library QuestionRewardPoolEscrowQualificationLib {
         view
         returns (bool roundSettled, bool canQualify, uint256 eligibleVoters, uint48 settledAt)
     {
-        (, RoundLib.RoundState state,,,,,,,,, uint48 roundSettledAt, uint48 thresholdReachedAt,,) =
+        (, RoundLib.RoundState state,,,,,,,,, uint48 roundSettledAt,,,) =
             ctx.votingEngine.rounds(ctx.contentId, ctx.roundId);
-        if (state != RoundLib.RoundState.Settled) return (false, false, 0, 0);
+        if (state != RoundLib.RoundState.Settled || roundSettledAt == 0) return (false, false, 0, 0);
         settledAt = roundSettledAt;
-        uint48 qualifiedAt = thresholdReachedAt == 0 ? settledAt : thresholdReachedAt;
-        if (qualifiedAt == 0 || (ctx.bountyClosesAt != 0 && qualifiedAt > ctx.bountyClosesAt)) {
-            return (true, false, 0, settledAt);
-        }
 
         roundSettled = true;
         eligibleVoters = _countEligibleRevealedVoters(ctx);

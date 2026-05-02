@@ -361,6 +361,154 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(refundAmount, REWARD_POOL_AMOUNT);
     }
 
+    // T-1: thresholdReachedAt is the timestamp of the minVoters-th reveal, but bounty
+    // qualification cares about whether `requiredVoters` voters revealed before
+    // `bountyClosesAt`. When minVoters > requiredVoters (allowed configuration), the
+    // early return in QuestionRewardPoolEscrowQualificationLib.previewRoundQualification
+    // wrongly disqualifies a round whose first `requiredVoters` reveals were timely.
+    function testT1ThresholdReachedAtVsRequiredVotersDivergence() public {
+        // Content config: minVoters=5, maxVoters=5 (so settle requires 5 reveals).
+        RoundLib.RoundConfig memory roundConfig = RoundLib.RoundConfig({
+            epochDuration: uint32(EPOCH_DURATION), maxDuration: uint32(7 days), minVoters: 5, maxVoters: 5
+        });
+        uint256 contentId = _submitQuestionWithRoundConfig("https://example.com/t1.jpg", roundConfig);
+
+        // Bootstrap a fifth voter (existing fixtures define voter1..voter4).
+        address voter5 = address(0x55);
+        vm.startPrank(owner);
+        voterIdNFT.setHolder(voter5);
+        hrepToken.mint(voter5, 10_000e6);
+        usdc.mint(voter5, 1_000e6);
+        vm.stopPrank();
+
+        // requiredVoters=3 (< minVoters=5). Bounty closes 1 hour out so we can
+        // straddle it across reveals. fundedAmount must cover requiredSettledRounds*maxVoters
+        // = 1*5 = 5 (refundable path), so 5e6 USDC is enough.
+        uint256 fundedAmount = 5e6;
+        uint256 bountyClosesAt = block.timestamp + 1 hours;
+        vm.startPrank(funder);
+        usdc.approve(address(rewardPoolEscrow), fundedAmount);
+        uint256 rewardPoolId = rewardPoolEscrow.createRewardPool(
+            contentId,
+            fundedAmount,
+            /*requiredVoters=*/
+            3,
+            /*requiredSettledRounds=*/
+            1,
+            bountyClosesAt,
+            0
+        );
+        vm.stopPrank();
+
+        // Five voters commit (commits all happen pre-bountyClose).
+        address[5] memory voters = [voter1, voter2, voter3, voter4, voter5];
+        bool[5] memory directions = [true, true, true, false, false];
+        bytes32[5] memory salts;
+        bytes32[5] memory commitKeys;
+        for (uint256 i = 0; i < 5; i++) {
+            salts[i] = keccak256(abi.encodePacked("t1", voters[i], contentId, i));
+            commitKeys[i] = _commitTestVote(
+                DirectTestCommitRequest({
+                    engine: votingEngine,
+                    hrepToken: hrepToken,
+                    voter: voters[i],
+                    contentId: contentId,
+                    isUp: directions[i],
+                    stake: STAKE,
+                    frontend: address(0),
+                    salt: salts[i]
+                })
+            );
+        }
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
+
+        // Warp past epoch end (~10 min in) but well before bountyClosesAt (1h out).
+        // Reveal A, B, C — all timely (revealedAt < bountyClosesAt).
+        _warpPastTlockRevealTime(block.timestamp + EPOCH_DURATION);
+        for (uint256 i = 0; i < 3; i++) {
+            votingEngine.revealVoteByCommitKey(contentId, roundId, commitKeys[i], directions[i], salts[i]);
+        }
+        // Sanity: thresholdReachedAt is still 0 (only 3 revealed, minVoters=5).
+        (,,,,,,,,,,, uint48 thresholdReachedMid,,) = votingEngine.rounds(contentId, roundId);
+        assertEq(thresholdReachedMid, 0, "threshold should not be hit at 3 reveals when minVoters=5");
+
+        // Warp past bountyClosesAt; reveal D and E now (they are NOT timely).
+        vm.warp(bountyClosesAt + 1);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, commitKeys[3], directions[3], salts[3]);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, commitKeys[4], directions[4], salts[4]);
+
+        // thresholdReachedAt now equals E's revealedAt — past bountyClosesAt.
+        (,,,,,,,,,,, uint48 thresholdReachedAfter,,) = votingEngine.rounds(contentId, roundId);
+        assertGt(thresholdReachedAfter, bountyClosesAt, "thresholdReachedAt must be past bountyClose");
+
+        // Settle the round (revealedCount=5 >= minVoters=5).
+        votingEngine.settleRound(contentId, roundId);
+
+        // requiredVoters=3, A/B/C revealed timely => correct expectation: claimable > 0.
+        // Buggy library early-returns canQualify=false because thresholdReachedAt > bountyClosesAt.
+        uint256 claimableA = rewardPoolEscrow.claimableQuestionReward(rewardPoolId, roundId, voter1);
+
+        // If the early-return is wrong, claimableA == 0 (bug). If correct, > 0.
+        // We assert > 0; failure of this assertion confirms the bug.
+        assertGt(
+            claimableA,
+            0,
+            "T-1 confirmed: voter A revealed before bountyClosesAt with 3-of-5 timely reveals, but library disqualified the round via thresholdReachedAt"
+        );
+    }
+
+    function testT1BundleThresholdReachedAtVsRequiredCompletersDivergence() public {
+        RoundLib.RoundConfig memory roundConfig = RoundLib.RoundConfig({
+            epochDuration: uint32(EPOCH_DURATION), maxDuration: uint32(7 days), minVoters: 5, maxVoters: 5
+        });
+        uint256[] memory contentIds = new uint256[](2);
+        contentIds[0] = _submitQuestionWithContextAndRoundConfig(
+            "https://example.com/t1-bundle-a", "https://example.com/t1-a.jpg", roundConfig
+        );
+        contentIds[1] = _submitQuestionWithContextAndRoundConfig(
+            "https://example.com/t1-bundle-b", "https://example.com/t1-b.jpg", roundConfig
+        );
+
+        address voter5 = address(0x55);
+        _registerTestVoter(voter5);
+
+        uint256 bountyClosesAt = block.timestamp + 1 hours;
+        uint256 bundleId = _createSubmissionBundleWithClose(
+            contentIds,
+            funder,
+            REWARD_ASSET_USDC,
+            20e6,
+            /*requiredCompleters=*/
+            3,
+            bountyClosesAt
+        );
+
+        (uint256 firstRoundId, bytes32[5] memory firstSalts, bytes32[5] memory firstCommitKeys) =
+            _commitFiveVoterT1Round(contentIds[0], voter5, "t1-bundle-a");
+        (uint256 secondRoundId, bytes32[5] memory secondSalts, bytes32[5] memory secondCommitKeys) =
+            _commitFiveVoterT1Round(contentIds[1], voter5, "t1-bundle-b");
+
+        _warpPastTlockRevealTime(block.timestamp + EPOCH_DURATION);
+        _revealFiveVoterT1Round(contentIds[0], firstRoundId, firstSalts, firstCommitKeys, 0, 3);
+        _revealFiveVoterT1Round(contentIds[1], secondRoundId, secondSalts, secondCommitKeys, 0, 3);
+
+        vm.warp(bountyClosesAt + 1);
+        _revealFiveVoterT1Round(contentIds[0], firstRoundId, firstSalts, firstCommitKeys, 3, 5);
+        _revealFiveVoterT1Round(contentIds[1], secondRoundId, secondSalts, secondCommitKeys, 3, 5);
+
+        assertGt(
+            RoundEngineReadHelpers.round(votingEngine, contentIds[0], firstRoundId).thresholdReachedAt, bountyClosesAt
+        );
+        assertGt(
+            RoundEngineReadHelpers.round(votingEngine, contentIds[1], secondRoundId).thresholdReachedAt, bountyClosesAt
+        );
+
+        votingEngine.settleRound(contentIds[0], firstRoundId);
+        votingEngine.settleRound(contentIds[1], secondRoundId);
+
+        assertGt(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter1), 0);
+    }
+
     function testRefundableRewardPoolAmountUsesQuestionSelectedVoterCap() public {
         RoundLib.RoundConfig memory roundConfig =
             RoundLib.RoundConfig({ epochDuration: 10 minutes, maxDuration: 1 hours, minVoters: 3, maxVoters: 4 });
@@ -2494,6 +2642,52 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         rewardPoolEscrow.createSubmissionBundleFromRegistry(
             bundleId, contentIds, bundleFunder, asset, amount, requiredCompleters, 1, bountyClosesAt, bountyClosesAt
         );
+    }
+
+    function _registerTestVoter(address voter) internal {
+        vm.startPrank(owner);
+        voterIdNFT.setHolder(voter);
+        hrepToken.mint(voter, 10_000e6);
+        usdc.mint(voter, 1_000e6);
+        vm.stopPrank();
+    }
+
+    function _commitFiveVoterT1Round(uint256 contentId, address voter5, string memory label)
+        internal
+        returns (uint256 roundId, bytes32[5] memory salts, bytes32[5] memory commitKeys)
+    {
+        address[5] memory voters = [voter1, voter2, voter3, voter4, voter5];
+        bool[5] memory directions = [true, true, true, false, false];
+        for (uint256 i = 0; i < 5; i++) {
+            salts[i] = keccak256(abi.encodePacked(label, voters[i], contentId, i));
+            commitKeys[i] = _commitTestVote(
+                DirectTestCommitRequest({
+                    engine: votingEngine,
+                    hrepToken: hrepToken,
+                    voter: voters[i],
+                    contentId: contentId,
+                    isUp: directions[i],
+                    stake: STAKE,
+                    frontend: address(0),
+                    salt: salts[i]
+                })
+            );
+        }
+        roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
+    }
+
+    function _revealFiveVoterT1Round(
+        uint256 contentId,
+        uint256 roundId,
+        bytes32[5] memory salts,
+        bytes32[5] memory commitKeys,
+        uint256 startIndex,
+        uint256 endIndex
+    ) internal {
+        bool[5] memory directions = [true, true, true, false, false];
+        for (uint256 i = startIndex; i < endIndex; i++) {
+            votingEngine.revealVoteByCommitKey(contentId, roundId, commitKeys[i], directions[i], salts[i]);
+        }
     }
 
     function _submitQuestion(string memory url) internal returns (uint256 contentId) {

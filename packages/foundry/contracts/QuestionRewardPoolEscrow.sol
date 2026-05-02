@@ -1032,15 +1032,13 @@ contract QuestionRewardPoolEscrow is
         }
     }
 
-    function _bundleRoundSettledWithinWindow(BundleReward storage bundle, uint256 contentId, uint256 roundId)
+    function _bundleRoundSettledWithinWindow(BundleReward storage, uint256 contentId, uint256 roundId)
         internal
         view
         returns (bool)
     {
-        (RoundLib.RoundState state, uint48 settledAt, uint48 thresholdReachedAt) =
-            _roundTerminalState(contentId, roundId);
-        uint48 qualifiedAt = thresholdReachedAt == 0 ? settledAt : thresholdReachedAt;
-        return state == RoundLib.RoundState.Settled && qualifiedAt != 0 && qualifiedAt <= bundle.bountyClosesAt;
+        (RoundLib.RoundState state, uint48 settledAt,) = _roundTerminalState(contentId, roundId);
+        return state == RoundLib.RoundState.Settled && settledAt != 0;
     }
 
     function _roundTerminalState(uint256 contentId, uint256 roundId)
