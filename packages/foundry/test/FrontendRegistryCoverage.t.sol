@@ -648,7 +648,7 @@ contract FrontendRegistryCoverageTest is Test {
 
     function test_GrantRoleExtraFeeCreditor_CannotCreditFees() public {
         _registerFrontend(frontend1);
-        address extraCreditor = address(99);
+        address extraCreditor = address(new MockRewardDistributor_FR(address(votingEngine)));
         bytes32 feeCreditorRole = registry.FEE_CREDITOR_ROLE();
 
         vm.prank(admin);
@@ -701,7 +701,7 @@ contract FrontendRegistryCoverageTest is Test {
         splitRoleRegistry.setVotingEngine(address(votingEngine));
         vm.prank(governance);
         splitRoleRegistry.addFeeCreditor(address(newCreditor));
-        assertFalse(splitRoleRegistry.hasRole(splitRoleRegistry.FEE_CREDITOR_ROLE(), feeCreditor));
+        assertTrue(splitRoleRegistry.hasRole(splitRoleRegistry.FEE_CREDITOR_ROLE(), feeCreditor));
         assertTrue(splitRoleRegistry.hasRole(splitRoleRegistry.FEE_CREDITOR_ROLE(), address(newCreditor)));
         assertEq(splitRoleRegistry.feeCreditor(), address(newCreditor));
     }

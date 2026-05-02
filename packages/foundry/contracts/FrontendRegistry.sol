@@ -56,9 +56,10 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
     mapping(address => uint256) public frontendExitAvailableAt;
     bool public initialFeeCreditorConfigured;
     address public feeCreditor;
+    mapping(address => bool) private authorizedFeeCreditors;
 
     /// @dev Reserved storage gap for future upgrades
-    uint256[47] private __gap;
+    uint256[46] private __gap;
 
     // --- Events ---
     event FrontendRegistered(address indexed frontend, address indexed operator, uint256 stakedAmount);
@@ -250,7 +251,7 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
     /// @dev No eligibility check here — commit-time eligibility is snapshotted in RoundVotingEngine.
     ///      Slashed or underbonded frontends cannot accrue newly claimed historical fees.
     function creditFees(address frontend, uint256 hrepAmount) external override onlyRole(FEE_CREDITOR_ROLE) {
-        require(msg.sender == feeCreditor, "Unauthorized fee creditor");
+        require(authorizedFeeCreditors[msg.sender], "Unauthorized fee creditor");
         require(hrepAmount <= MAX_FEE_CREDIT, "Fee credit too large");
         Frontend storage f = frontends[frontend];
         require(f.operator != address(0), "Frontend not registered");
@@ -331,7 +332,6 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
     /// @param _votingEngine New voting engine address
     function setVotingEngine(address _votingEngine) external onlyRole(ADMIN_ROLE) {
         require(_votingEngine != address(0), "Invalid voting engine");
-        if (feeCreditor != address(0)) _requireFeeCreditorForEngine(feeCreditor, _votingEngine);
         votingEngine = IRoundVotingEngine(_votingEngine);
         emit VotingEngineUpdated(_votingEngine);
     }
@@ -349,10 +349,8 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
     function addFeeCreditor(address creditor) external onlyRole(GOVERNANCE_ROLE) {
         _requireFeeCreditorForEngine(creditor, address(votingEngine));
         address oldCreditor = feeCreditor;
-        if (oldCreditor != address(0) && oldCreditor != creditor) {
-            _revokeRole(FEE_CREDITOR_ROLE, oldCreditor);
-        }
         feeCreditor = creditor;
+        authorizedFeeCreditors[creditor] = true;
         _grantRole(FEE_CREDITOR_ROLE, creditor);
         emit FeeCreditorUpdated(oldCreditor, creditor);
     }
@@ -364,6 +362,7 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
             feeCreditor = address(0);
             emit FeeCreditorUpdated(creditor, address(0));
         }
+        authorizedFeeCreditors[creditor] = false;
         _revokeRole(FEE_CREDITOR_ROLE, creditor);
     }
 
@@ -375,6 +374,7 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
         require(creditor.code.length != 0, "Invalid fee creditor");
         initialFeeCreditorConfigured = true;
         feeCreditor = creditor;
+        authorizedFeeCreditors[creditor] = true;
         _grantRole(FEE_CREDITOR_ROLE, creditor);
         emit FeeCreditorUpdated(address(0), creditor);
     }

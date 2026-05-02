@@ -748,12 +748,14 @@ contract FrontendRegistryTest is Test {
         assertEq(address(registry.votingEngine()), newVotingEngine);
     }
 
-    function test_SetVotingEngine_RejectsMismatchedFeeCreditor() public {
+    function test_SetVotingEngine_AllowsHistoricalFeeCreditor() public {
         address newVotingEngine = address(100);
 
         vm.prank(admin);
-        vm.expectRevert("Invalid fee creditor");
         registry.setVotingEngine(newVotingEngine);
+
+        assertEq(address(registry.votingEngine()), newVotingEngine);
+        assertTrue(registry.hasRole(registry.FEE_CREDITOR_ROLE(), feeCreditor));
     }
 
     function test_RevertSetVotingEngineZeroAddress() public {
@@ -808,8 +810,11 @@ contract FrontendRegistryTest is Test {
         vm.prank(newCreditor);
         registry.creditFees(frontend1, 100e6);
 
+        vm.prank(feeCreditor);
+        registry.creditFees(frontend1, 25e6);
+
         uint256 hrepFees = registry.getAccumulatedFees(frontend1);
-        assertEq(hrepFees, 100e6);
+        assertEq(hrepFees, 125e6);
 
         // Remove creditor
         vm.prank(admin);
