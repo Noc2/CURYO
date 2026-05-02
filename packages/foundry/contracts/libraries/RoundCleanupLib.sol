@@ -153,7 +153,7 @@ library RoundCleanupLib {
     function recordCommitAccounting(
         RoundLib.Round storage round,
         mapping(address => uint256) storage contentLastVoteTimestamp,
-        mapping(uint256 => uint256) storage contentLastVoteTimestampByToken,
+        mapping(uint256 => uint256) storage contentLastVoteTimestampByNullifier,
         address registry,
         IVoterIdNFT currentVoterIdNft,
         uint256 contentId,
@@ -169,7 +169,8 @@ library RoundCleanupLib {
 
         contentLastVoteTimestamp[voter] = block.timestamp;
         if (useTokenIdentity) {
-            contentLastVoteTimestampByToken[voterId] = block.timestamp;
+            uint256 nullifier = currentVoterIdNft.getNullifier(voterId);
+            if (nullifier != 0) contentLastVoteTimestampByNullifier[nullifier] = block.timestamp;
             currentVoterIdNft.recordStake(contentId, roundId, voterId, stakeAmount);
         }
 

@@ -384,7 +384,7 @@ contract RoundVotingEngine is
             hasTokenIdCommitted,
             voterNullifierCommitKey,
             lastVoteTimestamp,
-            lastVoteTimestampByToken,
+            lastVoteTimestampByNullifier,
             roundVoterIdNft,
             VotePreflightLib.CommitPreflightParams({
                 voter: voter,
@@ -608,7 +608,7 @@ contract RoundVotingEngine is
         RoundCleanupLib.recordCommitAccounting(
             round,
             lastVoteTimestamp[contentId],
-            lastVoteTimestampByToken[contentId],
+            lastVoteTimestampByNullifier[contentId],
             address(registry),
             currentVoterIdNft,
             contentId,
@@ -1209,8 +1209,8 @@ contract RoundVotingEngine is
     // One vote per identity per round
     mapping(uint256 => mapping(uint256 => mapping(uint256 => bool))) internal hasTokenIdCommitted;
 
-    // Per-identity cooldown: contentId => tokenId => timestamp (prevents cooldown bypass via delegation)
-    mapping(uint256 => mapping(uint256 => uint256)) internal lastVoteTimestampByToken;
+    // Per-identity cooldown: contentId => nullifier => timestamp (survives delegation and reset/remint)
+    mapping(uint256 => mapping(uint256 => uint256)) internal lastVoteTimestampByNullifier;
 
     // Per-epoch unrevealed commit counter: prevents selective vote revelation (front-running keeper).
     // contentId => roundId => epochEnd => number of unrevealed commits for that epoch.

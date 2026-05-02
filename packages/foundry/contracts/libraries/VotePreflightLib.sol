@@ -84,13 +84,14 @@ library VotePreflightLib {
         ) storage hasTokenIdCommitted,
         mapping(uint256 => mapping(uint256 => mapping(uint256 => bytes32))) storage voterNullifierCommitKey,
         mapping(uint256 => mapping(address => uint256)) storage lastVoteTimestamp,
-        mapping(uint256 => mapping(uint256 => uint256)) storage lastVoteTimestampByToken,
+        mapping(uint256 => mapping(uint256 => uint256)) storage lastVoteTimestampByNullifier,
         IVoterIdNFT voterIdNft,
         CommitPreflightParams memory params
     ) external view returns (bytes32 commitKey) {
         _validateCooldown(
             lastVoteTimestamp,
-            lastVoteTimestampByToken,
+            lastVoteTimestampByNullifier,
+            voterIdNft,
             params.voter,
             params.contentId,
             params.voterId,
@@ -125,7 +126,8 @@ library VotePreflightLib {
 
     function _validateCooldown(
         mapping(uint256 => mapping(address => uint256)) storage lastVoteTimestamp,
-        mapping(uint256 => mapping(uint256 => uint256)) storage lastVoteTimestampByToken,
+        mapping(uint256 => mapping(uint256 => uint256)) storage lastVoteTimestampByNullifier,
+        IVoterIdNFT voterIdNft,
         address voter,
         uint256 contentId,
         uint256 voterId,
@@ -134,8 +136,11 @@ library VotePreflightLib {
         uint256 timestamp
     ) private view {
         if (useTokenIdentity) {
-            uint256 lastVoteByToken = lastVoteTimestampByToken[contentId][voterId];
-            if (lastVoteByToken > 0 && timestamp < lastVoteByToken + cooldownWindow) revert CooldownActive();
+            uint256 nullifier = voterIdNft.getNullifier(voterId);
+            uint256 lastVoteByNullifier = nullifier == 0 ? 0 : lastVoteTimestampByNullifier[contentId][nullifier];
+            if (lastVoteByNullifier > 0 && timestamp < lastVoteByNullifier + cooldownWindow) {
+                revert CooldownActive();
+            }
             return;
         }
 

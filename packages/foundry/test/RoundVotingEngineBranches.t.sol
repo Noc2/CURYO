@@ -678,6 +678,56 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         assertEq(engine.voterNullifierCommitKey(contentId, roundId, 42), originalCommitKey);
     }
 
+    function test_CommitSameNullifierAfterRemint_NewRoundRespectsCooldown() public {
+        vm.prank(owner);
+        registry.setVoterIdNFT(address(mockVoterIdNFT));
+        vm.prank(owner);
+        ProtocolConfig(protocolConfigAddress).setVoterIdNFT(address(mockVoterIdNFT));
+
+        mockVoterIdNFT.mint(submitter, 9_001);
+        mockVoterIdNFT.mint(voter1, 42);
+        mockVoterIdNFT.mint(voter2, 43);
+        mockVoterIdNFT.mint(voter3, 44);
+
+        uint256 contentId = _submitContent();
+        (bytes32 ck1, bytes32 s1) = _commit(voter1, contentId, true, STAKE);
+        (bytes32 ck2, bytes32 s2) = _commit(voter2, contentId, true, STAKE);
+        (bytes32 ck3, bytes32 s3) = _commit(voter3, contentId, false, STAKE);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
+
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
+        _warpPastTlockRevealTime(uint256(round.startTime) + EPOCH);
+        _reveal(contentId, roundId, ck1, true, s1);
+        _reveal(contentId, roundId, ck2, true, s2);
+        _reveal(contentId, roundId, ck3, false, s3);
+        engine.settleRound(contentId, roundId);
+
+        mockVoterIdNFT.revokeVoterId(voter1);
+        mockVoterIdNFT.resetNullifier(42);
+        mockVoterIdNFT.mint(voter4, 42);
+
+        bytes32 salt2 = keccak256(abi.encodePacked(voter4, block.timestamp, "remint-cooldown"));
+        bytes32 commitHash2 = _commitHash(false, salt2, contentId);
+        bytes memory ciphertext2 = _testCiphertext(false, salt2, contentId);
+
+        vm.startPrank(voter4);
+        hrepToken.approve(address(engine), STAKE);
+        uint256 cachedRoundContext =
+            _roundContext(engine.previewCommitRoundId(contentId), registry.getRating(contentId));
+        vm.expectRevert(RoundVotingEngine.CooldownActive.selector);
+        engine.commitVote(
+            contentId,
+            cachedRoundContext,
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            commitHash2,
+            ciphertext2,
+            STAKE,
+            address(0)
+        );
+        vm.stopPrank();
+    }
+
     // =========================================================================
     // 4. CANNOT REVEAL BEFORE EPOCH ENDS (EpochNotEnded)
     // =========================================================================
