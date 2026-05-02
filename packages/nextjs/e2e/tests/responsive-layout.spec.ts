@@ -49,6 +49,14 @@ async function expectRouteControls(page: Page, path: string, width: number): Pro
     return;
   }
 
+  if (path === "/") {
+    await expectNavigationForViewport(page, width);
+    await expect(main.getByRole("heading", { name: /AI Asks,\s*Humans Earn/i }).first()).toBeVisible({
+      timeout: 15_000,
+    });
+    return;
+  }
+
   if (path === "/ask") {
     const urlInput = main.getByPlaceholder(/paste/i).or(main.getByRole("textbox").first()).first();
     await expect(urlInput, "Ask URL input should stay visible").toBeVisible({ timeout: 15_000 });
