@@ -202,13 +202,18 @@ export const rewardClaim = onchainTable(
     roundId: t.bigint().notNull(),
     epochId: t.bigint(), // set only for epoch-based claims (distinguishes from round-based)
     source: t.text().notNull(), // "round", "epoch", or "participation"
+    // For round-based RewardClaimed: `voter` receives `hrepReward` (current SBT holder),
+    // `stakePayer` receives `stakeReturned` (original commit.voter — typically a delegate).
+    // When `stakePayer` is null/equal to `voter`, the two collapse (no delegation split).
     voter: t.hex().notNull(),
+    stakePayer: t.hex(),
     stakeReturned: t.bigint().notNull(),
     hrepReward: t.bigint().notNull(),
     claimedAt: t.bigint().notNull(),
   }),
   (table) => ({
     voterIdx: index().on(table.voter),
+    stakePayerIdx: index().on(table.stakePayer),
     contentIdx: index().on(table.contentId),
   }),
 );

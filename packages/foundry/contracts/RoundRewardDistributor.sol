@@ -98,8 +98,18 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     mapping(uint256 => mapping(uint256 => bool)) public roundParticipationRewardFinalized;
 
     // --- Events ---
+    /// @notice Emitted when a settled-round claim pays out.
+    /// @param voter Current SBT holder (or fallback EOA for non-SBT direct path) — receives `reward`.
+    /// @param stakePayer Original `commit.voter` (typically a delegate) — receives `stakeReturned`.
+    /// @param stakeReturned HREP sent to `stakePayer` (winning stake refund OR loser rebate).
+    /// @param reward HREP sent to `voter` (voter-pool reward; 0 for losers).
     event RewardClaimed(
-        uint256 indexed contentId, uint256 indexed roundId, address indexed voter, uint256 stakeReturned, uint256 reward
+        uint256 indexed contentId,
+        uint256 indexed roundId,
+        address indexed voter,
+        address stakePayer,
+        uint256 stakeReturned,
+        uint256 reward
     );
     event LoserNotified(uint256 indexed contentId, uint256 indexed roundId, address indexed voter);
     event FrontendFeeClaimed(
@@ -208,6 +218,12 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     ///      Revealed losers receive a fixed 5% rebate and unrevealed losers cannot claim.
     ///      Epoch-1 voters (blind) get 100% weight; epoch-2+ voters (informed) get 25% weight.
     ///      This creates a 4:1 reward ratio incentivizing early blind voting.
+    ///      Recipient split: stake refunds and loser rebates flow to `commit.voter` (whoever
+    ///      funded the stake — typically a delegate), while voter-pool rewards flow to the
+    ///      current SBT holder (resolved via VoterIdNFT). A rotated or removed delegate
+    ///      therefore cannot capture historical voter-pool rewards, while still being made
+    ///      whole on the stake they personally posted. This mirrors `claimCancelledRoundRefund`,
+    ///      which routes stake refunds to the original payer.
     /// @param contentId The content ID.
     /// @param roundId The round ID.
     function claimReward(uint256 contentId, uint256 roundId) external nonReentrant {
@@ -215,12 +231,11 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         require(round.state == RoundLib.RoundState.Settled, "Round not settled");
         _requireNoPendingUnrevealedCleanup(contentId, roundId);
 
-        (bytes32 commitKey,) = _resolveClaimCommit(contentId, roundId, msg.sender);
+        (bytes32 commitKey, address rewardRecipient) = _resolveClaimCommit(contentId, roundId, msg.sender);
         require(commitKey != bytes32(0), "No vote found");
 
         RoundLib.Commit memory commit = _readCommit(contentId, roundId, commitKey);
         require(commit.voter != address(0), "No vote found");
-        address rewardRecipient = commit.voter;
         if (rewardCommitClaimed[contentId][roundId][commitKey] || rewardClaimed[contentId][roundId][commit.voter]) {
             revert("Already claimed");
         }
@@ -250,10 +265,12 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
             roundLoserRebateClaimedCount[contentId][roundId] = loserClaimedCount + 1;
             roundLoserRebateClaimedAmount[contentId][roundId] = loserClaimedAmount + refund;
             if (refund > 0) {
-                votingEngine.transferReward(rewardRecipient, refund);
+                // Loser rebate is a partial stake refund; route to the stake payer.
+                votingEngine.transferReward(commit.voter, refund);
             }
 
-            emit RewardClaimed(contentId, roundId, rewardRecipient, 0, refund);
+            // Loser rebate occupies the stakeReturned slot since it is a stake refund.
+            emit RewardClaimed(contentId, roundId, rewardRecipient, commit.voter, refund, 0);
             return;
         }
 
@@ -279,12 +296,17 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         roundVoterRewardClaimedCount[contentId][roundId] = claimedCount + 1;
         roundVoterRewardClaimedAmount[contentId][roundId] = claimedAmount + reward;
 
-        // Total payout = original stake return + reward from voter pool
-        uint256 totalPayout = commit.stakeAmount + reward;
+        // Stake refund routes back to the original payer; the voter-pool reward routes to the
+        // current SBT holder. When commit.voter == rewardRecipient (no delegation, or delegate
+        // unchanged) this is identical to a single transfer of stake + reward.
+        if (commit.stakeAmount > 0) {
+            votingEngine.transferReward(commit.voter, commit.stakeAmount);
+        }
+        if (reward > 0) {
+            votingEngine.transferReward(rewardRecipient, reward);
+        }
 
-        votingEngine.transferReward(rewardRecipient, totalPayout);
-
-        emit RewardClaimed(contentId, roundId, rewardRecipient, commit.stakeAmount, reward);
+        emit RewardClaimed(contentId, roundId, rewardRecipient, commit.voter, commit.stakeAmount, reward);
     }
 
     // --- Frontend Fee Claims ---
@@ -476,6 +498,10 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     }
 
     /// @notice Claim a participation reward for the caller on a settled round.
+    /// @dev The participation reward is a pure bonus — there is no stake-refund component — so
+    ///      the entire payout routes to the current SBT holder resolved by `_resolveClaimCommit`.
+    ///      This prevents a rotated/removed delegate from capturing accumulated participation
+    ///      bonuses tied to the holder's identity.
     function claimParticipationReward(uint256 contentId, uint256 roundId)
         external
         nonReentrant
@@ -495,11 +521,10 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         uint256 reservedReward = roundParticipationRewardReserved[contentId][roundId];
         if (rewardPoolAddress == address(0)) revert NoPool();
 
-        (bytes32 commitKey,) = _resolveClaimCommit(contentId, roundId, msg.sender);
+        (bytes32 commitKey, address rewardRecipient) = _resolveClaimCommit(contentId, roundId, msg.sender);
         if (commitKey == bytes32(0)) revert NoCommit();
         RoundLib.Commit memory commit = _readCommit(contentId, roundId, commitKey);
         if (commit.voter == address(0)) revert NoCommit();
-        address rewardRecipient = commit.voter;
         if (
             participationRewardCommitClaimed[contentId][roundId][commitKey]
                 || participationRewardClaimed[contentId][roundId][commit.voter]
@@ -618,8 +643,8 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
                     }
                 }
 
-                rewardRecipient = voterIdNft.getHolder(voterId);
-                if (rewardRecipient == address(0)) rewardRecipient = account;
+                rewardRecipient = _currentVoterIdRewardRecipient(voterIdNft, voterId);
+                if (rewardRecipient == address(0)) return (bytes32(0), account);
                 return (commitKey, rewardRecipient);
             }
         }
@@ -627,10 +652,34 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         bytes32 directCommitHash = votingEngine.voterCommitHash(contentId, roundId, account);
         if (directCommitHash != bytes32(0)) {
             commitKey = keccak256(abi.encodePacked(account, directCommitHash));
+            uint256 committedVoterId = votingEngine.commitVoterId(contentId, roundId, commitKey);
+            if (committedVoterId != 0) {
+                if (voterIdNftAddress == address(0)) return (bytes32(0), account);
+                rewardRecipient = _currentVoterIdRewardRecipient(IVoterIdNFT(voterIdNftAddress), committedVoterId);
+                if (rewardRecipient == address(0)) return (bytes32(0), account);
+                return (commitKey, rewardRecipient);
+            }
             return (commitKey, account);
         }
 
         return (bytes32(0), account);
+    }
+
+    function _currentVoterIdRewardRecipient(IVoterIdNFT voterIdNft, uint256 voterId)
+        internal
+        view
+        returns (address rewardRecipient)
+    {
+        rewardRecipient = voterIdNft.getHolder(voterId);
+        if (rewardRecipient != address(0)) return rewardRecipient;
+
+        uint256 nullifier = voterIdNft.getNullifier(voterId);
+        if (nullifier == 0) return address(0);
+
+        uint256 currentVoterId = voterIdNft.getTokenIdForNullifier(nullifier);
+        if (currentVoterId == 0) return address(0);
+
+        return voterIdNft.getHolder(currentVoterId);
     }
 
     function _roundVoterIdNftAddress(uint256 contentId, uint256 roundId) internal view returns (address) {

@@ -1694,6 +1694,12 @@ export const RoundRewardDistributorAbi = [
         "internalType": "address"
       },
       {
+        "name": "stakePayer",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      },
+      {
         "name": "stakeReturned",
         "type": "uint256",
         "indexed": false,

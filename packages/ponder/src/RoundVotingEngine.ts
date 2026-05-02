@@ -529,7 +529,8 @@ ponder.on("RoundVotingEngine:RoundRevealFailed", async ({ event, context }) => {
 ponder.on("RoundVotingEngine:CancelledRoundRefundClaimed", async ({ event, context }) => {
   const { contentId, roundId, voter, amount } = event.args;
 
-  // Record refund as a reward claim with source "refund"
+  // Record refund as a reward claim with source "refund". The cancelled-round refund pays
+  // the original `commit.voter`, so voter and stakePayer collapse to the same address here.
   await context.db
     .insert(rewardClaim)
     .values({
@@ -539,6 +540,7 @@ ponder.on("RoundVotingEngine:CancelledRoundRefundClaimed", async ({ event, conte
       epochId: null,
       source: "refund",
       voter,
+      stakePayer: voter,
       stakeReturned: amount,
       hrepReward: 0n,
       claimedAt: event.block.timestamp,

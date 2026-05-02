@@ -1705,6 +1705,12 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "address",
             },
             {
+              name: "stakePayer",
+              type: "address",
+              indexed: false,
+              internalType: "address",
+            },
+            {
               name: "stakeReturned",
               type: "uint256",
               indexed: false,
@@ -29616,6 +29622,12 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "address",
             },
             {
+              name: "stakePayer",
+              type: "address",
+              indexed: false,
+              internalType: "address",
+            },
+            {
               name: "stakeReturned",
               type: "uint256",
               indexed: false,
@@ -47965,6 +47977,12 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "voter",
               type: "address",
               indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "stakePayer",
+              type: "address",
+              indexed: false,
               internalType: "address",
             },
             {

@@ -639,10 +639,13 @@ export function registerDataRoutes(app: ApiApp) {
       return c.json({ error: "Invalid voter address" }, 400);
     }
 
+    // Match on either `voter` (received the voter-pool reward) or `stakePayer`
+    // (received the stake refund — different address when a delegate paid the stake).
+    const address = voter.toLowerCase() as `0x${string}`;
     const items = await db
       .select()
       .from(rewardClaim)
-      .where(eq(rewardClaim.voter, voter.toLowerCase() as `0x${string}`))
+      .where(or(eq(rewardClaim.voter, address), eq(rewardClaim.stakePayer, address)))
       .orderBy(desc(rewardClaim.claimedAt))
       .limit(limit);
 

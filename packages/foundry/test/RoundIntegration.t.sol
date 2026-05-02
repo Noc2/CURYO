@@ -1361,7 +1361,7 @@ contract RoundIntegrationTest is VotingTestBase {
         assertEq(hrepToken.balanceOf(voter4) - stakePayerBalanceBefore, STAKE);
     }
 
-    function test_SettledRound_RemovedDelegateCanClaimOwnReward() public {
+    function test_SettledRound_RemovedDelegateRoutesRewardToHolder() public {
         uint256 contentId = _submitContent();
 
         MockVoterIdNFT voterIdNFT = new MockVoterIdNFT();
@@ -1388,10 +1388,235 @@ contract RoundIntegrationTest is VotingTestBase {
         vm.prank(voter1);
         voterIdNFT.removeDelegate();
 
+        uint256 holderBalanceBefore = hrepToken.balanceOf(voter1);
         uint256 stakePayerBalanceBefore = hrepToken.balanceOf(voter4);
         vm.prank(voter4);
         rewardDistributor.claimReward(contentId, roundId);
-        assertGt(hrepToken.balanceOf(voter4), stakePayerBalanceBefore);
+
+        assertEq(hrepToken.balanceOf(voter4), stakePayerBalanceBefore + STAKE, "old delegate only gets stake");
+        assertGt(hrepToken.balanceOf(voter1), holderBalanceBefore, "holder receives voter-pool reward");
+    }
+
+    function test_SettledRound_RevokedVoterIdCannotClaimBeforeRemint() public {
+        uint256 contentId = _submitContent();
+
+        MockVoterIdNFT voterIdNFT = new MockVoterIdNFT();
+        voterIdNFT.setHolder(voter1);
+        voterIdNFT.setHolder(voter2);
+        voterIdNFT.setHolder(voter3);
+
+        ProtocolConfig cfg = ProtocolConfig(address(votingEngine.protocolConfig()));
+        vm.prank(owner);
+        cfg.setVoterIdNFT(address(voterIdNFT));
+
+        address[] memory voters = new address[](3);
+        voters[0] = voter1;
+        voters[1] = voter2;
+        voters[2] = voter3;
+        bool[] memory dirs = new bool[](3);
+        dirs[0] = true;
+        dirs[1] = true;
+        dirs[2] = false;
+
+        uint256 roundId = _settleRoundWith(voters, contentId, dirs, STAKE);
+        voterIdNFT.revokeVoterId(voter1);
+
+        vm.prank(voter1);
+        vm.expectRevert("No vote found");
+        rewardDistributor.claimReward(contentId, roundId);
+    }
+
+    /// @dev Verifies the `RewardClaimed` event correctly attributes stake refund to the
+    ///      `stakePayer` (commit.voter / delegate) and reward to `voter` (current holder)
+    ///      when these are different addresses. Without this split, off-chain indexers
+    ///      mis-attribute claim payouts to a single address.
+    function test_SettledRound_RewardClaimedEventSplitsRecipients() public {
+        uint256 contentId = _submitContent();
+
+        MockVoterIdNFT voterIdNFT = new MockVoterIdNFT();
+        voterIdNFT.setHolder(voter1);
+        voterIdNFT.setHolder(voter2);
+        voterIdNFT.setHolder(voter3);
+        vm.prank(voter1);
+        voterIdNFT.setDelegate(voter4);
+
+        ProtocolConfig cfg = ProtocolConfig(address(votingEngine.protocolConfig()));
+        vm.prank(owner);
+        cfg.setVoterIdNFT(address(voterIdNFT));
+
+        address[] memory voters = new address[](3);
+        voters[0] = voter4;
+        voters[1] = voter2;
+        voters[2] = voter3;
+        bool[] memory dirs = new bool[](3);
+        dirs[0] = true;
+        dirs[1] = true;
+        dirs[2] = false;
+
+        uint256 roundId = _settleRoundWith(voters, contentId, dirs, STAKE);
+
+        // Expect the event to carry voter=voter1 (current holder) and stakePayer=voter4 (delegate),
+        // with stakeReturned = STAKE and reward > 0. Match topics + data; allow the reward amount
+        // to be any positive value (computed from voter pool).
+        vm.recordLogs();
+
+        vm.prank(voter1);
+        rewardDistributor.claimReward(contentId, roundId);
+
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        bytes32 expectedTopic =
+            keccak256("RewardClaimed(uint256,uint256,address,address,uint256,uint256)");
+        bool found;
+        for (uint256 i = 0; i < logs.length; i++) {
+            if (
+                logs[i].emitter == address(rewardDistributor) && logs[i].topics.length == 4
+                    && logs[i].topics[0] == expectedTopic
+                    && uint256(logs[i].topics[1]) == contentId && uint256(logs[i].topics[2]) == roundId
+                    && address(uint160(uint256(logs[i].topics[3]))) == voter1
+            ) {
+                (address stakePayer, uint256 stakeReturned, uint256 reward) =
+                    abi.decode(logs[i].data, (address, uint256, uint256));
+                assertEq(stakePayer, voter4, "stakePayer in event should be the delegate");
+                assertEq(stakeReturned, STAKE, "stakeReturned should equal posted stake");
+                assertGt(reward, 0, "voter-pool reward should be positive for winner");
+                found = true;
+                break;
+            }
+        }
+        assertTrue(found, "RewardClaimed event with split recipients not emitted");
+    }
+
+    /// @dev Holder votes via an active delegate and then claims directly. The voter-pool reward
+    ///      must reach the holder, while the original stake refund returns to the delegate that
+    ///      paid it. Pre-fix, both flowed to `commit.voter` (the delegate) and the holder
+    ///      received nothing from their own SBT identity's vote.
+    function test_SettledRound_HolderClaimsRewardWhileDelegateActive() public {
+        uint256 contentId = _submitContent();
+
+        MockVoterIdNFT voterIdNFT = new MockVoterIdNFT();
+        voterIdNFT.setHolder(voter1);
+        voterIdNFT.setHolder(voter2);
+        voterIdNFT.setHolder(voter3);
+        vm.prank(voter1);
+        voterIdNFT.setDelegate(voter4);
+
+        ProtocolConfig cfg = ProtocolConfig(address(votingEngine.protocolConfig()));
+        vm.prank(owner);
+        cfg.setVoterIdNFT(address(voterIdNFT));
+
+        address[] memory voters = new address[](3);
+        voters[0] = voter4; // votes UP on behalf of voter1
+        voters[1] = voter2; // UP — winning side
+        voters[2] = voter3; // DOWN — losing side
+        bool[] memory dirs = new bool[](3);
+        dirs[0] = true;
+        dirs[1] = true;
+        dirs[2] = false;
+
+        uint256 holderBalanceBefore = hrepToken.balanceOf(voter1);
+        uint256 delegateBalanceBefore = hrepToken.balanceOf(voter4);
+
+        uint256 roundId = _settleRoundWith(voters, contentId, dirs, STAKE);
+        // Delegate funded the stake; holder is unchanged so far.
+        assertEq(hrepToken.balanceOf(voter4), delegateBalanceBefore - STAKE, "delegate paid stake");
+        assertEq(hrepToken.balanceOf(voter1), holderBalanceBefore, "holder unchanged after vote");
+
+        vm.prank(voter1);
+        rewardDistributor.claimReward(contentId, roundId);
+
+        // Stake refund went back to the delegate; voter-pool reward went to the holder.
+        assertEq(hrepToken.balanceOf(voter4), delegateBalanceBefore, "delegate refunded original stake");
+        assertGt(hrepToken.balanceOf(voter1), holderBalanceBefore, "holder receives voter-pool reward");
+    }
+
+    /// @dev After rotating the delegate, claiming via the new delegate routes the voter-pool
+    ///      reward to the holder rather than to the rotated-out delegate. Stake still refunds
+    ///      to the old delegate that originally paid it.
+    function test_SettledRound_RotatedDelegateRoutesRewardToHolder() public {
+        uint256 contentId = _submitContent();
+
+        MockVoterIdNFT voterIdNFT = new MockVoterIdNFT();
+        voterIdNFT.setHolder(voter1);
+        voterIdNFT.setHolder(voter2);
+        voterIdNFT.setHolder(voter3);
+        vm.prank(voter1);
+        voterIdNFT.setDelegate(voter4);
+
+        ProtocolConfig cfg = ProtocolConfig(address(votingEngine.protocolConfig()));
+        vm.prank(owner);
+        cfg.setVoterIdNFT(address(voterIdNFT));
+
+        address[] memory voters = new address[](3);
+        voters[0] = voter4; // ex-delegate at claim time
+        voters[1] = voter2;
+        voters[2] = voter3;
+        bool[] memory dirs = new bool[](3);
+        dirs[0] = true;
+        dirs[1] = true;
+        dirs[2] = false;
+
+        uint256 holderBalanceBefore = hrepToken.balanceOf(voter1);
+        uint256 oldDelegateBalanceBefore = hrepToken.balanceOf(voter4);
+        uint256 newDelegateBalanceBefore = hrepToken.balanceOf(voter5);
+
+        uint256 roundId = _settleRoundWith(voters, contentId, dirs, STAKE);
+
+        // Holder rotates: removes voter4, sets voter5 as the new delegate.
+        vm.prank(voter1);
+        voterIdNFT.removeDelegate();
+        vm.prank(voter1);
+        voterIdNFT.setDelegate(voter5);
+
+        // Claim through the new delegate.
+        vm.prank(voter5);
+        rewardDistributor.claimReward(contentId, roundId);
+
+        assertEq(hrepToken.balanceOf(voter4), oldDelegateBalanceBefore, "rotated delegate refunded only original stake");
+        assertGt(hrepToken.balanceOf(voter1), holderBalanceBefore, "holder receives voter-pool reward post-rotation");
+        assertEq(hrepToken.balanceOf(voter5), newDelegateBalanceBefore, "new delegate is a relay, not a recipient");
+    }
+
+    /// @dev Once the rotated-delegate path has claimed the holder's reward, the ex-delegate
+    ///      cannot replay the same commit through its EOA-keyed direct path.
+    function test_SettledRound_RotatedDelegateBlocksExDelegateReplay() public {
+        uint256 contentId = _submitContent();
+
+        MockVoterIdNFT voterIdNFT = new MockVoterIdNFT();
+        voterIdNFT.setHolder(voter1);
+        voterIdNFT.setHolder(voter2);
+        voterIdNFT.setHolder(voter3);
+        vm.prank(voter1);
+        voterIdNFT.setDelegate(voter4);
+
+        ProtocolConfig cfg = ProtocolConfig(address(votingEngine.protocolConfig()));
+        vm.prank(owner);
+        cfg.setVoterIdNFT(address(voterIdNFT));
+
+        address[] memory voters = new address[](3);
+        voters[0] = voter4;
+        voters[1] = voter2;
+        voters[2] = voter3;
+        bool[] memory dirs = new bool[](3);
+        dirs[0] = true;
+        dirs[1] = true;
+        dirs[2] = false;
+
+        uint256 roundId = _settleRoundWith(voters, contentId, dirs, STAKE);
+
+        vm.prank(voter1);
+        voterIdNFT.removeDelegate();
+        vm.prank(voter1);
+        voterIdNFT.setDelegate(voter5);
+
+        // Holder/new-delegate path claims first.
+        vm.prank(voter5);
+        rewardDistributor.claimReward(contentId, roundId);
+
+        // The ex-delegate (now no SBT relationship) cannot re-claim via the direct EOA path —
+        // the rewardClaimed flag is keyed on commit.voter == voter4.
+        vm.prank(voter4);
+        vm.expectRevert("Already claimed");
+        rewardDistributor.claimReward(contentId, roundId);
     }
 
     function test_TiedRound_NewRoundAfterTie() public {
