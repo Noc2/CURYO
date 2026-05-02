@@ -3,6 +3,7 @@ import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
 import { readTokenBalance } from "../helpers/admin-helpers";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
 import { gotoWithRetry } from "../helpers/wait-helpers";
+import { setupWallet } from "../helpers/wallet-session";
 
 test.describe("Settings page", () => {
   test("delegation tab can transfer HREP to another address", async ({ connectedPage: page }) => {
@@ -37,6 +38,18 @@ test.describe("Settings page", () => {
 
     expect(senderBalanceAfter).toBe(senderBalanceBefore - transferAmountMicro);
     expect(recipientBalanceAfter).toBe(recipientBalanceBefore + transferAmountMicro);
+  });
+
+  test("delegation tab explains missing Voter ID instead of rendering empty", async ({ page }) => {
+    await setupWallet(page, ANVIL_ACCOUNTS.account1.privateKey);
+    await gotoWithRetry(page, "/settings#delegation", { ensureWalletConnected: true });
+
+    await expect(page).toHaveURL(/\/settings#delegation$/);
+    await expect(page.getByRole("button", { name: "Delegation", exact: true })).toHaveClass(/pill-active/);
+    await expect(page.getByRole("heading", { name: "Voter ID required for delegation" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByRole("link", { name: "Open HREP faucet" })).toHaveAttribute("href", "/governance#faucet");
   });
 
   test("frontend tab shows the registration surface", async ({ connectedPage: page }) => {

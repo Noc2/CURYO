@@ -1,11 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatUnits, isAddress, parseUnits } from "viem";
 import { useAccount } from "wagmi";
 import { ArrowsRightLeftIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
+import { GOVERNANCE_ROUTE } from "~~/constants/routes";
 import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { useDelegation } from "~~/hooks/useDelegation";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
@@ -179,7 +181,21 @@ export function DelegationSection() {
   }
 
   if (!hasVoterId) {
-    return null;
+    return (
+      <div className="surface-card rounded-2xl p-6 space-y-4">
+        <h2 className="text-xl font-semibold flex items-center gap-2">
+          <ShieldCheckIcon className="w-6 h-6" />
+          Voter ID required for delegation
+        </h2>
+        <p className="text-base leading-7 text-base-content/70">
+          Delegation is only available from the wallet that holds a Voter ID. Claim a Voter ID first, then return here
+          to authorize a delegate wallet or move HREP.
+        </p>
+        <Link href={`${GOVERNANCE_ROUTE}#faucet`} className="btn btn-primary w-full rounded-lg sm:w-auto">
+          Open HREP faucet
+        </Link>
+      </div>
+    );
   }
 
   return (
