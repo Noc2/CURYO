@@ -61,6 +61,11 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
     mapping(uint256 => mapping(uint256 => bool)) public voterIdAwarded;
     mapping(uint256 => mapping(bytes32 => bool)) public feedbackHashAwarded;
 
+    /// @dev Reserved storage gap for future upgrades. Mirrors the pattern used by every other
+    ///      upgradeable contract in this protocol so new state can be added without colliding
+    ///      with inherited OpenZeppelin storage.
+    uint256[50] private __gap;
+
     event FeedbackBonusPoolCreated(
         uint256 indexed poolId,
         uint256 indexed contentId,
