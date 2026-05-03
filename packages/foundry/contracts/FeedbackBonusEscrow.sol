@@ -407,11 +407,15 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
         }
 
         try IFrontendRegistry(frontendRegistry).getFrontendInfo(frontend) returns (
-            address operator, uint256 stakedAmount, bool eligible, bool slashed
+            address operator, uint256, bool, bool
         ) {
-            stakedAmount;
-            bool canReceiveHistorically = eligible || _canReceiveHistoricalFees(frontendRegistry, frontend);
-            if (operator != address(0) && !slashed && canReceiveHistorically) {
+            if (operator == address(0)) {
+                return address(0);
+            }
+            // Round-time eligibility gate: a frontend that re-registered after the round
+            // settled cannot revive feedback-bonus fees. Subsumes slash/exit/Voter ID checks.
+            (,,,,,,,,,, uint48 roundSettledAt,,,) = votingEngine.rounds(contentId, roundId);
+            if (_canClaimFeesForRound(frontendRegistry, frontend, roundSettledAt)) {
                 frontendRecipient = operator;
             }
         } catch {
@@ -419,9 +423,13 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
         }
     }
 
-    function _canReceiveHistoricalFees(address frontendRegistry, address frontend) internal view returns (bool) {
-        try IFrontendRegistry(frontendRegistry).canReceiveHistoricalFees(frontend) returns (bool canReceive) {
-            return canReceive;
+    function _canClaimFeesForRound(address frontendRegistry, address frontend, uint48 roundSettledAt)
+        internal
+        view
+        returns (bool)
+    {
+        try IFrontendRegistry(frontendRegistry).canClaimFeesForRound(frontend, roundSettledAt) returns (bool can) {
+            return can;
         } catch {
             return false;
         }

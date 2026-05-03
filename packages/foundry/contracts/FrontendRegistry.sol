@@ -124,10 +124,24 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
     ///      main `claimFees` path enforces this guard, so historical-fee resolution must
     ///      mirror it. Without the check, bounty-side fee routing (which calls this view via
     ///      `_resolveFrontendRewardRecipient`) would leak fees to the operator EOA mid-window.
-    function canReceiveHistoricalFees(address frontend) external view override returns (bool) {
+    function canReceiveHistoricalFees(address frontend) public view override returns (bool) {
         Frontend storage f = frontends[frontend];
         return f.operator != address(0) && !f.slashed && uint256(f.stakedAmount) >= STAKE_AMOUNT
             && frontendExitAvailableAt[frontend] == 0 && _hasActiveOperatorVoterId(frontend);
+    }
+
+    /// @inheritdoc IFrontendRegistry
+    /// @dev Registration timestamp gate: a frontend that re-registers after a round settled
+    ///      cannot claim that round's fees. Without this, deregister + re-register would
+    ///      revive fees that should have routed to Protocol (admin-confiscatable).
+    function canClaimFeesForRound(address frontend, uint48 roundSettledAt)
+        external
+        view
+        override
+        returns (bool)
+    {
+        if (!canReceiveHistoricalFees(frontend)) return false;
+        return frontends[frontend].registeredAt <= roundSettledAt;
     }
 
     /// @inheritdoc IFrontendRegistry

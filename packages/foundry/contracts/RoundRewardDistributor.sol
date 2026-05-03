@@ -326,8 +326,9 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         bool registryLookupFailed;
         address snapshotRegistryAddress;
         fee = _quoteFrontendFee(contentId, roundId, frontend);
+        uint48 roundSettledAt = _readRound(contentId, roundId).settledAt;
         (disposition, operator, registryLookupFailed, snapshotRegistryAddress) =
-            _resolveFrontendFeeDisposition(contentId, roundId, frontend);
+            _resolveFrontendFeeDisposition(contentId, roundId, frontend, roundSettledAt);
         if (registryLookupFailed) {
             emit FrontendRegistryLookupFailed(contentId, roundId, frontend, snapshotRegistryAddress);
         }
@@ -349,7 +350,9 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         returns (uint256 fee)
     {
         fee = _quoteFrontendFee(contentId, roundId, frontend);
-        (FrontendFeeDisposition disposition,,,) = _resolveFrontendFeeDisposition(contentId, roundId, frontend);
+        uint48 roundSettledAt = _readRound(contentId, roundId).settledAt;
+        (FrontendFeeDisposition disposition,,,) =
+            _resolveFrontendFeeDisposition(contentId, roundId, frontend, roundSettledAt);
         if (disposition != FrontendFeeDisposition.Protocol) revert FrontendFeeNotConfiscatable();
 
         _consumeFrontendFeeClaim(contentId, roundId, frontend, fee);
@@ -496,7 +499,8 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     {
         alreadyClaimed = frontendFeeClaimed[contentId][roundId][frontend];
         fee = _quoteFrontendFee(contentId, roundId, frontend);
-        (disposition, operator,,) = _resolveFrontendFeeDisposition(contentId, roundId, frontend);
+        uint48 roundSettledAt = _readRound(contentId, roundId).settledAt;
+        (disposition, operator,,) = _resolveFrontendFeeDisposition(contentId, roundId, frontend, roundSettledAt);
     }
 
     /// @notice Snapshot and reserve voter participation rewards for a settled round.
@@ -816,7 +820,12 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         }
     }
 
-    function _resolveFrontendFeeDisposition(uint256 contentId, uint256 roundId, address frontend)
+    function _resolveFrontendFeeDisposition(
+        uint256 contentId,
+        uint256 roundId,
+        address frontend,
+        uint48 roundSettledAt
+    )
         internal
         view
         returns (
@@ -832,19 +841,15 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         }
 
         IFrontendRegistry snapshotRegistry = IFrontendRegistry(snapshotRegistryAddress);
-        try snapshotRegistry.getFrontendInfo(frontend) returns (
-            address frontendOperator, uint256 stakedAmount, bool eligible, bool slashed
-        ) {
+        try snapshotRegistry.getFrontendInfo(frontend) returns (address frontendOperator, uint256, bool, bool) {
             if (frontendOperator == address(0)) {
                 return (FrontendFeeDisposition.Protocol, frontend, false, snapshotRegistryAddress);
             }
-            if (eligible) {
-                return (FrontendFeeDisposition.CreditRegistry, frontendOperator, false, snapshotRegistryAddress);
-            }
-            if (slashed || stakedAmount < snapshotRegistry.STAKE_AMOUNT()) {
-                return (FrontendFeeDisposition.Protocol, frontendOperator, false, snapshotRegistryAddress);
-            }
-            if (_canReceiveHistoricalFees(snapshotRegistry, frontend)) {
+            // canClaimFeesForRound subsumes the eligible / slashed / stakedAmount /
+            // exit-pending / Voter ID / registered-before-round checks. A frontend that
+            // re-registered after this round settled fails the registeredAt gate and routes
+            // the fee to Protocol (admin confiscation) instead of reviving a claim.
+            if (_canClaimFeesForRound(snapshotRegistry, frontend, roundSettledAt)) {
                 return (FrontendFeeDisposition.CreditRegistry, frontendOperator, false, snapshotRegistryAddress);
             }
             return (FrontendFeeDisposition.Protocol, frontendOperator, false, snapshotRegistryAddress);
@@ -853,13 +858,13 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         }
     }
 
-    function _canReceiveHistoricalFees(IFrontendRegistry snapshotRegistry, address frontend)
+    function _canClaimFeesForRound(IFrontendRegistry snapshotRegistry, address frontend, uint48 roundSettledAt)
         internal
         view
         returns (bool)
     {
-        try snapshotRegistry.canReceiveHistoricalFees(frontend) returns (bool canReceive) {
-            return canReceive;
+        try snapshotRegistry.canClaimFeesForRound(frontend, roundSettledAt) returns (bool canClaim) {
+            return canClaim;
         } catch {
             return false;
         }

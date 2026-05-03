@@ -2962,30 +2962,39 @@ contract RoundIntegrationTest is VotingTestBase {
         );
     }
 
-    function test_ClaimFrontendFee_SucceedsAfterFrontendReregisters() public {
+    /// @dev After completeDeregister + register(), the frontend's `registeredAt` is set to
+    ///      the re-registration timestamp, which post-dates the historical round's
+    ///      `settledAt`. Reviving the historical fee at this point would let an operator
+    ///      bypass the protocol's slashing review window via a quick deregister+re-register
+    ///      cycle. The fee must instead route to Protocol disposition for governance to
+    ///      confiscate.
+    function test_ClaimFrontendFee_BlocksClaimsAfterReregistration() public {
         (FrontendRegistry frontendReg, address frontendOp) = _setupFrontendRegistry();
         (uint256 contentId, uint256 roundId) = _settleRoundWithFrontend(frontendOp);
 
-        vm.startPrank(frontendOp);
+        vm.prank(frontendOp);
         frontendReg.requestDeregister();
-        vm.stopPrank();
-
         _completeFrontendExit(frontendReg, frontendOp);
+
+        vm.warp(block.timestamp + 1);
 
         vm.startPrank(frontendOp);
         hrepToken.approve(address(frontendReg), 1000e6);
         frontendReg.register();
         vm.stopPrank();
 
-        uint256 feesBefore = frontendReg.getAccumulatedFees(frontendOp);
+        assertTrue(frontendReg.isEligible(frontendOp), "Re-registration restores eligibility");
+
+        vm.expectRevert(RoundRewardDistributor.FrontendFeeNotClaimable.selector);
         _claimFrontendFeeAsOperator(contentId, roundId, frontendOp);
 
-        assertGt(
-            frontendReg.getAccumulatedFees(frontendOp) - feesBefore,
-            0,
-            "Re-registered frontend should still receive fees"
+        assertEq(
+            frontendReg.getAccumulatedFees(frontendOp), 0, "Re-registered frontend cannot revive historical fee"
         );
-        assertTrue(frontendReg.isEligible(frontendOp), "Re-registration should restore eligibility");
+
+        // Governance can confiscate the now-Protocol-disposition fee.
+        vm.prank(owner);
+        rewardDistributor.confiscateFrontendFee(contentId, roundId, frontendOp);
     }
 
     function test_ClaimFrontendFee_SucceedsAfterFrontendIsRebonded() public {

@@ -98,11 +98,15 @@ library QuestionRewardPoolEscrowClaimLib {
         }
 
         try IFrontendRegistry(frontendRegistry).getFrontendInfo(frontend) returns (
-            address operator, uint256 stakedAmount, bool eligible, bool slashed
+            address operator, uint256, bool, bool
         ) {
-            stakedAmount;
-            bool canReceiveHistorically = eligible || _canReceiveHistoricalFees(frontendRegistry, frontend);
-            if (operator != address(0) && !slashed && canReceiveHistorically) {
+            if (operator == address(0)) {
+                return address(0);
+            }
+            // Use the round-time gate so a frontend that re-registered after this round
+            // settled cannot revive the bounty fee. Also covers slash/exit-pending/Voter ID.
+            uint48 roundSettledAt = _readRoundSettledAt(votingEngine, contentId, roundId);
+            if (_canClaimFeesForRound(frontendRegistry, frontend, roundSettledAt)) {
                 return operator;
             }
         } catch {
@@ -112,11 +116,23 @@ library QuestionRewardPoolEscrowClaimLib {
         return address(0);
     }
 
-    function _canReceiveHistoricalFees(address frontendRegistry, address frontend) private view returns (bool) {
-        try IFrontendRegistry(frontendRegistry).canReceiveHistoricalFees(frontend) returns (bool canReceive) {
-            return canReceive;
+    function _canClaimFeesForRound(address frontendRegistry, address frontend, uint48 roundSettledAt)
+        private
+        view
+        returns (bool)
+    {
+        try IFrontendRegistry(frontendRegistry).canClaimFeesForRound(frontend, roundSettledAt) returns (bool can) {
+            return can;
         } catch {
             return false;
         }
+    }
+
+    function _readRoundSettledAt(RoundVotingEngine votingEngine, uint256 contentId, uint256 roundId)
+        private
+        view
+        returns (uint48 settledAt)
+    {
+        (,,,,,,,,,, settledAt,,,) = votingEngine.rounds(contentId, roundId);
     }
 }

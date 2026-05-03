@@ -25,10 +25,19 @@ interface IFrontendRegistry {
     /// @return hrepFees Accumulated HREP fees
     function getAccumulatedFees(address frontend) external view returns (uint256 hrepFees);
 
-    /// @notice Whether a registered frontend can receive historical fees.
-    /// @dev Intentionally ignores exit-pending status so commit-time eligible frontends can
-    ///      still receive old round fees during voluntary unbonding.
+    /// @notice Whether a registered frontend can receive historical fees right now.
+    /// @dev Mirrors the `claimFees` eligibility (active operator, fully bonded, not slashed,
+    ///      not mid-unbonding, Voter ID active). Does NOT verify the frontend was registered
+    ///      at the time the round settled; use `canClaimFeesForRound` for that round-time
+    ///      guard.
     function canReceiveHistoricalFees(address frontend) external view returns (bool);
+
+    /// @notice Whether a frontend can claim fees for a round that settled at `roundSettledAt`.
+    /// @dev Combines `canReceiveHistoricalFees` with a registration-window check:
+    ///      `frontends[frontend].registeredAt <= roundSettledAt`. A frontend that
+    ///      deregistered and re-registered after a round settled cannot claim that round's
+    ///      historical fees — those should route to Protocol disposition.
+    function canClaimFeesForRound(address frontend, uint48 roundSettledAt) external view returns (bool);
 
     /// @notice Get frontend info
     /// @param frontend The frontend address
