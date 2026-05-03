@@ -1363,7 +1363,7 @@ export function AgentSubmissionPanel() {
                     : "Save optional controls before creating managed agent access."}
               </p>
             </div>
-            <Link href={`${DOCS_AI_ROUTE}#mcp`} className="link link-primary text-sm">
+            <Link href={`${DOCS_AI_ROUTE}#accountless-public-access`} className="link link-primary text-sm">
               Setup guide
             </Link>
           </div>
@@ -1390,7 +1390,7 @@ export function AgentSubmissionPanel() {
                     <KeyIcon className="h-4 w-4" />
                     <span>Auth</span>
                   </div>
-                  <p className="mt-2 text-sm text-base-content/70">No bearer token required</p>
+                  <p className="mt-2 text-sm text-base-content/70">No bearer token or Curyo account required</p>
                 </div>
               </div>
 

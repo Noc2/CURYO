@@ -10,6 +10,7 @@ Use these notes when wiring Curyo into chat-hosted agents such as ChatGPT and Cl
   - status
   - result
 - Use the public endpoint when the connector can supply a funded `walletAddress`; use a managed token only for Curyo-enforced caps or callbacks.
+- Keep Curyo account creation optional for the user. The accountless flow only needs a funded wallet, a public context URL, a budget, and a signing/approval path.
 - Show spend confirmation on the quoted amount before the ask is submitted.
 - Keep callbacks optional. Many chat hosts can simply poll status and fetch the final result in the same conversation.
 

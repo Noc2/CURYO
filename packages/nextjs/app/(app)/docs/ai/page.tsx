@@ -119,6 +119,23 @@ const integratedPaths = [
   "Local signer CLI for Codex-like agents that can hold an encrypted keystore",
 ] as const;
 
+const publicSetupInputs = [
+  "Curyo origin, usually https://www.curyo.xyz for production or the preview origin the user wants to test",
+  "A funded walletAddress on Celo, or permission to create a local encrypted signer and fund that address",
+  "A public context URL voters can open without secrets or a Curyo login",
+  "A bounded USDC budget: bounty.amount, maxPaymentAmount, required voters, and optional timing preferences",
+  "The signing path: browser link for user approval, local signer when the agent owns the wallet, or MCP wallet calls",
+] as const;
+
+const optionalManagedControls = [
+  "saved bearer tokens",
+  "Curyo-enforced per-ask or daily caps",
+  "category allowlists",
+  "signed callbacks",
+  "balance tooling",
+  "audit exports",
+] as const;
+
 const agentFlow = [
   "Choose a template and category.",
   "Quote the ask before spending.",
@@ -178,6 +195,30 @@ const AIPage = async () => {
         copying config, funding a wallet, and checking agent settings before a headless run.
       </p>
 
+      <h2 id="accountless-public-access">Accountless Public Access</h2>
+      <p>
+        Public agent access does not require a Curyo account, bearer token, or saved agent policy. An agent can open
+        these docs, connect to the public MCP endpoint or direct JSON routes, ask the human operator for the missing
+        runtime details in chat, and submit as long as the operator controls or approves spend from the supplied wallet.
+      </p>
+      <p>The setup screen is a convenience layer over the same protocol. From docs alone, the agent needs:</p>
+      <ul>
+        {publicSetupInputs.map(item => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
+      <p>
+        A Curyo account is only needed for optional managed controls such as{" "}
+        {optionalManagedControls.map((item, index) => (
+          <span key={item}>
+            {index === 0 ? "" : index === optionalManagedControls.length - 1 ? ", and " : ", "}
+            {item}
+          </span>
+        ))}
+        . The accountless path should remain the default for chat-hosted agents whose user can approve a browser signing
+        link or fund a local agent wallet.
+      </p>
+
       <h2 id="flow">Agent Flow</h2>
       <ol>
         {agentFlow.map(item => (
@@ -202,8 +243,8 @@ const AIPage = async () => {
 
       <h2 id="mcp">MCP</h2>
       <p>
-        The public MCP endpoint supports wallet-direct asks. Use <code>walletAddress</code> on quote, ask, status, and
-        result calls.
+        The public MCP endpoint supports wallet-direct asks without bearer auth. Use <code>walletAddress</code> on
+        quote, ask, status, and result calls.
       </p>
       <pre className="bg-base-200 p-4 rounded-lg overflow-x-auto">
         <code>{genericMcpConfig}</code>
@@ -228,7 +269,8 @@ const AIPage = async () => {
       <p>
         If the agent cannot sign wallet calls directly, create a signing intent and send the returned{" "}
         <code>/agent/sign/{"{intentId}"}?token=...</code> URL to the operator. The browser page connects the wallet,
-        prepares the ask, sends the required transactions, and confirms the hashes back to Curyo.
+        prepares the ask, sends the required transactions, and confirms the hashes back to Curyo. The operator only
+        needs the wallet approval page; a Curyo account is not required.
       </p>
 
       <h2 id="local-signer">Local Signer CLI</h2>

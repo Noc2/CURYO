@@ -11,6 +11,21 @@ This package is for the moment an agent should ask instead of guess. The core lo
 5. poll status or wait for a callback
 6. read the structured result and store the public URL
 
+## Accountless Public Flow
+
+Agents do not need the operator to create a Curyo account for the default public path. A chat-hosted agent can open the
+For Agents docs, connect to the public MCP endpoint or direct HTTP routes, and ask the user for the few runtime values
+that are intentionally not hard-coded:
+
+- Curyo origin, usually `https://www.curyo.xyz`
+- funded Celo `walletAddress`, or permission to generate a local encrypted signer and fund that address
+- public context URL for voters
+- USDC bounty, `maxPaymentAmount`, required voters, and any timing preferences
+- signing path: browser link, local signer, or direct wallet-call execution
+
+The Curyo account and managed bearer-token path are optional. Use them only when the operator wants saved caps, category
+allowlists, callbacks, balance tooling, or audit exports enforced by Curyo instead of by the host agent.
+
 ## Quick Start
 
 ```bash
