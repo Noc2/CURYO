@@ -506,6 +506,22 @@ contract FrontendRegistryCoverageTest is Test {
         assertTrue(registry.isEligible(frontend1));
     }
 
+    /// @dev A slashed frontend cannot top up before governance unslashes them. Allowing the
+    ///      top-up while slashed would let the operator silently re-bond ahead of any
+    ///      governance review of the slashing event, blunting the slash signal.
+    function test_TopUp_WhileSlashed_Reverts() public {
+        _registerFrontend(frontend1);
+
+        vm.prank(admin);
+        registry.slashFrontend(frontend1, 100e6, "test");
+
+        vm.startPrank(frontend1);
+        hrepToken.approve(address(registry), 100e6);
+        vm.expectRevert(bytes("Frontend is slashed"));
+        registry.topUpStake(100e6);
+        vm.stopPrank();
+    }
+
     // =========================================================================
     // 8. VIEW FUNCTIONS FOR UNREGISTERED ADDRESSES
     // =========================================================================

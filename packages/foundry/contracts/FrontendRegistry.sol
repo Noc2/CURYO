@@ -263,10 +263,14 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
     }
 
     /// @notice Restore stake after a partial slash so the frontend can earn fees again.
+    /// @dev Slashed frontends cannot top up — governance must `unslashFrontend` first so the
+    ///      slash signal is not silently neutralised by re-bonding before the violation is
+    ///      adjudicated.
     /// @param amount Additional HREP to bond.
     function topUpStake(uint256 amount) external nonReentrant {
         Frontend storage f = frontends[msg.sender];
         require(f.operator != address(0), "Not registered");
+        require(!f.slashed, "Frontend is slashed");
         if (frontendExitAvailableAt[msg.sender] != 0) revert FrontendExitPending();
         require(amount > 0, "Invalid top-up amount");
         require(uint256(f.stakedAmount) < STAKE_AMOUNT, "Already fully bonded");
