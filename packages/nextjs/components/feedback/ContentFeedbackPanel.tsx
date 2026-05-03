@@ -165,16 +165,9 @@ export function ContentFeedbackPanel({ item, variant = "rail", onRequestConnect 
         </span>
       </div>
 
-      {feedback.settlementComplete || ownHiddenCopy ? (
+      {ownHiddenCopy ? (
         <div className="mt-3 rounded-lg border border-base-content/10 bg-base-content/[0.035] px-3 py-2">
-          {feedback.settlementComplete ? (
-            <p className="text-xs font-medium leading-relaxed text-base-content/64">
-              Feedback is unlocked for this question.
-            </p>
-          ) : null}
-          {!feedback.settlementComplete && ownHiddenCopy ? (
-            <p className="text-xs leading-relaxed text-base-content/60">{ownHiddenCopy}</p>
-          ) : null}
+          <p className="text-xs leading-relaxed text-base-content/60">{ownHiddenCopy}</p>
         </div>
       ) : null}
 
