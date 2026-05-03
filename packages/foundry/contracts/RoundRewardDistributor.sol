@@ -361,7 +361,13 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     }
 
     /// @notice Finalize only mathematical voter-reward dust after stale winners have had time to claim.
-    /// @dev `sortedWinningVoters` must contain every revealed winner exactly once, sorted by address ascending.
+    /// @dev `sortedWinningVoters` must contain every revealed winner exactly once, sorted by
+    ///      address ascending. NOTE: each entry is the **`commit.voter`** address — the EOA
+    ///      that originally committed the vote — not the SBT holder. For delegated commits
+    ///      these differ; off-chain dust finalizers must enumerate `commit.voter` from the
+    ///      `voterCommitHash` mapping (or the `VoteCommitted` events), NOT call
+    ///      `voterIdNFT.getHolder(voterId)`. Passing the holder address for a delegated
+    ///      commit fails the lookup and reverts the entire batch with `InvalidFinalizationInput`.
     function finalizeVoterRewardDust(uint256 contentId, uint256 roundId, address[] calldata sortedWinningVoters)
         external
         nonReentrant
