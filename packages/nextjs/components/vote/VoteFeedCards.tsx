@@ -585,7 +585,6 @@ function FeedContentMetaCard({
               winRate={submitterProfile?.winRate}
               totalSettledVotes={submitterProfile?.totalSettledVotes}
               size="sm"
-              addressMode={submitterProfile?.username ? "inline" : "hidden"}
             />
           </div>
           {hasContextLink ? (
