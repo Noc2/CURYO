@@ -230,7 +230,14 @@ library RoundCleanupLib {
         )
     {
         uint256 len = commitKeys.length;
-        uint256 endIndex = (count == 0 || startIndex + count > len) ? len : startIndex + count;
+        // Treat `count == 0` and any `count` whose remaining range covers the rest of the
+        // array as "process all". Use `unchecked` because callers may pass `type(uint256).max`
+        // as a sentinel and `startIndex + count` would otherwise revert with Panic(0x11).
+        uint256 endIndex;
+        unchecked {
+            uint256 candidate = startIndex + count;
+            endIndex = (count == 0 || candidate < startIndex || candidate > len) ? len : candidate;
+        }
         updatedConsensusReserve = consensusReserve;
 
         for (uint256 i = startIndex; i < endIndex; i++) {
