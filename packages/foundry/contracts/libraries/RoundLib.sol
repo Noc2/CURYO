@@ -54,6 +54,13 @@ library RoundLib {
     ///        - RoundCleanupLib.processUnrevealedVotes (epoch-end semantics, guarded by !revealed)
     ///        - QuestionRewardPoolEscrow._timelyRevealedCommitFrontend (reveal-time, guarded by revealed)
     ///        - QuestionRewardPoolEscrowQualificationLib (reveal-time, guarded by revealed)
+    ///      DEPLOY POLICY: this dual semantics is in-place-upgrade unsafe. Existing-revealed
+    ///      commits store reveal timestamps; a future implementation that interpreted the
+    ///      field as epoch-end semantics on those records would silently corrupt cleanup and
+    ///      bounty timing. RoundVotingEngine MUST be deployed behind a fresh proxy whenever
+    ///      `Commit` storage layout or this field's semantics change — the deploy script
+    ///      already follows this invariant; do not switch to in-place UUPS upgrades for the
+    ///      voting engine without first introducing a `commitVersion` discriminant.
     struct Commit {
         address voter;
         uint64 stakeAmount;
