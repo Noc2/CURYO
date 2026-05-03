@@ -119,10 +119,15 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
     }
 
     /// @inheritdoc IFrontendRegistry
+    /// @dev A frontend mid-unbonding (`frontendExitAvailableAt != 0`) cannot receive newly
+    ///      claimed historical fees. The unbonding window is the slashing review period; the
+    ///      main `claimFees` path enforces this guard, so historical-fee resolution must
+    ///      mirror it. Without the check, bounty-side fee routing (which calls this view via
+    ///      `_resolveFrontendRewardRecipient`) would leak fees to the operator EOA mid-window.
     function canReceiveHistoricalFees(address frontend) external view override returns (bool) {
         Frontend storage f = frontends[frontend];
         return f.operator != address(0) && !f.slashed && uint256(f.stakedAmount) >= STAKE_AMOUNT
-            && _hasActiveOperatorVoterId(frontend);
+            && frontendExitAvailableAt[frontend] == 0 && _hasActiveOperatorVoterId(frontend);
     }
 
     /// @inheritdoc IFrontendRegistry

@@ -3013,7 +3013,11 @@ contract RoundIntegrationTest is VotingTestBase {
         assertTrue(frontendReg.isEligible(frontendOp), "Rebonding should restore eligibility");
     }
 
-    function test_ClaimFrontendFee_UsesCommitTimeEligibilitySnapshot() public {
+    /// @dev While the frontend is mid-unbonding the historical fee resolves to `Protocol`
+    ///      and the operator cannot claim it. The unbonding window is the slashing review
+    ///      period; bypassing it would let the operator EOA collect HREP fees that should be
+    ///      held back until the window closes.
+    function test_ClaimFrontendFee_BlocksClaimsWhileExitPending() public {
         (FrontendRegistry frontendReg, address frontendOp) = _setupFrontendRegistry();
         uint256 contentId = _submitContent();
 
@@ -3083,9 +3087,13 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter3, ch3), false, s3);
 
         votingEngine.settleRound(contentId, roundId);
+
+        vm.expectRevert(RoundRewardDistributor.FrontendFeeNotClaimable.selector);
         _claimFrontendFeeAsOperator(contentId, roundId, frontendOp);
 
-        assertGt(frontendReg.getAccumulatedFees(frontendOp), 0, "commit-time eligibility should remain preserved");
+        assertEq(
+            frontendReg.getAccumulatedFees(frontendOp), 0, "no fees should accumulate while frontend is exit-pending"
+        );
     }
 
     function test_ClaimFrontendFee_IgnoresFrontendEligibleAfterCommit() public {

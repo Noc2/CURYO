@@ -600,7 +600,11 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(usdc.balanceOf(frontend1), frontendBalanceBefore);
     }
 
-    function testExitPendingFrontendReceivesHistoricalQuestionRewardFees() public {
+    /// @dev A frontend mid-unbonding cannot collect bounty fees on rounds it serviced before
+    ///      requesting deregistration. The unbonding window is the slashing review period;
+    ///      bounty fee routing must mirror the main `claimFees` path's exit-pending guard,
+    ///      otherwise USDC fees leak to the operator EOA mid-window.
+    function testExitPendingFrontendDoesNotReceiveHistoricalQuestionRewardFees() public {
         _registerFrontend(frontend1);
 
         uint256 contentId = _submitQuestion("");
@@ -614,13 +618,14 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         frontendRegistry.requestDeregister();
 
         uint256 frontendBalanceBefore = usdc.balanceOf(frontend1);
-        assertEq(rewardPoolEscrow.claimableQuestionReward(rewardPoolId, roundId, voter1), 32_333_333);
+        // Without an eligible frontend recipient, the fee carve-out falls back to the voter.
+        assertEq(rewardPoolEscrow.claimableQuestionReward(rewardPoolId, roundId, voter1), REWARD_POOL_AMOUNT / 3);
 
         vm.prank(voter1);
         uint256 reward = rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
 
-        assertEq(reward, 32_333_333);
-        assertEq(usdc.balanceOf(frontend1), frontendBalanceBefore + 1e6);
+        assertEq(reward, REWARD_POOL_AMOUNT / 3);
+        assertEq(usdc.balanceOf(frontend1), frontendBalanceBefore);
     }
 
     function testUnregisteredFrontendFeeShareFallsBackToVoterReward() public {

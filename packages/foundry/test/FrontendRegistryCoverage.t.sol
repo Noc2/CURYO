@@ -522,6 +522,20 @@ contract FrontendRegistryCoverageTest is Test {
         vm.stopPrank();
     }
 
+    /// @dev `canReceiveHistoricalFees` must respect the unbonding window — a frontend
+    ///      currently in `requestDeregister` cooldown cannot be eligible for newly resolved
+    ///      historical fees, otherwise bounty-path fee routing leaks fees to the operator
+    ///      EOA mid-window while the main `claimFees` path is correctly blocked.
+    function test_CanReceiveHistoricalFees_RejectsExitPending() public {
+        _registerFrontend(frontend1);
+        assertTrue(registry.canReceiveHistoricalFees(frontend1));
+
+        vm.prank(frontend1);
+        registry.requestDeregister();
+
+        assertFalse(registry.canReceiveHistoricalFees(frontend1));
+    }
+
     // =========================================================================
     // 8. VIEW FUNCTIONS FOR UNREGISTERED ADDRESSES
     // =========================================================================

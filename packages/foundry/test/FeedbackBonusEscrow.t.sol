@@ -332,7 +332,11 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
         assertEq(usdc.balanceOf(frontend1), 1_000_300_000);
     }
 
-    function testAwardPaysExitPendingHistoricalFrontend() public {
+    /// @dev A frontend in unbonding cannot collect feedback-bonus frontend fees on a round it
+    ///      serviced before requesting deregistration — the unbonding window is the slashing
+    ///      review period and `canReceiveHistoricalFees` must mirror the main `claimFees`
+    ///      path's exit-pending guard. The fee carve-out falls back to the voter.
+    function testAwardDoesNotPayExitPendingHistoricalFrontend() public {
         _registerFrontend(frontend1);
         uint256 contentId = _submitQuestion("");
         uint256 poolId = _createFeedbackBonusPool(contentId);
@@ -345,9 +349,9 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
         uint256 recipientAmount = feedbackBonusEscrow.awardFeedbackBonus(poolId, voter1, FEEDBACK_HASH, 10e6);
 
         assertEq(roundId, 1);
-        assertEq(recipientAmount, 9_700_000);
-        assertEq(usdc.balanceOf(voter1), 1_009_700_000);
-        assertEq(usdc.balanceOf(frontend1), 1_000_300_000);
+        assertEq(recipientAmount, 10e6);
+        assertEq(usdc.balanceOf(voter1), 1_010e6);
+        assertEq(usdc.balanceOf(frontend1), 1_000e6);
     }
 
     function testAwardFallsBackToVoterWhenFrontendWasNotEligibleAtCommit() public {
