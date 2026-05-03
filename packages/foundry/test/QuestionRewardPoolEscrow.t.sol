@@ -505,6 +505,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
 
         votingEngine.settleRound(contentIds[0], firstRoundId);
         votingEngine.settleRound(contentIds[1], secondRoundId);
+        rewardPoolEscrow.syncBundleQuestionTerminal(contentIds[1], secondRoundId);
 
         assertGt(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter1), 0);
     }
@@ -949,6 +950,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         vm.warp(closesAt + 1);
         votingEngine.settleRound(contentIds[0], firstRoundId);
         votingEngine.settleRound(contentIds[1], secondRoundId);
+        rewardPoolEscrow.syncBundleQuestionTerminal(contentIds[1], secondRoundId);
 
         assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter1), REWARD_POOL_AMOUNT / 4);
     }
@@ -1019,6 +1021,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         );
         votingEngine.settleRound(contentIds[0], firstRoundId);
         votingEngine.settleRound(contentIds[1], secondRoundId);
+        rewardPoolEscrow.syncBundleQuestionTerminal(contentIds[1], secondRoundId);
 
         assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter1), REWARD_POOL_AMOUNT / 3);
         assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter4), 0);
@@ -3014,6 +3017,37 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         return _settleRoundWithFrontend(voters, contentId, directions, address(0));
     }
 
+    /// @dev Settle without triggering bundle qualification on the test's `rewardPoolEscrow`.
+    ///      Used by tests that intentionally race the escrow wiring (e.g., mock-escrow swaps).
+    function _settleRoundWithoutBundleSync(address[] memory voters, uint256 contentId, bool[] memory directions)
+        internal
+        returns (uint256 roundId)
+    {
+        bytes32[] memory salts = new bytes32[](voters.length);
+        bytes32[] memory commitKeys = new bytes32[](voters.length);
+        for (uint256 i = 0; i < voters.length; i++) {
+            salts[i] = keccak256(abi.encodePacked(voters[i], contentId, directions[i], i));
+            commitKeys[i] = _commitTestVote(
+                DirectTestCommitRequest({
+                    engine: votingEngine,
+                    hrepToken: hrepToken,
+                    voter: voters[i],
+                    contentId: contentId,
+                    isUp: directions[i],
+                    stake: STAKE,
+                    frontend: address(0),
+                    salt: salts[i]
+                })
+            );
+        }
+        roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH_DURATION);
+        for (uint256 i = 0; i < voters.length; i++) {
+            votingEngine.revealVoteByCommitKey(contentId, roundId, commitKeys[i], directions[i], salts[i]);
+        }
+        votingEngine.settleRound(contentId, roundId);
+    }
+
     function _settleRoundWithFrontend(
         address[] memory voters,
         uint256 contentId,
@@ -3047,6 +3081,11 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         }
 
         votingEngine.settleRound(contentId, roundId);
+        // Bundle qualification is decoupled from settlement to keep settlement O(1) at high
+        // `maxVoters` × bundle-size. `syncBundleQuestionTerminal` is permissionless, idempotent,
+        // and a no-op for non-bundled content; calling it from the test helper keeps the
+        // existing test assertions (which expect a qualified snapshot post-settle) accurate.
+        rewardPoolEscrow.syncBundleQuestionTerminal(contentId, roundId);
     }
 
     function _revealRoundWith(address[] memory voters, uint256 contentId, bool[] memory directions)
@@ -3357,6 +3396,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
 
         votingEngine.settleRound(contentIds[0], firstRoundId);
         votingEngine.settleRound(contentIds[1], secondRoundId);
+        rewardPoolEscrow.syncBundleQuestionTerminal(contentIds[1], secondRoundId);
 
         assertGt(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter1), 0);
         vm.prank(voter1);
@@ -3395,6 +3435,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         votingEngine.settleRound(contentIds[1], secondRoundId);
         votingEngine.processUnrevealedVotes(contentIds[0], firstRoundId, 0, 0);
         votingEngine.processUnrevealedVotes(contentIds[1], secondRoundId, 0, 0);
+        rewardPoolEscrow.syncBundleQuestionTerminal(contentIds[1], secondRoundId);
 
         assertGt(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter1), 0);
     }
@@ -3475,8 +3516,11 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         vm.stopPrank();
 
         vm.warp(block.timestamp + 25 hours);
-        uint256 lateFirstRoundId = _settleRoundWith(voters, contentIds[0], directions);
-        uint256 lateSecondRoundId = _settleRoundWith(voters, contentIds[1], directions);
+        // Settle without auto-sync: the registry's active escrow is the mock, so we want to
+        // verify the LATER `syncBundleQuestionTerminal` call does the recording on the real
+        // escrow (the "late-synced round set" scenario).
+        uint256 lateFirstRoundId = _settleRoundWithoutBundleSync(voters, contentIds[0], directions);
+        uint256 lateSecondRoundId = _settleRoundWithoutBundleSync(voters, contentIds[1], directions);
 
         vm.startPrank(owner);
         registry.pause();

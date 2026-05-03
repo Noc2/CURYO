@@ -617,10 +617,26 @@ contract QuestionRewardPoolEscrow is
         _recordBundleQuestionTerminal(contentId, roundId, settled);
     }
 
+    /// @notice Mirror a settled or terminal round into its bundle accounting and, when the
+    ///         round set is complete, evaluate it (qualify or reset). Permissionless.
+    /// @dev Settlement only does the O(1) record; the heavy qualification iteration over
+    ///      voters × bundle questions is intentionally deferred to this function so it cannot
+    ///      OOG the settlement transaction at high `maxVoters` × bundle-size. Anyone can
+    ///      call this after settlement (or to re-run a missed sync) to drive the bundle
+    ///      forward — including the very first call which records the round AND qualifies.
     function syncBundleQuestionTerminal(uint256 contentId, uint256 roundId) external {
         (RoundLib.RoundState state, uint48 settledAt,) = _roundTerminalState(contentId, roundId);
         require(settledAt != 0, "Round not terminal");
         _recordBundleQuestionTerminal(contentId, roundId, state == RoundLib.RoundState.Settled);
+        uint256 bundleId = contentBundleId[contentId];
+        if (bundleId == 0) return;
+        BundleReward storage bundle = bundleRewards[bundleId];
+        if (bundle.refunded) return;
+        uint256 roundSetIndex = bundle.completedRoundSets;
+        if (roundSetIndex >= bundle.requiredSettledRounds) return;
+        if (bundleRoundSetSnapshots[bundleId][roundSetIndex].qualified) return;
+        if (!_isBundleRoundSetComplete(bundleId, roundSetIndex)) return;
+        _qualifyBundleRoundSet(bundleId, bundle, roundSetIndex);
     }
 
     function _recordBundleQuestionTerminal(uint256 contentId, uint256 roundId, bool settled) internal {
@@ -647,10 +663,15 @@ contract QuestionRewardPoolEscrow is
         bundleQuestionRecordedRounds[bundleId][bundleIndex] = uint32(roundSetIndex + 1);
         emit QuestionBundleRoundRecorded(bundleId, contentId, roundId, bundleIndex, roundSetIndex);
 
-        if (roundSetIndex == bundle.completedRoundSets && _isBundleRoundSetComplete(bundleId, roundSetIndex)) {
-            _qualifyBundleRoundSet(bundleId, bundle, roundSetIndex);
-        }
+        // Qualification is intentionally NOT triggered here. With large bundles + high
+        // per-content `maxVoters`, `_qualifyBundleRoundSet` is O(maxVoters * bundleSize)
+        // and can exceed the settlement-block gas budget. Anyone can call
+        // `qualifyBundleRoundSet(bundleId, roundSetIndex)` once the round set is complete
+        // to evaluate eligibility and either qualify the snapshot or reset it for retry.
+        // Indexers can detect round-set completion by counting QuestionBundleRoundRecorded
+        // events for a given (bundleId, roundSetIndex) and matching against bundleQuestions.length.
     }
+
 
     function claimQuestionBundleReward(uint256 bundleId, uint256 roundSetIndex)
         external
