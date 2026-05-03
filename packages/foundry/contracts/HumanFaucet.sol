@@ -348,6 +348,7 @@ contract HumanFaucet is SelfVerificationRoot, EIP712, Ownable, Pausable {
         ) {
             revert MigrationArrayLengthMismatch();
         }
+        require(users.length > 0, "Empty batch");
         if (users.length > MIGRATION_BOOTSTRAP_MAX_BATCH_SIZE) {
             revert MigrationBootstrapBatchTooLarge();
         }
