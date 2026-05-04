@@ -346,7 +346,12 @@ contract QuestionRewardPoolEscrow is
         require(requiredSettledRounds <= MAX_REQUIRED_SETTLED_ROUNDS, "Too many rounds");
         require(amount >= requiredCompleters * requiredSettledRounds, "Amount too small");
         _requireBundleFundingCoversMaxCompleters(contentIds, amount, requiredSettledRounds);
-        _requireFutureBountyWindow(bountyClosesAt);
+        // Bundles must have a strict future bountyClosesAt. Without this, a bountyClosesAt
+        // of 0 would silently pass _requireFutureBountyWindow and render the bundle instantly
+        // refundable through refundQuestionBundleReward (block.timestamp > 0 + BUNDLE_REFUND_GRACE
+        // is trivially true). Today this is shielded by the registry's bountyClosesAt!=0 check,
+        // but this escrow is the trust boundary — keep the constraint local.
+        require(bountyClosesAt > block.timestamp, "Bad close");
         uint256 normalizedFeedbackClosesAt = _normalizeFeedbackClosesAt(bountyClosesAt, feedbackClosesAt);
 
         uint256 fundedAmount = _pullExactToken(funder, asset, amount);
