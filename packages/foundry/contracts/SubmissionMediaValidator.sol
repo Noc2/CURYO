@@ -83,10 +83,21 @@ contract SubmissionMediaValidator {
             }
         }
 
-        for (uint256 i = 0; i < urlBytes.length; i++) {
+        // Scan the host segment (between scheme and first path/query/fragment delimiter).
+        // Reject host-confusion characters that browsers parse permissively but that
+        // mask the effective host: '@' splits userinfo, '\' is normalized to '/',
+        // and '%' allows percent-encoded host obfuscation.
+        bool inHost = true;
+        for (uint256 i = prefix.length; i < urlBytes.length; i++) {
             bytes1 char = urlBytes[i];
-            if (char < 0x21 || char > 0x7E) {
-                return false;
+            if (char < 0x21 || char > 0x7E) return false;
+            if (char == "\\" || char == "@") return false;
+            if (inHost) {
+                if (char == "/" || char == "?" || char == "#") {
+                    inHost = false;
+                } else if (char == "%") {
+                    return false;
+                }
             }
         }
 

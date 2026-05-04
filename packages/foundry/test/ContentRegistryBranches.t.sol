@@ -1533,6 +1533,60 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.stopPrank();
     }
 
+    function test_SubmitContent_UrlWithUserinfo_Reverts() public {
+        vm.startPrank(submitter);
+        hrepToken.approve(address(registry), 10e6);
+        vm.expectRevert("Invalid URL");
+        registry.submitQuestion(
+            "https://safe.com@evil.com/context",
+            _singleImageUrls("https://example.com/1.jpg"),
+            "",
+            "goal",
+            "goal",
+            "tags",
+            1,
+            bytes32(0),
+            _defaultQuestionSpec()
+        );
+        vm.stopPrank();
+    }
+
+    function test_SubmitContent_UrlWithBackslash_Reverts() public {
+        vm.startPrank(submitter);
+        hrepToken.approve(address(registry), 10e6);
+        vm.expectRevert("Invalid URL");
+        registry.submitQuestion(
+            "https://example.com/context",
+            _singleImageUrls("https://safe.com\\@evil.com/1.jpg"),
+            "",
+            "goal",
+            "goal",
+            "tags",
+            1,
+            bytes32(0),
+            _defaultQuestionSpec()
+        );
+        vm.stopPrank();
+    }
+
+    function test_SubmitContent_UrlWithPercentEncodedHost_Reverts() public {
+        vm.startPrank(submitter);
+        hrepToken.approve(address(registry), 10e6);
+        vm.expectRevert("Invalid URL");
+        registry.submitQuestion(
+            "https://goo%67le.com/context",
+            _singleImageUrls("https://example.com/1.jpg"),
+            "",
+            "goal",
+            "goal",
+            "tags",
+            1,
+            bytes32(0),
+            _defaultQuestionSpec()
+        );
+        vm.stopPrank();
+    }
+
     function test_SubmitContent_CategoryNotRegistered_Reverts() public {
         vm.prank(owner);
         registry.setCategoryRegistry(address(mockCategoryRegistry));
