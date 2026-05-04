@@ -17,7 +17,7 @@ import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
 
 /// @title Audit Gap Tests — Priority-1 test coverage for gaps identified during security audit.
 /// @dev Covers:
-///   1. Paused state enforcement — verify all critical functions respect whenNotPaused
+///   1. Paused state enforcement — new commitments stop, existing-round exits continue
 ///   2. Claim paths in a single settled round (voter + loser refund + participation + frontend fee + consensus)
 ///   3. processUnrevealedVotes batch boundary edge cases
 ///   4. Tied + RevealFailed refund path precedence
@@ -217,8 +217,8 @@ contract AuditGapTests is VotingTestBase {
         vm.stopPrank();
     }
 
-    /// @notice Verify settleRound respects whenNotPaused
-    function test_Paused_SettleRound_Reverts() public {
+    /// @notice Existing rounds can still reveal and settle while paused.
+    function test_Paused_RevealAndSettleRound_StillWorks() public {
         uint256 contentId = _submitContent("https://pause-test-2.com");
 
         // Commit 3 votes
@@ -228,20 +228,21 @@ contract AuditGapTests is VotingTestBase {
 
         _warpPastTlockRevealTime(block.timestamp + EPOCH_DURATION);
 
+        // Pause before reveal and settlement.
+        vm.prank(owner);
+        votingEngine.pause();
+
         _reveal(voter1, contentId, 1, ck1, true, s1);
         _reveal(voter2, contentId, 1, ck2, true, s2);
         _reveal(voter3, contentId, 1, ck3, false, s3);
 
-        // Pause
-        vm.prank(owner);
-        votingEngine.pause();
-
-        vm.expectRevert(); // EnforcedPause
         votingEngine.settleRound(contentId, 1);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, 1);
+        assertTrue(round.state == RoundLib.RoundState.Settled, "Round should settle while paused");
     }
 
-    /// @notice Verify cancelExpiredRound respects whenNotPaused
-    function test_Paused_CancelExpiredRound_Reverts() public {
+    /// @notice Expired below-threshold rounds can still cancel while paused.
+    function test_Paused_CancelExpiredRound_StillWorks() public {
         uint256 contentId = _submitContent("https://pause-test-3.com");
         _commit(voter1, contentId, true, STAKE, address(0));
 
@@ -250,8 +251,9 @@ contract AuditGapTests is VotingTestBase {
         vm.prank(owner);
         votingEngine.pause();
 
-        vm.expectRevert(); // EnforcedPause
         votingEngine.cancelExpiredRound(contentId, 1);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, 1);
+        assertTrue(round.state == RoundLib.RoundState.Cancelled, "Round should cancel while paused");
     }
 
     function test_CancelExpiredRound_DoesNotRewardKeeper() public {

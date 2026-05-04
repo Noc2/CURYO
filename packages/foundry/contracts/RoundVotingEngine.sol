@@ -687,7 +687,7 @@ contract RoundVotingEngine is
     // =========================================================================
 
     /// @notice Cancel an expired round that didn't reach the minimum voter threshold. Permissionless.
-    function cancelExpiredRound(uint256 contentId, uint256 roundId) external nonReentrant whenNotPaused {
+    function cancelExpiredRound(uint256 contentId, uint256 roundId) external nonReentrant {
         RoundLib.Round storage round = rounds[contentId][roundId];
         if (round.state != RoundLib.RoundState.Open) revert RoundNotOpen();
         RoundLib.RoundConfig memory roundCfg = _getRoundConfig(contentId, roundId);
@@ -702,7 +702,7 @@ contract RoundVotingEngine is
     }
 
     /// @notice Finalize a round whose reveal quorum never materialized after commit quorum was already reached.
-    function finalizeRevealFailedRound(uint256 contentId, uint256 roundId) external nonReentrant whenNotPaused {
+    function finalizeRevealFailedRound(uint256 contentId, uint256 roundId) external nonReentrant {
         RoundLib.Round storage round = rounds[contentId][roundId];
         if (round.state != RoundLib.RoundState.Open) revert RoundNotOpen();
         RoundLib.RoundConfig memory roundCfg = _getRoundConfig(contentId, roundId);
@@ -725,7 +725,6 @@ contract RoundVotingEngine is
     function revealVoteByCommitKey(uint256 contentId, uint256 roundId, bytes32 commitKey, bool isUp, bytes32 salt)
         external
         nonReentrant
-        whenNotPaused
     {
         _revealVoteInternal(contentId, roundId, commitKey, isUp, salt);
     }
@@ -737,7 +736,7 @@ contract RoundVotingEngine is
     /// @notice Settle a round after ≥minVoters votes have been revealed. Permissionless.
     /// @dev Win condition uses epoch-weighted pools to prevent late-voter herding.
     ///      Rating update uses raw revealed pools for accurate crowd opinion representation.
-    function settleRound(uint256 contentId, uint256 roundId) external nonReentrant whenNotPaused {
+    function settleRound(uint256 contentId, uint256 roundId) external nonReentrant {
         RoundLib.Round storage round = rounds[contentId][roundId];
 
         if (round.state != RoundLib.RoundState.Open) revert RoundNotOpen();
