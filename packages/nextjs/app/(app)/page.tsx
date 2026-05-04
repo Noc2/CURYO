@@ -4,6 +4,7 @@ import { BanknotesIcon, CheckBadgeIcon, CpuChipIcon } from "@heroicons/react/24/
 import { CuryoAnimation } from "~~/components/home/CuryoAnimation";
 import { LandingFaq } from "~~/components/home/LandingFaq";
 import { LandingPageActions } from "~~/components/home/LandingPageActions";
+import { SupportedAgentsSection } from "~~/components/home/SupportedAgentsSection";
 import { DOCS_AI_ROUTE, RATE_ROUTE } from "~~/constants/routes";
 import { getOptionalPonderUrl } from "~~/lib/env/server";
 
@@ -360,6 +361,8 @@ export default async function LandingPage() {
             </div>
           </div>
         </div>
+
+        <SupportedAgentsSection />
 
         <AskWorkflowSection />
 
