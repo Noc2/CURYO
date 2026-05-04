@@ -347,10 +347,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
 
             humanFaucet = new HumanFaucet(address(hrepToken), humanFaucetHubAddress, governance);
             console.log("HumanFaucet deployed at:", address(humanFaucet));
-            if (!isLocalDev) {
-                humanFaucet.pause();
-                console.log("Paused HumanFaucet until final launch checks open public claims");
-            }
+            console.log("HumanFaucet starts paused until final launch checks open public claims");
 
             // Wire VoterIdNFT
             voterIdNFT.addMinter(address(humanFaucet));
