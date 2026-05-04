@@ -59,8 +59,19 @@ library RoundSettlementSideEffectsLib {
             }
         }
 
-        registry.updateRatingState(contentId, roundId, referenceRatingBps, nextState);
-        registry.recordMeaningfulActivity(contentId);
+        try registry.updateRatingState(contentId, roundId, referenceRatingBps, nextState) { }
+        catch {
+            emit SettlementSideEffectFailed(
+                contentId, roundId, address(registry), SideEffectFailureStage.RatingStateUpdate
+            );
+        }
+
+        try registry.recordMeaningfulActivity(contentId) { }
+        catch {
+            emit SettlementSideEffectFailed(
+                contentId, roundId, address(registry), SideEffectFailureStage.MeaningfulActivityRecord
+            );
+        }
 
         if (participationPoolAddress != address(0) && hasParticipationRate) {
             if (rewardDistributor != address(0)) {

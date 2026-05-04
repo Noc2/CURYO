@@ -1074,7 +1074,10 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     /// @notice Called by VotingEngine to update raw activity timestamp after commits.
     /// @dev Vote commits refresh UI-facing activity without extending the dormancy window.
     function updateActivity(uint256 contentId) external {
-        if (msg.sender != votingEngine) revert OnlyVotingEngine();
+        uint256 callerGeneration = votingEngineCallbackGeneration[msg.sender];
+        if (callerGeneration == 0) revert OnlyVotingEngine();
+        if (callerGeneration < contentSettlementEngineGeneration[contentId]) return;
+
         address trackedEngine = contentRoundTrackingEngine[contentId];
         if (trackedEngine != address(0) && trackedEngine != msg.sender && _engineHasOpenRound(trackedEngine, contentId)) {
             revert ActiveRoundOnPreviousEngine();
