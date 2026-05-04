@@ -187,6 +187,7 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
     function awardFeedbackBonus(uint256 poolId, address recipient, bytes32 feedbackHash, uint256 grossAmount)
         external
         nonReentrant
+        whenNotPaused
         returns (uint256 recipientAmount)
     {
         FeedbackBonusPool storage pool = _getExistingPool(poolId);
@@ -237,7 +238,7 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
         );
     }
 
-    function forfeitExpiredFeedbackBonus(uint256 poolId) external nonReentrant returns (uint256 forfeitedAmount) {
+    function forfeitExpiredFeedbackBonus(uint256 poolId) external nonReentrant whenNotPaused returns (uint256 forfeitedAmount) {
         FeedbackBonusPool storage pool = _getExistingPool(poolId);
         require(!pool.forfeited, "Already forfeited");
         require(block.timestamp > pool.feedbackClosesAt, "Not expired");
