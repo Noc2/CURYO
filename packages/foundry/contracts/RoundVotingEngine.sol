@@ -767,6 +767,10 @@ contract RoundVotingEngine is
                 emit RoundTied(contentId, roundId);
                 return;
             }
+            // Tiebreak: smaller raw pool wins. Rationale: identical weighted pools with
+            // different raw pools means the smaller-raw side achieved the same weight with
+            // fewer tokens → more concentration in early epochs → "more informed" voters.
+            // This inverts the conventional raw-majority-breaks-tie convention intentionally.
             upWins = round.upPool < round.downPool;
         }
         round.upWins = upWins;
