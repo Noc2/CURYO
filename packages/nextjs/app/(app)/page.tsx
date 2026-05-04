@@ -243,9 +243,7 @@ function FeaturesBenefitsSection() {
       <WorkflowHeading title="Why It Works" />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-6">
         {FEATURE_BENEFITS.map((feature, index) => (
-          <AnimateInView key={feature.title} className="h-full" delay={index * 100}>
-            <FeatureBenefitCard {...feature} index={index} />
-          </AnimateInView>
+          <FeatureBenefitCard key={feature.title} {...feature} index={index} />
         ))}
       </div>
     </section>
