@@ -617,13 +617,19 @@ contract QuestionRewardPoolEscrow is
         _recordBundleQuestionTerminal(contentId, roundId, settled);
     }
 
-    /// @notice Mirror a settled or terminal round into its bundle accounting and, when the
-    ///         round set is complete, evaluate it (qualify or reset). Permissionless.
-    /// @dev Settlement only does the O(1) record; the heavy qualification iteration over
-    ///      voters × bundle questions is intentionally deferred to this function so it cannot
-    ///      OOG the settlement transaction at high `maxVoters` × bundle-size. Anyone can
-    ///      call this after settlement (or to re-run a missed sync) to drive the bundle
-    ///      forward — including the very first call which records the round AND qualifies.
+    /// @notice Mirror a settled or terminal round into its bundle accounting and qualify any
+    ///         complete-but-pending round set. Permissionless and idempotent.
+    /// @dev Settlement only does the O(1) record into the bundle slot; the heavy qualification
+    ///      iteration (voters × bundle questions) is intentionally deferred here so it cannot
+    ///      OOG the settlement transaction at high `maxVoters` × bundle-size. Anyone can call
+    ///      this after settlement to drive the bundle forward.
+    /// @dev OPERATIONS REQUIREMENT: deployments MUST run a keeper that calls this function
+    ///      after each bundle question's round settles. The on-chain `refundQuestionBundleReward`
+    ///      path reads `bundle.completedRoundSets`, which only advances on qualification — a
+    ///      hostile funder who skipped sync could theoretically reclaim earned rewards via
+    ///      the refund window. The protocol's keeper covers the standard happy path; voters
+    ///      can also self-trigger this call before claiming, so a missed keeper run is
+    ///      recoverable. See `packages/keeper/src/keeper.ts` for the reference implementation.
     function syncBundleQuestionTerminal(uint256 contentId, uint256 roundId) external {
         (RoundLib.RoundState state, uint48 settledAt,) = _roundTerminalState(contentId, roundId);
         require(settledAt != 0, "Round not terminal");
@@ -666,7 +672,7 @@ contract QuestionRewardPoolEscrow is
         // Qualification is intentionally NOT triggered here. With large bundles + high
         // per-content `maxVoters`, `_qualifyBundleRoundSet` is O(maxVoters * bundleSize)
         // and can exceed the settlement-block gas budget. Anyone can call
-        // `qualifyBundleRoundSet(bundleId, roundSetIndex)` once the round set is complete
+        // `syncBundleQuestionTerminal(contentId, roundId)` once the round set is complete
         // to evaluate eligibility and either qualify the snapshot or reset it for retry.
         // Indexers can detect round-set completion by counting QuestionBundleRoundRecorded
         // events for a given (bundleId, roundSetIndex) and matching against bundleQuestions.length.

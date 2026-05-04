@@ -18,7 +18,11 @@
  */
 import type { PublicClient, WalletClient, Chain, Account } from "viem";
 import { timelockDecrypt, mainnetClient } from "tlock-js";
-import { ContentRegistryAbi, RoundVotingEngineAbi } from "@curyo/contracts/abis";
+import {
+  ContentRegistryAbi,
+  QuestionRewardPoolEscrowAbi,
+  RoundVotingEngineAbi,
+} from "@curyo/contracts/abis";
 import { parseTlockCiphertextMetadata } from "@curyo/contracts/voting";
 import {
   type CommitData,
@@ -151,6 +155,56 @@ function markCleanupCompleted(contentId: bigint, roundId: bigint): void {
     const toRemove = entries.slice(0, entries.length - MAX_CLEANUP_COMPLETED);
     for (const entry of toRemove) {
       cleanupCompletedRounds.delete(entry);
+    }
+  }
+}
+
+/**
+ * Best-effort: after a settled round, drive bundle qualification by calling
+ * `syncBundleQuestionTerminal` on the registry's `questionRewardPoolEscrow`. The escrow
+ * function is permissionless and idempotent — it is a no-op for non-bundled content and
+ * for bundles where the round set is not yet complete. Failures are logged but do not
+ * propagate, since the keeper has already produced its primary settle effect.
+ */
+async function _syncBundleQuestionTerminal(
+  publicClient: PublicClient,
+  walletClient: WalletClient,
+  chain: Chain,
+  account: Account,
+  registryAddr: `0x${string}`,
+  contentId: bigint,
+  roundId: bigint,
+  logger: Logger,
+): Promise<void> {
+  try {
+    const escrow = (await publicClient.readContract({
+      address: registryAddr,
+      abi: ContentRegistryAbi,
+      functionName: "questionRewardPoolEscrow",
+      args: [],
+    })) as `0x${string}`;
+    if (escrow === "0x0000000000000000000000000000000000000000") return;
+
+    await writeContractAndConfirm(publicClient, walletClient, {
+      chain,
+      account,
+      address: escrow,
+      abi: QuestionRewardPoolEscrowAbi,
+      functionName: "syncBundleQuestionTerminal",
+      args: [contentId, roundId],
+    });
+    logger.debug("Synced bundle question terminal", {
+      contentId: Number(contentId),
+      roundId: Number(roundId),
+    });
+  } catch (err: unknown) {
+    const reason = getRevertReason(err);
+    if (!isExpectedRevert(reason)) {
+      logger.debug("Bundle sync skipped", {
+        contentId: Number(contentId),
+        roundId: Number(roundId),
+        error: reason,
+      });
     }
   }
 }
@@ -331,6 +385,23 @@ export async function resolveRounds(
             });
             result.roundsSettled++;
             enqueueRoundForCleanup(contentId, activeRoundId);
+
+            // Drive bundle qualification (no-op for non-bundled content). Settlement only
+            // records the round into the bundle slot; qualification — which iterates voters
+            // and bundle questions — is intentionally deferred to keep settlement O(1).
+            // A hostile funder could otherwise wait for the refund window and reclaim
+            // rewards voters have earned, since `refundQuestionBundleReward` reads
+            // `bundle.completedRoundSets` (which only advances on qualification).
+            await _syncBundleQuestionTerminal(
+              publicClient,
+              walletClient,
+              chain,
+              account,
+              registryAddr,
+              contentId,
+              activeRoundId,
+              logger,
+            );
           } catch (err: unknown) {
             const reason = getRevertReason(err);
             if (!isExpectedRevert(reason)) {
