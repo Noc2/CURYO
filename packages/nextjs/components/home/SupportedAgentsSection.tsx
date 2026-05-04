@@ -43,7 +43,7 @@ function AgentIcon({ name }: { name: string }) {
           />
         </svg>
       );
-    case "Gemini":
+    case "Gemini CLI":
       return (
         <svg className={iconClass} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
           <path d="M12 2L13.5 8.5L20 12L13.5 15.5L12 22L10.5 15.5L4 12L10.5 8.5L12 2Z" />
@@ -68,14 +68,12 @@ function AgentIcon({ name }: { name: string }) {
 }
 
 const AGENTS: { name: string; highlighted?: boolean }[] = [
-  { name: "Kimi" },
   { name: "Claude Code" },
-  { name: "Cursor" },
   { name: "GitHub Copilot" },
+  { name: "Cursor" },
   { name: "OpenAI Codex" },
+  { name: "Gemini CLI" },
   { name: "Lovable" },
-  { name: "Gemini" },
-  { name: "And Others" },
 ];
 
 export function SupportedAgentsSection() {
@@ -87,14 +85,14 @@ export function SupportedAgentsSection() {
         </p>
       </div>
 
-      <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
+      <div className="mx-auto flex max-w-full flex-nowrap items-center justify-start gap-2 overflow-x-auto px-4 pb-1 sm:justify-center sm:gap-2.5 sm:px-0 lg:gap-3">
         {AGENTS.map(agent => {
           const isHighlighted = agent.highlighted;
           return (
             <div
               key={agent.name}
               className={`
-                flex items-center gap-2.5 rounded-xl border px-4 py-2.5
+                flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2.5 sm:px-3.5 lg:px-4
                 ${
                   isHighlighted
                     ? "border-primary/30 bg-primary/10 text-primary"
