@@ -778,55 +778,8 @@ body {
   animation-delay: 2000ms;
 }
 
-/* Orbit divider animations */
-@keyframes orbit-flow {
-  to {
-    stroke-dashoffset: -32;
-  }
-}
-
-@keyframes orbit-pulse {
-  0%,
-  100% {
-    opacity: 0.55;
-    transform: scale(0.92);
-  }
-
-  50% {
-    opacity: 1;
-    transform: scale(1.08);
-  }
-}
-
-@keyframes orbit-glow {
-  0%,
-  100% {
-    opacity: 0.7;
-  }
-
-  50% {
-    opacity: 1;
-  }
-}
-
-.animate-orbit-flow {
-  animation: orbit-flow 2s linear infinite;
-}
-
-.animate-orbit-pulse {
-  animation: orbit-pulse 3s ease-in-out infinite;
-  transform-origin: center;
-}
-
-.animate-orbit-glow {
-  animation: orbit-glow 4s ease-in-out infinite;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .animate-fade-in-up,
-  .animate-orbit-flow,
-  .animate-orbit-pulse,
-  .animate-orbit-glow {
+  .animate-fade-in-up {
     animation: none;
   }
 }

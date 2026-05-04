@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { BanknotesIcon, CheckBadgeIcon, CpuChipIcon } from "@heroicons/react/24/outline";
+import { AnimateInView } from "~~/components/home/AnimateInView";
 import { CuryoAnimation } from "~~/components/home/CuryoAnimation";
 import { LandingFaq } from "~~/components/home/LandingFaq";
 import { LandingPageActions } from "~~/components/home/LandingPageActions";
@@ -132,7 +133,6 @@ function LandingOrbitDivider({ variant }: { variant: LandingOrbitDividerVariant 
           stroke="#F26426"
           strokeWidth="4.5"
           strokeLinecap="round"
-          className="animate-orbit-glow"
         />
         <path
           d="M182 34C338 102 480 126 652 82C802 44 918 56 1098 116"
@@ -140,7 +140,6 @@ function LandingOrbitDivider({ variant }: { variant: LandingOrbitDividerVariant 
           strokeWidth="4"
           strokeLinecap="round"
           strokeDasharray="1 15"
-          className="animate-orbit-flow"
         />
         <path
           d="M322 112C476 20 642 8 800 66C926 112 1012 102 1134 54"
@@ -148,12 +147,10 @@ function LandingOrbitDivider({ variant }: { variant: LandingOrbitDividerVariant 
           strokeWidth="3.5"
           strokeLinecap="round"
           opacity="0.86"
-          className="animate-orbit-glow"
-          style={{ animationDelay: "2s" }}
         />
-        <circle cx="292" cy="93" r="13" fill="#F26426" className="animate-orbit-pulse" />
-        <circle cx="784" cy="60" r="10" fill="#FF8A3D" className="animate-orbit-pulse animate-delay-1000" />
-        <circle cx="1034" cy="40" r="14" fill="#E3A234" className="animate-orbit-pulse animate-delay-2000" />
+        <circle cx="292" cy="93" r="13" fill="#F26426" />
+        <circle cx="784" cy="60" r="10" fill="#FF8A3D" />
+        <circle cx="1034" cy="40" r="14" fill="#E3A234" />
       </svg>
     </div>
   );
@@ -189,15 +186,15 @@ function AskWorkflowSection() {
     <section className="relative z-10 mt-4 w-full sm:mt-6 lg:mt-8">
       <WorkflowHeading title="How It Works" />
       <div className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-3 lg:gap-6">
-        <div className="animate-fade-in-up h-full">
+        <AnimateInView className="h-full">
           <AskFlowPanel {...agentStep} />
-        </div>
-        <div className="animate-fade-in-up h-full animate-delay-150">
+        </AnimateInView>
+        <AnimateInView className="h-full" delay={150}>
           <AskFlowPanel {...mcpStep} />
-        </div>
-        <div className="animate-fade-in-up h-full animate-delay-300">
+        </AnimateInView>
+        <AnimateInView className="h-full" delay={300}>
           <AskFlowPanel {...resultStep} />
-        </div>
+        </AnimateInView>
       </div>
     </section>
   );
@@ -246,7 +243,9 @@ function FeaturesBenefitsSection() {
       <WorkflowHeading title="Why It Works" />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-6">
         {FEATURE_BENEFITS.map((feature, index) => (
-          <FeatureBenefitCard key={feature.title} {...feature} index={index} />
+          <AnimateInView key={feature.title} className="h-full" delay={index * 100}>
+            <FeatureBenefitCard {...feature} index={index} />
+          </AnimateInView>
         ))}
       </div>
     </section>
@@ -346,7 +345,7 @@ export default async function LandingPage() {
           </div>
 
           {/* Title (left on large screens) */}
-          <div className="relative z-10 flex flex-col items-center lg:mr-auto lg:max-w-[32rem] lg:items-start lg:py-24 xl:py-28">
+          <div className="relative z-10 flex flex-col items-center lg:mr-auto lg:max-w-[32rem] lg:items-start lg:pt-24 lg:pb-6 xl:pt-28 xl:pb-8">
             <h1 className="hero-headline max-w-[14ch] text-center text-[2.35rem] text-base-content sm:max-w-[11ch] sm:text-[3.05rem] lg:max-w-none lg:text-left lg:text-[3.2rem] xl:text-[3.55rem]">
               <span className="block">AI Asks,</span>
               <span className="block">Humans Earn</span>
@@ -370,9 +369,8 @@ export default async function LandingPage() {
               ))}
             </div>
           </div>
+          <SupportedAgentsSection />
         </div>
-
-        <SupportedAgentsSection />
 
         <AskWorkflowSection />
 
