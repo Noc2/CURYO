@@ -325,6 +325,14 @@ contract HumanFaucet is SelfVerificationRoot, EIP712, Ownable, Pausable {
         require(nullifier != 0, "No nullifier recorded");
         require(address(voterIdNFT) != address(0), "VoterIdNFT not set");
         require(voterIdNFT.resolveHolder(user) != user, "User already has direct Voter ID");
+        // Same delegate-severance defense as the regular claim and remint paths: refuse to
+        // mint into a wallet with an active or pending delegation in either direction.
+        if (
+            voterIdNFT.delegateOf(user) != address(0) || voterIdNFT.pendingDelegateOf(user) != address(0)
+                || voterIdNFT.pendingDelegateTo(user) != address(0)
+        ) {
+            revert AddressAlreadyClaimed();
+        }
 
         uint256 tokenId = voterIdNFT.mint(user, nullifier);
         emit VoterIdMinted(user, tokenId, nullifier);

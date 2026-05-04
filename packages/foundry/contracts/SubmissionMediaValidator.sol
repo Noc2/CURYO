@@ -107,7 +107,15 @@ contract SubmissionMediaValidator {
 
         if (end < suffixBytes.length) return false;
         uint256 offset = end - suffixBytes.length;
-        if (offset == 0 || valueBytes[offset - 1] != "/") return false;
+        // Require the suffix to appear in the path component (after at least one '/' past the scheme).
+        bool hasPathSeparator = false;
+        for (uint256 i = 8; i < offset; i++) {
+            if (valueBytes[i] == "/") {
+                hasPathSeparator = true;
+                break;
+            }
+        }
+        if (!hasPathSeparator) return false;
         for (uint256 i = 0; i < suffixBytes.length; i++) {
             if (_toLowerByte(valueBytes[offset + i]) != suffixBytes[i]) {
                 return false;
