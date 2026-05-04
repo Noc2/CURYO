@@ -5,7 +5,6 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
-import { TransientSlot } from "@openzeppelin/contracts/utils/TransientSlot.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -50,7 +49,6 @@ interface IQuestionRewardPoolEscrow {
 contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpgradeable, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
     using SafeCast for uint256;
-    using TransientSlot for *;
 
     error OnlyVotingEngine();
     error ActiveRoundOnPreviousEngine();
@@ -176,7 +174,9 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     mapping(uint256 => bytes32) internal contentSubmissionKey;
 
     /// @notice Canonical submitter identity snapshot (holder address if submitted through a delegate).
-    mapping(uint256 => address) internal contentSubmitterIdentity;
+    /// @dev Public to expose the auto-getter as `getSubmitterIdentity(uint256)` and skip the
+    ///      explicit external wrapper, keeping ContentRegistry under the EIP-170 size limit.
+    mapping(uint256 => address) public getSubmitterIdentity;
 
     /// @notice Stable Self nullifier for the canonical submitter identity.
     mapping(uint256 => uint256) public contentSubmitterNullifier;
@@ -204,7 +204,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     mapping(uint256 => uint256) public dormantKeyReleasableAt;
 
     /// @notice Rich rating state used by the score-relative rating system.
-    mapping(uint256 => RatingLib.RatingState) internal ratingState;
+    mapping(uint256 => RatingLib.RatingState) internal _ratingState;
 
     /// @notice Slash policy frozen at content creation so governance cannot retroactively rewrite stake terms.
     mapping(uint256 => RatingLib.SlashConfig) internal contentSlashConfigSnapshot;
@@ -445,30 +445,13 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         SubmissionRewardTerms memory rewardTerms,
         RoundLib.RoundConfig memory roundConfig,
         QuestionSpecCommitment memory spec
-    ) public returns (uint256) {
+    ) public nonReentrant whenNotPaused returns (uint256) {
         SubmissionMetadata memory metadata = _validatedContextSubmissionMetadata(
             contextUrl, imageUrls, videoUrl, title, description, tags, categoryId
         );
-        return _submitQuestionWithRewardAndRoundConfig(
-            metadata, imageUrls, videoUrl, salt, rewardTerms, _validatedRoundConfig(roundConfig), spec
+        return _submitValidatedQuestionWithMedia(
+            metadata, imageUrls, videoUrl, salt, rewardTerms, _validatedRoundConfig(roundConfig), 0, spec
         );
-    }
-
-    function _submitQuestionWithRewardAndRoundConfig(
-        SubmissionMetadata memory metadata,
-        string[] memory imageUrls,
-        string memory videoUrl,
-        bytes32 salt,
-        SubmissionRewardTerms memory rewardTerms,
-        RoundLib.RoundConfig memory roundConfig,
-        QuestionSpecCommitment memory spec
-    ) private returns (uint256) {
-        _enterQuestionSubmissionGuard();
-        _requireNotPaused();
-        uint256 contentId =
-            _submitValidatedQuestionWithMedia(metadata, imageUrls, videoUrl, salt, rewardTerms, roundConfig, 0, spec);
-        _exitQuestionSubmissionGuard();
-        return contentId;
     }
 
     function submitQuestionBundleWithRewardAndRoundConfig(
@@ -618,7 +601,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         uint256 categoryId,
         bytes32 salt,
         QuestionSpecCommitment memory spec
-    ) public returns (uint256) {
+    ) public nonReentrant whenNotPaused returns (uint256) {
         SubmissionRewardTerms memory rewardTerms = SubmissionRewardTerms({
             asset: SUBMISSION_REWARD_ASSET_HREP,
             amount: _minimumSubmissionReward(SUBMISSION_REWARD_ASSET_HREP),
@@ -630,8 +613,8 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         SubmissionMetadata memory metadata =
             _validatedContextSubmissionMetadata(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId);
 
-        return _submitQuestionWithRewardAndRoundConfig(
-            metadata, imageUrls, videoUrl, salt, rewardTerms, _defaultRoundConfig(), spec
+        return _submitValidatedQuestionWithMedia(
+            metadata, imageUrls, videoUrl, salt, rewardTerms, _defaultRoundConfig(), 0, spec
         );
     }
 
@@ -648,11 +631,9 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         RoundLib.RoundConfig memory roundConfig,
         QuestionSpecCommitment memory spec,
         address submitter
-    ) external onlyRole(X402_GATEWAY_ROLE) returns (uint256 contentId) {
+    ) external onlyRole(X402_GATEWAY_ROLE) nonReentrant whenNotPaused returns (uint256 contentId) {
         require(submitter != address(0), "Invalid submitter");
         require(rewardTerms.asset == SUBMISSION_REWARD_ASSET_USDC, "USDC required");
-        _enterQuestionSubmissionGuard();
-        _requireNotPaused();
         SubmissionMetadata memory metadata =
             _validatedContextSubmissionMetadata(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId);
         RoundLib.RoundConfig memory validatedRoundConfig = _validatedRoundConfig(roundConfig);
@@ -673,7 +654,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             0,
             spec
         );
-        _exitQuestionSubmissionGuard();
     }
 
     function getContentRoundConfig(uint256 contentId) public view returns (RoundLib.RoundConfig memory cfg) {
@@ -688,7 +668,12 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     function cancelContent(uint256 contentId) external nonReentrant whenNotPaused {
         require(bonusPool != address(0), "Bonus pool not set");
         Content storage c = contents[contentId];
-        require(contentSubmitterIdentity[contentId] == _resolveOptionalSubmitterIdentity(msg.sender), "Not submitter");
+        address resolvedSender = msg.sender;
+        if (address(voterIdNFT) != address(0)) {
+            address h = voterIdNFT.resolveHolder(msg.sender);
+            if (h != address(0)) resolvedSender = h;
+        }
+        require(getSubmitterIdentity[contentId] == resolvedSender, "Not submitter");
         require(c.status == ContentStatus.Active, "Not active");
         require(contentRoundTrackingEngine[contentId] == address(0), "Content has votes");
         if (votingEngine != address(0)) {
@@ -709,16 +694,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         emit ContentCancelled(contentId);
     }
 
-    function _validateTextFields(SubmissionMetadata memory metadata) internal pure {
-        require(bytes(metadata.url).length > 0, "Context URL required");
-        require(bytes(metadata.url).length <= MAX_URL_LENGTH, "URL too long");
-        require(bytes(metadata.title).length > 0, "Question required");
-        require(bytes(metadata.title).length <= MAX_QUESTION_LENGTH, "Question too long");
-        require(bytes(metadata.description).length <= MAX_DESCRIPTION_LENGTH, "Description too long");
-        require(bytes(metadata.tags).length > 0, "Tags required");
-        require(bytes(metadata.tags).length <= MAX_TAGS_LENGTH, "Tags too long");
-    }
-
     function _validatedContextSubmissionMetadata(
         string memory contextUrl,
         string[] memory imageUrls,
@@ -735,6 +710,16 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         });
         _validateTextFields(metadata);
         require(address(categoryRegistry) != address(0), "Category unset");
+    }
+
+    function _validateTextFields(SubmissionMetadata memory metadata) internal pure {
+        require(bytes(metadata.url).length > 0, "Context URL required");
+        require(bytes(metadata.url).length <= MAX_URL_LENGTH, "URL too long");
+        require(bytes(metadata.title).length > 0, "Question required");
+        require(bytes(metadata.title).length <= MAX_QUESTION_LENGTH, "Question too long");
+        require(bytes(metadata.description).length <= MAX_DESCRIPTION_LENGTH, "Description too long");
+        require(bytes(metadata.tags).length > 0, "Tags required");
+        require(bytes(metadata.tags).length <= MAX_TAGS_LENGTH, "Tags too long");
     }
 
     function _submitValidatedQuestionWithMedia(
@@ -845,17 +830,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         );
     }
 
-    function _enterQuestionSubmissionGuard() private {
-        if (_reentrancyGuardEntered()) {
-            revert ReentrancyGuardReentrantCall();
-        }
-        _reentrancyGuardStorageSlot().asBoolean().tstore(true);
-    }
-
-    function _exitQuestionSubmissionGuard() private {
-        _reentrancyGuardStorageSlot().asBoolean().tstore(false);
-    }
-
     function _validateQuestionSpec(QuestionSpecCommitment memory spec) internal pure {
         require(spec.questionMetadataHash != bytes32(0), "Bad metadata");
         require(spec.resultSpecHash != bytes32(0), "Bad spec");
@@ -901,7 +875,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         contentSubmissionKey[contentId] = submissionKey;
         (address submitterIdentity, uint256 submitterNullifier) =
             _snapshotSubmitterIdentity(submitter, requireSubmitterVoterId);
-        contentSubmitterIdentity[contentId] = submitterIdentity;
+        getSubmitterIdentity[contentId] = submitterIdentity;
         contentSubmitterNullifier[contentId] = submitterNullifier;
         contentRoundConfig[contentId] = roundConfig;
         contents[contentId] = Content({
@@ -922,7 +896,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         emit ContentRoundConfigSet(
             contentId, roundConfig.epochDuration, roundConfig.maxDuration, roundConfig.minVoters, roundConfig.maxVoters
         );
-        ratingState[contentId] = RatingLib.RatingState({
+        _ratingState[contentId] = RatingLib.RatingState({
             ratingLogitX18: int128(RatingLib.DEFAULT_RATING_LOGIT_X18),
             confidenceMass: uint128(_getInitialConfidenceMass()),
             effectiveEvidence: 0,
@@ -1006,7 +980,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         Content storage c = contents[contentId];
         require(c.id != 0, "Content does not exist");
         require(c.status == ContentStatus.Active, "Not active");
-        require(block.timestamp > _getDormancyAnchor(contentId) + DORMANCY_PERIOD, "Dormancy period not elapsed");
+        require(block.timestamp > dormancyAnchorAt[contentId] + DORMANCY_PERIOD, "Dormancy period not elapsed");
         require(!_hasOpenRound(contentId), "Content has active round");
 
         c.status = ContentStatus.Dormant;
@@ -1035,7 +1009,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         bytes32 submissionKey = contentSubmissionKey[contentId];
         require(submissionKey != bytes32(0), "Dormant key released");
         require(submissionKeyUsed[submissionKey], "Dormant key released");
-        require(contentSubmitterIdentity[contentId] == _resolveSubmitterIdentity(msg.sender), "Not original submitter");
+        require(getSubmitterIdentity[contentId] == _resolveSubmitterIdentity(msg.sender), "Not original submitter");
         require(block.timestamp <= dormantKeyReleasableAt[contentId], "Revival window elapsed");
 
         // M-1/M-2 fix: send revival stake to treasury instead of leaving it unaccounted
@@ -1071,12 +1045,25 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
     // --- VotingEngine callbacks ---
 
+    /// @dev Authorize a callback from a registered voting engine. Reverts if the caller is not
+    ///      a registered engine. Returns the caller's generation and whether it is stale relative
+    ///      to the most recent engine that settled `contentId` (in which case the caller should
+    ///      silent-no-op so a rotated engine does not corrupt newer-generation state).
+    function _authorizeEngineCallback(uint256 contentId)
+        private
+        view
+        returns (uint256 callerGeneration, bool stale)
+    {
+        callerGeneration = votingEngineCallbackGeneration[msg.sender];
+        if (callerGeneration == 0) revert OnlyVotingEngine();
+        stale = callerGeneration < contentSettlementEngineGeneration[contentId];
+    }
+
     /// @notice Called by VotingEngine to update raw activity timestamp after commits.
     /// @dev Vote commits refresh UI-facing activity without extending the dormancy window.
     function updateActivity(uint256 contentId) external {
-        uint256 callerGeneration = votingEngineCallbackGeneration[msg.sender];
-        if (callerGeneration == 0) revert OnlyVotingEngine();
-        if (callerGeneration < contentSettlementEngineGeneration[contentId]) return;
+        (, bool stale) = _authorizeEngineCallback(contentId);
+        if (stale) return;
 
         address trackedEngine = contentRoundTrackingEngine[contentId];
         if (trackedEngine != address(0) && trackedEngine != msg.sender && _engineHasOpenRound(trackedEngine, contentId)) {
@@ -1088,9 +1075,8 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
     /// @notice Called by VotingEngine when content reaches milestone 0 through a settled round.
     function recordMeaningfulActivity(uint256 contentId) external {
-        uint256 callerGeneration = votingEngineCallbackGeneration[msg.sender];
-        if (callerGeneration == 0) revert OnlyVotingEngine();
-        if (callerGeneration < contentSettlementEngineGeneration[contentId]) return;
+        (, bool stale) = _authorizeEngineCallback(contentId);
+        if (stale) return;
         contents[contentId].lastActivityAt = uint48(block.timestamp);
         dormancyAnchorAt[contentId] = block.timestamp;
     }
@@ -1101,15 +1087,14 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         uint16 referenceRatingBps,
         RatingLib.RatingState calldata nextState
     ) external {
-        uint256 callerGeneration = votingEngineCallbackGeneration[msg.sender];
-        if (callerGeneration == 0) revert OnlyVotingEngine();
-        if (callerGeneration < contentSettlementEngineGeneration[contentId]) return;
+        (uint256 callerGeneration, bool stale) = _authorizeEngineCallback(contentId);
+        if (stale) return;
 
         Content storage c = contents[contentId];
         require(c.id != 0, "Content does not exist");
         contentSettlementEngineGeneration[contentId] = callerGeneration;
 
-        RatingLib.RatingState storage state = ratingState[contentId];
+        RatingLib.RatingState storage state = _ratingState[contentId];
         uint16 oldRatingBps = state.ratingBps == 0 ? uint16(uint256(c.rating) * 100) : state.ratingBps;
         uint8 oldDisplayRating = c.rating;
         uint16 clampedRatingBps = RatingMath.clampRatingBps(nextState.ratingBps);
@@ -1146,24 +1131,12 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
     // --- View functions ---
 
-    function getSubmitterIdentity(uint256 contentId) external view returns (address) {
-        return contentSubmitterIdentity[contentId];
-    }
-
     function getRatingState(uint256 contentId) external view returns (RatingLib.RatingState memory state) {
-        state = ratingState[contentId];
-    }
-
-    function getSlashConfigForContent(uint256 contentId)
-        external
-        view
-        returns (RatingLib.SlashConfig memory slashConfig)
-    {
-        slashConfig = _getSlashConfigForContent(contentId);
+        state = _ratingState[contentId];
     }
 
     function getRating(uint256 contentId) external view returns (uint16) {
-        uint16 ratingBps = ratingState[contentId].ratingBps;
+        uint16 ratingBps = _ratingState[contentId].ratingBps;
         if (ratingBps == 0) return uint16(uint256(contents[contentId].rating) * 100);
         return ratingBps;
     }
@@ -1176,7 +1149,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     function isDormancyEligible(uint256 contentId) external view returns (bool) {
         Content storage c = contents[contentId];
         if (c.id == 0 || c.status != ContentStatus.Active) return false;
-        if (block.timestamp <= _getDormancyAnchor(contentId) + DORMANCY_PERIOD) return false;
+        if (block.timestamp <= dormancyAnchorAt[contentId] + DORMANCY_PERIOD) return false;
         return !_hasOpenRound(contentId);
     }
 
@@ -1356,12 +1329,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         return resolved;
     }
 
-    function _resolveOptionalSubmitterIdentity(address submitter) internal view returns (address) {
-        if (submitter == address(0) || address(voterIdNFT) == address(0)) return submitter;
-        address resolved = voterIdNFT.resolveHolder(submitter);
-        return resolved == address(0) ? submitter : resolved;
-    }
-
     function _snapshotSubmitterIdentity(address submitter, bool requireVoterId)
         internal
         view
@@ -1384,10 +1351,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         }
         uint256 voterId = voterIdNFT.getTokenId(submitterIdentity);
         submitterNullifier = voterId == 0 ? 0 : voterIdNFT.getNullifier(voterId);
-    }
-
-    function _getDormancyAnchor(uint256 contentId) internal view returns (uint256) {
-        return dormancyAnchorAt[contentId];
     }
 
     function _hasOpenRound(uint256 contentId) internal view returns (bool) {
@@ -1434,8 +1397,8 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         ) = protocolConfig.slashConfig();
     }
 
-    function _getSlashConfigForContent(uint256 contentId)
-        internal
+    function getSlashConfigForContent(uint256 contentId)
+        public
         view
         returns (RatingLib.SlashConfig memory slashConfig)
     {

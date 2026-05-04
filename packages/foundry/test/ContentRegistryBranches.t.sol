@@ -1975,8 +1975,11 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         registry.unpause();
         vm.stopPrank();
 
+        // Stale engine retains its callback generation so it can finish settling its in-flight
+        // round; updateActivity is silently no-ops once a newer engine settles the content (the
+        // generation comparison handles that), so post-rotation it still completes for content
+        // that has not yet been settled by the replacement engine.
         vm.prank(address(votingEngine));
-        vm.expectRevert(ContentRegistry.OnlyVotingEngine.selector);
         registry.updateActivity(1);
 
         _warpPastTlockRevealTime(block.timestamp + 1 hours);
