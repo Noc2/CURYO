@@ -131,7 +131,7 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
     }
 
     /// @inheritdoc IFrontendRegistry
-    /// @dev Registration timestamp gate: a frontend that re-registers after a round settled
+    /// @dev Registration timestamp gate: a frontend that re-registers at or after a round settled
     ///      cannot claim that round's fees. Without this, deregister + re-register would
     ///      revive fees that should have routed to Protocol (admin-confiscatable).
     function canClaimFeesForRound(address frontend, uint48 roundSettledAt)
@@ -141,7 +141,7 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
         returns (bool)
     {
         if (!canReceiveHistoricalFees(frontend)) return false;
-        return frontends[frontend].registeredAt <= roundSettledAt;
+        return frontends[frontend].registeredAt < roundSettledAt;
     }
 
     /// @inheritdoc IFrontendRegistry

@@ -239,6 +239,25 @@ contract FrontendRegistryTest is Test {
         assertEq(registry.getAccumulatedFees(frontend1), 0);
     }
 
+    function test_CanClaimFeesForRoundRejectsSameTimestampReregistration() public {
+        vm.startPrank(frontend1);
+        hrepToken.approve(address(registry), STAKE);
+        registry.register();
+        registry.requestDeregister();
+        vm.stopPrank();
+
+        _completeDeregister(frontend1);
+
+        uint48 roundSettledAt = uint48(block.timestamp);
+        vm.startPrank(frontend1);
+        hrepToken.approve(address(registry), STAKE);
+        registry.register();
+        vm.stopPrank();
+
+        assertTrue(registry.canReceiveHistoricalFees(frontend1));
+        assertFalse(registry.canClaimFeesForRound(frontend1, roundSettledAt));
+    }
+
     function test_RevertClaimFeesWhileExitPending() public {
         vm.startPrank(frontend1);
         hrepToken.approve(address(registry), STAKE);
