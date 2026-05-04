@@ -820,26 +820,27 @@ contract FrontendRegistryTest is Test {
         registry.addFeeCreditor(newCreditor);
         vm.stopPrank();
 
-        // New creditor can credit fees
         vm.startPrank(frontend1);
         hrepToken.approve(address(registry), STAKE);
         registry.register();
         vm.stopPrank();
 
+        // New creditor can credit fees.
         vm.prank(newCreditor);
         registry.creditFees(frontend1, 100e6);
 
+        // Prior fee creditor lost authorization on rotation (addFeeCreditor revokes previous).
         vm.prank(feeCreditor);
+        vm.expectRevert();
         registry.creditFees(frontend1, 25e6);
 
         uint256 hrepFees = registry.getAccumulatedFees(frontend1);
-        assertEq(hrepFees, 125e6);
+        assertEq(hrepFees, 100e6);
 
-        // Remove creditor
+        // Removing the new creditor revokes its authorization too.
         vm.prank(admin);
         registry.removeFeeCreditor(newCreditor);
 
-        // Should now revert
         vm.prank(newCreditor);
         vm.expectRevert();
         registry.creditFees(frontend1, 100e6);

@@ -730,7 +730,9 @@ contract FrontendRegistryCoverageTest is Test {
         MockRewardDistributor_FR newCreditor = new MockRewardDistributor_FR(address(votingEngine));
         vm.prank(governance);
         splitRoleRegistry.addFeeCreditor(address(newCreditor));
-        assertTrue(splitRoleRegistry.hasRole(splitRoleRegistry.FEE_CREDITOR_ROLE(), feeCreditor));
+        // Rotation revokes the prior creditor's role so a stale distributor can no longer
+        // call creditFees() and inflate accounting without sending backing HREP.
+        assertFalse(splitRoleRegistry.hasRole(splitRoleRegistry.FEE_CREDITOR_ROLE(), feeCreditor));
         assertTrue(splitRoleRegistry.hasRole(splitRoleRegistry.FEE_CREDITOR_ROLE(), address(newCreditor)));
         assertEq(splitRoleRegistry.feeCreditor(), address(newCreditor));
     }

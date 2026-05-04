@@ -161,7 +161,7 @@ contract HumanFaucetCoverageTest is Test {
         assertEq(faucet.totalClaimed(), 0);
     }
 
-    function test_Claim_ClearsInboundDelegation_WhenUsingRealVoterIdNFT() public {
+    function test_Claim_RejectsActiveDelegate_WhenUsingRealVoterIdNFT() public {
         VoterIdNFT realVoterIdNFT = _deployRealVoterIdNFT();
 
         vm.prank(admin);
@@ -177,12 +177,18 @@ contract HumanFaucetCoverageTest is Test {
         vm.prank(admin);
         faucet.setVoterIdNFT(address(realVoterIdNFT));
 
+        // user2 is currently user1's Voter ID delegate. Faucet claim must refuse to mint a
+        // direct Voter ID into user2's wallet, which would silently sever the inbound
+        // delegation (VoterIdNFT.mint clears delegateOf/delegateTo). user2 must call
+        // realVoterIdNFT.removeDelegate() first.
         mockHub.setVerified(user2);
+        vm.expectRevert(HumanFaucet.AddressAlreadyClaimed.selector);
         mockHub.simulateVerification(address(faucet), user2);
 
-        assertEq(realVoterIdNFT.resolveHolder(user2), user2);
-        assertEq(realVoterIdNFT.delegateOf(user2), address(0));
-        assertEq(realVoterIdNFT.delegateTo(user1), address(0));
+        // Delegation remains intact after the rejected claim.
+        assertEq(realVoterIdNFT.resolveHolder(user2), user1);
+        assertEq(realVoterIdNFT.delegateOf(user2), user1);
+        assertEq(realVoterIdNFT.delegateTo(user1), user2);
     }
 
     function test_RetryVoterIdMint_AllowsDelegatedClaimerWithoutDirectId() public {
