@@ -130,8 +130,9 @@ contract RoundVotingEngine is
     mapping(uint256 => mapping(uint256 => mapping(address => bool))) public cancelledRoundRefundClaimed;
     mapping(uint256 => mapping(uint256 => mapping(bytes32 => bool))) internal cancelledRoundRefundCommitClaimed;
 
-    // Fast zero/non-zero indicator for content vote history.
-    mapping(uint256 => bool) internal contentHasCommits;
+    // Fast zero/non-zero indicator for content vote history. Public so the IRoundVotingEngine
+    // `hasCommits` view is fulfilled by the auto-getter without an explicit function definition.
+    mapping(uint256 => bool) public hasCommits;
 
     // Sybil resistance
     // Consensus subsidy reserve: pre-funded + replenished by 5% of each losing pool.
@@ -226,13 +227,16 @@ contract RoundVotingEngine is
     /// @notice Add HREP to the consensus reserve.
     /// @dev Permissionless by design — treasury top-ups and slashed-stake routing both use this same path.
     function addToConsensusReserve(uint256 amount) external nonReentrant {
-        _pullHrepFromSender(amount);
+        if (amount == 0) revert InvalidStake();
+        hrepToken.safeTransferFrom(msg.sender, address(this), amount);
         accountedHrepBalance += amount;
         consensusReserve += amount;
     }
 
     /// @notice Recover HREP sent directly to this contract outside accounted protocol flows.
-    function recoverSurplusHrep() external nonReentrant {
+    /// @dev Admin-only and naturally reentrancy-safe: a re-entrant call would compute
+    ///      `balanceOf - accountedHrepBalance == 0` after the first transfer, draining nothing.
+    function recoverSurplusHrep() external {
         if (!hasRole(bytes32(0), msg.sender)) revert Unauthorized();
         hrepToken.safeTransfer(msg.sender, hrepToken.balanceOf(address(this)) - accountedHrepBalance);
     }
@@ -568,7 +572,7 @@ contract RoundVotingEngine is
     ) internal {
         uint256 effectiveRevealableAfter = _targetRoundRevealableAt(contentId, roundId, targetRound);
         if (effectiveRevealableAfter < epochEnd) effectiveRevealableAfter = epochEnd;
-        contentHasCommits[contentId] = true;
+        hasCommits[contentId] = true;
         RoundCleanupLib.recordCommitIndexes(
             roundCommitHashes[contentId][roundId],
             epochUnrevealedCount[contentId][roundId],
@@ -776,7 +780,6 @@ contract RoundVotingEngine is
         round.upWins = upWins;
         round.state = RoundLib.RoundState.Settled;
         round.settledAt = block.timestamp.toUint48();
-        contentHasSettledRound[contentId] = true;
         _notifyBundleRoundTerminal(contentId, roundId, true);
 
         // Epoch-weighted winning stake — used for proportional reward distribution
@@ -946,11 +949,6 @@ contract RoundVotingEngine is
     // INTERNAL HELPERS
     // =========================================================================
 
-    function _pullHrepFromSender(uint256 amount) internal {
-        if (amount == 0) revert InvalidStake();
-        hrepToken.safeTransferFrom(msg.sender, address(this), amount);
-    }
-
     function _getRoundConfig(uint256 contentId, uint256 roundId) internal view returns (RoundLib.RoundConfig memory) {
         RoundLib.RoundConfig memory cfg = roundConfigSnapshot[contentId][roundId];
         if (cfg.epochDuration == 0) return _currentConfig();
@@ -1005,8 +1003,8 @@ contract RoundVotingEngine is
         return referenceRatingBps;
     }
 
-    function _previewCommitReferenceRatingBps(uint256 contentId) internal view returns (uint16) {
-        uint256 openRoundId = _previewCommitRoundId(contentId);
+    function previewCommitReferenceRatingBps(uint256 contentId) public view returns (uint16) {
+        uint256 openRoundId = previewCommitRoundId(contentId);
         if (openRoundId == nextRoundId[contentId] + 1) {
             return registry.getRating(contentId);
         }
@@ -1014,7 +1012,7 @@ contract RoundVotingEngine is
         return _getRoundReferenceRatingBps(contentId, openRoundId);
     }
 
-    function _previewCommitRoundId(uint256 contentId) internal view returns (uint256) {
+    function previewCommitRoundId(uint256 contentId) public view returns (uint256) {
         uint256 openRoundId = currentRoundId[contentId];
         if (openRoundId != 0) {
             RoundLib.Round storage round = rounds[contentId][openRoundId];
@@ -1164,24 +1162,15 @@ contract RoundVotingEngine is
         emit VoteRevealed(contentId, roundId, voter, isUp);
     }
 
+
     // =========================================================================
     // VIEW FUNCTIONS
     // =========================================================================
 
     // Note: computeCurrentEpochEnd removed to fit size limit.
     // Use config().epochDuration plus rounds(contentId, roundId).startTime to compute off-chain.
-
-    function hasCommits(uint256 contentId) external view override returns (bool) {
-        return contentHasCommits[contentId];
-    }
-
-    function previewCommitReferenceRatingBps(uint256 contentId) external view returns (uint16) {
-        return _previewCommitReferenceRatingBps(contentId);
-    }
-
-    function previewCommitRoundId(uint256 contentId) external view returns (uint256) {
-        return _previewCommitRoundId(contentId);
-    }
+    // previewCommitRoundId / previewCommitReferenceRatingBps are public above (their internal
+    // wrappers were merged into the externals to fit the EIP-170 size limit).
 
     function getRoundCommitCount(uint256 contentId, uint256 roundId) external view returns (uint256) {
         return roundCommitHashes[contentId][roundId].length;
@@ -1234,9 +1223,6 @@ contract RoundVotingEngine is
     // Frontend registry snapshot per round so historical fee claims do not depend on live registry replacement.
     mapping(uint256 => mapping(uint256 => address)) public roundFrontendRegistrySnapshot;
 
-    // Tracks whether a content item has produced at least one settled round.
-    mapping(uint256 => bool) internal contentHasSettledRound;
-
     // Settled rounds with expired unrevealed votes must be cleaned before reward claims.
     mapping(uint256 => mapping(uint256 => uint256)) public roundUnrevealedCleanupRemaining;
 
@@ -1244,5 +1230,5 @@ contract RoundVotingEngine is
     mapping(uint256 => mapping(uint256 => uint256)) internal roundCleanupIncentivePaid;
 
     // --- Storage gap reserved for future upgrades ---
-    uint256[43] private __gap;
+    uint256[44] private __gap;
 }
