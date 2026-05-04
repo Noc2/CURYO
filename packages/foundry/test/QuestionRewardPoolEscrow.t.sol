@@ -1857,6 +1857,39 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(reward, REWARD_POOL_AMOUNT / 3);
     }
 
+    function testOpenRoundWithTimelyRequiredVotersBelowQuorumBlocksRefundAndCanQualify() public {
+        address voter5 = address(0x55);
+        _registerTestVoter(voter5);
+        RoundLib.RoundConfig memory roundConfig = RoundLib.RoundConfig({
+            epochDuration: uint32(EPOCH_DURATION), maxDuration: uint32(7 days), minVoters: 5, maxVoters: 5
+        });
+        uint256 contentId =
+            _submitQuestionWithRoundConfig("https://example.com/below-quorum-before-close.jpg", roundConfig);
+        uint256 expiresAt = block.timestamp + EPOCH_DURATION + 10;
+        uint256 rewardPoolId = _createRewardPoolWithExpiry(contentId, REWARD_POOL_AMOUNT, 3, 1, expiresAt);
+
+        (uint256 roundId, bytes32[5] memory salts, bytes32[5] memory commitKeys) =
+            _commitFiveVoterT1Round(contentId, voter5, "timely-below-quorum");
+        _warpPastTlockRevealTime(block.timestamp + EPOCH_DURATION);
+        _revealFiveVoterT1Round(contentId, roundId, salts, commitKeys, 0, 3);
+        assertEq(RoundEngineReadHelpers.round(votingEngine, contentId, roundId).thresholdReachedAt, 0);
+
+        vm.warp(expiresAt + 1);
+        vm.expectRevert(QuestionRewardPoolEscrow.RewardPoolCursorNeedsAdvance.selector);
+        rewardPoolEscrow.refundExpiredRewardPool(rewardPoolId);
+
+        _revealFiveVoterT1Round(contentId, roundId, salts, commitKeys, 3, 5);
+        assertGt(RoundEngineReadHelpers.round(votingEngine, contentId, roundId).thresholdReachedAt, expiresAt);
+        votingEngine.settleRound(contentId, roundId);
+
+        assertEq(rewardPoolEscrow.claimableQuestionReward(rewardPoolId, roundId, voter1), REWARD_POOL_AMOUNT / 3);
+        assertEq(rewardPoolEscrow.claimableQuestionReward(rewardPoolId, roundId, voter4), 0);
+
+        vm.prank(voter1);
+        uint256 reward = rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
+        assertEq(reward, REWARD_POOL_AMOUNT / 3);
+    }
+
     function testRewardPoolAboveQuorumQualifiesWhenRequiredVotersRevealBeforeClose() public {
         RoundLib.RoundConfig memory roundConfig = RoundLib.RoundConfig({
             epochDuration: uint32(EPOCH_DURATION), maxDuration: uint32(7 days), minVoters: 3, maxVoters: 4

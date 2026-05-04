@@ -36,6 +36,14 @@ library QuestionRewardPoolEscrowQualificationLib {
         canQualify = eligibleVoters >= ctx.requiredVoters;
     }
 
+    function countEligibleRevealedVoters(QualificationContext memory ctx)
+        external
+        view
+        returns (uint256 eligibleVoters)
+    {
+        eligibleVoters = _countEligibleRevealedVoters(ctx);
+    }
+
     function isExcludedVoter(
         IVoterIdNFT voterIdNft,
         uint256 voterId,
