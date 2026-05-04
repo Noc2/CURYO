@@ -603,6 +603,13 @@ contract HumanFaucet is SelfVerificationRoot, EIP712, Ownable, Pausable {
         if (addressClaimed[user]) {
             revert AddressAlreadyClaimed();
         }
+        // Defense-in-depth: a wallet currently acting as another holder's Voter ID delegate
+        // must explicitly removeDelegate() before claiming its own Voter ID. Otherwise mint()
+        // would silently sever the inbound delegation (see VoterIdNFT.mint), letting a delegate
+        // unilaterally exit its delegation commitment without notifying the delegator.
+        if (address(voterIdNFT) != address(0) && voterIdNFT.delegateOf(user) != address(0)) {
+            revert AddressAlreadyClaimed();
+        }
 
         (address referrer, uint256 authDeadline, bytes memory authSignature) = _decodeClaimUserData(userData);
         if (recipientAuthorizationRequired) {
