@@ -21,6 +21,7 @@ contract MissingConfigHub {
 
 contract MigrationSourceFaucetMock {
     MigrationSourceVoterIdNFTMock public voterIdNFT = new MigrationSourceVoterIdNFTMock();
+    bool public paused = true;
     uint256 public totalClaimants;
     uint256 public totalClaimed;
     mapping(address => bool) public addressClaimed;
@@ -48,6 +49,10 @@ contract MigrationSourceFaucetMock {
 
     function remintVoterId(uint256 nullifier, address holder) external {
         voterIdNFT.remint(nullifier, holder);
+    }
+
+    function setPaused(bool paused_) external {
+        paused = paused_;
     }
 }
 
@@ -576,6 +581,33 @@ contract DeployCuryoCompilationTest is Test {
         vm.chainId(42220);
         vm.expectRevert(
             abi.encodeWithSelector(DeployCuryo.DeploymentRoleVerificationFailed.selector, "Migration source voterId missing")
+        );
+        deployScript.exposedValidateMigrationBootstrapConfigWithSource(
+            address(sourceFaucet), users, nullifiers, amounts, referrers, claimantBonuses, referrerRewards
+        );
+    }
+
+    function test_MigrationBootstrapValidation_RejectsUnpausedSourceFaucet() public {
+        DeployCuryoHarness deployScript = new DeployCuryoHarness();
+        MigrationSourceFaucetMock sourceFaucet = new MigrationSourceFaucetMock();
+        address[] memory users = new address[](1);
+        users[0] = address(0x1111);
+        uint256[] memory nullifiers = new uint256[](1);
+        nullifiers[0] = 123456;
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = 10_000e6;
+        address[] memory referrers = new address[](1);
+        uint256[] memory claimantBonuses = new uint256[](1);
+        uint256[] memory referrerRewards = new uint256[](1);
+
+        sourceFaucet.addClaim(users[0], nullifiers[0], amounts[0]);
+        sourceFaucet.setPaused(false);
+
+        vm.chainId(42220);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                DeployCuryo.DeploymentRoleVerificationFailed.selector, "Migration source faucet not paused"
+            )
         );
         deployScript.exposedValidateMigrationBootstrapConfigWithSource(
             address(sourceFaucet), users, nullifiers, amounts, referrers, claimantBonuses, referrerRewards

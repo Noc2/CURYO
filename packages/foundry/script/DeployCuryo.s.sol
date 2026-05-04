@@ -808,6 +808,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
 
         _require(migrationConfig.sourceHumanFaucet != address(0), "Migration source faucet required");
         HumanFaucet sourceHumanFaucet = HumanFaucet(migrationConfig.sourceHumanFaucet);
+        _require(sourceHumanFaucet.paused(), "Migration source faucet not paused");
         VoterIdNFT sourceVoterIdNFT = VoterIdNFT(address(sourceHumanFaucet.voterIdNFT()));
         _require(address(sourceVoterIdNFT) != address(0), "Migration source voterIdNFT required");
         _require(sourceHumanFaucet.totalClaimants() == claimCount, "Migration source claimant count");
