@@ -140,7 +140,9 @@ contract QuestionRewardPoolEscrow is
     mapping(uint256 => mapping(uint256 => mapping(uint256 => uint64))) private bundleRoundIds;
     mapping(uint256 => mapping(uint256 => BundleRoundSetSnapshot)) private bundleRoundSetSnapshots;
     mapping(uint256 => mapping(uint256 => mapping(bytes32 => bool))) private bundleRoundSetRewardClaimed;
-    mapping(uint256 => uint256) private rewardPoolFunderNullifier;
+    /// @dev rewardPoolFunderNullifier was removed (write-only after the M2-1 payer-identity
+    ///      refactor; the funder address itself is still stored on RewardPool.funder, and the
+    ///      payer nullifier covers gateway-mediated exclusion checks).
     mapping(uint256 => uint256) private rewardPoolSubmitterNullifier;
     mapping(uint256 => address) private rewardPoolPayerIdentity;
     mapping(uint256 => uint256) private rewardPoolPayerNullifier;
@@ -164,16 +166,6 @@ contract QuestionRewardPoolEscrow is
         uint8 asset,
         bool nonRefundable
     );
-    event BountyWindowCreated(
-        uint256 indexed rewardPoolId,
-        uint256 indexed contentId,
-        uint256 bountyOpensAt,
-        uint256 bountyClosesAt,
-        uint256 feedbackClosesAt,
-        uint256 requiredVoters,
-        uint256 requiredSettledRounds
-    );
-    event BountyWindowExpired(uint256 indexed rewardPoolId, uint256 indexed contentId, uint256 amount);
     event RewardPoolRoundQualified(
         uint256 indexed rewardPoolId,
         uint256 indexed contentId,
@@ -474,14 +466,12 @@ contract QuestionRewardPoolEscrow is
 
         uint256 currentRoundId = votingEngine.currentRoundId(contentId);
         uint256 startRoundId = currentRoundId == 0 ? 1 : currentRoundId + 1;
-        (uint256 funderVoterId, address funderIdentity, uint256 funderNullifier) = _resolveFunderIdentity(funder, asset);
+        (uint256 funderVoterId, address funderIdentity,) = _resolveFunderIdentity(funder, asset);
         // For X402 and other gateway-mediated payments, the actual human payer (submitter)
         // differs from the refund destination (funder/gateway). Resolve the payer's identity
         // for funder-side voter-eligibility exclusion so the payer cannot vote on their own question.
         address effectivePayer = payer == address(0) ? funder : payer;
-        (uint256 payerVoterId, address payerIdentity, uint256 payerNullifier) = _resolveFunderIdentity(effectivePayer, asset);
-        // Suppress unused variable warnings for payerVoterId (kept for consistency with _resolveFunderIdentity)
-        payerVoterId;
+        (, address payerIdentity, uint256 payerNullifier) = _resolveFunderIdentity(effectivePayer, asset);
         address submitterIdentity = registry.getSubmitterIdentity(contentId);
         uint256 submitterNullifier = registry.contentSubmitterNullifier(contentId);
 
@@ -511,7 +501,6 @@ contract QuestionRewardPoolEscrow is
             frontendFeeBps: defaultFrontendFeeBps,
             nonRefundable: nonRefundable
         });
-        rewardPoolFunderNullifier[rewardPoolId] = funderNullifier;
         rewardPoolSubmitterNullifier[rewardPoolId] = submitterNullifier;
         rewardPoolPayerIdentity[rewardPoolId] = payerIdentity;
         rewardPoolPayerNullifier[rewardPoolId] = payerNullifier;
@@ -606,16 +595,9 @@ contract QuestionRewardPoolEscrow is
         }
         rewardPool.claimedAmount += grossAmount;
 
-        IERC20 rewardToken = _rewardToken(rewardPool.asset);
-        uint256 paidFrontendFee = _routeFrontendFee(rewardToken, frontendRecipient, frontendFee);
-        if (paidFrontendFee != frontendFee) {
-            rewardAmount += frontendFee;
-            frontendFee = 0;
-            frontendRecipient = address(0);
-        }
-        if (rewardAmount > 0) {
-            rewardToken.safeTransfer(rewardRecipient, rewardAmount);
-        }
+        (rewardAmount, frontendFee, frontendRecipient) = _settleClaimPayout(
+            _rewardToken(rewardPool.asset), rewardRecipient, rewardAmount, frontendRecipient, frontendFee
+        );
         emit QuestionRewardClaimed(
             rewardPoolId,
             rewardPool.contentId,
@@ -628,6 +610,29 @@ contract QuestionRewardPoolEscrow is
             frontendFee,
             grossAmount
         );
+    }
+
+    function _settleClaimPayout(
+        IERC20 rewardToken,
+        address rewardRecipient,
+        uint256 rewardAmount,
+        address frontendRecipient,
+        uint256 frontendFee
+    ) internal returns (uint256, uint256, address) {
+        if (
+            frontendFee > 0 && frontendRecipient != address(0)
+                && TokenTransferLib.tryTransfer(rewardToken, frontendRecipient, frontendFee)
+        ) {
+            // Frontend fee paid; nothing to redirect.
+        } else {
+            rewardAmount += frontendFee;
+            frontendFee = 0;
+            frontendRecipient = address(0);
+        }
+        if (rewardAmount > 0) {
+            rewardToken.safeTransfer(rewardRecipient, rewardAmount);
+        }
+        return (rewardAmount, frontendFee, frontendRecipient);
     }
 
     function recordBundleQuestionTerminal(uint256 contentId, uint256 roundId, bool settled) external {
@@ -752,16 +757,9 @@ contract QuestionRewardPoolEscrow is
         }
         bundle.claimedAmount += grossAmount;
 
-        IERC20 rewardToken = _rewardToken(bundle.asset);
-        uint256 paidFrontendFee = _routeFrontendFee(rewardToken, frontendRecipient, reservedFrontendFee);
-        if (paidFrontendFee != reservedFrontendFee) {
-            rewardAmount += reservedFrontendFee;
-            reservedFrontendFee = 0;
-            frontendRecipient = address(0);
-        }
-        if (rewardAmount > 0) {
-            rewardToken.safeTransfer(rewardRecipient, rewardAmount);
-        }
+        (rewardAmount, reservedFrontendFee, frontendRecipient) = _settleClaimPayout(
+            _rewardToken(bundle.asset), rewardRecipient, rewardAmount, frontendRecipient, reservedFrontendFee
+        );
 
         emit QuestionBundleRewardClaimed(
             bundleId,
@@ -1007,14 +1005,6 @@ contract QuestionRewardPoolEscrow is
         token.safeTransferFrom(funder, address(this), amount);
         receivedAmount = token.balanceOf(address(this)) - balanceBefore;
         require(receivedAmount == amount, "Bad token");
-    }
-
-    function _routeFrontendFee(IERC20 token, address frontendRecipient, uint256 amount)
-        internal
-        returns (uint256 paidAmount)
-    {
-        if (amount == 0 || frontendRecipient == address(0)) return 0;
-        return TokenTransferLib.tryTransfer(token, frontendRecipient, amount) ? amount : 0;
     }
 
     function _requireFutureBountyWindow(uint256 bountyClosesAt) internal view {
