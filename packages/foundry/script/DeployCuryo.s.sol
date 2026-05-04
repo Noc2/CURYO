@@ -464,6 +464,29 @@ contract DeployCuryo is ScaffoldETHDeploy {
         // 14. Renounce deployer's temporary roles
         // Local dev: deployer IS governance, so don't renounce (need roles for dev)
         if (!isLocalDev) {
+            ProductionDeploymentRoleVerification memory productionTargets = ProductionDeploymentRoleVerification({
+                deployerAddress: deployer,
+                governance: governance,
+                governorAddr: governorAddr,
+                hrepToken: hrepToken,
+                registry: registry,
+                votingEngine: votingEngine,
+                protocolConfig: protocolConfig,
+                rewardDistributor: rewardDistributor,
+                questionRewardPoolEscrow: questionRewardPoolEscrow,
+                x402QuestionSubmitter: x402QuestionSubmitter,
+                feedbackBonusEscrow: feedbackBonusEscrow,
+                frontendRegistry: frontendRegistry,
+                profileRegistry: profileRegistry,
+                categoryRegistry: categoryRegistry,
+                voterIdNFT: voterIdNFT,
+                participationPool: participationPool,
+                humanFaucet: humanFaucet,
+                humanFaucetOpen: false
+            });
+            _verifyProductionDeploymentBeforeIrreversibleHandoff(productionTargets);
+            console.log("Verified production wiring before deployer role handoff");
+
             // Production/testnet dev faucet grants now require governance after deployment.
             address devFaucet = vm.envOr("DEV_FAUCET_ADDRESS", address(0));
             bool isTestnet = (block.chainid == 44787 || block.chainid == 11142220);
@@ -502,28 +525,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
             console.log("Renounced all deployer temporary roles (including Timelock)");
             console.log("VoterIdNFT ownership transferred to governance");
 
-            _verifyProductionDeploymentRoles(
-                ProductionDeploymentRoleVerification({
-                    deployerAddress: deployer,
-                    governance: governance,
-                    governorAddr: governorAddr,
-                    hrepToken: hrepToken,
-                    registry: registry,
-                    votingEngine: votingEngine,
-                    protocolConfig: protocolConfig,
-                    rewardDistributor: rewardDistributor,
-                    questionRewardPoolEscrow: questionRewardPoolEscrow,
-                    x402QuestionSubmitter: x402QuestionSubmitter,
-                    feedbackBonusEscrow: feedbackBonusEscrow,
-                    frontendRegistry: frontendRegistry,
-                    profileRegistry: profileRegistry,
-                    categoryRegistry: categoryRegistry,
-                    voterIdNFT: voterIdNFT,
-                    participationPool: participationPool,
-                    humanFaucet: humanFaucet,
-                    humanFaucetOpen: false
-                })
-            );
+            _verifyProductionDeploymentRoles(productionTargets);
             console.log("Verified governance ownership, deployer role renunciation, and paused faucet pre-launch");
 
             exportDeployments(false);
@@ -532,28 +534,8 @@ contract DeployCuryo is ScaffoldETHDeploy {
             humanFaucet.openClaimsAndTransferOwnership();
             console.log("Opened HumanFaucet public claims and transferred ownership to governance");
 
-            _verifyProductionDeploymentRoles(
-                ProductionDeploymentRoleVerification({
-                    deployerAddress: deployer,
-                    governance: governance,
-                    governorAddr: governorAddr,
-                    hrepToken: hrepToken,
-                    registry: registry,
-                    votingEngine: votingEngine,
-                    protocolConfig: protocolConfig,
-                    rewardDistributor: rewardDistributor,
-                    questionRewardPoolEscrow: questionRewardPoolEscrow,
-                    x402QuestionSubmitter: x402QuestionSubmitter,
-                    feedbackBonusEscrow: feedbackBonusEscrow,
-                    frontendRegistry: frontendRegistry,
-                    profileRegistry: profileRegistry,
-                    categoryRegistry: categoryRegistry,
-                    voterIdNFT: voterIdNFT,
-                    participationPool: participationPool,
-                    humanFaucet: humanFaucet,
-                    humanFaucetOpen: true
-                })
-            );
+            productionTargets.humanFaucetOpen = true;
+            _verifyProductionDeploymentRoles(productionTargets);
             console.log("Verified HumanFaucet final launch state");
         } else {
             // Local dev: just revoke MINTER_ROLE as before
@@ -932,6 +914,224 @@ contract DeployCuryo is ScaffoldETHDeploy {
         _verifyProductionX402SubmitterWiring(targets);
         _verifyProductionParticipationAndFaucetWiring(targets);
         _verifyProductionGovernorAndTimelock(targets);
+    }
+
+    function _verifyProductionDeploymentBeforeIrreversibleHandoff(ProductionDeploymentRoleVerification memory targets)
+        internal
+        view
+    {
+        _verifyProductionPermanentRolesBeforeHandoff(targets);
+        _verifyProductionCoreWiring(targets);
+        _verifyProductionEscrowWiring(targets);
+        _verifyProductionX402SubmitterWiring(targets);
+        _verifyProductionParticipationAndFaucetWiringBeforeHandoff(targets);
+        _verifyProductionGovernorAndTimelockBeforeHandoff(targets);
+    }
+
+    function _verifyProductionPermanentRolesBeforeHandoff(ProductionDeploymentRoleVerification memory targets)
+        internal
+        view
+    {
+        HumanReputation hrepToken = targets.hrepToken;
+        _requireHasRole(
+            address(hrepToken), hrepToken.DEFAULT_ADMIN_ROLE(), targets.governance, "HREP governance default admin"
+        );
+        _requireHasRole(address(hrepToken), hrepToken.CONFIG_ROLE(), targets.governance, "HREP governance config");
+
+        ContentRegistry registry = targets.registry;
+        _requireHasRole(
+            address(registry),
+            registry.DEFAULT_ADMIN_ROLE(),
+            targets.governance,
+            "ContentRegistry governance default admin"
+        );
+        _requireHasRole(
+            address(registry), registry.CONFIG_ROLE(), targets.governance, "ContentRegistry governance config"
+        );
+        _requireHasRole(
+            address(registry), registry.PAUSER_ROLE(), targets.governance, "ContentRegistry governance pauser"
+        );
+        _requireHasRole(
+            address(registry), registry.TREASURY_ROLE(), targets.governance, "ContentRegistry governance treasury"
+        );
+        _requireHasRole(
+            address(registry),
+            registry.TREASURY_ADMIN_ROLE(),
+            targets.governance,
+            "ContentRegistry governance treasury admin"
+        );
+        _requireHasRole(
+            address(registry),
+            registry.X402_GATEWAY_ROLE(),
+            address(targets.x402QuestionSubmitter),
+            "ContentRegistry x402 gateway"
+        );
+        _requireProxyAdminOwner(address(registry), targets.governance, "ContentRegistry proxy admin owner");
+
+        RoundVotingEngine votingEngine = targets.votingEngine;
+        _requireHasRole(
+            address(votingEngine),
+            votingEngine.DEFAULT_ADMIN_ROLE(),
+            targets.governance,
+            "RoundVotingEngine governance default admin"
+        );
+        _requireHasRole(
+            address(votingEngine), votingEngine.PAUSER_ROLE(), targets.governance, "RoundVotingEngine governance pauser"
+        );
+        _requireProxyAdminOwner(address(votingEngine), targets.governance, "RoundVotingEngine proxy admin owner");
+
+        ProtocolConfig protocolConfig = targets.protocolConfig;
+        _requireHasRole(
+            address(protocolConfig),
+            protocolConfig.DEFAULT_ADMIN_ROLE(),
+            targets.governance,
+            "ProtocolConfig governance default admin"
+        );
+        _requireHasRole(
+            address(protocolConfig),
+            protocolConfig.CONFIG_ROLE(),
+            targets.governance,
+            "ProtocolConfig governance config"
+        );
+        _requireHasRole(
+            address(protocolConfig),
+            protocolConfig.TREASURY_ROLE(),
+            targets.governance,
+            "ProtocolConfig governance treasury"
+        );
+        _requireHasRole(
+            address(protocolConfig),
+            protocolConfig.TREASURY_ADMIN_ROLE(),
+            targets.governance,
+            "ProtocolConfig governance treasury admin"
+        );
+        _requireProxyAdminOwner(address(protocolConfig), targets.governance, "ProtocolConfig proxy admin owner");
+
+        _verifyProductionEscrowRolesBeforeHandoff(targets);
+        _verifyProductionUserRegistryRolesBeforeHandoff(targets);
+    }
+
+    function _verifyProductionEscrowRolesBeforeHandoff(ProductionDeploymentRoleVerification memory targets)
+        internal
+        view
+    {
+        RoundRewardDistributor rewardDistributor = targets.rewardDistributor;
+        _requireHasRole(
+            address(rewardDistributor),
+            rewardDistributor.DEFAULT_ADMIN_ROLE(),
+            targets.governance,
+            "RoundRewardDistributor governance default admin"
+        );
+        _requireProxyAdminOwner(
+            address(rewardDistributor), targets.governance, "RoundRewardDistributor proxy admin owner"
+        );
+
+        QuestionRewardPoolEscrow questionRewardPoolEscrow = targets.questionRewardPoolEscrow;
+        _requireHasRole(
+            address(questionRewardPoolEscrow),
+            questionRewardPoolEscrow.DEFAULT_ADMIN_ROLE(),
+            targets.governance,
+            "QuestionRewardPoolEscrow governance default admin"
+        );
+        _requireHasRole(
+            address(questionRewardPoolEscrow),
+            QUESTION_ESCROW_CONFIG_ROLE,
+            targets.governance,
+            "QuestionRewardPoolEscrow governance config"
+        );
+        _requireHasRole(
+            address(questionRewardPoolEscrow),
+            QUESTION_ESCROW_PAUSER_ROLE,
+            targets.governance,
+            "QuestionRewardPoolEscrow governance pauser"
+        );
+        _requireProxyAdminOwner(
+            address(questionRewardPoolEscrow), targets.governance, "QuestionRewardPoolEscrow proxy admin owner"
+        );
+
+        FeedbackBonusEscrow feedbackBonusEscrow = targets.feedbackBonusEscrow;
+        _requireHasRole(
+            address(feedbackBonusEscrow),
+            feedbackBonusEscrow.DEFAULT_ADMIN_ROLE(),
+            targets.governance,
+            "FeedbackBonusEscrow governance default admin"
+        );
+        _requireHasRole(
+            address(feedbackBonusEscrow),
+            feedbackBonusEscrow.CONFIG_ROLE(),
+            targets.governance,
+            "FeedbackBonusEscrow governance config"
+        );
+        _requireHasRole(
+            address(feedbackBonusEscrow),
+            feedbackBonusEscrow.PAUSER_ROLE(),
+            targets.governance,
+            "FeedbackBonusEscrow governance pauser"
+        );
+        _requireProxyAdminOwner(
+            address(feedbackBonusEscrow), targets.governance, "FeedbackBonusEscrow proxy admin owner"
+        );
+    }
+
+    function _verifyProductionUserRegistryRolesBeforeHandoff(ProductionDeploymentRoleVerification memory targets)
+        internal
+        view
+    {
+        FrontendRegistry frontendRegistry = targets.frontendRegistry;
+        _requireHasRole(
+            address(frontendRegistry),
+            frontendRegistry.DEFAULT_ADMIN_ROLE(),
+            targets.governance,
+            "FrontendRegistry governance default admin"
+        );
+        _requireHasRole(
+            address(frontendRegistry),
+            frontendRegistry.ADMIN_ROLE(),
+            targets.governance,
+            "FrontendRegistry governance admin"
+        );
+        _requireHasRole(
+            address(frontendRegistry),
+            frontendRegistry.GOVERNANCE_ROLE(),
+            targets.governance,
+            "FrontendRegistry governance governance-role"
+        );
+        _requireHasRole(
+            address(frontendRegistry),
+            frontendRegistry.FEE_CREDITOR_ROLE(),
+            address(targets.rewardDistributor),
+            "FrontendRegistry reward distributor fee creditor"
+        );
+        _requireProxyAdminOwner(address(frontendRegistry), targets.governance, "FrontendRegistry proxy admin owner");
+
+        ProfileRegistry profileRegistry = targets.profileRegistry;
+        _requireHasRole(
+            address(profileRegistry),
+            profileRegistry.DEFAULT_ADMIN_ROLE(),
+            targets.governance,
+            "ProfileRegistry governance default admin"
+        );
+        _requireHasRole(
+            address(profileRegistry),
+            profileRegistry.ADMIN_ROLE(),
+            targets.governance,
+            "ProfileRegistry governance admin"
+        );
+        _requireProxyAdminOwner(address(profileRegistry), targets.governance, "ProfileRegistry proxy admin owner");
+
+        CategoryRegistry categoryRegistry = targets.categoryRegistry;
+        _requireHasRole(
+            address(categoryRegistry),
+            categoryRegistry.DEFAULT_ADMIN_ROLE(),
+            targets.governance,
+            "CategoryRegistry governance default admin"
+        );
+        _requireHasRole(
+            address(categoryRegistry),
+            categoryRegistry.ADMIN_ROLE(),
+            targets.governance,
+            "CategoryRegistry governance admin"
+        );
     }
 
     function _verifyProductionTokenRoles(ProductionDeploymentRoleVerification memory targets) internal view {
@@ -1320,6 +1520,59 @@ contract DeployCuryo is ScaffoldETHDeploy {
                 _require(targets.humanFaucet.paused(), "HumanFaucet paused pre-launch");
             }
         }
+    }
+
+    function _verifyProductionParticipationAndFaucetWiringBeforeHandoff(ProductionDeploymentRoleVerification memory targets)
+        internal
+        view
+    {
+        _require(targets.voterIdNFT.owner() == targets.deployerAddress, "VoterIdNFT deployer owner pre-handoff");
+        _require(targets.voterIdNFT.governance() == targets.governance, "VoterIdNFT governance");
+        _require(targets.voterIdNFT.stakeRecorder() == address(targets.votingEngine), "VoterIdNFT stake recorder");
+        _require(targets.participationPool.owner() == targets.governance, "ParticipationPool governance owner");
+        _require(
+            address(targets.participationPool.hrepToken()) == address(targets.hrepToken), "ParticipationPool HREP token"
+        );
+        _require(targets.participationPool.governance() == targets.governance, "ParticipationPool governance");
+        _require(
+            targets.participationPool.authorizedCallers(address(targets.rewardDistributor)),
+            "ParticipationPool reward distributor authorized"
+        );
+        if (address(targets.humanFaucet) != address(0)) {
+            _require(
+                targets.voterIdNFT.authorizedMinters(address(targets.humanFaucet)), "VoterIdNFT HumanFaucet minter"
+            );
+            _require(address(targets.humanFaucet.hrepToken()) == address(targets.hrepToken), "HumanFaucet HREP token");
+            _require(address(targets.humanFaucet.voterIdNFT()) == address(targets.voterIdNFT), "HumanFaucet voterIdNFT");
+            _require(targets.humanFaucet.governance() == targets.governance, "HumanFaucet governance");
+            _require(targets.humanFaucet.migrationBootstrapClosed(), "HumanFaucet migration bootstrap closed");
+            _require(targets.humanFaucet.verificationConfigId() != bytes32(0), "HumanFaucet config stored");
+            _require(
+                targets.humanFaucet.recipientAuthorizationRequired(), "HumanFaucet recipient authorization required"
+            );
+            _require(targets.humanFaucet.owner() == targets.deployerAddress, "HumanFaucet deployer owner pre-launch");
+            _require(targets.humanFaucet.paused(), "HumanFaucet paused pre-launch");
+        }
+    }
+
+    function _verifyProductionGovernorAndTimelockBeforeHandoff(ProductionDeploymentRoleVerification memory targets)
+        internal
+        view
+    {
+        _require(targets.governorAddr != address(0), "Governor deployed");
+        CuryoGovernor governor = CuryoGovernor(payable(targets.governorAddr));
+        _require(address(governor.hrepToken()) == address(targets.hrepToken), "Governor HREP token");
+        _require(governor.timelock() == targets.governance, "Governor timelock");
+        _require(governor.poolsInitialized(), "Governor pools initialized");
+        _assertExactExcludedHolders(governor, _buildProductionQuorumExcludedHolders(targets));
+
+        TimelockController timelock = TimelockController(payable(targets.governance));
+        _requireHasRole(address(timelock), timelock.DEFAULT_ADMIN_ROLE(), address(timelock), "Timelock self admin");
+        _requireHasRole(address(timelock), timelock.PROPOSER_ROLE(), targets.governorAddr, "Timelock governor proposer");
+        _requireHasRole(
+            address(timelock), timelock.CANCELLER_ROLE(), targets.governorAddr, "Timelock governor canceller"
+        );
+        _requireHasRole(address(timelock), timelock.EXECUTOR_ROLE(), address(0), "Timelock open executor");
     }
 
     function _verifyProductionGovernorAndTimelock(ProductionDeploymentRoleVerification memory targets) internal view {
