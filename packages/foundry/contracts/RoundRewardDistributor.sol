@@ -249,12 +249,6 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         bool voterWon = (commit.isUp == round.upWins);
 
         if (!voterWon) {
-            if (roundLoserRebateDustFinalized[contentId][roundId]) {
-                // Loser rebate dust has been finalized to protocol; no rebate remains.
-                emit RewardClaimed(contentId, roundId, rewardRecipient, commit.voter, 0, 0);
-                return;
-            }
-
             uint256 loserRefundPool =
                 RewardMath.calculateRevealedLoserRefund(round.upWins ? round.downPool : round.upPool);
             uint256 totalLosingClaimants = round.upWins ? round.downCount : round.upCount;
@@ -293,17 +287,6 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         uint256 claimedAmount = roundVoterRewardClaimedAmount[contentId][roundId];
         if (totalWinningClaimants == 0 || claimedCount >= totalWinningClaimants || claimedAmount > voterPool) {
             revert PoolExhausted();
-        }
-
-        // If voter-reward dust has been finalized to protocol, the pool is exhausted.
-        // Pay only the stake refund so the winner does not atomically lose both reward
-        // and stake refund to an accountedHrepBalance underflow.
-        if (roundVoterRewardDustFinalized[contentId][roundId]) {
-            if (commit.stakeAmount > 0) {
-                votingEngine.transferReward(commit.voter, commit.stakeAmount);
-            }
-            emit RewardClaimed(contentId, roundId, rewardRecipient, commit.voter, commit.stakeAmount, 0);
-            return;
         }
 
         uint256 reward;
