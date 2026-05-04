@@ -14,14 +14,14 @@ import type { Section } from "./types";
 export const SECTIONS: Section[] = [
   {
     title: "Introduction",
-    lead: "Curyo is a human-in-the-loop judgment layer for AI agents.",
+    lead: "Curyo is a public, paid, verified-human evaluation layer for agents and AI product teams.",
     subsections: [
       {
         heading: "Mission",
         blocks: [
           {
             type: "paragraph",
-            text: "Curyo exists for the moment an agent should ask instead of guess. It gives agents and people a human-in-the-loop path to publish one bounded question, attach source context and funding, and receive a public, stake-backed judgment from verified humans that other agents can inspect later.",
+            text: "Curyo exists for the moment an agent should ask instead of guess. It gives agents, AI product teams, and people a human-in-the-loop path to publish one bounded question, attach source context and funding, and receive a public, stake-backed judgment from verified humans that other agents can inspect later.",
           },
         ],
       },
@@ -44,6 +44,7 @@ export const SECTIONS: Section[] = [
               "Paid attention -- every ask carries a non-refundable bounty funded in HREP or Celo USDC.",
               "Verified humans -- only Voter ID holders can vote or earn voter rewards.",
               "Skin in the game -- votes are backed by HREP stake rather than passive engagement.",
+              "Agent-native access -- public MCP, direct JSON routes, SDK helpers, browser signing, and local signer flows all feed the same protocol record.",
               "Reusable output -- settled results stay public so later agents can inspect them instead of repeating the same ask.",
             ],
           },
@@ -54,7 +55,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Curyo returns a judgment package, not just a raw score. Agents can read the settled direction, rating movement, vote distribution, optional feedback after unlock, payout metadata, and a public result URL that can be cited in later decisions. The result is a public human judgment signal, not proof of universal truth.",
+            text: "Curyo returns a judgment package, not just a raw score. Agents can read the settled direction, rating movement, vote distribution, answer, confidence, rationale summary, dissenting view, optional feedback after unlock, payout metadata, and a public result URL that can be cited in later decisions. The result is a public human judgment signal, not proof of universal truth.",
           },
         ],
       },
@@ -86,8 +87,18 @@ export const SECTIONS: Section[] = [
                 ["Taste or clarity", "Which generated image better matches the brief?"],
                 ["Local context", "Does this venue look open and trustworthy?"],
                 ["Action review", "Should this agent send this message or hold it for review?"],
+                ["Trace review", "Did this agent use its tools appropriately for the task?"],
               ],
             },
+          },
+        ],
+      },
+      {
+        heading: "Human Evaluation Workloads",
+        blocks: [
+          {
+            type: "paragraph",
+            text: "The current AI focus is broader than generic feedback. Curyo is designed to support LLM answer quality review, RAG grounding, claim verification, source credibility screening, autonomous action gates, feature acceptance tests, agent trace review, proposal review, and output preference comparisons while keeping the same staked human rating primitive.",
           },
         ],
       },
@@ -114,7 +125,7 @@ export const SECTIONS: Section[] = [
               "Detect uncertainty, disagreement, or a high-cost action.",
               "Quote the ask, choose budget and timing, and submit a short question with context.",
               "Let verified humans vote during the blind phase.",
-              "Read the settled answer, confidence, objections, and limitations.",
+              "Read the settled answer, confidence, vote signal, objections, and limitations.",
               "Act, revise, escalate, or stop while storing the public result URL in the agent audit trail.",
             ],
           },
@@ -133,7 +144,7 @@ export const SECTIONS: Section[] = [
             type: "ordered",
             items: [
               "Ask: submit one question-first ask with a required context URL and optional preview media.",
-              "Fund: attach a non-refundable bounty in HREP or USDC on Celo; agent asks should spend from user-authorized smart wallets or scoped agent wallets.",
+              "Fund: attach a non-refundable bounty in HREP or USDC on Celo; agent asks spend from user-authorized wallets, scoped agent wallets, x402 authorization, or ordered wallet calls.",
               "Vote: verified humans stake HREP on whether the displayed rating should move up or down and may add hidden feedback.",
               "Settle: the round resolves once the configured reveal and participation conditions are met.",
               "Reuse: any later agent can inspect the same settled result instead of paying to rediscover the same judgment.",
@@ -146,7 +157,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Submission starts from the question rather than from a passive content object. Every ask requires a source URL, can optionally include image or YouTube preview media, and chooses blind phase, maximum duration, settlement voters, and voter cap inside governance bounds. Agents can submit through direct transactions or through the hosted payment flow, but the resulting public record is the same.",
+            text: "Submission starts from the question rather than from a passive content object. Every ask requires a source URL, can optionally include image or YouTube preview media, and chooses blind phase, maximum duration, settlement voters, and voter cap inside governance bounds. Agents can submit through public MCP tools, direct JSON routes, browser signing intents, a local signer CLI, or optional managed policies, but the resulting public record is the same.",
           },
         ],
       },
@@ -199,9 +210,65 @@ export const SECTIONS: Section[] = [
             type: "bullets",
             items: [
               "Protocol state: content ID, operation key, transaction history, vote counts, stake mass, and the settled rating.",
-              "Agent-facing interpretation: answer, confidence, rationale summary, major objections, dissenting view, and recommended next action.",
+              "Agent-facing interpretation: answer, confidence, vote signal, rationale summary, major objections, dissenting view, limitations, and recommended next action.",
               "Audit surface: a public URL that preserves the original question and lets later systems inspect the same judgment record.",
             ],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Product Experience",
+    lead: "The current design makes the AI ask -> human earning loop visible from the first screen.",
+    subsections: [
+      {
+        heading: "Agent-First Brand",
+        blocks: [
+          {
+            type: "paragraph",
+            text: "The landing experience now leads with the concrete loop: AI Asks, Humans Earn. The visual system uses the warm Curyo AI-sphere mark and an AI/human collaboration hero, then explains the product through three steps: agents ask with context and bounty, verified humans stake judgment during blind rounds, and humans earn while agents use the verified feedback.",
+          },
+          {
+            type: "bullets",
+            items: [
+              "Primary routes point people to earn USDC or learn how agents integrate.",
+              "The product benefit cards map directly to the technical rails: x402 and MCP for agents, Voter ID for verified humans, commit-reveal for honest rating, bounties and Feedback Bonuses for paid work, and on-chain settlement for transparency.",
+              "The brand copy now frames Curyo as verified, staked human feedback for AI agents rather than a generic content curation app.",
+            ],
+          },
+        ],
+      },
+      {
+        heading: "Docs and App Shell",
+        blocks: [
+          {
+            type: "paragraph",
+            text: "Documentation has moved back into the app sidebar shell so protocol, AI, SDK, tokenomics, governance, and whitepaper pages sit beside the wallet-aware product routes. That design keeps the reference material close to ask, vote, governance, and settings workflows while preserving linkable section headings for agents and human operators.",
+          },
+        ],
+      },
+      {
+        heading: "Agent Setup Surface",
+        blocks: [
+          {
+            type: "bullets",
+            items: [
+              "`/ask?tab=agent` is an optional setup and funding helper, not a required account gate.",
+              "Public agent access works without a Curyo account, bearer token, or saved policy when the agent supplies a funded `walletAddress` and the user approves the spend path.",
+              "Browser signing creates an `/agent/sign/{intentId}` handoff for MetaMask, Ledger, and other injected-wallet approval flows.",
+              "Local signer tooling lets a Codex-like local agent use an encrypted keystore, sign x402 authorization when required, execute returned calls, and confirm hashes.",
+              "Wallet settings cover CELO for gas, while the agent setup screen can help fund Celo USDC for bounties.",
+            ],
+          },
+        ],
+      },
+      {
+        heading: "Human Earning Surface",
+        blocks: [
+          {
+            type: "paragraph",
+            text: "The human side is designed around concrete paid work rather than abstract engagement. Verified humans rate bounded asks, risk HREP stake, reveal through keeper-assisted or fallback paths, claim eligible bounties and rewards after settlement, and can earn optional USDC Feedback Bonuses for hidden notes that make the result more useful to agents.",
           },
         ],
       },
@@ -317,8 +384,10 @@ export const SECTIONS: Section[] = [
             type: "bullets",
             items: [
               "Every ask attaches a non-refundable bounty in HREP or USDC on Celo.",
+              "Celo USDC agent asks can use x402 authorization or ordered wallet calls to fund protocol escrow directly from the approved wallet.",
               "Qualified bounty rounds pay eligible revealed voters and reserve 3% for eligible frontend operators.",
               "Optional USDC Feedback Bonuses reward hidden notes by canonical hash after settlement.",
+              "USDC asks do not require the submitter to hold a Voter ID, while voting and earning voter rewards remain gated to verified humans.",
               "Submitters do not earn upside from their own ask; the protocol pays for judgment, not self-rating.",
             ],
           },
@@ -369,7 +438,7 @@ export const SECTIONS: Section[] = [
   },
   {
     title: "Agent Interfaces",
-    lead: "Agents should integrate with Curyo through narrow, budgeted interfaces rather than raw transaction plumbing.",
+    lead: "Agents integrate through public, accountless interfaces first and managed controls only when useful.",
     subsections: [
       {
         heading: "Integration Surfaces",
@@ -377,26 +446,28 @@ export const SECTIONS: Section[] = [
           {
             type: "bullets",
             items: [
-              "Managed MCP and SDK tools for agent-wallet delegated asks, with Celo USDC wallet calls that fund protocol escrow without operator custody or a separate service fee.",
-              "MCP-style tools such as `curyo_quote_question`, `curyo_ask_humans`, `curyo_get_question_status`, `curyo_get_result`, `curyo_list_result_templates`, and `curyo_get_agent_balance`.",
-              "Typed SDK helpers that mirror the same quote, ask, status, result, and webhook-verification flows.",
-              "Signed callbacks so always-on agents can wake up when an ask changes state instead of polling constantly.",
+              "Public MCP and direct JSON routes support wallet-direct asks with `walletAddress` and no bearer token.",
+              "MCP-style tools include `curyo_list_categories`, `curyo_list_result_templates`, `curyo_quote_question`, `curyo_ask_humans`, `curyo_confirm_ask_transactions`, `curyo_get_question_status`, and `curyo_get_result`.",
+              "Payment modes include ordered `wallet_calls` and native `x402_authorization` for Celo USDC asks.",
+              "Browser signing intents let an agent create an approval URL for a human operator to connect a wallet, prepare the ask, execute transactions, and confirm hashes.",
+              "The local signer CLI loads an encrypted keystore, signs x402 authorization when needed, sends returned transaction plan calls through viem, waits for receipts, and confirms the ask.",
+              "Optional managed policies add bearer tokens, Curyo-enforced spend caps, category allowlists, signed callbacks, balance tooling through `curyo_get_agent_balance`, and audit exports.",
             ],
           },
         ],
       },
       {
-        heading: "Connector Flow",
+        heading: "Public Connector Flow",
         blocks: [
           {
             type: "ordered",
             items: [
-              "Configure the remote connector or SDK with an operator token and explicit budget caps.",
-              "Call `curyo_list_result_templates` to choose the result shape that matches the task.",
-              "Call `curyo_quote_question` before spending so the agent sees price, timing, and bounds.",
-              "Submit through `curyo_ask_humans` with a deterministic client request ID and optional callback URL.",
-              "Wait for a signed callback or recover through `curyo_get_question_status` without re-submitting the paid ask.",
-              "Read the result through `curyo_get_result`, persist the public URL, and continue, revise, or stop.",
+              "Choose a category and result template.",
+              "Quote the ask with `walletAddress`, budget, voter count, and timing preferences before spending.",
+              "Submit through `curyo_ask_humans` or `POST /api/agent/asks` with a stable `clientRequestId`, bounty, max payment amount, and payment mode.",
+              "Sign the x402 authorization or execute the returned wallet calls; use browser signing when a human needs to approve the transaction in an injected wallet.",
+              "Confirm submitted transaction hashes through `curyo_confirm_ask_transactions`.",
+              "Poll `curyo_get_question_status`, wait for an optional signed callback, then read `curyo_get_result`, persist the public URL, and continue, revise, or stop.",
             ],
           },
         ],
@@ -409,10 +480,25 @@ export const SECTIONS: Section[] = [
             data: {
               headers: ["Agent type", "Best integration", "Wait strategy", "Example"],
               rows: [
-                ["Chat agents", "Remote connector or MCP", "Poll status/result", "ChatGPT, Claude"],
-                ["Persistent agents", "Remote MCP plus callbacks", "Signed callback webhook", "Hermes, OpenClaw"],
-                ["Terminal agents", "`mcpServers` or SDK", "Poll or callback", "Coding agents and CLIs"],
-                ["Backend workers", "SDK or HTTP", "Callback queue", "Research, lead-gen, moderation jobs"],
+                ["Chat agents", "Public MCP or browser signing handoff", "Poll status/result", "ChatGPT, Claude"],
+                [
+                  "Persistent agents",
+                  "Public MCP or managed MCP plus callbacks",
+                  "Signed callback webhook",
+                  "Hermes, OpenClaw",
+                ],
+                [
+                  "Terminal agents",
+                  "`mcpServers`, SDK, or local signer CLI",
+                  "Poll or callback",
+                  "Coding agents and CLIs",
+                ],
+                [
+                  "Backend workers",
+                  "SDK or direct JSON routes",
+                  "Callback queue",
+                  "Research, lead-gen, moderation jobs",
+                ],
               ],
             },
           },
@@ -427,6 +513,9 @@ export const SECTIONS: Section[] = [
               "`generic_rating` turns the binary rating system into a general support signal.",
               "`go_no_go` maps up to proceed and down to stop or revise for action review flows.",
               "`ranked_option_member` lets an agent ask one question per option and compare settled outputs without inventing a new scoring system.",
+              "`llm_answer_quality`, `rag_grounding_check`, `claim_verification`, and `source_credibility_check` cover answer quality, grounding, factual support, and evidence reliability.",
+              "`agent_action_go_no_go`, `feature_acceptance_test`, `agent_trace_review`, and `proposal_review` cover action gates, public preview testing, trajectory/tool-call review, and proposal readiness.",
+              "`pairwise_output_preference` supports AI/model output comparisons while preserving one anchored ask per judged candidate.",
             ],
           },
           {
@@ -505,7 +594,7 @@ export const SECTIONS: Section[] = [
               "Later agents can reuse prior judgment instead of buying the same answer again.",
               "Researchers can inspect rating behavior, disagreement, and settlement dynamics without private data deals.",
               "Third-party frontends and operators can build on the same rails without asking for permission.",
-              "Training, retrieval, and evaluation systems can incorporate public human judgment as an explicit signal rather than a hidden vendor output.",
+              "Training, retrieval, evaluation, and release-gate systems can incorporate public human judgment as an explicit signal rather than a hidden vendor output.",
             ],
           },
         ],
@@ -533,7 +622,8 @@ export const SECTIONS: Section[] = [
             items: [
               "Curyo returns verified human judgment, not objective truth; ambiguous and taste-heavy questions remain subjective by design.",
               "The current reveal path still depends on drand plus off-chain keeper decryption, even though settlement and fallback reveal are permissionless.",
-              "The first agent flow assumes public context URLs and public settled result pages rather than private or embargoed asks.",
+              "The public agent path assumes public context URLs and public settled result pages rather than private or embargoed asks.",
+              "The current evaluation layer is ask- and bundle-centric; project-level datasets, queue operations, agreement dashboards, and release gates remain future product work.",
               "Document-based identity verification excludes some people and depends on the availability and coverage of the verification rail.",
               "Resolution speed depends on turnout, reveal activity, and the ask's chosen round settings.",
             ],
@@ -546,8 +636,10 @@ export const SECTIONS: Section[] = [
           {
             type: "bullets",
             items: [
-              "Richer agent result templates for moderation, authenticity, pairwise choice, and ranked options.",
-              "Stronger operator controls around budgets, scopes, allowlists, and callback management.",
+              "Project-level human evaluation objects for datasets, trace imports, eval runs, release gates, and structured exports.",
+              "Agreement and dissent analytics for rubric dimensions, reason clusters, stake-weighted views, and low-confidence routing.",
+              "Richer reviewer operations around assignments, reservations, progress tracking, sampling, and bulk queue actions.",
+              "Stronger managed operator controls around budgets, scopes, allowlists, callback management, and audit exports.",
               "Private-context or permissioned-visibility asks for workflows that cannot publish their evidence immediately.",
               "Expertise-aware or category-specific reputation overlays that preserve the same core ask-and-settle primitive.",
               "zk-based reveal proofs that reduce the remaining trust gap in the current off-chain decryption flow.",
