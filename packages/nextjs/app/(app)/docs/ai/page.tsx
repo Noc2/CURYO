@@ -113,9 +113,17 @@ const useCases = [
   "Public bug reproduction or feature acceptance checks",
 ] as const;
 
+const templateRecommendations = [
+  "Use feature_acceptance_test when the user has a public preview URL and wants humans to follow concrete test steps.",
+  "Use go_no_go or agent_action_go_no_go when the agent needs approval before taking a consequential action.",
+  "Use llm_answer_quality, rag_grounding_check, claim_verification, or source_credibility_check for model-output and evidence review.",
+  "Use ranked_option_member or pairwise_output_preference when comparing several generated options.",
+] as const;
+
 const integratedPaths = [
+  "WebMCP guidance on this page for browser agents that need to understand what to ask the user next",
   "MCP with x402 authorization or ordered wallet calls for wallet-capable agents",
-  "Browser signing handoff for MetaMask, Ledger, or other injected-wallet approval",
+  "WebMCP-assisted browser signing handoff for MetaMask, Ledger, or other injected-wallet approval",
   "Local signer CLI for Codex-like agents that can hold an encrypted keystore",
 ] as const;
 
@@ -124,7 +132,14 @@ const publicSetupInputs = [
   "A funded walletAddress on Celo, or permission to create a local encrypted signer and fund that address",
   "A public context URL voters can open without secrets or a Curyo login",
   "A bounded USDC budget: bounty.amount, maxPaymentAmount, required voters, and optional timing preferences",
-  "The signing path: browser link for user approval, local signer when the agent owns the wallet, or MCP wallet calls",
+  "The execution path: public MCP wallet calls, direct JSON routes, local signer, or WebMCP-assisted browser signing",
+] as const;
+
+const webMcpAgentTools = [
+  "explain the accountless public ask flow and the values the agent should request from the user",
+  "recommend result templates from the user's task, such as feature_acceptance_test, go_no_go, or rag_grounding_check",
+  "list categories and validate that a draft question has a public context URL, tags, bounty, and stable clientRequestId",
+  "route wallet-capable agents to public MCP or JSON calls and route wallet-approval agents to browser signing intents",
 ] as const;
 
 const optionalManagedControls = [
@@ -169,6 +184,12 @@ const AIPage = async () => {
         USDC bounty, and a funded EVM wallet address. The output is a structured result package with answer, confidence,
         vote signal, rationale summary, limitations, and public URL.
       </p>
+      <p>
+        This page is the public agent entry point. Browser agents should use it to understand the workflow, choose a
+        template, and ask the operator for the missing runtime inputs. <Link href="/ask?tab=agent">/ask?tab=agent</Link>{" "}
+        is an optional user-control surface for funding, copied config, and managed policy setup; it is not required
+        before an agent submits a public wallet-funded question.
+      </p>
 
       <h2 id="when-to-use">When To Use Curyo</h2>
       <ul>
@@ -183,6 +204,11 @@ const AIPage = async () => {
         landing-page review, feature acceptance test, source credibility check, RAG grounding check, or go/no-go action
         gate while returning fields that an agent can store and compare later.
       </p>
+      <ul>
+        {templateRecommendations.map(item => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
 
       <h2 id="paths">Integrated Paths</h2>
       <ul>
@@ -191,8 +217,9 @@ const AIPage = async () => {
         ))}
       </ul>
       <p>
-        Use <Link href="/ask?tab=agent">/ask?tab=agent</Link> as an optional setup and funding helper. It is useful for
-        copying config, funding a wallet, and checking agent settings before a headless run.
+        Use <Link href="/ask?tab=agent">/ask?tab=agent</Link> only when the human operator wants browser assistance for
+        funding, optional managed controls, or copied MCP config. Agents that already have the values below can submit
+        through public MCP or direct JSON without opening that screen.
       </p>
 
       <h2 id="accountless-public-access">Accountless Public Access</h2>
@@ -217,6 +244,23 @@ const AIPage = async () => {
         ))}
         . The accountless path should remain the default for chat-hosted agents whose user can approve a browser signing
         link or fund a local agent wallet.
+      </p>
+
+      <h2 id="webmcp">WebMCP Guidance</h2>
+      <p>
+        Curyo uses WebMCP as the browser-agent guidance layer for this docs page and browser signing pages. WebMCP
+        should make the intended flow callable instead of forcing an agent to infer it from headings, buttons, or
+        screenshots. The backend submission surface remains public MCP, direct JSON, SDK, or CLI.
+      </p>
+      <p>When available, WebMCP tools on this page should help agents:</p>
+      <ul>
+        {webMcpAgentTools.map(item => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
+      <p>
+        The agent should still ask the user before spending: which wallet pays, how much USDC is authorized, which
+        public context URL voters should inspect, and whether the user wants browser approval or a local signer.
       </p>
 
       <h2 id="flow">Agent Flow</h2>
@@ -311,8 +355,9 @@ const AIPage = async () => {
         browser signing or an encrypted local keystore when a human or local agent should approve spend.
       </p>
       <p>
-        Operators using the browser helper can open <Link href="/settings#wallet">Wallet settings</Link> to add CELO for
-        gas, then use <Link href="/ask?tab=agent">/ask?tab=agent</Link> to add Celo USDC for bounties.
+        Operators who want browser assistance can open <Link href="/settings#wallet">Wallet settings</Link> to add CELO
+        for gas, then use <Link href="/ask?tab=agent">/ask?tab=agent</Link> to add Celo USDC for bounties or configure
+        optional managed controls.
       </p>
 
       <h2 id="results">Polling Results</h2>

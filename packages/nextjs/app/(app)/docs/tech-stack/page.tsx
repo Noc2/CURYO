@@ -7,6 +7,7 @@ const x402NetworkSupportHref = "https://docs.x402.org/core-concepts/network-and-
 const x402McpHref = "https://docs.x402.org/guides/mcp-server-with-x402";
 const mcpSpecHref = "https://modelcontextprotocol.io/specification/2025-11-25/basic";
 const mcpTransportsHref = "https://modelcontextprotocol.io/specification/2025-11-25/basic/transports";
+const webMcpSpecHref = "https://webmachinelearning.github.io/webmcp/";
 const selfDocsHref = "https://docs.self.xyz/";
 const selfOverviewHref = "https://docs.self.xyz/technical-docs/overview";
 const drandTlockHref = "https://docs.drand.love/docs/timelock-encryption";
@@ -15,7 +16,7 @@ const circleCeloUsdcHref = "https://www.circle.com/multi-chain-usdc/celo";
 export const metadata = {
   title: "Tech Stack | Curyo Docs",
   description:
-    "The protocol terms behind Curyo: x402 agent payments, MCP tools, Self.xyz zero-knowledge identity, tlock blind voting, HREP staking, and Celo USDC settlement.",
+    "The protocol terms behind Curyo: x402 agent payments, MCP and WebMCP tools, Self.xyz zero-knowledge identity, tlock blind voting, HREP staking, and Celo USDC settlement.",
 } satisfies Metadata;
 
 const TechStackPage: NextPage = () => {
@@ -64,20 +65,24 @@ const TechStackPage: NextPage = () => {
         callbacks, and result packaging behind those tools.
       </p>
 
-      <h2 id="signing-paths">Signing Paths</h2>
+      <h2 id="webmcp">WebMCP</h2>
       <p>
-        Wallet-sensitive actions stay explicit. Curyo supports browser signing handoff for injected wallets and Ledger,
-        local signer CLI flows for agents with encrypted keystores, raw ordered wallet calls for wallet-capable agents,
-        and x402 authorization for Celo USDC-funded asks.
+        <a href={webMcpSpecHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
+          WebMCP
+        </a>{" "}
+        is the browser-side companion to backend MCP. It lets a web page expose structured JavaScript tools to browser
+        agents, so the agent can call the intended action instead of guessing from visible UI.
       </p>
       <p>
-        The reason for multiple paths is workflow fit. Agents should be able to integrate Curyo into their current
-        runtime, whether that is a chat connector, terminal agent, backend worker, or local autonomous loop, and ask
-        verified humans without needing to click through the Curyo website for every step.
+        In Curyo, WebMCP belongs on <Link href="/docs/ai">/docs/ai</Link> and the browser signing handoff. It should
+        tell agents which values to request from the user, recommend templates, validate draft asks, and route the agent
+        toward public MCP, direct JSON, local signer, or browser approval. It should not replace the public MCP endpoint
+        used by headless agents.
       </p>
       <p>
-        These paths all lead to the same protocol outcome: the ask is funded from a user-controlled wallet, transaction
-        hashes are confirmed, and the public operation can be polled by operation key or client request ID.
+        Wallet-sensitive actions stay explicit. Browser signing remains a user approval step for injected wallets and
+        Ledger, local signer CLI flows remain available for agents with encrypted keystores, and raw ordered wallet
+        calls or x402 authorization remain available for wallet-capable agents.
       </p>
 
       <h2 id="zk-proof-of-human">ZK Proof-of-Human</h2>
@@ -165,6 +170,9 @@ const TechStackPage: NextPage = () => {
         </li>
         <li>
           MCP: <a href={mcpSpecHref}>base protocol</a>, <a href={mcpTransportsHref}>Streamable HTTP transport</a>
+        </li>
+        <li>
+          WebMCP: <a href={webMcpSpecHref}>W3C Community Group draft</a>
         </li>
         <li>
           Self.xyz: <a href={selfDocsHref}>protocol overview</a>, <a href={selfOverviewHref}>technical overview</a>

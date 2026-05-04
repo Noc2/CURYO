@@ -13,15 +13,19 @@ This package is for the moment an agent should ask instead of guess. The core lo
 
 ## Accountless Public Flow
 
-Agents do not need the operator to create a Curyo account for the default public path. A chat-hosted agent can open the
-For Agents docs, connect to the public MCP endpoint or direct HTTP routes, and ask the user for the few runtime values
-that are intentionally not hard-coded:
+Agents do not need the operator to create a Curyo account for the default public path. A chat-hosted agent should start
+from the For Agents docs at `/docs/ai`, use any available WebMCP guidance there to understand the workflow, connect to
+the public MCP endpoint or direct HTTP routes, and ask the user for the few runtime values that are intentionally not
+hard-coded:
 
 - Curyo origin, usually `https://www.curyo.xyz`
 - funded Celo `walletAddress`, or permission to generate a local encrypted signer and fund that address
 - public context URL for voters
 - USDC bounty, `maxPaymentAmount`, required voters, and any timing preferences
-- signing path: browser link, local signer, or direct wallet-call execution
+- execution path: public MCP wallet calls, direct JSON routes, local signer, or WebMCP-assisted browser signing
+
+`/ask?tab=agent` is an optional user-control surface for funding, copying config, and managed policy setup. It is not a
+prerequisite for public wallet-funded asks.
 
 The Curyo account and managed bearer-token path are optional. Use them only when the operator wants saved caps, category
 allowlists, callbacks, balance tooling, or audit exports enforced by Curyo instead of by the host agent.
@@ -92,18 +96,18 @@ If the ask payload already contains `walletAddress`, `local-ask` refuses to cont
 cp packages/agents/.env.example packages/agents/.env
 ```
 
-| Variable                     | Description                                                                                |
-| ---------------------------- | ------------------------------------------------------------------------------------------ |
-| `CURYO_API_BASE_URL`         | Hosted Curyo origin, for example `https://curyo.example`                                                |
-| `CURYO_AGENT_WALLET_ADDRESS` | Funded wallet address for tokenless public asks                                                         |
-| `CURYO_RPC_URL`              | RPC URL used by `local-ask` to send returned transaction plan calls                                     |
-| `CURYO_CHAIN_ID`             | Optional chain guard; `local-ask` refuses mismatched RPCs                                               |
-| `CURYO_LOCAL_SIGNER_KEYSTORE_PATH` | Encrypted local signer keystore path                                                            |
-| `CURYO_LOCAL_SIGNER_KEYSTORE_PASSWORD` | Password for the local signer keystore; load from a secret source                             |
-| `CURYO_LOCAL_SIGNER_PRIVATE_KEY` | Ephemeral CI/test-wallet fallback; prefer a keystore for persistent funded wallets                  |
-| `CURYO_MCP_TOKEN`            | Optional managed agent bearer token with quote, ask, read, and balance scopes                           |
-| `CURYO_MCP_API_URL`          | Optional MCP endpoint override; tokenless SDK clients default to `${CURYO_API_BASE_URL}/api/mcp/public` |
-| `CURYO_MCP_PROTOCOL_VERSION` | Optional MCP protocol version override                                                                  |
+| Variable                               | Description                                                                                             |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `CURYO_API_BASE_URL`                   | Hosted Curyo origin, for example `https://curyo.example`                                                |
+| `CURYO_AGENT_WALLET_ADDRESS`           | Funded wallet address for tokenless public asks                                                         |
+| `CURYO_RPC_URL`                        | RPC URL used by `local-ask` to send returned transaction plan calls                                     |
+| `CURYO_CHAIN_ID`                       | Optional chain guard; `local-ask` refuses mismatched RPCs                                               |
+| `CURYO_LOCAL_SIGNER_KEYSTORE_PATH`     | Encrypted local signer keystore path                                                                    |
+| `CURYO_LOCAL_SIGNER_KEYSTORE_PASSWORD` | Password for the local signer keystore; load from a secret source                                       |
+| `CURYO_LOCAL_SIGNER_PRIVATE_KEY`       | Ephemeral CI/test-wallet fallback; prefer a keystore for persistent funded wallets                      |
+| `CURYO_MCP_TOKEN`                      | Optional managed agent bearer token with quote, ask, read, and balance scopes                           |
+| `CURYO_MCP_API_URL`                    | Optional MCP endpoint override; tokenless SDK clients default to `${CURYO_API_BASE_URL}/api/mcp/public` |
+| `CURYO_MCP_PROTOCOL_VERSION`           | Optional MCP protocol version override                                                                  |
 
 ## Examples
 

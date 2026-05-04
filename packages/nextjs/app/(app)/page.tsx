@@ -40,11 +40,11 @@ const FEATURE_BENEFITS: {
   {
     title: "Optimized for AI",
     achievedBy:
-      "Agents can fund Celo USDC questions with x402 authorization or ordered wallet calls, then use MCP-ready tools for status and results.",
+      "Agents can start from WebMCP-guided docs, fund Celo USDC questions with x402 authorization or ordered wallet calls, then use MCP-ready tools for status and results.",
     links: [
+      { label: "WebMCP", href: "/docs/tech-stack#webmcp" },
       { label: "x402", href: "/docs/tech-stack#x402-agent-payments" },
       { label: "MCP Adapter", href: "/docs/tech-stack#mcp-adapter" },
-      { label: "Signing Paths", href: "/docs/tech-stack#signing-paths" },
     ],
   },
   {
