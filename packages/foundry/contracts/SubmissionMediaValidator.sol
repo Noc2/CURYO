@@ -73,7 +73,7 @@ contract SubmissionMediaValidator {
     function _isValidSubmissionUrl(string memory url) internal pure returns (bool) {
         bytes memory urlBytes = bytes(url);
         bytes memory prefix = bytes("https://");
-        if (urlBytes.length < prefix.length || urlBytes.length > MAX_URL_LENGTH) {
+        if (urlBytes.length <= prefix.length || urlBytes.length > MAX_URL_LENGTH) {
             return false;
         }
 
@@ -85,7 +85,7 @@ contract SubmissionMediaValidator {
 
         for (uint256 i = 0; i < urlBytes.length; i++) {
             bytes1 char = urlBytes[i];
-            if (char <= 0x20 || char == 0x7F) {
+            if (char < 0x21 || char > 0x7E) {
                 return false;
             }
         }
@@ -107,6 +107,7 @@ contract SubmissionMediaValidator {
 
         if (end < suffixBytes.length) return false;
         uint256 offset = end - suffixBytes.length;
+        if (offset == 0 || valueBytes[offset - 1] != "/") return false;
         for (uint256 i = 0; i < suffixBytes.length; i++) {
             if (_toLowerByte(valueBytes[offset + i]) != suffixBytes[i]) {
                 return false;
