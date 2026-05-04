@@ -96,6 +96,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     mapping(uint256 => mapping(uint256 => uint256)) public roundParticipationRewardPaidTotal;
     mapping(uint256 => mapping(uint256 => uint256)) public roundParticipationRewardFullyClaimedCount;
     mapping(uint256 => mapping(uint256 => bool)) public roundParticipationRewardFinalized;
+    mapping(uint256 => mapping(uint256 => uint48)) public roundParticipationRewardClaimableAt;
 
     // --- Events ---
     /// @notice Emitted when a settled-round claim pays out.
@@ -650,7 +651,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         _requireNoPendingUnrevealedCleanup(contentId, roundId);
 
         uint256 winnerCount = round.upWins ? round.upCount : round.downCount;
-        bool stale = _isStaleRound(round);
+        bool stale = _participationRewardsStale(contentId, roundId, round);
         if (roundParticipationRewardFullyClaimedCount[contentId][roundId] != winnerCount && !stale) {
             revert ParticipationRewardsOutstanding();
         }
@@ -1045,6 +1046,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         }
 
         reservedReward = roundParticipationRewardReserved[contentId][roundId];
+        uint256 previousReservedReward = reservedReward;
         if (reservedReward < totalReward) {
             uint256 additionalReserved =
                 IParticipationPool(rewardPool).reserveReward(address(this), totalReward - reservedReward);
@@ -1070,7 +1072,23 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
             roundParticipationRewardOwed[contentId][roundId] = totalReward;
         }
         roundParticipationRewardReserved[contentId][roundId] = reservedReward;
+        if (
+            roundParticipationRewardClaimableAt[contentId][roundId] == 0
+                || reservedReward > previousReservedReward
+        ) {
+            roundParticipationRewardClaimableAt[contentId][roundId] = uint48(block.timestamp);
+        }
         fullyReserved = true;
+    }
+
+    function _participationRewardsStale(uint256 contentId, uint256 roundId, RoundLib.Round memory round)
+        internal
+        view
+        returns (bool)
+    {
+        uint256 claimableAt = roundParticipationRewardClaimableAt[contentId][roundId];
+        if (claimableAt == 0) claimableAt = round.settledAt;
+        return claimableAt != 0 && block.timestamp >= claimableAt + STALE_REWARD_FINALIZATION_DELAY;
     }
 
     function _protocolTreasury() internal view returns (address) {

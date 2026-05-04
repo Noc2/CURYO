@@ -3660,6 +3660,49 @@ contract RoundIntegrationTest is VotingTestBase {
         );
     }
 
+    function test_FinalizeParticipationRewards_UsesFreshBackfillGraceWindow() public {
+        ParticipationPool pool = new ParticipationPool(address(hrepToken), owner);
+        pool.setAuthorizedCaller(address(rewardDistributor), true);
+
+        vm.startPrank(owner);
+        hrepToken.mint(owner, 4e6);
+        hrepToken.approve(address(pool), 4e6);
+        pool.depositPool(4e6);
+        ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(address(pool));
+        vm.stopPrank();
+
+        uint256 contentId = _submitContent();
+
+        address[] memory voters = new address[](3);
+        voters[0] = voter1;
+        voters[1] = voter2;
+        voters[2] = voter3;
+        bool[] memory dirs = new bool[](3);
+        dirs[0] = true;
+        dirs[1] = true;
+        dirs[2] = false;
+
+        uint256 roundId = _settleRoundWith(voters, contentId, dirs, STAKE);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
+
+        vm.warp(uint256(round.settledAt) + rewardDistributor.STALE_REWARD_FINALIZATION_DELAY());
+
+        vm.startPrank(owner);
+        hrepToken.mint(owner, 5e6);
+        hrepToken.approve(address(pool), 5e6);
+        pool.depositPool(5e6);
+        rewardDistributor.backfillParticipationRewards(contentId, roundId, address(pool), 9000);
+        vm.stopPrank();
+
+        uint256 backfilledAt = block.timestamp;
+        vm.expectRevert(RoundRewardDistributor.ParticipationRewardsOutstanding.selector);
+        rewardDistributor.finalizeParticipationRewards(contentId, roundId);
+
+        vm.warp(backfilledAt + rewardDistributor.STALE_REWARD_FINALIZATION_DELAY());
+        uint256 releasedReward = rewardDistributor.finalizeParticipationRewards(contentId, roundId);
+        assertEq(releasedReward, 9e6, "stale backfilled rewards should release after a fresh grace window");
+    }
+
     function test_FinalizeParticipationRewards_ReleasesStaleUnclaimedReservation() public {
         ParticipationPool pool = new ParticipationPool(address(hrepToken), owner);
         pool.setAuthorizedCaller(address(rewardDistributor), true);
