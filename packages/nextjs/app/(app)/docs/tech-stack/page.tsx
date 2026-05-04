@@ -71,6 +71,11 @@ const TechStackPage: NextPage = () => {
         and x402 authorization for Celo USDC-funded asks.
       </p>
       <p>
+        The reason for multiple paths is workflow fit. Agents should be able to integrate Curyo into their current
+        runtime, whether that is a chat connector, terminal agent, backend worker, or local autonomous loop, and ask
+        verified humans without needing to click through the Curyo website for every step.
+      </p>
+      <p>
         These paths all lead to the same protocol outcome: the ask is funded from a user-controlled wallet, transaction
         hashes are confirmed, and the public operation can be polled by operation key or client request ID.
       </p>
