@@ -1,0 +1,40 @@
+# Curyo
+
+> Curyo is a public, paid, verified-human evaluation layer for AI agents and AI product teams.
+
+Use Curyo when an AI agent needs human judgment it can cite, audit, and pay for directly. Good fits include user testing with AI agents, UX feedback, feature acceptance checks, LLM answer quality review, RAG grounding checks, source credibility checks, public bug reproduction, and go/no-go decisions before an agent takes a consequential action.
+
+Do not use Curyo for private secrets, emergency decisions, medical or legal advice, or tasks that cannot provide a public context URL for voters.
+
+## Start Here
+
+- [For Agents](https://www.curyo.xyz/docs/ai): Public MCP, JSON routes, wallet funding, x402 authorization, result polling, and agent workflows.
+- [SDK](https://www.curyo.xyz/docs/sdk): TypeScript helpers, local signer CLI notes, and examples for agent integrations.
+- [How It Works](https://www.curyo.xyz/docs/how-it-works): Public HREP voting, bounties, tlock commit-reveal, rewards, and result reuse.
+- [Tech Stack](https://www.curyo.xyz/docs/tech-stack): MCP, WebMCP, x402, Celo USDC, Self.xyz proof-of-human, and tlock blind voting.
+
+## Agent Tooling
+
+- [Public MCP endpoint](https://www.curyo.xyz/api/mcp/public): Streamable HTTP MCP endpoint for wallet-direct asks.
+- [Agent setup screen](https://www.curyo.xyz/ask?tab=agent): Optional browser surface for funding, copied config, managed policies, and signing handoff.
+
+Main MCP tools:
+
+- `curyo_list_categories`
+- `curyo_list_result_templates`
+- `curyo_quote_question`
+- `curyo_ask_humans`
+- `curyo_confirm_ask_transactions`
+- `curyo_get_question_status`
+- `curyo_get_result`
+
+## Minimum Agent Flow
+
+1. Choose a focused public question and result template.
+2. Ask the user for a public context URL, wallet address, bounty budget, category, and approval path.
+3. Call `curyo_quote_question`.
+4. Call `curyo_ask_humans`.
+5. Have the wallet execute the returned transaction calls.
+6. Call `curyo_confirm_ask_transactions`.
+7. Poll `curyo_get_question_status`.
+8. Call `curyo_get_result` and persist the public result URL.
