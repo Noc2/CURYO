@@ -20,6 +20,7 @@ contract MissingConfigHub {
 }
 
 contract MigrationSourceFaucetMock {
+    MigrationSourceVoterIdNFTMock public voterIdNFT = new MigrationSourceVoterIdNFTMock();
     uint256 public totalClaimants;
     uint256 public totalClaimed;
     mapping(address => bool) public addressClaimed;
@@ -38,10 +39,50 @@ contract MigrationSourceFaucetMock {
         referredBy[user] = referrer;
         totalClaimants++;
         totalClaimed += amount;
+        voterIdNFT.mint(user, nullifier);
     }
 
     function hasClaimed(address user) external view returns (bool) {
         return addressClaimed[user];
+    }
+
+    function remintVoterId(uint256 nullifier, address holder) external {
+        voterIdNFT.remint(nullifier, holder);
+    }
+}
+
+contract MigrationSourceVoterIdNFTMock {
+    uint256 internal nextTokenId = 1;
+    mapping(uint256 => uint256) internal tokenIdForNullifier;
+    mapping(uint256 => address) internal holderForTokenId;
+
+    function mint(address holder, uint256 nullifier) external returns (uint256 tokenId) {
+        tokenId = nextTokenId++;
+        tokenIdForNullifier[nullifier] = tokenId;
+        holderForTokenId[tokenId] = holder;
+    }
+
+    function remint(uint256 nullifier, address holder) external returns (uint256 tokenId) {
+        uint256 previousTokenId = tokenIdForNullifier[nullifier];
+        if (previousTokenId != 0) {
+            holderForTokenId[previousTokenId] = address(0);
+        }
+        if (holder == address(0)) {
+            tokenIdForNullifier[nullifier] = 0;
+            return 0;
+        }
+        tokenId = nextTokenId++;
+        tokenIdForNullifier[nullifier] = tokenId;
+        holderForTokenId[tokenId] = holder;
+    }
+
+    function getTokenIdForNullifier(uint256 nullifier) external view returns (uint256 tokenId) {
+        tokenId = tokenIdForNullifier[nullifier];
+        return holderForTokenId[tokenId] == address(0) ? 0 : tokenId;
+    }
+
+    function getHolder(uint256 tokenId) external view returns (address) {
+        return holderForTokenId[tokenId];
     }
 }
 
@@ -485,6 +526,56 @@ contract DeployCuryoCompilationTest is Test {
         vm.chainId(42220);
         vm.expectRevert(
             abi.encodeWithSelector(DeployCuryo.DeploymentRoleVerificationFailed.selector, "Migration source referrer")
+        );
+        deployScript.exposedValidateMigrationBootstrapConfigWithSource(
+            address(sourceFaucet), users, nullifiers, amounts, referrers, claimantBonuses, referrerRewards
+        );
+    }
+
+    function test_MigrationBootstrapValidation_RejectsSourceVoterIdHolderMismatch() public {
+        DeployCuryoHarness deployScript = new DeployCuryoHarness();
+        MigrationSourceFaucetMock sourceFaucet = new MigrationSourceFaucetMock();
+        address[] memory users = new address[](1);
+        users[0] = address(0x1111);
+        uint256[] memory nullifiers = new uint256[](1);
+        nullifiers[0] = 123456;
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = 10_000e6;
+        address[] memory referrers = new address[](1);
+        uint256[] memory claimantBonuses = new uint256[](1);
+        uint256[] memory referrerRewards = new uint256[](1);
+
+        sourceFaucet.addClaim(users[0], nullifiers[0], amounts[0]);
+        sourceFaucet.remintVoterId(nullifiers[0], address(0x9999));
+
+        vm.chainId(42220);
+        vm.expectRevert(
+            abi.encodeWithSelector(DeployCuryo.DeploymentRoleVerificationFailed.selector, "Migration source voterId holder")
+        );
+        deployScript.exposedValidateMigrationBootstrapConfigWithSource(
+            address(sourceFaucet), users, nullifiers, amounts, referrers, claimantBonuses, referrerRewards
+        );
+    }
+
+    function test_MigrationBootstrapValidation_RejectsRevokedSourceVoterId() public {
+        DeployCuryoHarness deployScript = new DeployCuryoHarness();
+        MigrationSourceFaucetMock sourceFaucet = new MigrationSourceFaucetMock();
+        address[] memory users = new address[](1);
+        users[0] = address(0x1111);
+        uint256[] memory nullifiers = new uint256[](1);
+        nullifiers[0] = 123456;
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = 10_000e6;
+        address[] memory referrers = new address[](1);
+        uint256[] memory claimantBonuses = new uint256[](1);
+        uint256[] memory referrerRewards = new uint256[](1);
+
+        sourceFaucet.addClaim(users[0], nullifiers[0], amounts[0]);
+        sourceFaucet.remintVoterId(nullifiers[0], address(0));
+
+        vm.chainId(42220);
+        vm.expectRevert(
+            abi.encodeWithSelector(DeployCuryo.DeploymentRoleVerificationFailed.selector, "Migration source voterId missing")
         );
         deployScript.exposedValidateMigrationBootstrapConfigWithSource(
             address(sourceFaucet), users, nullifiers, amounts, referrers, claimantBonuses, referrerRewards

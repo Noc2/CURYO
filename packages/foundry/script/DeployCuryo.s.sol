@@ -808,6 +808,8 @@ contract DeployCuryo is ScaffoldETHDeploy {
 
         _require(migrationConfig.sourceHumanFaucet != address(0), "Migration source faucet required");
         HumanFaucet sourceHumanFaucet = HumanFaucet(migrationConfig.sourceHumanFaucet);
+        VoterIdNFT sourceVoterIdNFT = VoterIdNFT(address(sourceHumanFaucet.voterIdNFT()));
+        _require(address(sourceVoterIdNFT) != address(0), "Migration source voterIdNFT required");
         _require(sourceHumanFaucet.totalClaimants() == claimCount, "Migration source claimant count");
         _require(sourceHumanFaucet.totalClaimed() == totalMigratedClaimed, "Migration source total claimed");
 
@@ -818,6 +820,9 @@ contract DeployCuryo is ScaffoldETHDeploy {
             _require(sourceHumanFaucet.claimNullifier(user) == nullifier, "Migration source user nullifier");
             _require(sourceHumanFaucet.referredBy(user) == migrationConfig.referrers[i], "Migration source referrer");
             _require(sourceHumanFaucet.nullifierUsed(nullifier), "Migration source nullifier unused");
+            uint256 sourceTokenId = sourceVoterIdNFT.getTokenIdForNullifier(nullifier);
+            _require(sourceTokenId != 0, "Migration source voterId missing");
+            _require(sourceVoterIdNFT.getHolder(sourceTokenId) == user, "Migration source voterId holder");
         }
     }
 
