@@ -933,8 +933,12 @@ contract QuestionRewardPoolEscrow is
         );
     }
 
-    function getWiring() external view returns (address voterIdNft_) {
-        return address(voterIdNFT);
+    function getWiring()
+        external
+        view
+        returns (address hrep, address usdc, address registry_, address votingEngine_, address voterIdNft_)
+    {
+        return (address(hrepToken), address(usdcToken), address(registry), address(votingEngine), address(voterIdNFT));
     }
 
     function setDefaultFrontendFeeBps(uint256 frontendFeeBps_) external onlyRole(CONFIG_ROLE) {

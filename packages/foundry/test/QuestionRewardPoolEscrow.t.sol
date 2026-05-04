@@ -666,7 +666,13 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         (bool ok,) = address(rewardPoolEscrow).call(abi.encodeWithSignature("setVotingEngine(address)", newEngine));
         assertFalse(ok);
 
-        assertEq(rewardPoolEscrow.getWiring(), address(voterIdNFT));
+        (address wiredHrep, address wiredUsdc, address wiredRegistry, address wiredEngine, address wiredVoterIdNFT) =
+            rewardPoolEscrow.getWiring();
+        assertEq(wiredHrep, address(hrepToken));
+        assertEq(wiredUsdc, address(usdc));
+        assertEq(wiredRegistry, address(registry));
+        assertEq(wiredEngine, address(votingEngine));
+        assertEq(wiredVoterIdNFT, address(voterIdNFT));
     }
 
     function testRegistrySubmissionRewardRejectsStaleEscrowAfterEngineRotation() public {

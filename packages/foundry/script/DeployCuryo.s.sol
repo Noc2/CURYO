@@ -1481,7 +1481,17 @@ contract DeployCuryo is ScaffoldETHDeploy {
     }
 
     function _verifyProductionEscrowWiring(ProductionDeploymentRoleVerification memory targets) internal view {
-        address questionVoterIdNFT = targets.questionRewardPoolEscrow.getWiring();
+        (
+            address questionHrep,
+            address questionUsdc,
+            address questionRegistry,
+            address questionVotingEngine,
+            address questionVoterIdNFT
+        ) = targets.questionRewardPoolEscrow.getWiring();
+        _require(questionHrep == address(targets.hrepToken), "QuestionRewardPoolEscrow HREP token");
+        _require(questionUsdc == _resolveCeloUsdcAddress(), "QuestionRewardPoolEscrow USDC");
+        _require(questionRegistry == address(targets.registry), "QuestionRewardPoolEscrow registry");
+        _require(questionVotingEngine == address(targets.votingEngine), "QuestionRewardPoolEscrow voting engine");
         _require(questionVoterIdNFT == address(targets.voterIdNFT), "QuestionRewardPoolEscrow voterIdNFT");
         _require(
             address(targets.feedbackBonusEscrow.voterIdNFT()) == address(targets.voterIdNFT),
