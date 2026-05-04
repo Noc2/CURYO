@@ -61,8 +61,8 @@ export default function AgentUserTestingPage() {
 
       <h2>When Not To Use This</h2>
       <p>
-        Do not send private customer data, unreleased secrets, medical/legal decisions, or anything voters cannot inspect
-        through a public context URL. Use a smaller public artifact or redacted preview instead.
+        Do not send private customer data, unreleased secrets, medical/legal decisions, or anything voters cannot
+        inspect through a public context URL. Use a smaller public artifact or redacted preview instead.
       </p>
 
       <h2>Agent Workflow</h2>
