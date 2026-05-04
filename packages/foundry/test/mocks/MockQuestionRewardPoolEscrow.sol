@@ -35,6 +35,7 @@ contract MockQuestionRewardPoolEscrow {
     function createSubmissionRewardPoolFromRegistry(
         uint256 contentId,
         address funder,
+        address /* payer */,
         uint8 asset,
         uint256 amount,
         uint256 requiredVoters,

@@ -142,6 +142,8 @@ contract QuestionRewardPoolEscrow is
     mapping(uint256 => mapping(uint256 => mapping(bytes32 => bool))) private bundleRoundSetRewardClaimed;
     mapping(uint256 => uint256) private rewardPoolFunderNullifier;
     mapping(uint256 => uint256) private rewardPoolSubmitterNullifier;
+    mapping(uint256 => address) private rewardPoolPayerIdentity;
+    mapping(uint256 => uint256) private rewardPoolPayerNullifier;
     mapping(uint256 => uint256) private contentBundleId;
     mapping(uint256 => uint256) private contentBundleIndex;
     uint16 public defaultFrontendFeeBps;
@@ -287,6 +289,7 @@ contract QuestionRewardPoolEscrow is
         rewardPoolId = _createRewardPool(
             contentId,
             msg.sender,
+            address(0),
             REWARD_ASSET_USDC,
             amount,
             requiredVoters,
@@ -300,6 +303,7 @@ contract QuestionRewardPoolEscrow is
     function createSubmissionRewardPoolFromRegistry(
         uint256 contentId,
         address funder,
+        address payer,
         uint8 asset,
         uint256 amount,
         uint256 requiredVoters,
@@ -313,6 +317,7 @@ contract QuestionRewardPoolEscrow is
         rewardPoolId = _createRewardPool(
             contentId,
             funder,
+            payer,
             asset,
             amount,
             requiredVoters,
@@ -412,6 +417,7 @@ contract QuestionRewardPoolEscrow is
     function _createRewardPool(
         uint256 contentId,
         address funder,
+        address payer,
         uint8 asset,
         uint256 amount,
         uint256 requiredVoters,
@@ -425,6 +431,7 @@ contract QuestionRewardPoolEscrow is
         rewardPoolId = _createRewardPoolFromFundedAmount(
             contentId,
             funder,
+            payer,
             asset,
             fundedAmount,
             requiredVoters,
@@ -438,6 +445,7 @@ contract QuestionRewardPoolEscrow is
     function _createRewardPoolFromFundedAmount(
         uint256 contentId,
         address funder,
+        address payer,
         uint8 asset,
         uint256 fundedAmount,
         uint256 requiredVoters,
@@ -467,6 +475,13 @@ contract QuestionRewardPoolEscrow is
         uint256 currentRoundId = votingEngine.currentRoundId(contentId);
         uint256 startRoundId = currentRoundId == 0 ? 1 : currentRoundId + 1;
         (uint256 funderVoterId, address funderIdentity, uint256 funderNullifier) = _resolveFunderIdentity(funder, asset);
+        // For X402 and other gateway-mediated payments, the actual human payer (submitter)
+        // differs from the refund destination (funder/gateway). Resolve the payer's identity
+        // for funder-side voter-eligibility exclusion so the payer cannot vote on their own question.
+        address effectivePayer = payer == address(0) ? funder : payer;
+        (uint256 payerVoterId, address payerIdentity, uint256 payerNullifier) = _resolveFunderIdentity(effectivePayer, asset);
+        // Suppress unused variable warnings for payerVoterId (kept for consistency with _resolveFunderIdentity)
+        payerVoterId;
         address submitterIdentity = registry.getSubmitterIdentity(contentId);
         uint256 submitterNullifier = registry.contentSubmitterNullifier(contentId);
 
@@ -498,6 +513,8 @@ contract QuestionRewardPoolEscrow is
         });
         rewardPoolFunderNullifier[rewardPoolId] = funderNullifier;
         rewardPoolSubmitterNullifier[rewardPoolId] = submitterNullifier;
+        rewardPoolPayerIdentity[rewardPoolId] = payerIdentity;
+        rewardPoolPayerNullifier[rewardPoolId] = payerNullifier;
 
         emit RewardPoolCreated(
             rewardPoolId,
@@ -1405,8 +1422,10 @@ contract QuestionRewardPoolEscrow is
                 bountyClosesAt: rewardPool.bountyClosesAt,
                 requiredVoters: rewardPool.requiredVoters,
                 funder: rewardPool.funder,
-                funderIdentity: rewardPool.funderIdentity,
-                funderNullifier: rewardPoolFunderNullifier[rewardPool.id],
+                // Use payer identity for exclusion checks so gateway-mediated payments
+                // (e.g. X402) correctly exclude the actual human payer, not the gateway contract.
+                funderIdentity: rewardPoolPayerIdentity[rewardPool.id],
+                funderNullifier: rewardPoolPayerNullifier[rewardPool.id],
                 submitterIdentity: rewardPool.submitterIdentity,
                 submitterNullifier: rewardPoolSubmitterNullifier[rewardPool.id]
             })
@@ -1468,8 +1487,10 @@ contract QuestionRewardPoolEscrow is
             _roundVoterIdNft(rewardPool.contentId, roundId),
             voterId,
             rewardPool.funder,
-            rewardPool.funderIdentity,
-            rewardPoolFunderNullifier[rewardPool.id],
+            // Use payer identity for exclusion checks so gateway-mediated payments
+            // (e.g. X402) correctly exclude the actual human payer, not the gateway contract.
+            rewardPoolPayerIdentity[rewardPool.id],
+            rewardPoolPayerNullifier[rewardPool.id],
             rewardPool.submitterIdentity,
             rewardPoolSubmitterNullifier[rewardPool.id]
         );

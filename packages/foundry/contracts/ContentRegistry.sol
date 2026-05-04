@@ -22,6 +22,7 @@ interface IQuestionRewardPoolEscrow {
     function createSubmissionRewardPoolFromRegistry(
         uint256 contentId,
         address funder,
+        address payer,
         uint8 asset,
         uint256 amount,
         uint256 requiredVoters,
@@ -965,6 +966,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             .createSubmissionRewardPoolFromRegistry(
                 contentId,
                 funder,
+                submitter,
                 rewardTerms.asset,
                 rewardTerms.amount,
                 rewardTerms.requiredVoters,
