@@ -187,7 +187,6 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
     function awardFeedbackBonus(uint256 poolId, address recipient, bytes32 feedbackHash, uint256 grossAmount)
         external
         nonReentrant
-        whenNotPaused
         returns (uint256 recipientAmount)
     {
         FeedbackBonusPool storage pool = _getExistingPool(poolId);
