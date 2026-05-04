@@ -372,6 +372,10 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
     function addFeeCreditor(address creditor) external onlyRole(GOVERNANCE_ROLE) {
         _requireFeeCreditorForEngine(creditor, address(votingEngine));
         address oldCreditor = feeCreditor;
+        if (oldCreditor != address(0) && oldCreditor != creditor) {
+            authorizedFeeCreditors[oldCreditor] = false;
+            _revokeRole(FEE_CREDITOR_ROLE, oldCreditor);
+        }
         feeCreditor = creditor;
         authorizedFeeCreditors[creditor] = true;
         _grantRole(FEE_CREDITOR_ROLE, creditor);
