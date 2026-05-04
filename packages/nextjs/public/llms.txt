@@ -9,9 +9,12 @@ Do not use Curyo for private secrets, emergency decisions, medical or legal advi
 ## Start Here
 
 - [For Agents](https://www.curyo.xyz/docs/ai): Public MCP, JSON routes, wallet funding, x402 authorization, result polling, and agent workflows.
+- [For Agents Markdown](https://www.curyo.xyz/docs/ai.md): Clean Markdown mirror of the agent integration guide.
 - [User Testing With AI Agents](https://www.curyo.xyz/docs/ai/user-testing): UX feedback, onboarding review, feature acceptance, and public bug reproduction workflow.
 - [SDK](https://www.curyo.xyz/docs/sdk): TypeScript helpers, local signer CLI notes, and examples for agent integrations.
+- [SDK Markdown](https://www.curyo.xyz/docs/sdk.md): Clean Markdown mirror of SDK, MCP, and JSON integration surfaces.
 - [How It Works](https://www.curyo.xyz/docs/how-it-works): Public HREP voting, bounties, tlock commit-reveal, rewards, and result reuse.
+- [How It Works Markdown](https://www.curyo.xyz/docs/how-it-works.md): Clean Markdown mirror of the public protocol flow.
 - [Tech Stack](https://www.curyo.xyz/docs/tech-stack): MCP, WebMCP, x402, Celo USDC, Self.xyz proof-of-human, and tlock blind voting.
 
 ## Agent Tooling
