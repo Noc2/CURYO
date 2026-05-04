@@ -84,6 +84,7 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
     event DelegateRequested(address indexed holder, address indexed delegate);
     event DelegateSet(address indexed holder, address indexed delegate);
     event DelegateRemoved(address indexed holder, address indexed previousDelegate);
+    event PendingDelegateRemoved(address indexed holder, address indexed previousPendingDelegate);
     event GovernanceUpdated(address indexed governance);
     event NullifierReset(uint256 indexed nullifier);
 
@@ -260,6 +261,7 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
         if (pendingDelegator != address(0)) {
             delete pendingDelegateOf[to];
             delete pendingDelegateTo[pendingDelegator];
+            emit PendingDelegateRemoved(pendingDelegator, to);
         }
 
         tokenId = _tokenIdCounter++;
