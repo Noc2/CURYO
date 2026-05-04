@@ -73,14 +73,9 @@ const AGENTS = [
 
 export function SupportedAgentsSection() {
   return (
-    <section className="relative z-10 mt-10 w-full sm:mt-14 lg:mt-16">
-      <div className="mb-8 text-center sm:mb-10">
-        <h2 className="display-section text-[1.85rem] text-base-content sm:text-[2.35rem]">
-          Ask your favorite AI agent
-        </h2>
-        <p className="mx-auto mt-3 max-w-xl text-base leading-7 text-base-content/70 sm:text-lg">
-          Get verified human feedback from Curyo through any of these agents.
-        </p>
+    <section className="relative z-10 mt-2 w-full sm:mt-3 lg:mt-4">
+      <div className="mb-4 text-center sm:mb-5">
+        <p className="text-base leading-7 text-base-content/70 sm:text-lg">Ask your favorite AI agent about Curyo</p>
       </div>
 
       <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
@@ -91,11 +86,10 @@ export function SupportedAgentsSection() {
               key={agent.name}
               className={`
                 flex items-center gap-2.5 rounded-xl border px-4 py-2.5
-                transition duration-200
                 ${
                   isHighlighted
-                    ? "border-primary/30 bg-primary/10 text-primary hover:-translate-y-0.5 hover:border-primary/50"
-                    : "border-base-content/10 bg-[var(--curyo-surface-elevated)] text-base-content/80 hover:-translate-y-0.5 hover:border-primary/25 hover:text-base-content"
+                    ? "border-primary/30 bg-primary/10 text-primary"
+                    : "border-base-content/10 bg-[var(--curyo-surface-elevated)] text-base-content/80"
                 }
               `}
             >
