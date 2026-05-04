@@ -23,7 +23,6 @@ import {
   MIN_REWARD_POOL_REQUIRED_VOTERS,
   MIN_REWARD_POOL_SETTLED_ROUNDS,
   QUESTION_REWARD_POOL_ESCROW_ABI,
-  QUESTION_REWARD_POOL_ESCROW_WIRING_ABI,
   QUESTION_SUBMISSION_ABI,
   formatUsdAmount,
   getConfiguredContentRegistryAddress,
@@ -125,23 +124,7 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
 
     setIsFunding(true);
     try {
-      let usdcAddress = fallbackUsdcAddress;
-      try {
-        const [, configuredUsdcAddress, wiredRegistryAddress] = (await readContract(wagmiConfig, {
-          address: escrowAddress,
-          abi: QUESTION_REWARD_POOL_ESCROW_WIRING_ABI,
-          functionName: "getWiring",
-        })) as readonly [`0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`];
-        if (wiredRegistryAddress.toLowerCase() !== contentRegistryAddress.toLowerCase()) {
-          notification.error("Bounty escrow is not wired to this registry.");
-          return;
-        }
-        usdcAddress = configuredUsdcAddress;
-      } catch {
-        notification.error("Could not verify bounty escrow wiring.");
-        return;
-      }
-
+      const usdcAddress = fallbackUsdcAddress;
       try {
         const registryEscrowAddress = (await readContract(wagmiConfig, {
           address: contentRegistryAddress,

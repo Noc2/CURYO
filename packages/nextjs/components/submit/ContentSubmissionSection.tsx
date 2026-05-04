@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useQuery } from "@tanstack/react-query";
 import { decodeEventLog, toHex } from "viem";
-import { useAccount, useConfig, useReadContract } from "wagmi";
+import { useAccount, useConfig } from "wagmi";
 import { getPublicClient, readContract, waitForTransactionReceipt, writeContract } from "wagmi/actions";
 import { ChevronDownIcon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { ContentEmbed } from "~~/components/content/ContentEmbed";
@@ -64,6 +64,7 @@ import {
   SUBMISSION_REWARD_ASSET_USDC,
   type SubmissionRewardAsset,
   formatSubmissionRewardAmount,
+  getDefaultUsdcAddress,
   parseSubmissionRewardAmount,
 } from "~~/lib/questionRewardPools";
 import {
@@ -680,15 +681,6 @@ export function ContentSubmissionSection() {
   const registryAddress = registryInfo?.address as `0x${string}` | undefined;
   const hrepAddress = hrepInfo?.address as `0x${string}` | undefined;
   const rewardEscrowAddress = rewardEscrowInfo?.address as `0x${string}` | undefined;
-  const { data: rewardEscrowWiring } = useReadContract({
-    address: rewardEscrowAddress,
-    abi: QUESTION_REWARD_POOL_ESCROW_WIRING_ABI,
-    functionName: "getWiring",
-    query: {
-      enabled: Boolean(rewardEscrowAddress),
-      staleTime: 300_000,
-    },
-  });
   const { data: defaultFrontendFeeBps } = useScaffoldReadContract({
     contractName: "QuestionRewardPoolEscrow" as any,
     functionName: "defaultFrontendFeeBps" as any,
@@ -957,8 +949,7 @@ export function ContentSubmissionSection() {
         : parsedRoundMaxVoters > Math.max(parsedRewardRequiredVoters, 1) * 3
           ? "A wide voter cap can dilute the per-voter payout if participation is high; use it when broader input matters more than payout density."
           : "These settings give a clear payout target for a small qualifying round.";
-  const rewardTokenAddress =
-    rewardAsset === "hrep" ? hrepAddress : ((rewardEscrowWiring?.[1] as `0x${string}` | undefined) ?? undefined);
+  const rewardTokenAddress = rewardAsset === "hrep" ? hrepAddress : getDefaultUsdcAddress(targetNetwork.id);
   const { refetch: refetchNextContentId } = useScaffoldReadContract({
     contractName: "ContentRegistry",
     functionName: "nextContentId",
@@ -1234,33 +1225,44 @@ export function ContentSubmissionSection() {
 
     let verifiedRewardTokenAddress = rewardTokenAddress;
     try {
-      const [wiredHrepAddress, wiredUsdcAddress, wiredRegistryAddress] = (await readContract(wagmiConfig, {
-        address: rewardEscrowAddress,
-        abi: QUESTION_REWARD_POOL_ESCROW_WIRING_ABI,
-        functionName: "getWiring",
-      })) as readonly [`0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`];
+      const [wiredVoterIdNftAddress, wiredRegistryAddress, wiredHrepAddress, registryVoterIdNftAddress] =
+        (await Promise.all([
+          readContract(wagmiConfig, {
+            address: rewardEscrowAddress,
+            abi: QUESTION_REWARD_POOL_ESCROW_WIRING_ABI,
+            functionName: "getWiring",
+          }) as Promise<`0x${string}`>,
+          readContract(wagmiConfig, {
+            address: registryAddress,
+            abi: QUESTION_SUBMISSION_ABI,
+            functionName: "questionRewardPoolEscrow",
+          }) as Promise<`0x${string}`>,
+          readContract(wagmiConfig, {
+            address: registryAddress,
+            abi: QUESTION_SUBMISSION_ABI,
+            functionName: "hrepToken",
+          }) as Promise<`0x${string}`>,
+          readContract(wagmiConfig, {
+            address: registryAddress,
+            abi: QUESTION_SUBMISSION_ABI,
+            functionName: "voterIdNFT",
+          }) as Promise<`0x${string}`>,
+        ])) as readonly [`0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`];
 
-      if (wiredRegistryAddress.toLowerCase() !== registryAddress.toLowerCase()) {
-        notification.error("Bounty escrow is not wired to this registry.");
+      if (wiredRegistryAddress.toLowerCase() !== rewardEscrowAddress.toLowerCase()) {
+        notification.error("Bounty escrow is not active for this registry.");
         return;
       }
       if (wiredHrepAddress.toLowerCase() !== hrepAddress.toLowerCase()) {
         notification.error("Bounty escrow HREP token does not match this network.");
         return;
       }
-
-      const registryEscrowAddress = (await readContract(wagmiConfig, {
-        address: registryAddress,
-        abi: QUESTION_SUBMISSION_ABI,
-        functionName: "questionRewardPoolEscrow",
-      })) as `0x${string}`;
-
-      if (registryEscrowAddress.toLowerCase() !== rewardEscrowAddress.toLowerCase()) {
-        notification.error("Bounty escrow is not active for this registry.");
+      if (wiredVoterIdNftAddress.toLowerCase() !== registryVoterIdNftAddress.toLowerCase()) {
+        notification.error("Bounty escrow Voter ID does not match this registry.");
         return;
       }
 
-      verifiedRewardTokenAddress = rewardAsset === "hrep" ? hrepAddress : wiredUsdcAddress;
+      verifiedRewardTokenAddress = rewardAsset === "hrep" ? hrepAddress : rewardTokenAddress;
     } catch {
       notification.error("Could not verify bounty escrow wiring.");
       return;

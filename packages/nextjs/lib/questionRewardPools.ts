@@ -22,13 +22,7 @@ export const QUESTION_REWARD_POOL_ESCROW_WIRING_ABI = [
     type: "function",
     name: "getWiring",
     inputs: [],
-    outputs: [
-      { name: "hrep", type: "address", internalType: "address" },
-      { name: "usdc", type: "address", internalType: "address" },
-      { name: "registry_", type: "address", internalType: "address" },
-      { name: "votingEngine_", type: "address", internalType: "address" },
-      { name: "voterIdNft_", type: "address", internalType: "address" },
-    ],
+    outputs: [{ name: "voterIdNft_", type: "address", internalType: "address" }],
     stateMutability: "view",
   },
 ] as const;
