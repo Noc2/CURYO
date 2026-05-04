@@ -623,13 +623,10 @@ contract QuestionRewardPoolEscrow is
     ///      iteration (voters × bundle questions) is intentionally deferred here so it cannot
     ///      OOG the settlement transaction at high `maxVoters` × bundle-size. Anyone can call
     ///      this after settlement to drive the bundle forward.
-    /// @dev OPERATIONS REQUIREMENT: deployments MUST run a keeper that calls this function
-    ///      after each bundle question's round settles. The on-chain `refundQuestionBundleReward`
-    ///      path reads `bundle.completedRoundSets`, which only advances on qualification — a
-    ///      hostile funder who skipped sync could theoretically reclaim earned rewards via
-    ///      the refund window. The protocol's keeper covers the standard happy path; voters
-    ///      can also self-trigger this call before claiming, so a missed keeper run is
-    ///      recoverable. See `packages/keeper/src/keeper.ts` for the reference implementation.
+    /// @dev OPERATIONS REQUIREMENT: deployments SHOULD run a keeper that calls this function
+    ///      after each bundle question's round settles. Voters can also self-trigger this
+    ///      call before claiming, and the refund path rechecks complete recorded sets before
+    ///      sweeping funds.
     function syncBundleQuestionTerminal(uint256 contentId, uint256 roundId) external {
         (RoundLib.RoundState state, uint48 settledAt,) = _roundTerminalState(contentId, roundId);
         require(settledAt != 0, "Round not terminal");
@@ -638,6 +635,10 @@ contract QuestionRewardPoolEscrow is
         if (bundleId == 0) return;
         BundleReward storage bundle = bundleRewards[bundleId];
         if (bundle.refunded) return;
+        _qualifyPendingBundleRoundSet(bundleId, bundle);
+    }
+
+    function _qualifyPendingBundleRoundSet(uint256 bundleId, BundleReward storage bundle) internal {
         uint256 roundSetIndex = bundle.completedRoundSets;
         if (roundSetIndex >= bundle.requiredSettledRounds) return;
         if (bundleRoundSetSnapshots[bundleId][roundSetIndex].qualified) return;
@@ -784,6 +785,7 @@ contract QuestionRewardPoolEscrow is
         require(!bundle.refunded, "Already refunded");
         require(block.timestamp > bundle.bountyClosesAt, "Bundle active");
         require(block.timestamp > uint256(bundle.bountyClosesAt) + BUNDLE_REFUND_GRACE, "Grace");
+        _qualifyPendingBundleRoundSet(bundleId, bundle);
         if (bundle.completedRoundSets != 0) {
             _requireBundleCleanupComplete(bundleId, bundle.completedRoundSets);
             if (bundle.bountyOpensAt == 0) {

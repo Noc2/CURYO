@@ -3489,6 +3489,28 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(usdc.balanceOf(treasury), treasuryBalanceBefore + refundAmount);
     }
 
+    function testBundleRefund_CompleteRecordedRoundSetQualifiesBeforeRefund() public {
+        uint256[] memory contentIds = _submitBundleQuestions();
+        uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, REWARD_POOL_AMOUNT, 3);
+        uint256 bountyClosesAt = block.timestamp + 30 days;
+
+        address[] memory voters = _threeVoters();
+        bool[] memory directions = _directions(true, true, false);
+        _settleRoundWithoutBundleSync(voters, contentIds[0], directions);
+        _settleRoundWithoutBundleSync(voters, contentIds[1], directions);
+        assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter1), 0);
+
+        vm.warp(bountyClosesAt + BUNDLE_REFUND_GRACE + 1);
+        assertEq(rewardPoolEscrow.refundQuestionBundleReward(bundleId), 0);
+        assertGt(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter1), 0);
+
+        vm.expectRevert("Grace");
+        rewardPoolEscrow.refundQuestionBundleReward(bundleId);
+
+        vm.prank(voter1);
+        assertGt(rewardPoolEscrow.claimQuestionBundleReward(bundleId, 0), 0);
+    }
+
     function testBundleRefund_ClaimGraceBlocksRaceAtBountyClose() public {
         uint256[] memory contentIds = _submitBundleQuestions();
         uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, REWARD_POOL_AMOUNT, 3);
