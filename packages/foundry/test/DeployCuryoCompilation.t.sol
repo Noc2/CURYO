@@ -22,12 +22,17 @@ contract MissingConfigHub {
 contract MigrationSourceFaucetMock {
     MigrationSourceVoterIdNFTMock public voterIdNFT = new MigrationSourceVoterIdNFTMock();
     bool public paused = true;
+    address public owner;
     uint256 public totalClaimants;
     uint256 public totalClaimed;
     mapping(address => bool) public addressClaimed;
     mapping(address => uint256) public claimNullifier;
     mapping(uint256 => bool) public nullifierUsed;
     mapping(address => address) public referredBy;
+
+    constructor() {
+        owner = msg.sender;
+    }
 
     function addClaim(address user, uint256 nullifier, uint256 amount) external {
         _addClaim(user, nullifier, amount, address(0));
@@ -53,6 +58,15 @@ contract MigrationSourceFaucetMock {
 
     function setPaused(bool paused_) external {
         paused = paused_;
+    }
+
+    function setOwner(address newOwner) external {
+        owner = newOwner;
+    }
+
+    function pause() external {
+        require(msg.sender == owner, "not owner");
+        paused = true;
     }
 }
 
@@ -192,6 +206,31 @@ contract DeployCuryoHarness is DeployCuryo {
             referrerRewards: referrerRewards
         });
         _validateMigrationBootstrapConfig(migrationConfig);
+    }
+
+    function exposedSetDeployer(address newDeployer) external {
+        deployer = newDeployer;
+    }
+
+    function exposedEnsureMigrationSourceFaucetPaused(
+        address sourceHumanFaucet,
+        address[] memory users,
+        uint256[] memory nullifiers,
+        uint256[] memory amounts,
+        address[] memory referrers,
+        uint256[] memory claimantBonuses,
+        uint256[] memory referrerRewards
+    ) external {
+        MigrationBootstrapConfig memory migrationConfig = MigrationBootstrapConfig({
+            sourceHumanFaucet: sourceHumanFaucet,
+            users: users,
+            nullifiers: nullifiers,
+            amounts: amounts,
+            referrers: referrers,
+            claimantBonuses: claimantBonuses,
+            referrerRewards: referrerRewards
+        });
+        _ensureMigrationSourceFaucetPaused(migrationConfig);
     }
 
     function exposedBootstrapMigratedClaimsInBatchesAndClose(
@@ -587,7 +626,9 @@ contract DeployCuryoCompilationTest is Test {
         );
     }
 
-    function test_MigrationBootstrapValidation_RejectsUnpausedSourceFaucet() public {
+    function test_PreBroadcastValidation_AcceptsUnpausedSourceFaucet() public {
+        // Pause invariant moved to broadcast-phase auto-pause; the pre-broadcast view validation must
+        // no longer revert on an unpaused source so the deployer can pause-and-migrate in one run.
         DeployCuryoHarness deployScript = new DeployCuryoHarness();
         MigrationSourceFaucetMock sourceFaucet = new MigrationSourceFaucetMock();
         address[] memory users = new address[](1);
@@ -604,12 +645,88 @@ contract DeployCuryoCompilationTest is Test {
         sourceFaucet.setPaused(false);
 
         vm.chainId(42220);
+        deployScript.exposedValidateMigrationBootstrapConfigWithSource(
+            address(sourceFaucet), users, nullifiers, amounts, referrers, claimantBonuses, referrerRewards
+        );
+    }
+
+    function test_EnsureMigrationSourceFaucetPaused_AutoPausesWhenDeployerIsOwner() public {
+        DeployCuryoHarness deployScript = new DeployCuryoHarness();
+        MigrationSourceFaucetMock sourceFaucet = new MigrationSourceFaucetMock();
+        address[] memory users = new address[](1);
+        users[0] = address(0x1111);
+        uint256[] memory nullifiers = new uint256[](1);
+        nullifiers[0] = 123456;
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = 10_000e6;
+        address[] memory referrers = new address[](1);
+        uint256[] memory claimantBonuses = new uint256[](1);
+        uint256[] memory referrerRewards = new uint256[](1);
+
+        sourceFaucet.addClaim(users[0], nullifiers[0], amounts[0]);
+        sourceFaucet.setPaused(false);
+        sourceFaucet.setOwner(address(deployScript));
+        deployScript.exposedSetDeployer(address(deployScript));
+
+        vm.chainId(42220);
+        deployScript.exposedEnsureMigrationSourceFaucetPaused(
+            address(sourceFaucet), users, nullifiers, amounts, referrers, claimantBonuses, referrerRewards
+        );
+
+        assertTrue(sourceFaucet.paused());
+    }
+
+    function test_EnsureMigrationSourceFaucetPaused_NoOpWhenAlreadyPaused() public {
+        DeployCuryoHarness deployScript = new DeployCuryoHarness();
+        MigrationSourceFaucetMock sourceFaucet = new MigrationSourceFaucetMock();
+        address[] memory users = new address[](1);
+        users[0] = address(0x1111);
+        uint256[] memory nullifiers = new uint256[](1);
+        nullifiers[0] = 123456;
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = 10_000e6;
+        address[] memory referrers = new address[](1);
+        uint256[] memory claimantBonuses = new uint256[](1);
+        uint256[] memory referrerRewards = new uint256[](1);
+
+        sourceFaucet.addClaim(users[0], nullifiers[0], amounts[0]);
+        // Source already paused, deployer is NOT owner — must still be a no-op (no pause attempt, no revert).
+        sourceFaucet.setOwner(address(0xBEEF));
+        deployScript.exposedSetDeployer(address(deployScript));
+
+        vm.chainId(42220);
+        deployScript.exposedEnsureMigrationSourceFaucetPaused(
+            address(sourceFaucet), users, nullifiers, amounts, referrers, claimantBonuses, referrerRewards
+        );
+
+        assertTrue(sourceFaucet.paused());
+    }
+
+    function test_EnsureMigrationSourceFaucetPaused_RevertsWhenDeployerIsNotOwner() public {
+        DeployCuryoHarness deployScript = new DeployCuryoHarness();
+        MigrationSourceFaucetMock sourceFaucet = new MigrationSourceFaucetMock();
+        address[] memory users = new address[](1);
+        users[0] = address(0x1111);
+        uint256[] memory nullifiers = new uint256[](1);
+        nullifiers[0] = 123456;
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = 10_000e6;
+        address[] memory referrers = new address[](1);
+        uint256[] memory claimantBonuses = new uint256[](1);
+        uint256[] memory referrerRewards = new uint256[](1);
+
+        sourceFaucet.addClaim(users[0], nullifiers[0], amounts[0]);
+        sourceFaucet.setPaused(false);
+        sourceFaucet.setOwner(address(0xBEEF));
+        deployScript.exposedSetDeployer(address(deployScript));
+
+        vm.chainId(42220);
         vm.expectRevert(
             abi.encodeWithSelector(
                 DeployCuryo.DeploymentRoleVerificationFailed.selector, "Migration source faucet not paused"
             )
         );
-        deployScript.exposedValidateMigrationBootstrapConfigWithSource(
+        deployScript.exposedEnsureMigrationSourceFaucetPaused(
             address(sourceFaucet), users, nullifiers, amounts, referrers, claimantBonuses, referrerRewards
         );
     }
