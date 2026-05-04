@@ -733,6 +733,104 @@ body {
   }
 }
 
+/* Landing page entrance animations */
+@keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-delay-100 {
+  animation-delay: 100ms;
+}
+
+.animate-delay-150 {
+  animation-delay: 150ms;
+}
+
+.animate-delay-200 {
+  animation-delay: 200ms;
+}
+
+.animate-delay-300 {
+  animation-delay: 300ms;
+}
+
+.animate-delay-500 {
+  animation-delay: 500ms;
+}
+
+.animate-delay-1000 {
+  animation-delay: 1000ms;
+}
+
+.animate-delay-2000 {
+  animation-delay: 2000ms;
+}
+
+/* Orbit divider animations */
+@keyframes orbit-flow {
+  to {
+    stroke-dashoffset: -32;
+  }
+}
+
+@keyframes orbit-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.92);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes orbit-glow {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-orbit-flow {
+  animation: orbit-flow 2s linear infinite;
+}
+
+.animate-orbit-pulse {
+  animation: orbit-pulse 3s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.animate-orbit-glow {
+  animation: orbit-glow 4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in-up,
+  .animate-orbit-flow,
+  .animate-orbit-pulse,
+  .animate-orbit-glow {
+    animation: none;
+  }
+}
+
 /* Prose typography for docs pages */
 .prose {
   color: var(--color-base-content);

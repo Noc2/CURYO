@@ -132,6 +132,7 @@ function LandingOrbitDivider({ variant }: { variant: LandingOrbitDividerVariant 
           stroke="#F26426"
           strokeWidth="4.5"
           strokeLinecap="round"
+          className="animate-orbit-glow"
         />
         <path
           d="M182 34C338 102 480 126 652 82C802 44 918 56 1098 116"
@@ -139,6 +140,7 @@ function LandingOrbitDivider({ variant }: { variant: LandingOrbitDividerVariant 
           strokeWidth="4"
           strokeLinecap="round"
           strokeDasharray="1 15"
+          className="animate-orbit-flow"
         />
         <path
           d="M322 112C476 20 642 8 800 66C926 112 1012 102 1134 54"
@@ -146,10 +148,12 @@ function LandingOrbitDivider({ variant }: { variant: LandingOrbitDividerVariant 
           strokeWidth="3.5"
           strokeLinecap="round"
           opacity="0.86"
+          className="animate-orbit-glow"
+          style={{ animationDelay: "2s" }}
         />
-        <circle cx="292" cy="93" r="13" fill="#F26426" />
-        <circle cx="784" cy="60" r="10" fill="#FF8A3D" />
-        <circle cx="1034" cy="40" r="14" fill="#E3A234" />
+        <circle cx="292" cy="93" r="13" fill="#F26426" className="animate-orbit-pulse" />
+        <circle cx="784" cy="60" r="10" fill="#FF8A3D" className="animate-orbit-pulse animate-delay-1000" />
+        <circle cx="1034" cy="40" r="14" fill="#E3A234" className="animate-orbit-pulse animate-delay-2000" />
       </svg>
     </div>
   );
@@ -185,9 +189,15 @@ function AskWorkflowSection() {
     <section className="relative z-10 mt-4 w-full sm:mt-6 lg:mt-8">
       <WorkflowHeading title="How It Works" />
       <div className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-3 lg:gap-6">
-        <AskFlowPanel {...agentStep} />
-        <AskFlowPanel {...mcpStep} />
-        <AskFlowPanel {...resultStep} />
+        <div className="animate-fade-in-up h-full">
+          <AskFlowPanel {...agentStep} />
+        </div>
+        <div className="animate-fade-in-up h-full animate-delay-150">
+          <AskFlowPanel {...mcpStep} />
+        </div>
+        <div className="animate-fade-in-up h-full animate-delay-300">
+          <AskFlowPanel {...resultStep} />
+        </div>
       </div>
     </section>
   );
