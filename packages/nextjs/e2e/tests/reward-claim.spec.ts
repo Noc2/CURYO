@@ -18,9 +18,9 @@ import {
 import { ANVIL_ACCOUNTS, DEPLOYER } from "../helpers/anvil-accounts";
 import { newE2EContext } from "../helpers/browser-context";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
+import { getContentById, getContentList, ponderGet } from "../helpers/ponder-api";
 import { gotoWithRetry } from "../helpers/wait-helpers";
 import { setupWallet } from "../helpers/wallet-session";
-import { getContentById, getContentList, ponderGet } from "../helpers/ponder-api";
 import { expect, test } from "@playwright/test";
 
 /**
@@ -253,8 +253,8 @@ test.describe("Reward claim lifecycle", () => {
         r.contentId === settledContentId && r.roundId === settledRound.roundId,
     );
     expect(loserReward).toBeTruthy();
-    expect(loserReward.hrepReward).toBe(LOSER_REBATE.toString());
-    expect(loserReward.stakeReturned).toBe("0");
+    expect(loserReward.stakeReturned).toBe(LOSER_REBATE.toString());
+    expect(loserReward.hrepReward).toBe("0");
   });
 
   test("winning voter claims participation reward, double claim reverts", async () => {
