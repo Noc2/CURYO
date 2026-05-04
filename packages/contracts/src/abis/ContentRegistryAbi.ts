@@ -2206,6 +2206,11 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "error",
+    "name": "ActiveRoundOnPreviousEngine",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "EnforcedPause",
     "inputs": []
   },

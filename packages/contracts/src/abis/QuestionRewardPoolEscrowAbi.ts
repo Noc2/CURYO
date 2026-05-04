@@ -347,26 +347,6 @@ export const QuestionRewardPoolEscrowAbi = [
     "inputs": [],
     "outputs": [
       {
-        "name": "hrep",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "usdc",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "registry_",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "votingEngine_",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
         "name": "voterIdNft_",
         "type": "address",
         "internalType": "address"

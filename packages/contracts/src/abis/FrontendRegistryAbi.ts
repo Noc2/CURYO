@@ -123,6 +123,30 @@ export const FrontendRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "canClaimFeesForRound",
+    "inputs": [
+      {
+        "name": "frontend",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "roundSettledAt",
+        "type": "uint48",
+        "internalType": "uint48"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "canReceiveHistoricalFees",
     "inputs": [
       {

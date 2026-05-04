@@ -1,0 +1,21 @@
+{
+  "0x00a939FBdb8e0713AA3F79651dee06E6434F936A": "HumanFaucet",
+  "0x2853Ed333e571f9f5660376e0866fb5eCAB52828": "RoundRewardDistributor",
+  "0x2cDA129376Ad1C35ef5e7f2f762BF48F932AC70F": "CategoryRegistry",
+  "0x5B343748E7711CDf46d2875A2Ae1be8af2B92091": "HumanReputation",
+  "0x772E221AB63E6470943fcB4ffb865996EbDc72e6": "TimelockController",
+  "0x7d86360362189BE4fc087e913E676b62d160050A": "FrontendRegistry",
+  "0x82e7dfBc2E97f089dc9C4814775A29cE01fD3148": "VoterIdNFT",
+  "0x8857ec19F1c96e983E245DaDA441A76e06cc3ec4": "CuryoGovernor",
+  "0x8f7D691491432fBB7a43f147931Dfa62B3E96791": "X402QuestionSubmitter",
+  "0xBF77d6dfa081025977459f8bE9f1a930A0465fBB": "FeedbackBonusEscrow",
+  "0xC3688b3f4B8bC1A24919e93b9e892935bd4c4688": "ParticipationPool",
+  "0xEe78b0Fe956c35A53f933EdDE7cCc1FaF1881D01": "RoundVotingEngine",
+  "0xEeA05f5fC96368a23adE03250535fCF286A7857F": "ProtocolConfig",
+  "0xadEBCa61E394ea115F23Ecc4CE65e01b0a73Def6": "ContentRegistry",
+  "0xc3B0bDa1EC1A4D1441ccf4F88846F749096a85bD": "ProfileRegistry",
+  "0xd44ab1c142984c0742e98C763b3f3CA4eee35Dc1": "QuestionRewardPoolEscrow",
+  "deploymentBlockNumber": 65977192,
+  "deploymentComplete": "true",
+  "networkName": "celo"
+}
