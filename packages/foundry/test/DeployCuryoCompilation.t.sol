@@ -25,11 +25,17 @@ contract MigrationSourceFaucetMock {
     mapping(address => bool) public addressClaimed;
     mapping(address => uint256) public claimNullifier;
     mapping(uint256 => bool) public nullifierUsed;
+    mapping(address => address) public referredBy;
 
     function addClaim(address user, uint256 nullifier, uint256 amount) external {
+        _addClaim(user, nullifier, amount, address(0));
+    }
+
+    function _addClaim(address user, uint256 nullifier, uint256 amount, address referrer) internal {
         addressClaimed[user] = true;
         claimNullifier[user] = nullifier;
         nullifierUsed[nullifier] = true;
+        referredBy[user] = referrer;
         totalClaimants++;
         totalClaimed += amount;
     }
@@ -448,6 +454,37 @@ contract DeployCuryoCompilationTest is Test {
             abi.encodeWithSelector(
                 DeployCuryo.DeploymentRoleVerificationFailed.selector, "Migration source user nullifier"
             )
+        );
+        deployScript.exposedValidateMigrationBootstrapConfigWithSource(
+            address(sourceFaucet), users, nullifiers, amounts, referrers, claimantBonuses, referrerRewards
+        );
+    }
+
+    function test_MigrationBootstrapValidation_RejectsSourceReferrerMismatch() public {
+        DeployCuryoHarness deployScript = new DeployCuryoHarness();
+        MigrationSourceFaucetMock sourceFaucet = new MigrationSourceFaucetMock();
+        address[] memory users = new address[](2);
+        users[0] = address(0x1111);
+        users[1] = address(0x2222);
+        uint256[] memory nullifiers = new uint256[](2);
+        nullifiers[0] = 123456;
+        nullifiers[1] = 789012;
+        uint256[] memory amounts = new uint256[](2);
+        amounts[0] = 10_000e6;
+        amounts[1] = 15_000e6;
+        address[] memory referrers = new address[](2);
+        referrers[1] = users[0];
+        uint256[] memory claimantBonuses = new uint256[](2);
+        claimantBonuses[1] = 5_000e6;
+        uint256[] memory referrerRewards = new uint256[](2);
+        referrerRewards[1] = 5_000e6;
+
+        sourceFaucet.addClaim(users[0], nullifiers[0], amounts[0]);
+        sourceFaucet.addClaim(users[1], nullifiers[1], amounts[1] + referrerRewards[1]);
+
+        vm.chainId(42220);
+        vm.expectRevert(
+            abi.encodeWithSelector(DeployCuryo.DeploymentRoleVerificationFailed.selector, "Migration source referrer")
         );
         deployScript.exposedValidateMigrationBootstrapConfigWithSource(
             address(sourceFaucet), users, nullifiers, amounts, referrers, claimantBonuses, referrerRewards

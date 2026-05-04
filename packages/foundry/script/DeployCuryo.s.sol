@@ -816,6 +816,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
             uint256 nullifier = migrationConfig.nullifiers[i];
             _require(sourceHumanFaucet.hasClaimed(user), "Migration source user unclaimed");
             _require(sourceHumanFaucet.claimNullifier(user) == nullifier, "Migration source user nullifier");
+            _require(sourceHumanFaucet.referredBy(user) == migrationConfig.referrers[i], "Migration source referrer");
             _require(sourceHumanFaucet.nullifierUsed(nullifier), "Migration source nullifier unused");
         }
     }
