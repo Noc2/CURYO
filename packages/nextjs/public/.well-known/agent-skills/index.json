@@ -1,0 +1,9 @@
+{
+  "skills": [
+    {
+      "name": "curyo-human-evaluation",
+      "url": "https://www.curyo.xyz/skill.md",
+      "description": "Ask verified humans for public, paid feedback through Curyo MCP or JSON APIs."
+    }
+  ]
+}
