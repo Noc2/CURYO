@@ -19,6 +19,26 @@ contract MissingConfigHub {
     }
 }
 
+contract MigrationSourceFaucetMock {
+    uint256 public totalClaimants;
+    uint256 public totalClaimed;
+    mapping(address => bool) public addressClaimed;
+    mapping(address => uint256) public claimNullifier;
+    mapping(uint256 => bool) public nullifierUsed;
+
+    function addClaim(address user, uint256 nullifier, uint256 amount) external {
+        addressClaimed[user] = true;
+        claimNullifier[user] = nullifier;
+        nullifierUsed[nullifier] = true;
+        totalClaimants++;
+        totalClaimed += amount;
+    }
+
+    function hasClaimed(address user) external view returns (bool) {
+        return addressClaimed[user];
+    }
+}
+
 contract DeployCuryoHarness is DeployCuryo {
     function exposedPreBroadcastChecks() external view {
         _preBroadcastChecks();
@@ -88,8 +108,30 @@ contract DeployCuryoHarness is DeployCuryo {
         address[] memory referrers,
         uint256[] memory claimantBonuses,
         uint256[] memory referrerRewards
-    ) external pure {
+    ) external view {
         MigrationBootstrapConfig memory migrationConfig = MigrationBootstrapConfig({
+            sourceHumanFaucet: address(0),
+            users: users,
+            nullifiers: nullifiers,
+            amounts: amounts,
+            referrers: referrers,
+            claimantBonuses: claimantBonuses,
+            referrerRewards: referrerRewards
+        });
+        _validateMigrationBootstrapConfig(migrationConfig);
+    }
+
+    function exposedValidateMigrationBootstrapConfigWithSource(
+        address sourceHumanFaucet,
+        address[] memory users,
+        uint256[] memory nullifiers,
+        uint256[] memory amounts,
+        address[] memory referrers,
+        uint256[] memory claimantBonuses,
+        uint256[] memory referrerRewards
+    ) external view {
+        MigrationBootstrapConfig memory migrationConfig = MigrationBootstrapConfig({
+            sourceHumanFaucet: sourceHumanFaucet,
             users: users,
             nullifiers: nullifiers,
             amounts: amounts,
@@ -111,6 +153,7 @@ contract DeployCuryoHarness is DeployCuryo {
         uint256 batchSize
     ) external returns (uint256 batchCount) {
         MigrationBootstrapConfig memory migrationConfig = MigrationBootstrapConfig({
+            sourceHumanFaucet: address(0),
             users: users,
             nullifiers: nullifiers,
             amounts: amounts,
@@ -205,6 +248,34 @@ contract DeployCuryoCompilationTest is Test {
 
         vm.chainId(31337);
         assertEq(deployScript.exposedMigrationBootstrapUserCount(), 1);
+        deployScript.exposedPreBroadcastChecks();
+
+        vm.setEnv("MIGRATION_BOOTSTRAP_FILE", "");
+        vm.removeFile(path);
+    }
+
+    function test_PreBroadcastChecks_RequireMigrationSourceOnProductionManifest() public {
+        DeployCuryoHarness deployScript = new DeployCuryoHarness();
+        string memory path = "./out/curyo-migration-bootstrap-missing-source.json";
+        vm.writeFile(
+            path,
+            string.concat(
+                '{"users":["0x0000000000000000000000000000000000000001"],',
+                '"nullifiers":["123456"],',
+                '"amounts":["10000000000"],',
+                '"referrers":["0x0000000000000000000000000000000000000000"],',
+                '"claimantBonuses":["0"],',
+                '"referrerRewards":["0"]}'
+            )
+        );
+        vm.setEnv("MIGRATION_BOOTSTRAP_FILE", path);
+
+        vm.chainId(42220);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                DeployCuryo.DeploymentRoleVerificationFailed.selector, "Migration source faucet required"
+            )
+        );
         deployScript.exposedPreBroadcastChecks();
 
         vm.setEnv("MIGRATION_BOOTSTRAP_FILE", "");
@@ -347,6 +418,39 @@ contract DeployCuryoCompilationTest is Test {
 
         deployScript.exposedValidateMigrationBootstrapConfig(
             users, nullifiers, amounts, referrers, claimantBonuses, referrerRewards
+        );
+    }
+
+    function test_MigrationBootstrapValidation_VerifiesSourceFaucetState() public {
+        DeployCuryoHarness deployScript = new DeployCuryoHarness();
+        MigrationSourceFaucetMock sourceFaucet = new MigrationSourceFaucetMock();
+        address[] memory users = new address[](1);
+        users[0] = address(0x1111);
+        uint256[] memory nullifiers = new uint256[](1);
+        nullifiers[0] = 123456;
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = 10_000e6;
+        address[] memory referrers = new address[](1);
+        referrers[0] = address(0);
+        uint256[] memory claimantBonuses = new uint256[](1);
+        claimantBonuses[0] = 0;
+        uint256[] memory referrerRewards = new uint256[](1);
+        referrerRewards[0] = 0;
+
+        sourceFaucet.addClaim(users[0], nullifiers[0], amounts[0]);
+        vm.chainId(42220);
+        deployScript.exposedValidateMigrationBootstrapConfigWithSource(
+            address(sourceFaucet), users, nullifiers, amounts, referrers, claimantBonuses, referrerRewards
+        );
+
+        nullifiers[0] = 789012;
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                DeployCuryo.DeploymentRoleVerificationFailed.selector, "Migration source user nullifier"
+            )
+        );
+        deployScript.exposedValidateMigrationBootstrapConfigWithSource(
+            address(sourceFaucet), users, nullifiers, amounts, referrers, claimantBonuses, referrerRewards
         );
     }
 

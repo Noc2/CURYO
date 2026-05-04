@@ -77,6 +77,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
     uint256 public constant FAUCET_MINIMUM_AGE = 18;
 
     struct MigrationBootstrapConfig {
+        address sourceHumanFaucet;
         address[] users;
         uint256[] nullifiers;
         uint256[] amounts;
@@ -619,6 +620,9 @@ contract DeployCuryo is ScaffoldETHDeploy {
         }
 
         string memory json = vm.readFile(filePath);
+        if (vm.keyExistsJson(json, ".sourceHumanFaucet")) {
+            migrationConfig.sourceHumanFaucet = vm.parseJsonAddress(json, ".sourceHumanFaucet");
+        }
         migrationConfig.users = vm.parseJsonAddressArray(json, ".users");
         migrationConfig.nullifiers = _parseJsonUintStringArray(json, ".nullifiers");
         migrationConfig.amounts = _parseJsonUintStringArray(json, ".amounts");
@@ -735,7 +739,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         }
     }
 
-    function _validateMigrationBootstrapConfig(MigrationBootstrapConfig memory migrationConfig) internal pure {
+    function _validateMigrationBootstrapConfig(MigrationBootstrapConfig memory migrationConfig) internal view {
         uint256 claimCount = migrationConfig.users.length;
         _validateMigrationBootstrapLengths(migrationConfig, claimCount);
 
@@ -747,6 +751,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
             totalMigratedClaimed += _validateMigrationBootstrapEntry(migrationConfig, seenUsers, seenNullifiers, i);
         }
         _require(totalMigratedClaimed <= FAUCET_POOL_AMOUNT, "Migration faucet allocation");
+        _validateMigrationBootstrapSource(migrationConfig, claimCount, totalMigratedClaimed);
     }
 
     function _validateMigrationBootstrapLengths(MigrationBootstrapConfig memory migrationConfig, uint256 claimCount)
@@ -791,6 +796,28 @@ contract DeployCuryo is ScaffoldETHDeploy {
 
         _require(migrationConfig.amounts[index] == baseAmount + claimantBonus, "Migration amount mismatch");
         totalRequired = migrationConfig.amounts[index] + referrerReward;
+    }
+
+    function _validateMigrationBootstrapSource(
+        MigrationBootstrapConfig memory migrationConfig,
+        uint256 claimCount,
+        uint256 totalMigratedClaimed
+    ) internal view {
+        if (claimCount == 0) return;
+        if (block.chainid == 31337 && migrationConfig.sourceHumanFaucet == address(0)) return;
+
+        _require(migrationConfig.sourceHumanFaucet != address(0), "Migration source faucet required");
+        HumanFaucet sourceHumanFaucet = HumanFaucet(migrationConfig.sourceHumanFaucet);
+        _require(sourceHumanFaucet.totalClaimants() == claimCount, "Migration source claimant count");
+        _require(sourceHumanFaucet.totalClaimed() == totalMigratedClaimed, "Migration source total claimed");
+
+        for (uint256 i = 0; i < claimCount; ++i) {
+            address user = migrationConfig.users[i];
+            uint256 nullifier = migrationConfig.nullifiers[i];
+            _require(sourceHumanFaucet.hasClaimed(user), "Migration source user unclaimed");
+            _require(sourceHumanFaucet.claimNullifier(user) == nullifier, "Migration source user nullifier");
+            _require(sourceHumanFaucet.nullifierUsed(nullifier), "Migration source nullifier unused");
+        }
     }
 
     function _migrationLookupTableSize(uint256 claimCount) internal pure returns (uint256 size) {

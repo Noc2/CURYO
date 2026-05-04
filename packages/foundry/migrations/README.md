@@ -19,9 +19,10 @@ This is deliberately different from a plain token transfer plus NFT mint. Plain 
 
 ## Manifest
 
-Copy `faucet-bootstrap.example.json` to `faucet-bootstrap.json` and replace every array with the
-snapshot data. All arrays must be the same length and in the original claim order. Numeric fields
-are quoted strings so large Self nullifiers and 6-decimal HREP amounts are parsed exactly.
+Copy `faucet-bootstrap.example.json` to `faucet-bootstrap.json`, set `sourceHumanFaucet`
+to the previous deployed faucet, and replace every array with the snapshot data. All arrays must
+be the same length and in the original claim order. Numeric fields are quoted strings so large
+Self nullifiers and 6-decimal HREP amounts are parsed exactly.
 
 Amounts use HREP's 6 decimals:
 
@@ -39,6 +40,13 @@ For the first 9 current verified humans, capture:
 - holder address and nullifier from old `VoterIdNFT.VoterIdMinted` logs
 - claimant amount from old `HumanFaucet.TokensClaimed` logs
 - referral details, if any, from old `HumanFaucet.ReferralRewardPaid` logs
+
+Production deploys also verify the manifest against `sourceHumanFaucet` before broadcasting:
+
+- `totalClaimants()` must equal the manifest row count
+- `totalClaimed()` must equal the manifest payout total
+- every holder must be claimed on the source faucet
+- every holder's `claimNullifier` and every `nullifierUsed` entry must match the manifest
 
 If token IDs must remain `1..9`, keep the rows ordered by the old token ID and run the bootstrap
 before anyone can claim on the new deployment.
