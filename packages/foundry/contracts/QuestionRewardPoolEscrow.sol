@@ -1413,41 +1413,15 @@ contract QuestionRewardPoolEscrow is
 
     function _requireNoPendingFinishedRound(RewardPool storage rewardPool) internal view {
         uint256 nextRoundToEvaluate = rewardPool.nextRoundToEvaluate;
-        (, RoundLib.RoundState state,,,,,,,,,, uint48 thresholdReachedAt,,) =
+        (uint48 startedAt, RoundLib.RoundState state,,,,,,,,,,,,) =
             votingEngine.rounds(rewardPool.contentId, nextRoundToEvaluate);
         if (state == RoundLib.RoundState.Open) {
-            if (
-                thresholdReachedAt != 0
-                    && (rewardPool.bountyClosesAt == 0 || thresholdReachedAt <= rewardPool.bountyClosesAt)
-            ) revert RewardPoolCursorNeedsAdvance();
-            if (_timelyEligibleRevealCount(rewardPool, nextRoundToEvaluate) >= rewardPool.requiredVoters) {
+            if (rewardPool.bountyClosesAt == 0 || startedAt <= rewardPool.bountyClosesAt) {
                 revert RewardPoolCursorNeedsAdvance();
             }
             return;
         }
         revert RewardPoolCursorNeedsAdvance();
-    }
-
-    function _timelyEligibleRevealCount(RewardPool storage rewardPool, uint256 roundId)
-        internal
-        view
-        returns (uint256)
-    {
-        return QuestionRewardPoolEscrowQualificationLib.countEligibleRevealedVoters(
-            QuestionRewardPoolEscrowQualificationLib.QualificationContext({
-                votingEngine: votingEngine,
-                voterIdNft: _roundVoterIdNft(rewardPool.contentId, roundId),
-                contentId: rewardPool.contentId,
-                roundId: roundId,
-                bountyClosesAt: rewardPool.bountyClosesAt,
-                requiredVoters: rewardPool.requiredVoters,
-                funder: rewardPool.funder,
-                funderIdentity: rewardPool.funderIdentity,
-                funderNullifier: rewardPoolFunderNullifier[rewardPool.id],
-                submitterIdentity: rewardPool.submitterIdentity,
-                submitterNullifier: rewardPoolSubmitterNullifier[rewardPool.id]
-            })
-        );
     }
 
     function _previewRoundAllocation(RewardPool storage rewardPool) internal view returns (uint256 allocation) {
