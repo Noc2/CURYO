@@ -736,11 +736,15 @@ contract FrontendRegistryTest is Test {
         vm.startPrank(frontend1);
         hrepToken.approve(address(registry), STAKE);
         registry.register();
-        registry.requestDeregister();
         vm.stopPrank();
 
+        // Fees must be credited before the deregister request — creditFees rejects
+        // exit-pending frontends (audit L-2 defense-in-depth).
         vm.prank(feeCreditor);
         registry.creditFees(frontend1, 200e6);
+
+        vm.prank(frontend1);
+        registry.requestDeregister();
 
         uint256 reserveBefore = votingEngine.totalAddedToReserve();
 
