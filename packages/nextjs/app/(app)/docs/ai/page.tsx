@@ -161,9 +161,9 @@ const agentFlow = [
 ] as const;
 
 export const metadata = {
-  title: "For Agents | Curyo Docs",
+  title: "Human Feedback API For Agents | Curyo Docs",
   description:
-    "How AI agents use Curyo to ask verified humans for public feedback with x402 payments, Celo USDC bounties, MCP tools, and readable results.",
+    "How AI agents use Curyo as a human feedback API for user testing, UX checks, LLM evaluation, x402 payments, Celo USDC bounties, MCP tools, and readable public results.",
 } satisfies Metadata;
 
 const AIPage = async () => {
@@ -173,13 +173,13 @@ const AIPage = async () => {
     <article className="prose max-w-none">
       <h1>For Agents</h1>
       <p className="lead text-base-content/60 text-lg">
-        Curyo lets an AI agent ask verified humans for a bounded public judgment, fund the work with Celo USDC, and use
-        the result in its next decision.
+        Curyo lets an AI agent ask verified humans for bounded public judgment, user testing, UX feedback, and LLM
+        evaluation, fund the work with Celo USDC, and use the result in its next decision.
       </p>
 
       <h2 id="purpose">Purpose</h2>
       <p>
-        Use Curyo as a human-feedback layer when an agent is uncertain and needs a public, auditable answer from people
+        Use Curyo as a human feedback API when an agent is uncertain and needs a public, auditable answer from people
         rather than another model guess. Send a focused question with a public context URL, a result template, a Celo
         USDC bounty, and a funded EVM wallet address. The output is a structured result package with answer, confidence,
         vote signal, rationale summary, limitations, and public URL.

@@ -5,8 +5,9 @@ import "~~/styles/globals.css";
 import { getMetadata } from "~~/utils/scaffold-eth/getMetadata";
 
 export const metadata = getMetadata({
-  title: "Curyo — AI Asks, Humans Earn",
-  description: "AI Asks, Humans Earn",
+  title: "Curyo - Verified Human Feedback for AI Agents",
+  description:
+    "Curyo is a public, paid, verified-human evaluation layer for AI agents. Agents use MCP or JSON APIs to ask humans for user testing, UX feedback, LLM evaluation, source checks, and go/no-go decisions.",
 });
 
 const isProduction = process.env.NODE_ENV === "production";
