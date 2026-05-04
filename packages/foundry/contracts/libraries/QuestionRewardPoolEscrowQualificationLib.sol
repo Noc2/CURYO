@@ -7,6 +7,8 @@ import { RoundVotingEngine } from "../RoundVotingEngine.sol";
 import { RoundLib } from "./RoundLib.sol";
 
 library QuestionRewardPoolEscrowQualificationLib {
+    error RewardPoolCursorNeedsAdvance();
+
     struct QualificationContext {
         RoundVotingEngine votingEngine;
         IVoterIdNFT voterIdNft;
@@ -34,6 +36,19 @@ library QuestionRewardPoolEscrowQualificationLib {
         roundSettled = true;
         eligibleVoters = _countEligibleRevealedVoters(ctx);
         canQualify = eligibleVoters >= ctx.requiredVoters;
+    }
+
+    function requireNoPendingFinishedRound(
+        RoundVotingEngine votingEngine,
+        uint256 contentId,
+        uint256 nextRoundToEvaluate,
+        uint64 bountyClosesAt
+    ) external view {
+        (uint48 startedAt, RoundLib.RoundState state,,,,,,,,,,,,) = votingEngine.rounds(contentId, nextRoundToEvaluate);
+        if (state == RoundLib.RoundState.Open) {
+            if (startedAt == 0 || (bountyClosesAt != 0 && startedAt > bountyClosesAt)) return;
+        }
+        revert RewardPoolCursorNeedsAdvance();
     }
 
     function isExcludedVoter(

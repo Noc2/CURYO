@@ -1413,15 +1413,9 @@ contract QuestionRewardPoolEscrow is
 
     function _requireNoPendingFinishedRound(RewardPool storage rewardPool) internal view {
         uint256 nextRoundToEvaluate = rewardPool.nextRoundToEvaluate;
-        (uint48 startedAt, RoundLib.RoundState state,,,,,,,,,,,,) =
-            votingEngine.rounds(rewardPool.contentId, nextRoundToEvaluate);
-        if (state == RoundLib.RoundState.Open) {
-            if (rewardPool.bountyClosesAt == 0 || startedAt <= rewardPool.bountyClosesAt) {
-                revert RewardPoolCursorNeedsAdvance();
-            }
-            return;
-        }
-        revert RewardPoolCursorNeedsAdvance();
+        QuestionRewardPoolEscrowQualificationLib.requireNoPendingFinishedRound(
+            votingEngine, rewardPool.contentId, nextRoundToEvaluate, rewardPool.bountyClosesAt
+        );
     }
 
     function _previewRoundAllocation(RewardPool storage rewardPool) internal view returns (uint256 allocation) {
