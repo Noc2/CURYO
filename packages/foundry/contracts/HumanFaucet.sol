@@ -688,6 +688,20 @@ contract HumanFaucet is SelfVerificationRoot, EIP712, Ownable, Pausable {
         if (voterIdNFT.isNullifierUsed(nullifier) || voterIdNFT.getTokenIdForNullifier(nullifier) != 0) {
             revert NullifierAlreadyUsed();
         }
+        // Bind the remint to either (a) a wallet that has never claimed, or (b) the original
+        // wallet that previously held this nullifier before it was reset. Without this guard,
+        // a holder of a reset passport could remint into any wallet whose owner co-signs the
+        // EIP-712 authorization, permanently setting addressClaimed[user] = true on that wallet
+        // and blocking it from ever claiming HREP with its own future passport.
+        if (addressClaimed[user] && claimNullifier[user] != nullifier) {
+            revert AddressAlreadyClaimed();
+        }
+        // Same delegate-severance defense as the regular claim path: refuse to mint into a
+        // wallet that is currently another holder's Voter ID delegate, since mint() would
+        // silently clear that delegation.
+        if (voterIdNFT.delegateOf(user) != address(0)) {
+            revert AddressAlreadyClaimed();
+        }
 
         addressClaimed[user] = true;
         claimNullifier[user] = nullifier;
