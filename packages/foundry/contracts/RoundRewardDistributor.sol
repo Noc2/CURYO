@@ -338,8 +338,6 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         address expectedCaller = operator != address(0) ? operator : frontend;
         if (msg.sender != expectedCaller) revert UnauthorizedFrontendFeeCaller();
 
-        if (roundFrontendFeeDustFinalized[contentId][roundId]) revert PoolExhausted();
-
         _consumeFrontendFeeClaim(contentId, roundId, frontend, fee);
         _payoutFrontendFee(contentId, roundId, frontend, fee, disposition);
         emit FrontendFeeClaimed(contentId, roundId, frontend, fee);
@@ -638,7 +636,10 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     }
 
     /// @notice Release participation-reward dust, or stale unclaimed reservations after the finalization delay.
-    /// @dev Permissionless so old rounds can be cleaned up without admin intervention.
+    /// @dev Permissionless when every winner has fully claimed (only mathematical dust remains).
+    ///      Admin-only when finalizing via the stale-time branch with unclaimed winners — otherwise
+    ///      a griefer could trigger the cliff on every settled round to maximize forfeitures, since
+    ///      claimParticipationReward reverts once `roundParticipationRewardFinalized` is set.
     function finalizeParticipationRewards(uint256 contentId, uint256 roundId)
         external
         nonReentrant
@@ -653,10 +654,10 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         _requireNoPendingUnrevealedCleanup(contentId, roundId);
 
         uint256 winnerCount = round.upWins ? round.upCount : round.downCount;
+        bool fullyClaimed = roundParticipationRewardFullyClaimedCount[contentId][roundId] == winnerCount;
         bool stale = _participationRewardsStale(contentId, roundId, round);
-        if (roundParticipationRewardFullyClaimedCount[contentId][roundId] != winnerCount && !stale) {
-            revert ParticipationRewardsOutstanding();
-        }
+        if (!fullyClaimed && !stale) revert ParticipationRewardsOutstanding();
+        if (!fullyClaimed && !hasRole(DEFAULT_ADMIN_ROLE, msg.sender)) revert UnauthorizedCaller();
 
         address rewardPoolAddress = roundParticipationRewardPool[contentId][roundId];
         if (rewardPoolAddress == address(0)) revert NoPool();

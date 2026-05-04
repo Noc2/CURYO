@@ -3695,10 +3695,12 @@ contract RoundIntegrationTest is VotingTestBase {
         vm.stopPrank();
 
         uint256 backfilledAt = block.timestamp;
+        vm.prank(owner);
         vm.expectRevert(RoundRewardDistributor.ParticipationRewardsOutstanding.selector);
         rewardDistributor.finalizeParticipationRewards(contentId, roundId);
 
         vm.warp(backfilledAt + rewardDistributor.STALE_REWARD_FINALIZATION_DELAY());
+        vm.prank(owner);
         uint256 releasedReward = rewardDistributor.finalizeParticipationRewards(contentId, roundId);
         assertEq(releasedReward, 9e6, "stale backfilled rewards should release after a fresh grace window");
     }
@@ -3730,6 +3732,7 @@ contract RoundIntegrationTest is VotingTestBase {
         vm.prank(voter1);
         rewardDistributor.claimParticipationReward(contentId, roundId);
 
+        vm.prank(owner);
         vm.expectRevert(RoundRewardDistributor.ParticipationRewardsOutstanding.selector);
         rewardDistributor.finalizeParticipationRewards(contentId, roundId);
 
@@ -3739,6 +3742,7 @@ contract RoundIntegrationTest is VotingTestBase {
         uint256 poolBalanceBeforeFinalize = pool.poolBalance();
         uint256 totalDistributedBeforeFinalize = pool.totalDistributed();
 
+        vm.prank(owner);
         uint256 releasedReward = rewardDistributor.finalizeParticipationRewards(contentId, roundId);
 
         assertEq(releasedReward, 4_500_000, "stale unpaid winner reservation should be released");
@@ -3758,6 +3762,46 @@ contract RoundIntegrationTest is VotingTestBase {
         vm.prank(voter2);
         vm.expectRevert(RoundRewardDistributor.ParticipationRewardsAlreadyFinalized.selector);
         rewardDistributor.claimParticipationReward(contentId, roundId);
+    }
+
+    function test_FinalizeParticipationRewards_StaleBranchRequiresAdmin() public {
+        ParticipationPool pool = new ParticipationPool(address(hrepToken), owner);
+        pool.setAuthorizedCaller(address(rewardDistributor), true);
+
+        vm.startPrank(owner);
+        hrepToken.mint(owner, 1_000_000e6);
+        hrepToken.approve(address(pool), 1_000_000e6);
+        pool.depositPool(1_000_000e6);
+        ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(address(pool));
+        vm.stopPrank();
+
+        uint256 contentId = _submitContent();
+        address[] memory voters = new address[](3);
+        voters[0] = voter1;
+        voters[1] = voter2;
+        voters[2] = voter3;
+        bool[] memory dirs = new bool[](3);
+        dirs[0] = true;
+        dirs[1] = true;
+        dirs[2] = false;
+        uint256 roundId = _settleRoundWith(voters, contentId, dirs, STAKE);
+
+        // Only voter1 claims pre-stale; voter2 is the "late" winner who would lose their bonus.
+        vm.prank(voter1);
+        rewardDistributor.claimParticipationReward(contentId, roundId);
+
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
+        vm.warp(uint256(round.settledAt) + rewardDistributor.STALE_REWARD_FINALIZATION_DELAY());
+
+        // A griefer cannot trigger the cliff that would forfeit voter2's bonus.
+        vm.prank(address(0xBEEF));
+        vm.expectRevert(RoundRewardDistributor.UnauthorizedCaller.selector);
+        rewardDistributor.finalizeParticipationRewards(contentId, roundId);
+
+        // Admin retains the ability to finalize when truly stuck.
+        vm.prank(owner);
+        rewardDistributor.finalizeParticipationRewards(contentId, roundId);
+        assertTrue(rewardDistributor.roundParticipationRewardFinalized(contentId, roundId));
     }
 
     function test_SettlementSideEffectFailure_InsufficientParticipationLiquidityCanBeBackfilled() public {
