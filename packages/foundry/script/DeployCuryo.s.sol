@@ -293,8 +293,8 @@ contract DeployCuryo is ScaffoldETHDeploy {
         profileRegistry.setVoterIdNFT(address(voterIdNFT));
 
         // Wire FrontendRegistry to VotingEngine for slashing
-        frontendRegistry.initializeFeeCreditor(address(rewardDistributor));
         frontendRegistry.setVotingEngine(address(votingEngine));
+        frontendRegistry.initializeFeeCreditor(address(rewardDistributor));
 
         // 9. Seed initial categories
         _seedCategories(categoryRegistry);

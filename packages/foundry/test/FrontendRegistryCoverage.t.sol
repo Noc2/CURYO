@@ -707,7 +707,7 @@ contract FrontendRegistryCoverageTest is Test {
         vm.stopPrank();
     }
 
-    function test_InitialFeeCreditorSetup_RequiresPreVotingEngine() public {
+    function test_InitialFeeCreditorSetup_RequiresConfiguredVotingEngine() public {
         vm.startPrank(admin);
         FrontendRegistry impl2 = new FrontendRegistry();
         FrontendRegistry splitRoleRegistry = FrontendRegistry(
@@ -718,6 +718,7 @@ contract FrontendRegistryCoverageTest is Test {
             )
         );
 
+        splitRoleRegistry.setVotingEngine(address(votingEngine));
         splitRoleRegistry.initializeFeeCreditor(feeCreditor);
         assertTrue(splitRoleRegistry.hasRole(splitRoleRegistry.FEE_CREDITOR_ROLE(), feeCreditor));
         assertEq(splitRoleRegistry.feeCreditor(), feeCreditor);
@@ -727,8 +728,6 @@ contract FrontendRegistryCoverageTest is Test {
         vm.stopPrank();
 
         MockRewardDistributor_FR newCreditor = new MockRewardDistributor_FR(address(votingEngine));
-        vm.prank(admin);
-        splitRoleRegistry.setVotingEngine(address(votingEngine));
         vm.prank(governance);
         splitRoleRegistry.addFeeCreditor(address(newCreditor));
         assertTrue(splitRoleRegistry.hasRole(splitRoleRegistry.FEE_CREDITOR_ROLE(), feeCreditor));
@@ -736,7 +735,23 @@ contract FrontendRegistryCoverageTest is Test {
         assertEq(splitRoleRegistry.feeCreditor(), address(newCreditor));
     }
 
-    function test_InitialFeeCreditorSetup_AfterVotingEngine_Reverts() public {
+    function test_InitialFeeCreditorSetup_BeforeVotingEngine_Reverts() public {
+        vm.startPrank(admin);
+        FrontendRegistry impl2 = new FrontendRegistry();
+        FrontendRegistry splitRoleRegistry = FrontendRegistry(
+            address(
+                new ERC1967Proxy(
+                    address(impl2), abi.encodeCall(FrontendRegistry.initialize, (admin, governance, address(hrepToken)))
+                )
+            )
+        );
+
+        vm.expectRevert("VotingEngine not set");
+        splitRoleRegistry.initializeFeeCreditor(feeCreditor);
+        vm.stopPrank();
+    }
+
+    function test_InitialFeeCreditorSetup_RejectsWrongEngine() public {
         vm.startPrank(admin);
         FrontendRegistry impl2 = new FrontendRegistry();
         FrontendRegistry splitRoleRegistry = FrontendRegistry(
@@ -748,8 +763,9 @@ contract FrontendRegistryCoverageTest is Test {
         );
 
         splitRoleRegistry.setVotingEngine(address(votingEngine));
-        vm.expectRevert("Setup complete");
-        splitRoleRegistry.initializeFeeCreditor(feeCreditor);
+        MockRewardDistributor_FR wrongCreditor = new MockRewardDistributor_FR(address(0xBEEF));
+        vm.expectRevert("Invalid fee creditor");
+        splitRoleRegistry.initializeFeeCreditor(address(wrongCreditor));
         vm.stopPrank();
     }
 

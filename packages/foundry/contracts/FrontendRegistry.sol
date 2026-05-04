@@ -389,12 +389,11 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
         _revokeRole(FEE_CREDITOR_ROLE, creditor);
     }
 
-    /// @notice One-shot deploy-time fee creditor wiring before the registry is connected to VotingEngine.
+    /// @notice One-shot deploy-time fee creditor wiring after the registry is connected to VotingEngine.
     /// @param creditor The initial contract allowed to credit frontend fees.
     function initializeFeeCreditor(address creditor) external onlyRole(ADMIN_ROLE) {
         require(!initialFeeCreditorConfigured, "Initial fee creditor set");
-        require(address(votingEngine) == address(0), "Setup complete");
-        require(creditor.code.length != 0, "Invalid fee creditor");
+        _requireFeeCreditorForEngine(creditor, address(votingEngine));
         initialFeeCreditorConfigured = true;
         feeCreditor = creditor;
         authorizedFeeCreditors[creditor] = true;
