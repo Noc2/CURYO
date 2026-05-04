@@ -358,6 +358,17 @@ contract FrontendRegistryCoverageTest is Test {
         registry.creditFees(frontend1, 100e6);
     }
 
+    function test_CreditFees_ToExitPendingFrontend_Reverts() public {
+        _registerFrontend(frontend1);
+
+        vm.prank(frontend1);
+        registry.requestDeregister();
+
+        vm.prank(feeCreditor);
+        vm.expectRevert(IFrontendRegistry.FrontendExitPending.selector);
+        registry.creditFees(frontend1, 100e6);
+    }
+
     // =========================================================================
     // 5. SLASH EDGE CASES
     // =========================================================================

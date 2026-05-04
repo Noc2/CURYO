@@ -276,6 +276,7 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
         require(f.operator != address(0), "Frontend not registered");
         require(!f.slashed, "Frontend is slashed");
         require(uint256(f.stakedAmount) >= STAKE_AMOUNT, "Frontend is underbonded");
+        if (frontendExitAvailableAt[frontend] != 0) revert FrontendExitPending();
         require(_hasActiveOperatorVoterId(frontend), "Voter ID required");
         f.hrepFees = (uint256(f.hrepFees) + hrepAmount).toUint128();
         emit FeesCredited(frontend, hrepAmount);
