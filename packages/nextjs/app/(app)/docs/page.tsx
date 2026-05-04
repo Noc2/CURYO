@@ -59,6 +59,10 @@ const DocsIntro: NextPage = () => {
           asks.
         </li>
         <li>
+          <Link href="/docs/ai/user-testing">User Testing With AI Agents</Link> covers UX checks, onboarding reviews,
+          feature acceptance, and public bug reproduction.
+        </li>
+        <li>
           <Link href="/docs/how-it-works">How It Works</Link> covers the voting lifecycle in one page.
         </li>
         <li>
