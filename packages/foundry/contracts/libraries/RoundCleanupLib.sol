@@ -212,6 +212,9 @@ library RoundCleanupLib {
         RoundLib.Round storage round,
         bytes32[] storage commitKeys,
         mapping(bytes32 => RoundLib.Commit) storage roundCommits,
+        mapping(uint256 => mapping(uint256 => uint256)) storage roundCleanupIncentivePaid,
+        uint256 contentId,
+        uint256 roundId,
         IERC20 hrepToken,
         ProtocolConfig protocolConfig,
         uint256 consensusReserve,
@@ -264,8 +267,10 @@ library RoundCleanupLib {
             }
         }
 
-        cleanupIncentive = _cleanupIncentive(forfeitedToTreasury + addedToConsensusReserve);
+        uint256 cleanupIncentivePaid = roundCleanupIncentivePaid[contentId][roundId];
+        cleanupIncentive = _cleanupIncentive(forfeitedToTreasury + addedToConsensusReserve, 5e6 - cleanupIncentivePaid);
         if (cleanupIncentive > 0) {
+            roundCleanupIncentivePaid[contentId][roundId] = cleanupIncentivePaid + cleanupIncentive;
             uint256 fromReserve = addedToConsensusReserve < cleanupIncentive ? addedToConsensusReserve : cleanupIncentive;
             if (fromReserve > 0) {
                 addedToConsensusReserve -= fromReserve;
@@ -295,8 +300,10 @@ library RoundCleanupLib {
         }
     }
 
-    function _cleanupIncentive(uint256 forfeitedAmount) private pure returns (uint256 incentive) {
+    function _cleanupIncentive(uint256 forfeitedAmount, uint256 remainingCap) private pure returns (uint256 incentive) {
+        if (remainingCap == 0) return 0;
         incentive = forfeitedAmount * CLEANUP_INCENTIVE_BPS / 10_000;
         if (incentive > CLEANUP_INCENTIVE_MAX) incentive = CLEANUP_INCENTIVE_MAX;
+        if (incentive > remainingCap) incentive = remainingCap;
     }
 }

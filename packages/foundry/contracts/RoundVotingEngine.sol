@@ -887,6 +887,9 @@ contract RoundVotingEngine is
             round,
             commitKeys,
             commits[contentId][roundId],
+            roundCleanupIncentivePaid,
+            contentId,
+            roundId,
             hrepToken,
             protocolConfig,
             consensusReserve,
@@ -1127,11 +1130,6 @@ contract RoundVotingEngine is
         }
     }
 
-    function _hasOpenRound(uint256 contentId) internal view returns (bool) {
-        uint256 roundId = currentRoundId[contentId];
-        return roundId != 0 && rounds[contentId][roundId].state == RoundLib.RoundState.Open;
-    }
-
     function _revealVoteInternal(uint256 contentId, uint256 roundId, bytes32 commitKey, bool isUp, bytes32 salt)
         internal
     {
@@ -1238,6 +1236,9 @@ contract RoundVotingEngine is
     // Settled rounds with expired unrevealed votes must be cleaned before reward claims.
     mapping(uint256 => mapping(uint256 => uint256)) public roundUnrevealedCleanupRemaining;
 
+    // Cumulative cleanup incentive paid per round.
+    mapping(uint256 => mapping(uint256 => uint256)) internal roundCleanupIncentivePaid;
+
     // --- Storage gap reserved for future upgrades ---
-    uint256[44] private __gap;
+    uint256[43] private __gap;
 }

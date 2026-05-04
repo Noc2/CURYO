@@ -1442,6 +1442,43 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         assertEq(afterSecondBatch - keeperBalBefore, (STAKE * 2) / 100, "second forfeiture pays incentive once");
     }
 
+    function test_ProcessUnrevealed_CleanupIncentiveCapAppliesAcrossBatches() public {
+        uint256 contentId = _submitContent();
+        uint256 highStake = 100e6;
+
+        address[] memory unrevealedVoters = new address[](6);
+        for (uint256 i = 0; i < unrevealedVoters.length; ++i) {
+            unrevealedVoters[i] = address(uint160(1_000 + i));
+            mockVoterIdNFT.setHolder(unrevealedVoters[i]);
+            vm.prank(owner);
+            hrepToken.mint(unrevealedVoters[i], highStake);
+            _commit(unrevealedVoters[i], contentId, true, highStake);
+        }
+
+        (bytes32 ck1, bytes32 s1) = _commit(voter1, contentId, true, STAKE);
+        (bytes32 ck2, bytes32 s2) = _commit(voter2, contentId, true, STAKE);
+        (bytes32 ck3, bytes32 s3) = _commit(voter3, contentId, false, STAKE);
+
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
+        uint256 revealGracePeriod = ProtocolConfig(protocolConfigAddress).revealGracePeriod();
+        vm.warp(engine.lastCommitRevealableAfter(contentId, roundId) + revealGracePeriod + 1);
+        _reveal(contentId, roundId, ck1, true, s1);
+        _reveal(contentId, roundId, ck2, true, s2);
+        _reveal(contentId, roundId, ck3, false, s3);
+        engine.settleRound(contentId, roundId);
+
+        uint256 keeperBefore = hrepToken.balanceOf(keeper);
+        uint256 reserveBefore = engine.consensusReserve();
+        for (uint256 i = 0; i < unrevealedVoters.length; ++i) {
+            vm.prank(keeper);
+            engine.processUnrevealedVotes(contentId, roundId, i, 1);
+        }
+
+        assertEq(hrepToken.balanceOf(keeper) - keeperBefore, 5e6, "round cleanup incentive is capped");
+        assertEq(engine.consensusReserve() - reserveBefore, highStake * 6 - 5e6, "remaining stake stays reserved");
+        assertEq(engine.roundUnrevealedCleanupRemaining(contentId, roundId), 0, "cleanup queue clears");
+    }
+
     function test_ProcessUnrevealed_RevertsIfRoundOpen() public {
         uint256 contentId = _submitContent();
         _commit(voter1, contentId, true, STAKE);
