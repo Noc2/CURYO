@@ -16,6 +16,7 @@ import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol"
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
 import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
+import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 
 contract SlashedFrontendRegistryMock is IFrontendRegistry {
     address public immutable frontend;
@@ -545,7 +546,7 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
         feedbackBonusEscrow.awardFeedbackBonus(poolId, voter1, keccak256("second-feedback"), 10e6);
     }
 
-    function testAwardFeedbackBonusSucceedsWhilePaused() public {
+    function testAwardFeedbackBonusRevertsWhilePaused() public {
         uint256 contentId = _submitQuestion("");
         uint256 poolId = _createFeedbackBonusPool(contentId);
         _settleRoundWith(_threeVoters(), contentId, _directions(true, true, false));
@@ -553,12 +554,9 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
         vm.prank(owner);
         feedbackBonusEscrow.pause();
 
-        uint256 voterBalanceBefore = usdc.balanceOf(voter1);
         vm.prank(funder);
-        uint256 recipientAmount = feedbackBonusEscrow.awardFeedbackBonus(poolId, voter1, FEEDBACK_HASH, 10e6);
-
-        assertGt(recipientAmount, 0);
-        assertEq(usdc.balanceOf(voter1), voterBalanceBefore + recipientAmount);
+        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
+        feedbackBonusEscrow.awardFeedbackBonus(poolId, voter1, FEEDBACK_HASH, 10e6);
     }
 
     function testExpiredRemainderForfeitsToTreasury() public {
@@ -580,7 +578,7 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
         assertTrue(forfeited);
     }
 
-    function testExpiredRemainderForfeitsWhilePaused() public {
+    function testExpiredRemainderForfeitRevertsWhilePaused() public {
         uint256 contentId = _submitQuestion("");
         uint256 poolId = _createFeedbackBonusPool(contentId);
         _settleRoundWith(_threeVoters(), contentId, _directions(true, true, false));
@@ -592,11 +590,8 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
         vm.prank(owner);
         feedbackBonusEscrow.pause();
 
-        uint256 treasuryBalanceBefore = usdc.balanceOf(treasury);
-        uint256 forfeitedAmount = feedbackBonusEscrow.forfeitExpiredFeedbackBonus(poolId);
-
-        assertEq(forfeitedAmount, 90e6);
-        assertEq(usdc.balanceOf(treasury), treasuryBalanceBefore + 90e6);
+        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
+        feedbackBonusEscrow.forfeitExpiredFeedbackBonus(poolId);
     }
 
     function testAwarderOnlyCanAward() public {

@@ -191,7 +191,7 @@ contract HumanFaucetCoverageTest is Test {
         assertEq(realVoterIdNFT.delegateTo(user1), user2);
     }
 
-    function test_RetryVoterIdMint_AllowsDelegatedClaimerWithoutDirectId() public {
+    function test_RetryVoterIdMint_RevertsForDelegatedClaimer() public {
         mockHub.setVerified(user2);
         mockHub.simulateVerification(address(faucet), user2);
         assertTrue(faucet.hasClaimed(user2));
@@ -212,11 +212,8 @@ contract HumanFaucetCoverageTest is Test {
         faucet.setVoterIdNFT(address(realVoterIdNFT));
 
         vm.prank(admin);
+        vm.expectRevert(HumanFaucet.AddressAlreadyClaimed.selector);
         faucet.retryVoterIdMint(user2);
-
-        assertEq(realVoterIdNFT.resolveHolder(user2), user2);
-        assertEq(realVoterIdNFT.delegateOf(user2), address(0));
-        assertEq(realVoterIdNFT.delegateTo(user1), address(0));
     }
 
     function test_ResetNullifier_RemintsVoterIdWithoutSecondReward() public {
