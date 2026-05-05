@@ -253,6 +253,20 @@ function formatFrontendFeePercent(frontendFeeBps: number): string {
   return fractional === 0 ? `${whole}%` : `${whole}.${String(fractional).padStart(2, "0").replace(/0+$/, "")}%`;
 }
 
+function formatBountyExpiryDate(windowSeconds: number | null, referenceTimeMs: number | null): string {
+  if (windowSeconds === null) {
+    return "Choose a window";
+  }
+  if (referenceTimeMs === null) {
+    return "Calculating...";
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(referenceTimeMs + windowSeconds * 1000));
+}
+
 function isReservationExistsError(error: unknown): boolean {
   const message =
     (error as { shortMessage?: string; message?: string } | undefined)?.shortMessage ??
@@ -321,6 +335,7 @@ export function ContentSubmissionSection() {
   const [customBountyWindowUnit, setCustomBountyWindowUnit] = useState<BountyWindowUnit>(
     DEFAULT_CUSTOM_BOUNTY_WINDOW_UNIT,
   );
+  const [bountyExpiryReferenceTimeMs, setBountyExpiryReferenceTimeMs] = useState<number | null>(null);
   const [roundBlindMinutes, setRoundBlindMinutes] = useState(
     String(Number(DEFAULT_QUESTION_ROUND_CONFIG.epochDuration / 60n)),
   );
@@ -347,6 +362,10 @@ export function ContentSubmissionSection() {
   const categoryDropdownRef = useRef<HTMLDivElement>(null);
 
   const { categories, isLoading: categoriesLoading } = useCategoryRegistry();
+
+  useEffect(() => {
+    setBountyExpiryReferenceTimeMs(Date.now());
+  }, [bountyWindowPreset, customBountyWindowAmount, customBountyWindowUnit]);
 
   useEffect(() => {
     if (!selectedCategory) return;
@@ -922,6 +941,7 @@ export function ContentSubmissionSection() {
     customBountyWindowAmount,
     customBountyWindowUnit,
   );
+  const estimatedBountyExpiresAtLabel = formatBountyExpiryDate(bountyWindowSeconds, bountyExpiryReferenceTimeMs);
   const parsedCustomBountyWindowAmount = parseBountyWindowAmount(customBountyWindowAmount);
   const customBountyWindowAmountMax =
     customBountyWindowUnit === "hours"
@@ -2353,6 +2373,14 @@ export function ContentSubmissionSection() {
           <p className="mt-1 text-lg font-semibold text-base-content">
             {formatSubmissionRewardAmount(estimatedVoterCapReward, rewardAsset)}
           </p>
+        </div>
+
+        <div className="rounded-lg bg-base-100/70 p-3">
+          <p className="flex items-center gap-1.5 text-sm font-medium uppercase text-base-content/60">
+            Bounty expires
+            <InfoTooltip text="Estimated from the selected bounty window and current time. The final timestamp is set when you submit." />
+          </p>
+          <p className="mt-1 text-lg font-semibold text-base-content">{estimatedBountyExpiresAtLabel}</p>
         </div>
       </div>
 
