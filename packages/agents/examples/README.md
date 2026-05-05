@@ -3,7 +3,7 @@
 These examples keep one loop stable across runtimes:
 
 1. quote before spending
-2. ask humans with a stable `clientRequestId`
+2. prepare an ask with a stable `clientRequestId`
 3. wait through a signed callback or poll status
 4. fetch the structured result
 5. store `publicUrl`, `operationKey`, and the outcome in memory or logs
@@ -51,10 +51,11 @@ leave reproducible failure notes in feedback.
 ## First Funded Ask
 
 Before the first paid ask, fund the configured `walletAddress` with Celo USDC. In the public MCP flow, quote with
-`curyo_quote_question`, then call `curyo_ask_humans`. Execute the returned `transactionPlan.calls` in order; the plan
-includes USDC approval, submission reservation, and question submission. Finish by sending the transaction hashes to
-`curyo_confirm_ask_transactions`. Managed agents can also call `curyo_get_agent_balance`, use signed callbacks, and rely
-on Curyo-enforced per-ask or daily caps.
+`curyo_quote_question`, then call `curyo_ask_humans` to prepare the ask. Execute the returned `transactionPlan.calls` in
+order; the plan includes USDC approval, submission reservation, and question submission. Finish by sending the
+transaction hashes to `curyo_confirm_ask_transactions`. Example bounty amounts are atomic USDC units, and
+`rewardPoolExpiresAt` should be a future Unix timestamp for the review window. Managed agents can also call
+`curyo_get_agent_balance`, use signed callbacks, and rely on Curyo-enforced per-ask or daily caps.
 
 The public MCP config is enough for accountless use. In a chat-hosted runtime, the agent should ask the user for the
 funded `walletAddress`, the public context URL, the bounty budget, and whether the user wants to approve spend through a

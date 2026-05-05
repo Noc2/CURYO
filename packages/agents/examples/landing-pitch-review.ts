@@ -32,6 +32,7 @@ export async function main() {
   const clientRequestId = `landing-pitch-${Date.now()}`;
   const pitchUrl = process.env.CURYO_PITCH_URL ?? "https://example.com/landing-page";
   const bountyAmount = process.env.CURYO_BOUNTY_AMOUNT ?? "1000000";
+  const rewardPoolExpiresAt = process.env.CURYO_REWARD_POOL_EXPIRES_AT ?? "1893456000";
 
   const question = {
     title: "Would this pitch make you want to learn more?",
@@ -46,6 +47,7 @@ export async function main() {
     amount: bountyAmount,
     requiredVoters: "3",
     requiredSettledRounds: "1",
+    rewardPoolExpiresAt,
   };
 
   const quote = await agent.quoteQuestion({

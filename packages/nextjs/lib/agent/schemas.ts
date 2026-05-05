@@ -18,6 +18,12 @@ const evmAddressSchema = {
   type: "string",
 };
 
+const agentWalletAddressSchema = {
+  ...evmAddressSchema,
+  description:
+    "User-controlled wallet or scoped agent wallet that signs the returned transaction plan or x402 authorization.",
+};
+
 const templateSelectorSchema = {
   additionalProperties: false,
   properties: {
@@ -121,6 +127,11 @@ export const agentOperationLookupInputSchema = {
     chainId: { description: "Chain id used with clientRequestId lookup.", type: "integer" },
     clientRequestId: { description: "Client idempotency key returned by curyo_ask_humans.", type: "string" },
     operationKey: { description: "Curyo operation key returned by quote or ask.", type: "string" },
+    walletAddress: {
+      ...agentWalletAddressSchema,
+      description:
+        "Required for public wallet-mode lookup by chainId and clientRequestId. Not needed when operationKey is provided.",
+    },
   },
   type: "object",
 } satisfies JsonSchema;
@@ -145,7 +156,14 @@ export const agentAskInputBaseProperties = {
 
 export const agentQuoteInputSchema = {
   additionalProperties: true,
-  properties: agentAskInputBaseProperties,
+  properties: {
+    ...agentAskInputBaseProperties,
+    walletAddress: {
+      ...agentWalletAddressSchema,
+      description:
+        "Required for public wallet-mode quotes. Managed MCP agents may omit it when the token has a scoped wallet.",
+    },
+  },
   required: ["clientRequestId", "bounty"],
   type: "object",
 } satisfies JsonSchema;
@@ -187,11 +205,7 @@ export const agentAskHumansInputSchema = {
       enum: ["wallet_calls", "x402_authorization"],
       type: "string",
     },
-    walletAddress: {
-      ...evmAddressSchema,
-      description:
-        "User-controlled smart wallet or scoped agent wallet that signs the returned plan or x402 authorization.",
-    },
+    walletAddress: agentWalletAddressSchema,
     webhookUrl: {
       description: "Optional HTTPS callback URL for lifecycle events.",
       type: "string",

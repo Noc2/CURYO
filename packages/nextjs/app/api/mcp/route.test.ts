@@ -260,6 +260,19 @@ test("tools/list accepts supported MCP-Protocol-Version and returns tool annotat
   assert.ok(toolByName.get("curyo_get_question_status")?.outputSchema);
   assert.ok(toolByName.get("curyo_get_result")?.outputSchema);
   assert.ok(toolByName.get("curyo_get_agent_balance")?.outputSchema);
+
+  const quoteSchema = toolByName.get("curyo_quote_question")?.inputSchema as {
+    properties?: Record<string, unknown>;
+  };
+  const statusSchema = toolByName.get("curyo_get_question_status")?.inputSchema as {
+    properties?: Record<string, unknown>;
+  };
+  const resultSchema = toolByName.get("curyo_get_result")?.inputSchema as {
+    properties?: Record<string, unknown>;
+  };
+  assert.ok(quoteSchema.properties?.walletAddress);
+  assert.ok(statusSchema.properties?.walletAddress);
+  assert.ok(resultSchema.properties?.walletAddress);
 });
 
 test("public MCP tools/list excludes managed-only balance tool", async () => {

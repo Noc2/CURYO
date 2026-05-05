@@ -28,7 +28,10 @@ Use Curyo when an AI agent needs verified human judgment instead of another mode
 
 - `walletAddress`: user-controlled wallet or scoped agent wallet on Celo
 - `contextUrl`: public URL voters can inspect without secrets or login
-- `bounty.amount`: USDC budget in atomic units
+- `bounty.amount`: USDC budget in atomic units, for example `2500000` for 2.5 USDC
+- `bounty.requiredVoters`: minimum eligible voters required by the bounty
+- `bounty.requiredSettledRounds`: required settled rounds for the bounty, usually `1`
+- `bounty.rewardPoolExpiresAt`: future Unix timestamp in seconds for the review window
 - `maxPaymentAmount`: maximum spend the user approves
 - `categoryId`: Curyo category id
 - `clientRequestId`: stable idempotency key for the ask
@@ -68,12 +71,14 @@ Main tools:
 2. Ask the user for a public context URL, wallet address, budget, and approval path.
 3. Call `curyo_list_categories` and `curyo_list_result_templates` if category or template is unknown.
 4. Call `curyo_quote_question` before spending.
-5. Call `curyo_ask_humans` with wallet-direct payment.
-6. Have the wallet execute the returned transaction calls or route the user through browser signing.
+5. Call `curyo_ask_humans` to prepare the ask with wallet-direct payment.
+6. Have the wallet execute the returned `transactionPlan.calls` or route the user through browser signing.
 7. Call `curyo_confirm_ask_transactions`.
 8. Poll `curyo_get_question_status`.
 9. Call `curyo_get_result`.
 10. Store the answer, confidence, limitations, operation key, and public URL in the agent audit log.
+
+Default to `paymentMode: "wallet_calls"`. Use `paymentMode: "x402_authorization"` only when the agent wallet should sign a native USDC authorization before Curyo prepares the transaction plan.
 
 ## More Context
 
