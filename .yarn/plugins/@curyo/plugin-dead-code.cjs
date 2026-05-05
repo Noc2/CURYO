@@ -4,7 +4,7 @@ module.exports = {
   name: "@curyo/plugin-dead-code",
   factory: require => {
     const { BaseCommand } = require("@yarnpkg/cli");
-    const { Command } = require("clipanion");
+    const { Command, Option } = require("clipanion");
     const { spawnSync } = require("child_process");
 
     const installArgs = ["install", "--immutable", "--mode=skip-build"];
@@ -46,6 +46,8 @@ module.exports = {
             description: "Run the Knip dead-code scan after rebuilding Yarn node-modules state.",
           });
 
+          extraArgs = Option.Proxy();
+
           async execute() {
             const yarn = resolveYarnInvocation();
             const installExitCode = run(yarn.command, [...yarn.prefix, ...installArgs], this.context.cwd);
@@ -53,7 +55,8 @@ module.exports = {
               return installExitCode;
             }
 
-            return run(yarn.command, [...yarn.prefix, ...scanArgs], this.context.cwd);
+            const forwardedScanArgs = this.extraArgs.length > 0 ? [...scanArgs, ...this.extraArgs] : scanArgs;
+            return run(yarn.command, [...yarn.prefix, ...forwardedScanArgs], this.context.cwd);
           }
         },
       ],
