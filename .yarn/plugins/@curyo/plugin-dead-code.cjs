@@ -7,15 +7,22 @@ module.exports = {
     const { Command } = require("clipanion");
     const { spawnSync } = require("child_process");
 
-    const yarnCommand = process.platform === "win32" ? "yarn.cmd" : "yarn";
     const installArgs = ["install", "--immutable", "--mode=skip-build"];
     const scanArgs = ["run", "dead-code:scan"];
+
+    function resolveYarnInvocation() {
+      const npmExecpath = process.env.npm_execpath;
+      if (npmExecpath && npmExecpath.length > 0) {
+        return { command: process.execPath, prefix: [npmExecpath] };
+      }
+      const fallback = process.platform === "win32" ? "yarn.cmd" : "yarn";
+      return { command: fallback, prefix: [] };
+    }
 
     function run(command, args, cwd) {
       const result = spawnSync(command, args, {
         cwd,
         stdio: "inherit",
-        env: process.env,
       });
 
       if (typeof result.status === "number") {
@@ -40,12 +47,13 @@ module.exports = {
           });
 
           async execute() {
-            const installExitCode = run(yarnCommand, installArgs, this.context.cwd);
+            const yarn = resolveYarnInvocation();
+            const installExitCode = run(yarn.command, [...yarn.prefix, ...installArgs], this.context.cwd);
             if (installExitCode !== 0) {
               return installExitCode;
             }
 
-            return run(yarnCommand, scanArgs, this.context.cwd);
+            return run(yarn.command, [...yarn.prefix, ...scanArgs], this.context.cwd);
           }
         },
       ],
