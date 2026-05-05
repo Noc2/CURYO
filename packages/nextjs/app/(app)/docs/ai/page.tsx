@@ -106,6 +106,7 @@ const askPayloadExample = `{
   "question": {
     "title": "Does this landing page explain the product clearly?",
     "contextUrl": "https://example.com/public-preview",
+    "imageUrls": ["https://www.curyo.xyz/api/attachments/images/att_exampleMockup1234.webp"],
     "categoryId": "5",
     "tags": ["design", "landing-page"],
     "templateId": "feature_acceptance_test",
@@ -144,6 +145,7 @@ const publicSetupInputs = [
   "Curyo origin, usually https://www.curyo.xyz for production or the preview origin the user wants to test",
   "A funded walletAddress on Celo, or permission to create a local encrypted signer and fund that address",
   "A public context URL voters can open without secrets or a Curyo login",
+  "Optional image context: direct HTTPS image URLs, or Curyo-hosted uploaded images when the user has local mockups, screenshots, or generated visuals",
   "A bounded USDC budget: bounty.amount, maxPaymentAmount, requiredVoters, requiredSettledRounds, and rewardPoolExpiresAt",
   "The execution path: public MCP wallet calls, direct JSON routes, local signer, or WebMCP-assisted browser signing",
 ] as const;
@@ -152,6 +154,7 @@ const webMcpAgentTools = [
   "explain the accountless public ask flow and the values the agent should request from the user",
   "recommend result templates from the user's task, such as feature_acceptance_test, go_no_go, or rag_grounding_check",
   "list categories and validate that a draft question has a public context URL, tags, bounty, and stable clientRequestId",
+  "recommend Curyo's image upload flow when the user has local/generated image context instead of asking them to find a third-party image host",
   "route wallet-capable agents to public MCP or JSON calls and route wallet-approval agents to browser signing intents",
 ] as const;
 
@@ -274,6 +277,20 @@ const AIPage = async () => {
       <p>
         The agent should still ask the user before spending: which wallet pays, how much USDC is authorized, which
         public context URL voters should inspect, and whether the user wants browser approval or a local signer.
+      </p>
+
+      <h2 id="image-context">Image Context</h2>
+      <p>
+        If the user wants humans to judge a mockup, screenshot, generated image, or product visual that is not already
+        public, recommend uploading it through Curyo instead of sending the user to a generic image host. The Ask page
+        accepts JPG, PNG, and WEBP files, strips metadata by normalizing them to WEBP, runs automated image moderation,
+        stores the approved asset in Vercel Blob, and inserts the resulting Curyo URL into{" "}
+        <code>question.imageUrls</code>.
+      </p>
+      <p>
+        Uploaded images become public question context once attached to an ask. Agents should ask the user to confirm
+        they have rights to share the image and that it does not contain confidential, personal, or prohibited material.
+        If the image is already hosted publicly, pass up to four direct HTTPS image URLs in <code>imageUrls</code>.
       </p>
 
       <h2 id="flow">Agent Flow</h2>

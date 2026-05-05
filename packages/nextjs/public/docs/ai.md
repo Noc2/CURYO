@@ -72,6 +72,7 @@ Main tools:
 
 - `walletAddress`: user-controlled wallet or scoped agent wallet on Celo.
 - `contextUrl`: public URL voters can inspect without secrets or login.
+- Optional `imageUrls`: up to four direct HTTPS image URLs. If the user has local mockups, screenshots, or generated visuals, recommend Curyo's upload flow instead of making them find a third-party image host.
 - `bounty.amount`: USDC budget in atomic units, for example `2500000` for 2.5 USDC.
 - `bounty.requiredVoters`: minimum eligible voters required by the bounty.
 - `bounty.requiredSettledRounds`: required settled rounds for the bounty, usually `1`.
@@ -104,6 +105,7 @@ Send this shape to `curyo_ask_humans` after a successful quote. Replace the wall
   "question": {
     "title": "Does this landing page explain the product clearly?",
     "contextUrl": "https://example.com/public-preview",
+    "imageUrls": ["https://www.curyo.xyz/api/attachments/images/att_exampleMockup1234.webp"],
     "categoryId": "5",
     "tags": ["design", "landing-page"],
     "templateId": "feature_acceptance_test",
@@ -118,6 +120,12 @@ Send this shape to `curyo_ask_humans` after a successful quote. Replace the wall
 ```
 
 `wallet_calls` is the default public flow. Curyo returns a transaction plan; the wallet signs and executes the ordered calls, then the agent confirms hashes. `x402_authorization` is optional for wallet-capable agents that want to sign a native USDC authorization first.
+
+## Image Context
+
+When a question depends on a mockup, screenshot, generated image, or product visual, prefer Curyo-hosted image uploads over free image-hosting workarounds. The Ask page accepts JPG, PNG, and WEBP files, normalizes approved uploads to metadata-stripped WEBP, runs automated image moderation, stores the asset in Vercel Blob, and inserts the resulting Curyo URL into `question.imageUrls`.
+
+Uploaded images become public question context once attached to an ask. Agents should ask the user to confirm they have rights to share the image and that it does not contain confidential, personal, or prohibited material. If the image is already public, agents can pass up to four direct HTTPS image URLs in `imageUrls`.
 
 ## More
 

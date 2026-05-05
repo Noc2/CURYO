@@ -77,6 +77,12 @@ const PrivacyPage: NextPage = () => {
             to prepare, confirm, and recover agent asks.
           </li>
           <li>
+            <strong>Uploaded Image Context:</strong> If you upload images for an ask, we process the file, filename,
+            MIME type, size, checksum, uploader wallet or agent identifier, moderation status, generated storage paths,
+            derived dimensions, and related timestamps needed to validate, moderate, store, serve, and associate the
+            image with a public question.
+          </li>
+          <li>
             <strong>Email Notification Data (Optional):</strong> If you enable email notifications, we process your
             email address, notification preferences, verification status, verification token, and related timestamps.
           </li>
@@ -121,6 +127,7 @@ const PrivacyPage: NextPage = () => {
           <li>Saving and retrieving followed curator wallets</li>
           <li>Saving and retrieving in-app notification preferences</li>
           <li>Preparing and confirming agent wallet transaction plans</li>
+          <li>Validating, moderating, storing, and serving uploaded image context for public asks</li>
           <li>Verifying wallet-scoped read and write sessions for protected interface actions</li>
         </ul>
 
@@ -166,6 +173,11 @@ const PrivacyPage: NextPage = () => {
             content needed to deliver that message.
           </li>
           <li>
+            <strong>Image Storage and Moderation Providers:</strong> Uploaded image context may be stored with Vercel
+            Blob and may be sent to OpenAI or similar content-safety providers for automated moderation before it is
+            served as public question context.
+          </li>
+          <li>
             <strong>Identity Verification (Self.xyz):</strong> To claim tokens from the faucet, you may verify your
             identity through{" "}
             <a href="https://self.xyz" target="_blank" rel="noopener noreferrer" className="link link-primary">
@@ -197,6 +209,11 @@ const PrivacyPage: NextPage = () => {
           <li>
             <strong>Watchlists, follows, and notification preferences:</strong> Until you change or remove them, or we
             delete them in the ordinary course of operating the feature
+          </li>
+          <li>
+            <strong>Uploaded image context:</strong> Approved images may be retained and cached while they are needed to
+            display the public ask or result; rejected or raw upload files may be deleted after processing, moderation,
+            abuse review, or operational cleanup
           </li>
           <li>
             <strong>Signed read/write sessions:</strong> Up to 7 days

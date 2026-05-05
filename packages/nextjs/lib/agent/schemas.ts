@@ -52,7 +52,8 @@ export const agentQuestionInputSchema = {
     contextUrl: { description: "HTTPS context URL voters should inspect.", type: "string" },
     description: { description: "Optional question details shown to voters.", type: "string" },
     imageUrls: {
-      description: "Optional direct HTTPS image URLs.",
+      description:
+        "Optional direct HTTPS image URLs, including approved Curyo-hosted uploads for public mockups, screenshots, or generated visuals.",
       items: { type: "string" },
       type: "array",
     },

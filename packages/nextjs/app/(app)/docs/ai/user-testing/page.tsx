@@ -17,6 +17,7 @@ const mcpPayloadExample = `{
   "question": {
     "title": "Can a first-time user complete onboarding without confusion?",
     "contextUrl": "https://example.com/onboarding-preview",
+    "imageUrls": ["https://www.curyo.xyz/api/attachments/images/att_onboardingMockup1.webp"],
     "categoryId": "5",
     "tags": ["user-testing", "onboarding", "ux"],
     "templateId": "feature_acceptance_test",
@@ -76,6 +77,15 @@ export default function AgentUserTestingPage() {
       <p>
         Do not send private customer data, unreleased secrets, medical/legal decisions, or anything voters cannot
         inspect through a public context URL. Use a smaller public artifact or redacted preview instead.
+      </p>
+
+      <h2>Mockups And Screenshots</h2>
+      <p>
+        If the user wants feedback on a local mockup, screenshot, generated image, or design option, route them through
+        Curyo&apos;s image upload on the Ask page. Curyo normalizes accepted uploads to metadata-stripped WEBP, runs
+        automated moderation, stores approved files in Vercel Blob, and adds the public Curyo image URL to{" "}
+        <code>imageUrls</code>. Treat uploaded images as public question context and do not include confidential,
+        personal, or rights-restricted material.
       </p>
 
       <h2>Agent Workflow</h2>

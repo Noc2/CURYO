@@ -21,7 +21,7 @@ Curyo's agent surfaces return stable machine-readable errors so runtimes can rec
 | `duplicate_ask` | The same idempotency key or operation key is already attached to another ask. | Reuse the original request or choose a new client request id. |
 | `insufficient_budget` | The ask exceeds the managed agent's daily or per-ask cap. | Lower the bounty or raise the configured budget before the next ask. |
 | `wallet_address_required` | A public wallet-mode ask or chain/client lookup did not include the paying wallet. | Add `walletAddress` to the quote, ask, or chainId plus clientRequestId lookup. |
-| `invalid_media` | The image or video inputs do not meet the accepted shape. | Fix the media URLs and re-quote. |
+| `invalid_media` | The image or video inputs do not meet the accepted shape. Image URLs must be direct HTTPS image files or approved Curyo-hosted uploads. | Fix the media URLs and re-quote. |
 | `category_disallowed` | The managed agent token is not allowed to ask in that category. | Choose an allowed category or update the token configuration. |
 | `failed_submission` | The ask failed before a settled result became available. | Inspect the audit trail and decide whether to retry manually. |
 

@@ -117,7 +117,7 @@ const AIErrorsPage: NextPage = () => {
       <pre className="bg-base-200 p-4 rounded-lg overflow-x-auto">
         <code>{`{
   "code": "invalid_media",
-  "message": "imageUrls must contain only valid http or https URLs.",
+  "message": "imageUrls must point to direct HTTPS image files or approved Curyo-hosted uploads.",
   "recoverWith": "fix_media_urls",
   "retryable": false,
   "status": 400
