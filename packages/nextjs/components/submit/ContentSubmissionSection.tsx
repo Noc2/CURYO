@@ -232,6 +232,10 @@ function clampWholeNumberInput(value: string, min: number, max: number): string 
   return String(Math.min(Math.max(parsed, min), max));
 }
 
+function getSyncedSettlementVotersForPaidCompleters(value: string, min: number, max: number): string {
+  return value === "" ? "" : clampWholeNumberInput(value, min, max);
+}
+
 function divideRewardAmount(total: bigint, divisor: bigint): bigint {
   return divisor > 0n ? total / divisor : 0n;
 }
@@ -326,6 +330,8 @@ export function ContentSubmissionSection() {
   const [roundMinVoters, setRoundMinVoters] = useState(String(DEFAULT_QUESTION_ROUND_CONFIG.minVoters));
   const [roundMaxVoters, setRoundMaxVoters] = useState(String(DEFAULT_QUESTION_ROUND_CONFIG.maxVoters));
   const [roundConfigTouched, setRoundConfigTouched] = useState(false);
+  const [settlementVotersOverridden, setSettlementVotersOverridden] = useState(false);
+  const [showAdvancedRoundSettings, setShowAdvancedRoundSettings] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [questionStepAttempted, setQuestionStepAttempted] = useState(false);
   const [bountyStepAttempted, setBountyStepAttempted] = useState(false);
@@ -755,13 +761,31 @@ export function ContentSubmissionSection() {
       maxVoterCap: Number(value?.maxVoterCap ?? value?.[7] ?? DEFAULT_QUESTION_ROUND_CONFIG_BOUNDS.maxVoterCap),
     };
   }, [protocolRoundConfigBounds]);
+  const syncedSettlementVoters = getSyncedSettlementVotersForPaidCompleters(
+    rewardRequiredVoters,
+    roundConfigBounds.minSettlementVoters,
+    roundConfigBounds.maxSettlementVoters,
+  );
+  const syncSettlementVotersToPaidCompleters = (paidCompleters: string) => {
+    if (settlementVotersOverridden) {
+      return;
+    }
+
+    setRoundMinVoters(
+      getSyncedSettlementVotersForPaidCompleters(
+        paidCompleters,
+        roundConfigBounds.minSettlementVoters,
+        roundConfigBounds.maxSettlementVoters,
+      ),
+    );
+  };
   useEffect(() => {
     if (roundConfigTouched || !protocolRoundConfig) return;
     setRoundBlindMinutes(String(Math.max(1, Math.round(roundConfigDefaults.epochDuration / SECONDS_PER_MINUTE))));
     setRoundMaxDurationHours(String(Math.max(1, Math.round(roundConfigDefaults.maxDuration / SECONDS_PER_HOUR))));
-    setRoundMinVoters(String(roundConfigDefaults.minVoters));
+    setRoundMinVoters(syncedSettlementVoters);
     setRoundMaxVoters(String(roundConfigDefaults.maxVoters));
-  }, [protocolRoundConfig, roundConfigDefaults, roundConfigTouched]);
+  }, [protocolRoundConfig, roundConfigDefaults, roundConfigTouched, syncedSettlementVoters]);
   const roundBlindMinuteBounds = useMemo(() => {
     const min = Math.ceil(roundConfigBounds.minEpochDuration / SECONDS_PER_MINUTE);
     const max = Math.max(min, Math.floor(roundConfigBounds.maxEpochDuration / SECONDS_PER_MINUTE));
@@ -1152,13 +1176,13 @@ export function ContentSubmissionSection() {
         Math.max(roundConfigBounds.minVoterCap, nextVoterCapMax),
       ),
     );
-    setRewardRequiredVoters(current =>
-      clampWholeNumberInput(
-        current,
-        MIN_REWARD_POOL_REQUIRED_VOTERS,
-        Math.max(MIN_REWARD_POOL_REQUIRED_VOTERS, nextVoterCapMax),
-      ),
+    const clampedPaidCompleters = clampWholeNumberInput(
+      rewardRequiredVoters,
+      MIN_REWARD_POOL_REQUIRED_VOTERS,
+      Math.max(MIN_REWARD_POOL_REQUIRED_VOTERS, nextVoterCapMax),
     );
+    setRewardRequiredVoters(clampedPaidCompleters);
+    syncSettlementVotersToPaidCompleters(clampedPaidCompleters);
     setSubmissionStep("question");
     setBountyStepAttempted(false);
   };
@@ -1219,6 +1243,9 @@ export function ContentSubmissionSection() {
 
     if (!bountySettingsValid) {
       setSubmissionStep("bounty");
+      if (roundConfigValidationError) {
+        setShowAdvancedRoundSettings(true);
+      }
       notification.warning("Please fix the bounty details before submitting.");
       return;
     }
@@ -1647,9 +1674,17 @@ export function ContentSubmissionSection() {
       setCustomBountyWindowUnit(DEFAULT_CUSTOM_BOUNTY_WINDOW_UNIT);
       setRoundBlindMinutes(String(Math.max(1, Math.round(roundConfigDefaults.epochDuration / SECONDS_PER_MINUTE))));
       setRoundMaxDurationHours(String(Math.max(1, Math.round(roundConfigDefaults.maxDuration / SECONDS_PER_HOUR))));
-      setRoundMinVoters(String(roundConfigDefaults.minVoters));
+      setRoundMinVoters(
+        getSyncedSettlementVotersForPaidCompleters(
+          "3",
+          roundConfigBounds.minSettlementVoters,
+          roundConfigBounds.maxSettlementVoters,
+        ),
+      );
       setRoundMaxVoters(String(roundConfigDefaults.maxVoters));
       setRoundConfigTouched(false);
+      setSettlementVotersOverridden(false);
+      setShowAdvancedRoundSettings(false);
       setQuestionStepAttempted(false);
       setBountyStepAttempted(false);
       setSubmissionStep("question");
@@ -1785,7 +1820,10 @@ export function ContentSubmissionSection() {
 
   const bountyTooltipText =
     "Required for spam protection and non-refundable. Paid from your wallet into escrow when the question is submitted. Set the terms that eligible voters must satisfy before payout.";
-  const requiredVotersTooltipText = `At least ${MIN_REWARD_POOL_REQUIRED_VOTERS} completers are required. Each paid completer must answer every question in the bundle.`;
+  const requiredVotersTooltipText =
+    questionCount === 1
+      ? `At least ${MIN_REWARD_POOL_REQUIRED_VOTERS} paid completers are required per round. Settlement voters match this by default unless changed in advanced round settings.`
+      : `At least ${MIN_REWARD_POOL_REQUIRED_VOTERS} paid completers are required per round set. Each paid completer must answer every question in the bundle.`;
   const requiredRoundsTooltipText =
     "Each settlement round set requires every bundled question to settle once. Paid completers can claim a reward for each completed set they fully answered.";
   const roundSettingsTooltipText =
@@ -1893,7 +1931,7 @@ export function ContentSubmissionSection() {
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="form-control">
           <span className="label-text flex items-center gap-1.5">
-            Paid completers
+            Paid completers per round
             <InfoTooltip text={requiredVotersTooltipText} />
           </span>
           <input
@@ -1907,12 +1945,17 @@ export function ContentSubmissionSection() {
               const normalizedValue = normalizeWholeNumberInput(e.target.value);
               if (normalizedValue !== null) {
                 setRewardRequiredVoters(normalizedValue);
+                syncSettlementVotersToPaidCompleters(normalizedValue);
               }
             }}
             onBlur={() => {
-              setRewardRequiredVoters(current =>
-                clampWholeNumberInput(current, rewardRequiredVotersBounds.min, rewardRequiredVotersBounds.max),
+              const clampedPaidCompleters = clampWholeNumberInput(
+                rewardRequiredVoters,
+                rewardRequiredVotersBounds.min,
+                rewardRequiredVotersBounds.max,
               );
+              setRewardRequiredVoters(clampedPaidCompleters);
+              syncSettlementVotersToPaidCompleters(clampedPaidCompleters);
             }}
             className={`input input-bordered bg-base-100 ${
               bountyStepAttempted && rewardRequiredVotersError ? "input-error" : ""
@@ -1955,170 +1998,6 @@ export function ContentSubmissionSection() {
       {bountyStepAttempted && rewardRequiredRoundsError ? (
         <p className="text-base text-error">{rewardRequiredRoundsError}</p>
       ) : null}
-
-      <div className="space-y-3 pt-2">
-        <div className="flex items-start justify-between gap-3">
-          <p className="flex items-center gap-1.5 text-base font-medium text-base-content">
-            Round settings
-            <InfoTooltip text={roundSettingsTooltipText} />
-          </p>
-          <span className="text-sm font-semibold text-base-content/50">
-            Default {formatDurationLabel(roundConfigDefaults.epochDuration)}
-          </span>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="form-control">
-            <div className="flex items-center gap-1.5">
-              <label htmlFor="round-blind-minutes" className="label-text">
-                Blind phase (minutes)
-              </label>
-              <InfoTooltip text={blindPhaseTooltipText} />
-            </div>
-            <input
-              id="round-blind-minutes"
-              type="number"
-              min={roundBlindMinuteBounds.min}
-              max={roundBlindMinuteBounds.max}
-              step={1}
-              inputMode="numeric"
-              value={roundBlindMinutes}
-              onChange={e => {
-                updateRoundWholeNumberInput(e.target.value, setRoundBlindMinutes);
-              }}
-              onBlur={() => {
-                const clampedBlindMinutes = clampWholeNumberInput(
-                  roundBlindMinutes,
-                  roundBlindMinuteBounds.min,
-                  roundBlindMinuteBounds.max,
-                );
-                const maxDurationSeconds = getQuestionRoundMaxDurationForEpoch(
-                  Number(clampedBlindMinutes) * SECONDS_PER_MINUTE,
-                  roundConfigBounds.maxRoundDuration,
-                );
-                const maxDurationHours = Math.max(
-                  roundMaxDurationHourBounds.min,
-                  Math.floor(maxDurationSeconds / SECONDS_PER_HOUR),
-                );
-
-                setRoundBlindMinutes(clampedBlindMinutes);
-                setRoundMaxDurationHours(current =>
-                  clampWholeNumberInput(current, roundMaxDurationHourBounds.min, maxDurationHours),
-                );
-              }}
-              className={`input input-bordered bg-base-100 ${
-                bountyStepAttempted && roundConfigValidationError ? "input-error" : ""
-              }`}
-            />
-          </div>
-
-          <div className="form-control">
-            <div className="flex items-center gap-1.5">
-              <label htmlFor="round-max-duration-hours" className="label-text">
-                Max duration (hours)
-              </label>
-              <InfoTooltip text={maxDurationTooltipText} />
-            </div>
-            <input
-              id="round-max-duration-hours"
-              type="number"
-              min={roundMaxDurationHourBounds.min}
-              max={roundMaxDurationHourBounds.max}
-              step={1}
-              inputMode="numeric"
-              value={roundMaxDurationHours}
-              onChange={e => {
-                updateRoundWholeNumberInput(e.target.value, setRoundMaxDurationHours);
-              }}
-              onBlur={() => {
-                setRoundMaxDurationHours(current =>
-                  clampWholeNumberInput(current, roundMaxDurationHourBounds.min, roundMaxDurationHourBounds.max),
-                );
-              }}
-              className={`input input-bordered bg-base-100 ${
-                bountyStepAttempted && roundConfigValidationError ? "input-error" : ""
-              }`}
-            />
-          </div>
-
-          <div className="form-control">
-            <div className="flex items-center gap-1.5">
-              <label htmlFor="round-settlement-voters" className="label-text">
-                Settlement voters
-              </label>
-              <InfoTooltip text={settlementVotersTooltipText} />
-            </div>
-            <input
-              id="round-settlement-voters"
-              type="number"
-              min={roundConfigBounds.minSettlementVoters}
-              max={roundConfigBounds.maxSettlementVoters}
-              step={1}
-              inputMode="numeric"
-              value={roundMinVoters}
-              onChange={e => {
-                updateRoundWholeNumberInput(e.target.value, setRoundMinVoters);
-              }}
-              onBlur={() => {
-                setRoundMinVoters(current =>
-                  clampWholeNumberInput(
-                    current,
-                    roundConfigBounds.minSettlementVoters,
-                    roundConfigBounds.maxSettlementVoters,
-                  ),
-                );
-              }}
-              className={`input input-bordered bg-base-100 ${
-                bountyStepAttempted && roundConfigValidationError ? "input-error" : ""
-              }`}
-            />
-          </div>
-
-          <div className="form-control">
-            <div className="flex items-center gap-1.5">
-              <label htmlFor="round-voter-cap" className="label-text">
-                Voter cap
-              </label>
-              <InfoTooltip text={voterCapTooltipText} />
-            </div>
-            <input
-              id="round-voter-cap"
-              type="number"
-              min={roundMaxVoterBounds.min}
-              max={roundMaxVoterBounds.max}
-              step={1}
-              inputMode="numeric"
-              value={roundMaxVoters}
-              onChange={e => {
-                updateRoundWholeNumberInput(e.target.value, setRoundMaxVoters);
-              }}
-              onBlur={() => {
-                const clampedMaxVoters = clampWholeNumberInput(
-                  roundMaxVoters,
-                  roundMaxVoterBounds.min,
-                  roundMaxVoterBounds.max,
-                );
-
-                setRoundMaxVoters(clampedMaxVoters);
-                setRewardRequiredVoters(current =>
-                  clampWholeNumberInput(
-                    current,
-                    MIN_REWARD_POOL_REQUIRED_VOTERS,
-                    Math.max(MIN_REWARD_POOL_REQUIRED_VOTERS, Number(clampedMaxVoters)),
-                  ),
-                );
-              }}
-              className={`input input-bordered bg-base-100 ${
-                bountyStepAttempted && roundConfigValidationError ? "input-error" : ""
-              }`}
-            />
-          </div>
-        </div>
-
-        {bountyStepAttempted && roundConfigValidationError ? (
-          <p className="text-base text-error">{roundConfigValidationError}</p>
-        ) : null}
-      </div>
 
       <div className="space-y-2">
         <p className="flex items-center gap-1.5 text-sm font-medium text-base-content/80">
@@ -2198,6 +2077,193 @@ export function ContentSubmissionSection() {
           </div>
         ) : null}
         {bountyStepAttempted && rewardExpiryError ? <p className="text-base text-error">{rewardExpiryError}</p> : null}
+      </div>
+
+      <div className="space-y-3 pt-2">
+        <div className="rounded-lg border border-base-300/70 bg-base-100/40 p-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                aria-expanded={showAdvancedRoundSettings}
+                aria-controls="advanced-round-settings"
+                onClick={() => setShowAdvancedRoundSettings(current => !current)}
+                className="inline-flex items-center gap-2 text-left text-base font-medium text-base-content transition-colors hover:text-base-content/80"
+              >
+                <ChevronDownIcon
+                  className={`h-4 w-4 shrink-0 transition-transform ${showAdvancedRoundSettings ? "rotate-180" : ""}`}
+                  aria-hidden="true"
+                />
+                Advanced round settings
+              </button>
+              <InfoTooltip text={roundSettingsTooltipText} />
+            </div>
+            <span className="text-sm font-semibold text-base-content/50">
+              Default {formatDurationLabel(roundConfigDefaults.epochDuration)}
+            </span>
+          </div>
+
+          {showAdvancedRoundSettings ? (
+            <div id="advanced-round-settings" className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="form-control">
+                <div className="flex items-center gap-1.5">
+                  <label htmlFor="round-blind-minutes" className="label-text">
+                    Blind phase (minutes)
+                  </label>
+                  <InfoTooltip text={blindPhaseTooltipText} />
+                </div>
+                <input
+                  id="round-blind-minutes"
+                  type="number"
+                  min={roundBlindMinuteBounds.min}
+                  max={roundBlindMinuteBounds.max}
+                  step={1}
+                  inputMode="numeric"
+                  value={roundBlindMinutes}
+                  onChange={e => {
+                    updateRoundWholeNumberInput(e.target.value, setRoundBlindMinutes);
+                  }}
+                  onBlur={() => {
+                    const clampedBlindMinutes = clampWholeNumberInput(
+                      roundBlindMinutes,
+                      roundBlindMinuteBounds.min,
+                      roundBlindMinuteBounds.max,
+                    );
+                    const maxDurationSeconds = getQuestionRoundMaxDurationForEpoch(
+                      Number(clampedBlindMinutes) * SECONDS_PER_MINUTE,
+                      roundConfigBounds.maxRoundDuration,
+                    );
+                    const maxDurationHours = Math.max(
+                      roundMaxDurationHourBounds.min,
+                      Math.floor(maxDurationSeconds / SECONDS_PER_HOUR),
+                    );
+
+                    setRoundBlindMinutes(clampedBlindMinutes);
+                    setRoundMaxDurationHours(current =>
+                      clampWholeNumberInput(current, roundMaxDurationHourBounds.min, maxDurationHours),
+                    );
+                  }}
+                  className={`input input-bordered bg-base-100 ${
+                    bountyStepAttempted && roundConfigValidationError ? "input-error" : ""
+                  }`}
+                />
+              </div>
+
+              <div className="form-control">
+                <div className="flex items-center gap-1.5">
+                  <label htmlFor="round-max-duration-hours" className="label-text">
+                    Max duration (hours)
+                  </label>
+                  <InfoTooltip text={maxDurationTooltipText} />
+                </div>
+                <input
+                  id="round-max-duration-hours"
+                  type="number"
+                  min={roundMaxDurationHourBounds.min}
+                  max={roundMaxDurationHourBounds.max}
+                  step={1}
+                  inputMode="numeric"
+                  value={roundMaxDurationHours}
+                  onChange={e => {
+                    updateRoundWholeNumberInput(e.target.value, setRoundMaxDurationHours);
+                  }}
+                  onBlur={() => {
+                    setRoundMaxDurationHours(current =>
+                      clampWholeNumberInput(current, roundMaxDurationHourBounds.min, roundMaxDurationHourBounds.max),
+                    );
+                  }}
+                  className={`input input-bordered bg-base-100 ${
+                    bountyStepAttempted && roundConfigValidationError ? "input-error" : ""
+                  }`}
+                />
+              </div>
+
+              <div className="form-control">
+                <div className="flex items-center gap-1.5">
+                  <label htmlFor="round-settlement-voters" className="label-text">
+                    Settlement voters
+                  </label>
+                  <InfoTooltip text={settlementVotersTooltipText} />
+                </div>
+                <input
+                  id="round-settlement-voters"
+                  type="number"
+                  min={roundConfigBounds.minSettlementVoters}
+                  max={roundConfigBounds.maxSettlementVoters}
+                  step={1}
+                  inputMode="numeric"
+                  value={roundMinVoters}
+                  onChange={e => {
+                    const normalizedValue = normalizeWholeNumberInput(e.target.value);
+                    if (normalizedValue !== null) {
+                      setRoundConfigTouched(true);
+                      setSettlementVotersOverridden(true);
+                      setRoundMinVoters(normalizedValue);
+                    }
+                  }}
+                  onBlur={() => {
+                    setRoundConfigTouched(true);
+                    setSettlementVotersOverridden(true);
+                    setRoundMinVoters(current =>
+                      clampWholeNumberInput(
+                        current,
+                        roundConfigBounds.minSettlementVoters,
+                        roundConfigBounds.maxSettlementVoters,
+                      ),
+                    );
+                  }}
+                  className={`input input-bordered bg-base-100 ${
+                    bountyStepAttempted && roundConfigValidationError ? "input-error" : ""
+                  }`}
+                />
+              </div>
+
+              <div className="form-control">
+                <div className="flex items-center gap-1.5">
+                  <label htmlFor="round-voter-cap" className="label-text">
+                    Voter cap
+                  </label>
+                  <InfoTooltip text={voterCapTooltipText} />
+                </div>
+                <input
+                  id="round-voter-cap"
+                  type="number"
+                  min={roundMaxVoterBounds.min}
+                  max={roundMaxVoterBounds.max}
+                  step={1}
+                  inputMode="numeric"
+                  value={roundMaxVoters}
+                  onChange={e => {
+                    updateRoundWholeNumberInput(e.target.value, setRoundMaxVoters);
+                  }}
+                  onBlur={() => {
+                    const clampedMaxVoters = clampWholeNumberInput(
+                      roundMaxVoters,
+                      roundMaxVoterBounds.min,
+                      roundMaxVoterBounds.max,
+                    );
+                    const clampedPaidCompleters = clampWholeNumberInput(
+                      rewardRequiredVoters,
+                      MIN_REWARD_POOL_REQUIRED_VOTERS,
+                      Math.max(MIN_REWARD_POOL_REQUIRED_VOTERS, Number(clampedMaxVoters)),
+                    );
+
+                    setRoundMaxVoters(clampedMaxVoters);
+                    setRewardRequiredVoters(clampedPaidCompleters);
+                    syncSettlementVotersToPaidCompleters(clampedPaidCompleters);
+                  }}
+                  className={`input input-bordered bg-base-100 ${
+                    bountyStepAttempted && roundConfigValidationError ? "input-error" : ""
+                  }`}
+                />
+              </div>
+            </div>
+          ) : null}
+
+          {showAdvancedRoundSettings && bountyStepAttempted && roundConfigValidationError ? (
+            <p className="mt-3 text-base text-error">{roundConfigValidationError}</p>
+          ) : null}
+        </div>
       </div>
     </div>
   );
