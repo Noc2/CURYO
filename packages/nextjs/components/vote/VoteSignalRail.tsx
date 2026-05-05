@@ -4,6 +4,7 @@ import { useAccount } from "wagmi";
 import { FooterLinks } from "~~/components/FooterLinks";
 import { ContentFeedbackPanel } from "~~/components/feedback/ContentFeedbackPanel";
 import { VOTING_SURFACE_BACKGROUND, VotingQuestionCard } from "~~/components/shared/VotingQuestionCard";
+import { isContentItemActive } from "~~/hooks/contentFeed/shared";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import { useCuryoConnectModal } from "~~/hooks/useCuryoConnectModal";
 
@@ -64,6 +65,7 @@ export function VoteSignalRail({
             error={voteError}
             cooldownSecondsRemaining={cooldownSecondsRemaining}
             isVoteEligibilityPending={isVoteEligibilityPending}
+            isContentActive={isContentItemActive(primaryItem)}
             isOwnContent={primaryItem.isOwnContent}
             embedded
             compact

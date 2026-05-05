@@ -14,6 +14,7 @@ function buildItem(id: bigint): ContentItem {
     tags: [],
     submitter: "0x0000000000000000000000000000000000000001",
     contentHash: `hash-${id}`,
+    status: 0,
     isOwnContent: false,
     categoryId: 0n,
     rating: 50,

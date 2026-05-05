@@ -15,7 +15,12 @@ import { FeedScopeFilter } from "~~/components/vote/FeedScopeFilter";
 import { VoteSignalRail } from "~~/components/vote/VoteSignalRail";
 import { RATE_ROUTE } from "~~/constants/routes";
 import { useMobileHeaderVisibility } from "~~/contexts/MobileHeaderVisibilityContext";
-import { MIN_CONTENT_SEARCH_QUERY_LENGTH, isContentSearchQueryTooShort } from "~~/hooks/contentFeed/shared";
+import {
+  MIN_CONTENT_SEARCH_QUERY_LENGTH,
+  getInactiveContentVotingMessage,
+  isContentItemActive,
+  isContentSearchQueryTooShort,
+} from "~~/hooks/contentFeed/shared";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { useCategoryPopularity } from "~~/hooks/useCategoryPopularity";
 import { useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
@@ -1099,6 +1104,11 @@ const HomeInner = () => {
         return;
       }
 
+      if (!isContentItemActive(item)) {
+        notification.info(getInactiveContentVotingMessage(item.status), { duration: 6000 });
+        return;
+      }
+
       if (isVoteCooldownCheckPendingForContent(item.id)) {
         notification.info("Still checking your recent votes. Try again in a moment.", { duration: 3000 });
         return;
@@ -1230,8 +1240,20 @@ const HomeInner = () => {
       }
 
       const item = displayFeed.find(i => i.id === stakeModal.contentId);
-      if (item?.isOwnContent) {
+      if (!item) {
+        notification.info(getInactiveContentVotingMessage(), { duration: 6000 });
+        setStakeModal(prev => ({ ...prev, isOpen: false }));
+        return;
+      }
+
+      if (item.isOwnContent) {
         notification.info("You cannot vote on your own content.", { duration: 6000 });
+        setStakeModal(prev => ({ ...prev, isOpen: false }));
+        return;
+      }
+
+      if (!isContentItemActive(item)) {
+        notification.info(getInactiveContentVotingMessage(item.status), { duration: 6000 });
         setStakeModal(prev => ({ ...prev, isOpen: false }));
         return;
       }
@@ -1817,6 +1839,7 @@ const HomeInner = () => {
                 error={voteError}
                 cooldownSecondsRemaining={primaryItemCooldownSeconds}
                 isVoteEligibilityPending={primaryVoteEligibilityPending}
+                isContentActive={isContentItemActive(primaryItem)}
                 isOwnContent={primaryItem.isOwnContent}
                 embedded
                 compact

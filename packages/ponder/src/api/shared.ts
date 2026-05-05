@@ -92,9 +92,16 @@ export async function attachOpenRoundSummary<T extends { id: bigint }>(items: T[
 
   const contentIds = items.map(item => item.id);
   const nowSeconds = BigInt(Math.floor(Date.now() / 1000));
+  const currentRewardPoolAsset = sql<number | null>`case
+    when ${questionRewardPool.allocatedAmount} > ${questionRewardPool.claimedAmount}
+      or (${questionRewardPool.refunded} = false and ${questionRewardPool.qualifiedRounds} < ${questionRewardPool.requiredSettledRounds} and (${questionRewardPool.bountyClosesAt} = 0 or ${questionRewardPool.bountyClosesAt} > ${nowSeconds}))
+    then ${questionRewardPool.asset}
+    else null
+  end`;
   const rewardPoolRows = await db
     .select({
       contentId: questionRewardPool.contentId,
+      asset: sql<number | null>`case when min(${currentRewardPoolAsset}) = max(${currentRewardPoolAsset}) then min(${currentRewardPoolAsset}) else null end`,
       rewardPoolCount: sql<number>`count(*)`,
       activeRewardPoolCount: sql<number>`sum(case when ${questionRewardPool.refunded} = false and ${questionRewardPool.qualifiedRounds} < ${questionRewardPool.requiredSettledRounds} and (${questionRewardPool.bountyClosesAt} = 0 or ${questionRewardPool.bountyClosesAt} > ${nowSeconds}) then 1 else 0 end)`,
       expiredRewardPoolCount: sql<number>`sum(case when ${questionRewardPool.refunded} = false and ${questionRewardPool.qualifiedRounds} < ${questionRewardPool.requiredSettledRounds} and ${questionRewardPool.bountyClosesAt} != 0 and ${questionRewardPool.bountyClosesAt} <= ${nowSeconds} then 1 else 0 end)`,
@@ -225,6 +232,7 @@ export async function attachOpenRoundSummary<T extends { id: bigint }>(items: T[
 
 function emptyRewardPoolSummary() {
   return {
+    asset: null as number | null,
     currency: "USDC",
     displayCurrency: "USD",
     decimals: 6,
@@ -322,7 +330,32 @@ function toNumberValue(value: number | string | bigint | null | undefined) {
   return 0;
 }
 
+function formatQuestionRewardAsset(value: number | string | bigint | null | undefined) {
+  const asset = value === null || value === undefined ? null : toNumberValue(value);
+  if (asset === 0) {
+    return {
+      asset,
+      currency: "HREP",
+      displayCurrency: "HREP",
+    };
+  }
+  if (asset === 1) {
+    return {
+      asset,
+      currency: "USDC",
+      displayCurrency: "USD",
+    };
+  }
+
+  return {
+    asset: null as number | null,
+    currency: "MIXED",
+    displayCurrency: "MIXED",
+  };
+}
+
 function formatRewardPoolSummary(row: {
+  asset: number | string | bigint | null;
   rewardPoolCount: number | string | bigint | null;
   activeRewardPoolCount: number | string | bigint | null;
   expiredRewardPoolCount: number | string | bigint | null;
@@ -346,10 +379,10 @@ function formatRewardPoolSummary(row: {
   const activeRewardPoolCount = toNumberValue(row.activeRewardPoolCount);
   const activeUnallocatedAmount = toBigIntValue(row.activeUnallocatedAmount);
   const claimableAllocatedAmount = toBigIntValue(row.claimableAllocatedAmount);
+  const rewardAsset = formatQuestionRewardAsset(row.asset);
 
   return {
-    currency: "USDC",
-    displayCurrency: "USD",
+    ...rewardAsset,
     decimals: 6,
     rewardPoolCount: toNumberValue(row.rewardPoolCount),
     activeRewardPoolCount,

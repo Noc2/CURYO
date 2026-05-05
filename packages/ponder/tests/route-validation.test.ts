@@ -119,6 +119,7 @@ function mockPonderModules<T>(result: T) {
       remainingAmount: "feedbackBonusPool.remainingAmount",
     },
     questionRewardPool: {
+      asset: "questionRewardPool.asset",
       allocatedAmount: "questionRewardPool.allocatedAmount",
       claimedAmount: "questionRewardPool.claimedAmount",
       contentId: "questionRewardPool.contentId",

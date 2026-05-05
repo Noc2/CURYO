@@ -27,7 +27,6 @@ export function useAllClaimableRewards() {
   } = useClaimableFrontendRewards();
   const {
     claimableItems: questionRewardPoolClaimableItems,
-    totalClaimable: totalQuestionRewardPoolClaimable,
     isLoading: questionRewardPoolClaimableLoading,
     refetch: refetchQuestionRewardPoolClaimables,
   } = useClaimableQuestionRewards();
@@ -320,11 +319,29 @@ export function useAllClaimableRewards() {
 
   const combinedHrepClaimable = useMemo(
     () =>
-      [...claimableItems, ...participationClaimableItems, ...frontendClaimableItems].reduce(
-        (sum, item) => sum + item.reward,
-        0n,
-      ),
-    [claimableItems, participationClaimableItems, frontendClaimableItems],
+      [
+        ...claimableItems,
+        ...participationClaimableItems,
+        ...frontendClaimableItems,
+        ...questionRewardPoolClaimableItems.filter(
+          item =>
+            (item.claimType === "question_reward" || item.claimType === "question_bundle_reward") &&
+            item.asset === "HREP",
+        ),
+      ].reduce((sum, item) => sum + item.reward, 0n),
+    [claimableItems, participationClaimableItems, frontendClaimableItems, questionRewardPoolClaimableItems],
+  );
+
+  const totalQuestionRewardPoolUsdcClaimable = useMemo(
+    () =>
+      questionRewardPoolClaimableItems
+        .filter(
+          item =>
+            (item.claimType === "question_reward" || item.claimType === "question_bundle_reward") &&
+            item.asset === "USDC",
+        )
+        .reduce((sum, item) => sum + item.reward, 0n),
+    [questionRewardPoolClaimableItems],
   );
 
   const isLoading =
@@ -352,7 +369,7 @@ export function useAllClaimableRewards() {
     claimableItems: combinedClaimableItems,
     totalClaimable: combinedHrepClaimable,
     totalHrepClaimable: combinedHrepClaimable,
-    totalUsdcClaimable: totalQuestionRewardPoolClaimable,
+    totalUsdcClaimable: totalQuestionRewardPoolUsdcClaimable,
     activeStake,
     isLoading,
     refetch,

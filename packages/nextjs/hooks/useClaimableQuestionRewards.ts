@@ -41,6 +41,10 @@ function safeBigInt(value: unknown): bigint {
   }
 }
 
+function getQuestionRewardAsset(candidate: { asset?: number | null; currency?: string | null }) {
+  return candidate.currency === "HREP" || candidate.asset === 0 ? ("HREP" as const) : ("USDC" as const);
+}
+
 export function useClaimableQuestionRewards() {
   const { address } = useAccount();
   const { targetNetwork } = useTargetNetwork();
@@ -143,6 +147,7 @@ export function useClaimableQuestionRewards() {
           contentId: safeBigInt(candidate.contentId),
           roundId: safeBigInt(candidate.roundId),
           reward,
+          asset: getQuestionRewardAsset(candidate),
           title: candidate.title,
           claimType: "question_reward" as const,
         },
@@ -163,6 +168,7 @@ export function useClaimableQuestionRewards() {
           bundleId,
           roundSetIndex,
           reward,
+          asset: getQuestionRewardAsset(candidate),
           title: `Bundle #${bundleId.toString()} round set ${roundSetIndex + 1n}`,
           claimType: "question_bundle_reward" as const,
         },

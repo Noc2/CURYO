@@ -7,6 +7,13 @@ import { DEFAULT_VOTING_CONFIG, type VotingConfig } from "~~/lib/contracts/round
 import { isContentItemBlocked } from "~~/utils/contentFilter";
 
 export const MIN_CONTENT_SEARCH_QUERY_LENGTH = 3;
+export const CONTENT_STATUS = {
+  Active: 0,
+  Dormant: 1,
+  Cancelled: 2,
+} as const;
+
+export type ContentStatus = (typeof CONTENT_STATUS)[keyof typeof CONTENT_STATUS];
 
 const LIKELY_URL_SEARCH_PATTERN = /^[a-z0-9.-]+\.[a-z]{2,}(?:[/?#:].*)?$/i;
 
@@ -34,6 +41,9 @@ export interface ContentOpenRoundSummary {
   estimatedSettlementTime: bigint | null;
 }
 
+export type RewardPoolCurrency = "HREP" | "USDC" | "MIXED";
+export type RewardPoolDisplayCurrency = "HREP" | "USD" | "MIXED";
+
 export interface ContentItem {
   id: bigint;
   url: string;
@@ -46,6 +56,7 @@ export interface ContentItem {
   contentHash: string;
   questionMetadataHash?: string | null;
   resultSpecHash?: string | null;
+  status: ContentStatus;
   isOwnContent: boolean;
   categoryId: bigint;
   rating: number;
@@ -82,6 +93,10 @@ export interface ContentItem {
   thumbnailUrl: string | null;
   contentMetadata?: ContentMetadataResult;
   rewardPoolSummary?: {
+    asset?: number | null;
+    currency?: RewardPoolCurrency;
+    displayCurrency?: RewardPoolDisplayCurrency;
+    decimals?: number;
     totalFunded: bigint;
     totalAvailable: bigint;
     totalClaimed?: bigint;
@@ -129,6 +144,7 @@ export interface UseContentFeedOptions {
   sortBy?: FeedSort;
   submitter?: string;
   submitters?: string[];
+  status?: "all" | ContentStatus;
 }
 
 function buildNormalizedAddressSet(addresses: readonly string[] | undefined, fallbackAddress?: string): Set<string> {
@@ -151,6 +167,67 @@ function numberOrDefault(value: string | number | null | undefined, fallback: nu
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+function normalizeContentStatus(value: string | number | null | undefined): ContentStatus {
+  const parsed = typeof value === "number" ? value : typeof value === "string" ? Number(value) : CONTENT_STATUS.Active;
+
+  switch (parsed) {
+    case CONTENT_STATUS.Dormant:
+      return CONTENT_STATUS.Dormant;
+    case CONTENT_STATUS.Cancelled:
+      return CONTENT_STATUS.Cancelled;
+    case CONTENT_STATUS.Active:
+    default:
+      return CONTENT_STATUS.Active;
+  }
+}
+
+function normalizeRewardPoolCurrency(
+  currency: string | null | undefined,
+  asset: number | string | bigint | null | undefined,
+): RewardPoolCurrency {
+  const normalizedCurrency = currency?.toUpperCase();
+  if (normalizedCurrency === "HREP" || normalizedCurrency === "USDC" || normalizedCurrency === "MIXED") {
+    return normalizedCurrency;
+  }
+
+  if (asset === 0 || asset === "0" || asset === 0n) return "HREP";
+  if (asset === 1 || asset === "1" || asset === 1n) return "USDC";
+
+  return "USDC";
+}
+
+function normalizeRewardPoolDisplayCurrency(
+  displayCurrency: string | null | undefined,
+  currency: RewardPoolCurrency,
+): RewardPoolDisplayCurrency {
+  const normalizedDisplayCurrency = displayCurrency?.toUpperCase();
+  if (
+    normalizedDisplayCurrency === "HREP" ||
+    normalizedDisplayCurrency === "USD" ||
+    normalizedDisplayCurrency === "MIXED"
+  ) {
+    return normalizedDisplayCurrency;
+  }
+
+  if (currency === "HREP") return "HREP";
+  if (currency === "MIXED") return "MIXED";
+  return "USD";
+}
+
+export function isContentItemActive(item: Pick<ContentItem, "status">): boolean {
+  return item.status === CONTENT_STATUS.Active;
+}
+
+export function getInactiveContentVotingMessage(status?: ContentStatus): string {
+  if (status === CONTENT_STATUS.Cancelled) {
+    return "This content was cancelled and is no longer active for voting.";
+  }
+  if (status === CONTENT_STATUS.Dormant) {
+    return "This content is dormant and is no longer active for voting.";
+  }
+  return "This content is no longer active for voting.";
+}
+
 export function mapContentItem(
   item: {
     id: string;
@@ -171,6 +248,7 @@ export function mapContentItem(
     contentHash: string;
     questionMetadataHash?: string | null;
     resultSpecHash?: string | null;
+    status?: string | number | null;
     categoryId: string;
     rating: number;
     ratingBps?: number;
@@ -228,6 +306,10 @@ export function mapContentItem(
       estimatedSettlementTime: string | null;
     } | null;
     rewardPoolSummary?: {
+      asset?: number | string | bigint | null;
+      currency?: string | null;
+      displayCurrency?: string | null;
+      decimals?: number | null;
       totalFunded?: string | number | bigint | null;
       totalFundedAmount?: string | number | bigint | null;
       totalAvailable?: string | number | bigint | null;
@@ -302,6 +384,13 @@ export function mapContentItem(
   const ratingBps = item.ratingBps !== undefined ? BigInt(item.ratingBps) : undefined;
   const conservativeRatingBps =
     item.conservativeRatingBps !== undefined ? BigInt(item.conservativeRatingBps) : undefined;
+  const rewardPoolCurrency = item.rewardPoolSummary
+    ? normalizeRewardPoolCurrency(item.rewardPoolSummary.currency, item.rewardPoolSummary.asset)
+    : undefined;
+  const rewardPoolDisplayCurrency =
+    item.rewardPoolSummary && rewardPoolCurrency
+      ? normalizeRewardPoolDisplayCurrency(item.rewardPoolSummary.displayCurrency, rewardPoolCurrency)
+      : undefined;
   const displayedRating =
     mappedOpenRound?.referenceRatingBps !== undefined ? Number(mappedOpenRound.referenceRatingBps) / 100 : item.rating;
   const url = item.url ?? "";
@@ -327,6 +416,7 @@ export function mapContentItem(
     contentHash: item.contentHash,
     questionMetadataHash: item.questionMetadataHash ?? null,
     resultSpecHash: item.resultSpecHash ?? null,
+    status: normalizeContentStatus(item.status),
     isOwnContent: ownSubmitterAddressSet.has(item.submitter.toLowerCase()),
     categoryId: BigInt(item.categoryId),
     rating: displayedRating,
@@ -366,6 +456,13 @@ export function mapContentItem(
     thumbnailUrl: null,
     rewardPoolSummary: item.rewardPoolSummary
       ? {
+          asset:
+            item.rewardPoolSummary.asset === undefined || item.rewardPoolSummary.asset === null
+              ? null
+              : Number(item.rewardPoolSummary.asset),
+          currency: rewardPoolCurrency,
+          displayCurrency: rewardPoolDisplayCurrency,
+          decimals: item.rewardPoolSummary.decimals ?? 6,
           totalFunded: BigInt(item.rewardPoolSummary.totalFunded ?? item.rewardPoolSummary.totalFundedAmount ?? 0),
           totalAvailable: BigInt(
             item.rewardPoolSummary.totalAvailable ?? item.rewardPoolSummary.currentRewardPoolAmount ?? 0,

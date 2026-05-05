@@ -259,6 +259,7 @@ test("buildAgentResultPackage keeps open rounds pending", () => {
       ratingBps: 5000,
       ratingSettledRounds: 0,
       rewardPoolSummary: {
+        asset: 1,
         activeRewardPoolCount: 1,
         activeUnallocatedAmount: "1000000",
         claimableAllocatedAmount: "0",

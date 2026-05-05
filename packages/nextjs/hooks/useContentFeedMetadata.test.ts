@@ -19,6 +19,7 @@ function makeContentItem(overrides: Partial<ContentItem> & Pick<ContentItem, "id
     tags: overrides.tags ?? [],
     submitter: overrides.submitter ?? "0x0000000000000000000000000000000000000001",
     contentHash: overrides.contentHash ?? "0xhash",
+    status: overrides.status ?? 0,
     isOwnContent: overrides.isOwnContent ?? false,
     categoryId: overrides.categoryId ?? 1n,
     rating: overrides.rating ?? 50,

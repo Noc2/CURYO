@@ -1,4 +1,5 @@
 import {
+  CONTENT_STATUS,
   type ContentItem,
   filterModeratedContentItems,
   filterRpcFeed,
@@ -26,6 +27,7 @@ function buildItem(
     tags,
     submitter: "0x0000000000000000000000000000000000000001",
     contentHash: `hash-${id.toString()}`,
+    status: CONTENT_STATUS.Active,
     isOwnContent: false,
     categoryId: 1n,
     rating: 50,
@@ -62,7 +64,7 @@ test("sortRpcFeed prioritizes stronger relevance matches for rpc search fallback
   );
 });
 
-test("sortRpcFeed orders bounty-backed items by available USD bounties", () => {
+test("sortRpcFeed orders bounty-backed items by available bounties", () => {
   const feed = [
     {
       ...buildItem(1n, "Funded", "A funded question", ["markets"]),
@@ -153,6 +155,23 @@ test("mapContentItem marks linked submitter addresses as own content", () => {
   assert.equal(item.isOwnContent, true);
 });
 
+test("mapContentItem preserves inactive Ponder content status", () => {
+  const dormantItem = mapContentItem({
+    id: "4",
+    url: "https://example.com/dormant",
+    title: "Dormant question",
+    description: "No longer accepting votes.",
+    tags: "",
+    submitter: "0x00000000000000000000000000000000000000aa",
+    contentHash: "hash-4",
+    categoryId: "1",
+    rating: 50,
+    status: CONTENT_STATUS.Dormant,
+  });
+
+  assert.equal(dormantItem.status, CONTENT_STATUS.Dormant);
+});
+
 test("mapContentItem supports text-only questions and Ponder bounty summaries", () => {
   const item = mapContentItem({
     id: "2",
@@ -167,6 +186,10 @@ test("mapContentItem supports text-only questions and Ponder bounty summaries", 
     categoryId: "2",
     rating: 50,
     rewardPoolSummary: {
+      asset: 0,
+      currency: "HREP",
+      displayCurrency: "HREP",
+      decimals: 6,
       totalFundedAmount: "25000000",
       currentRewardPoolAmount: "18000000",
       totalClaimedAmount: "7000000",
@@ -191,6 +214,10 @@ test("mapContentItem supports text-only questions and Ponder bounty summaries", 
   assert.equal(item.question, "Would you book this hotel?");
   assert.equal(item.questionMetadataHash, `0x${"2".repeat(64)}`);
   assert.equal(item.resultSpecHash, `0x${"3".repeat(64)}`);
+  assert.equal(item.rewardPoolSummary?.asset, 0);
+  assert.equal(item.rewardPoolSummary?.currency, "HREP");
+  assert.equal(item.rewardPoolSummary?.displayCurrency, "HREP");
+  assert.equal(item.rewardPoolSummary?.decimals, 6);
   assert.equal(item.rewardPoolSummary?.totalFunded, 25_000_000n);
   assert.equal(item.rewardPoolSummary?.totalAvailable, 18_000_000n);
   assert.equal(item.rewardPoolSummary?.totalClaimed, 7_000_000n);
