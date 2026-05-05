@@ -5,7 +5,7 @@
  */
 import React from "react";
 import { G, Path, Rect, Svg, Text as SvgText } from "@react-pdf/renderer";
-import { DOMParser } from "@xmldom/xmldom";
+import { DOMParser, type Element as XmlElement, type Node as XmlNode } from "@xmldom/xmldom";
 import { liteAdaptor } from "mathjax-full/js/adaptors/liteAdaptor.js";
 import { RegisterHTMLHandler } from "mathjax-full/js/handlers/html.js";
 import { TeX } from "mathjax-full/js/input/tex.js";
@@ -30,11 +30,15 @@ interface DefsMap {
 }
 
 // ── Collect <path> definitions from <defs> (recursive) ──
-function collectDefs(node: Element): DefsMap {
+function isElementNode(node: XmlNode): node is XmlElement {
+  return node.nodeType === 1;
+}
+
+function collectDefs(node: XmlElement): DefsMap {
   const map: DefsMap = {};
   for (let i = 0; i < node.childNodes.length; i++) {
-    const child = node.childNodes[i] as Element;
-    if (!child.nodeName) continue;
+    const child = node.childNodes[i];
+    if (!isElementNode(child) || !child.nodeName) continue;
     if (child.nodeName === "path" && child.getAttribute?.("id")) {
       map[child.getAttribute("id")!] = child.getAttribute("d") || "";
     }
@@ -47,9 +51,10 @@ function collectDefs(node: Element): DefsMap {
 }
 
 // ── Recursively map SVG DOM nodes → react-pdf elements ──
-function mapNode(node: Element, defs: DefsMap, fill: string, key: number): React.ReactElement | null {
+function mapNode(node: XmlNode, defs: DefsMap, fill: string, key: number): React.ReactElement | null {
+  if (!isElementNode(node)) return null;
   const tag = node.nodeName?.toLowerCase();
-  if (!tag || node.nodeType !== 1) return null;
+  if (!tag) return null;
 
   switch (tag) {
     case "g": {
@@ -57,7 +62,7 @@ function mapNode(node: Element, defs: DefsMap, fill: string, key: number): React
       const gFill = node.getAttribute("fill") || fill;
       const children: React.ReactElement[] = [];
       for (let i = 0; i < node.childNodes.length; i++) {
-        const mapped = mapNode(node.childNodes[i] as Element, defs, gFill, i);
+        const mapped = mapNode(node.childNodes[i], defs, gFill, i);
         if (mapped) children.push(mapped);
       }
       if (children.length === 0) return null;
@@ -210,7 +215,7 @@ export function renderLatex(latex: string, color = "#1a1a2e", scale = 1): Render
   const resolvedColor = color === "currentColor" ? "#1a1a2e" : color;
   const children: React.ReactElement[] = [];
   for (let i = 0; i < svgEl.childNodes.length; i++) {
-    const mapped = mapNode(svgEl.childNodes[i] as Element, defs, resolvedColor, i);
+    const mapped = mapNode(svgEl.childNodes[i], defs, resolvedColor, i);
     if (mapped) children.push(mapped);
   }
 
