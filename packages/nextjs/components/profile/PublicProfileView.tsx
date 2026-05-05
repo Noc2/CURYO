@@ -172,6 +172,12 @@ function findCountryOption(value: string) {
   );
 }
 
+function findCountryOptionByLabel(value: string) {
+  const normalized = normalizeCountrySearch(value);
+  if (!normalized) return undefined;
+  return PROFILE_COUNTRY_OPTIONS.find(option => option.label.toLowerCase() === normalized);
+}
+
 function filterCountryOptions(query: string, excludedValues: ReadonlySet<string> = new Set()) {
   const normalized = normalizeCountrySearch(query);
   const options = PROFILE_COUNTRY_OPTIONS.filter(option => !excludedValues.has(option.value));
@@ -245,7 +251,7 @@ function SearchableCountrySelect({
             return;
           }
 
-          const exactOption = findCountryOption(nextQuery);
+          const exactOption = findCountryOptionByLabel(nextQuery);
           if (exactOption) {
             onChange(exactOption.value);
           }
@@ -368,7 +374,7 @@ function NationalityPicker({
             setQuery(nextQuery);
             setIsOpen(true);
 
-            const exactOption = findCountryOption(nextQuery);
+            const exactOption = findCountryOptionByLabel(nextQuery);
             if (exactOption) {
               addOption(exactOption);
             }
