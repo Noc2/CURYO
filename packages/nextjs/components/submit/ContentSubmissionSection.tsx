@@ -2139,10 +2139,14 @@ export function ContentSubmissionSection() {
           </button>
         </div>
         {bountyWindowPreset === "custom" ? (
-          <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_8rem]">
-            <label className="form-control">
+          <div className="grid gap-3 sm:grid-cols-[max-content_8rem] sm:items-end sm:gap-x-6">
+            <label
+              htmlFor="custom-bounty-window-amount"
+              className="grid gap-2 sm:grid-cols-[max-content_12rem] sm:items-center sm:gap-x-6"
+            >
               <span className="label-text">Window length</span>
               <input
+                id="custom-bounty-window-amount"
                 type="number"
                 min={1}
                 max={customBountyWindowAmountMax}
