@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { copyTextToClipboard } from "~~/utils/copyToClipboard";
+import { notification } from "~~/utils/scaffold-eth";
 
 function AgentIcon({ name }: { name: string }) {
   const iconClass = "h-5 w-5 shrink-0";
@@ -100,10 +101,18 @@ export function SupportedAgentsSection() {
     const copied = await copyTextToClipboard(CURYO_AGENT_PROMPT);
     if (!copied) {
       console.error("Failed to copy Curyo agent prompt.");
+      notification.error("Could not copy the prompt. Please try again.", {
+        id: "curyo-agent-prompt-copy",
+      });
       return;
     }
 
     setCopiedAgentName(agentName);
+    notification.success(`Copied prompt for ${agentName}. Share it with your AI agent.`, {
+      duration: 2400,
+      id: "curyo-agent-prompt-copy",
+    });
+
     if (resetTimeoutRef.current !== null) {
       clearTimeout(resetTimeoutRef.current);
     }
