@@ -212,7 +212,7 @@ Run the Knip dead-code scan with:
 yarn dead-code
 ```
 
-This repo uses Yarn's `node-modules` linker, so `yarn dead-code` first performs an immutable `skip-build` relink to restore `node_modules/.yarn-state.yml` when a fresh worktree does not have the current Yarn state yet.
+This repo uses Yarn's `node-modules` linker, so `yarn dead-code` performs an immutable `skip-build` relink to restore `node_modules/.yarn-state.yml` only when that file is missing (e.g. fresh clone). When the file is already present the scan starts immediately. Any extra arguments after `yarn dead-code` are forwarded to Knip.
 
 ## Docs and APIs
 

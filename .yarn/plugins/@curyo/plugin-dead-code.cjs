@@ -6,9 +6,15 @@ module.exports = {
     const { BaseCommand } = require("@yarnpkg/cli");
     const { Command, Option } = require("clipanion");
     const { spawnSync } = require("child_process");
+    const fs = require("fs");
+    const path = require("path");
 
     const installArgs = ["install", "--immutable", "--mode=skip-build"];
     const scanArgs = ["run", "dead-code:scan"];
+
+    function yarnStateMissing(cwd) {
+      return !fs.existsSync(path.join(cwd, "node_modules", ".yarn-state.yml"));
+    }
 
     function resolveYarnInvocation() {
       const npmExecpath = process.env.npm_execpath;
@@ -54,9 +60,11 @@ module.exports = {
 
           async execute() {
             const yarn = resolveYarnInvocation();
-            const installExitCode = run(yarn.command, [...yarn.prefix, ...installArgs], this.context.cwd);
-            if (installExitCode !== 0) {
-              return installExitCode;
+            if (yarnStateMissing(this.context.cwd)) {
+              const installExitCode = run(yarn.command, [...yarn.prefix, ...installArgs], this.context.cwd);
+              if (installExitCode !== 0) {
+                return installExitCode;
+              }
             }
 
             const forwardedScanArgs = this.extraArgs.length > 0 ? [...scanArgs, ...this.extraArgs] : scanArgs;
