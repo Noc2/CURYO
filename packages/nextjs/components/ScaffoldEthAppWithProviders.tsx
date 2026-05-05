@@ -13,7 +13,6 @@ import { Footer } from "~~/components/Footer";
 import { Header } from "~~/components/Header";
 import { RouteScopedNotifiers } from "~~/components/RouteScopedNotifiers";
 import { ReferralAttributionCapture } from "~~/components/referrals/ReferralAttributionCapture";
-import { FaucetModal, FaucetTrigger } from "~~/components/scaffold-eth";
 import { LocalTestWalletBridge } from "~~/components/thirdweb/LocalTestWalletBridge";
 import { ThirdwebAutoConnectBridge } from "~~/components/thirdweb/ThirdwebAutoConnectBridge";
 import { ThirdwebConnectorWalletBridge } from "~~/components/thirdweb/ThirdwebConnectorWalletBridge";
@@ -28,6 +27,12 @@ const TermsAcceptanceModal = dynamic(
   () => import("~~/components/legal/TermsAcceptanceModal").then(m => m.TermsAcceptanceModal),
   { ssr: false },
 );
+const FaucetModal = dynamic(() => import("~~/components/scaffold-eth/Faucet").then(m => m.FaucetModal), {
+  ssr: false,
+});
+const FaucetTrigger = dynamic(() => import("~~/components/scaffold-eth/Faucet").then(m => m.FaucetTrigger), {
+  ssr: false,
+});
 
 const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname() ?? "";
