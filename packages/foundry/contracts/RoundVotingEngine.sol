@@ -236,7 +236,7 @@ contract RoundVotingEngine is
     /// @notice Recover HREP sent directly to this contract outside accounted protocol flows.
     /// @dev Admin-only and naturally reentrancy-safe: a re-entrant call would compute
     ///      `balanceOf - accountedHrepBalance == 0` after the first transfer, draining nothing.
-    function recoverSurplusHrep() external {
+    function recoverSurplusHrep() external nonReentrant {
         if (!hasRole(bytes32(0), msg.sender)) revert Unauthorized();
         hrepToken.safeTransfer(msg.sender, hrepToken.balanceOf(address(this)) - accountedHrepBalance);
     }

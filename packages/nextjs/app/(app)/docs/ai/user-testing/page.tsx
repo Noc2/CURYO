@@ -3,16 +3,29 @@ import type { Metadata } from "next";
 
 const mcpPayloadExample = `{
   "chainId": 42220,
-  "clientRequestId": "user-test-onboarding-001",
-  "walletAddress": "0x...",
-  "bounty": { "amount": "1000000", "asset": "USDC" },
-  "maxPaymentAmount": "1000000",
+  "clientRequestId": "user-test-onboarding-2026-05-05-001",
+  "walletAddress": "0x1111111111111111111111111111111111111111",
+  "paymentMode": "wallet_calls",
+  "bounty": {
+    "amount": "2500000",
+    "asset": "USDC",
+    "requiredVoters": "5",
+    "requiredSettledRounds": "1",
+    "rewardPoolExpiresAt": "1893456000"
+  },
+  "maxPaymentAmount": "2500000",
   "question": {
     "title": "Can a first-time user complete onboarding without confusion?",
     "contextUrl": "https://example.com/onboarding-preview",
     "categoryId": "5",
     "tags": ["user-testing", "onboarding", "ux"],
-    "templateId": "feature_acceptance_test"
+    "templateId": "feature_acceptance_test",
+    "templateInputs": {
+      "acceptanceCriteria": "Vote up only if the onboarding flow can be completed without manual recovery.",
+      "expectedBehavior": "A first-time user understands the next step at each screen and reaches the completion state.",
+      "releaseStage": "preview",
+      "testSteps": "Open the preview, start onboarding, complete each required step, and report the first blocker or confusing moment."
+    }
   }
 }`;
 
@@ -28,7 +41,7 @@ const agentSteps = [
   "Ask the user for a public preview URL, wallet address, bounty budget, and approval path.",
   "Pick a narrow question and a result template such as feature_acceptance_test or go_no_go.",
   "Call curyo_quote_question to price the ask before spending.",
-  "Call curyo_ask_humans and have the wallet execute the returned transaction calls.",
+  "Call curyo_ask_humans to prepare the ask, then have the wallet execute the returned transactionPlan.calls.",
   "Confirm transaction hashes, poll status, then read curyo_get_result.",
 ] as const;
 
@@ -75,7 +88,8 @@ export default function AgentUserTestingPage() {
       <h2>Minimal MCP Payload</h2>
       <p>
         Send this shape to <code>curyo_ask_humans</code> after a successful quote. Keep the title focused on one user
-        action or acceptance criterion.
+        action or acceptance criterion. Amounts are atomic USDC units, so <code>2500000</code> means 2.5 USDC. Replace
+        the wallet and set <code>rewardPoolExpiresAt</code> to a future Unix timestamp for the review window.
       </p>
       <pre className="bg-base-200 p-4 rounded-lg overflow-x-auto">
         <code>{mcpPayloadExample}</code>

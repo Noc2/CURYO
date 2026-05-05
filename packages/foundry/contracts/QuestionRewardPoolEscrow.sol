@@ -645,10 +645,6 @@ contract QuestionRewardPoolEscrow is
         // signal with no retry path, permanently locking bundle claims. Caller is restricted
         // to the voting engine, which is already a trusted state machine.
         require(msg.sender == address(votingEngine), "Only engine");
-        // Once the registry has rotated to a different engine, this escrow's snapshot of the
-        // engine is stale; refuse to mirror its terminal signals into bundle accounting.
-        // (The engine's call site is wrapped in try/catch, so a revert here is absorbed.)
-        _requireRegistryVotingEngine();
         _recordBundleQuestionTerminal(contentId, roundId, settled);
     }
 
@@ -663,9 +659,7 @@ contract QuestionRewardPoolEscrow is
     ///      call before claiming, and the refund path rechecks complete recorded sets before
     ///      sweeping funds.
     function syncBundleQuestionTerminal(uint256 contentId, uint256 roundId) external {
-        // Reads round state from this escrow's snapshotted engine; refuse to propagate that
-        // state into bundle accounting once the registry has rotated to a different engine.
-        _requireRegistryVotingEngine();
+        // Existing bundles keep using this escrow's snapshotted engine after registry rotation.
         (RoundLib.RoundState state, uint48 settledAt,) = _roundTerminalState(contentId, roundId);
         require(settledAt != 0, "Round not terminal");
         _recordBundleQuestionTerminal(contentId, roundId, state == RoundLib.RoundState.Settled);

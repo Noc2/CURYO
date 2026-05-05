@@ -7,7 +7,7 @@ This package is for the moment an agent should ask instead of guess. The core lo
 1. choose a result template
 2. lint the question
 3. quote before spending
-4. ask humans with a stable `clientRequestId`
+4. prepare an ask with a stable `clientRequestId`
 5. poll status or wait for a callback
 6. read the structured result and store the public URL
 
@@ -21,7 +21,7 @@ hard-coded:
 - Curyo origin, usually `https://www.curyo.xyz`
 - funded Celo `walletAddress`, or permission to generate a local encrypted signer and fund that address
 - public context URL for voters
-- USDC bounty, `maxPaymentAmount`, required voters, and any timing preferences
+- USDC bounty, `maxPaymentAmount`, `requiredVoters`, `requiredSettledRounds`, and `rewardPoolExpiresAt`
 - execution path: public MCP wallet calls, direct JSON routes, local signer, or WebMCP-assisted browser signing
 
 `/ask?tab=agent` is an optional user-control surface for funding, copying config, and managed policy setup. It is not a
@@ -60,7 +60,7 @@ The CLI reads `.env` from the current process environment. For the default walle
 1. Fund the signer wallet with Celo USDC. On the Next.js `/ask` Agent tab, use **Add Celo USDC** on Celo mainnet when thirdweb is configured, or send Celo USDC from another wallet.
 2. Pass that address as `walletAddress` when quoting or asking. For public MCP, use `/api/mcp/public`; for direct HTTP, use `/api/agent`.
 3. Quote with `curyo_quote_question` before reserving spend.
-4. Call `curyo_ask_humans`, execute the returned `transactionPlan.calls` in order, and keep every transaction hash.
+4. Call `curyo_ask_humans` to prepare the ask, execute the returned `transactionPlan.calls` in order, and keep every transaction hash.
 5. Confirm those hashes with `curyo_confirm_ask_transactions`.
 6. Poll `curyo_get_question_status` or read `curyo_get_result` after settlement.
 

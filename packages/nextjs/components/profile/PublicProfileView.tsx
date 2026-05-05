@@ -155,6 +155,259 @@ function optionSelected(values: readonly string[] | undefined, value: string) {
   return values?.includes(value) ?? false;
 }
 
+type CountryOption = (typeof PROFILE_COUNTRY_OPTIONS)[number];
+
+const COUNTRY_PICKER_RESULT_LIMIT = 8;
+const MAX_PROFILE_NATIONALITIES = 3;
+
+function normalizeCountrySearch(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function findCountryOption(value: string) {
+  const normalized = normalizeCountrySearch(value);
+  if (!normalized) return undefined;
+  return PROFILE_COUNTRY_OPTIONS.find(
+    option => option.value.toLowerCase() === normalized || option.label.toLowerCase() === normalized,
+  );
+}
+
+function filterCountryOptions(query: string, excludedValues: ReadonlySet<string> = new Set()) {
+  const normalized = normalizeCountrySearch(query);
+  const options = PROFILE_COUNTRY_OPTIONS.filter(option => !excludedValues.has(option.value));
+
+  if (!normalized) {
+    return options.slice(0, COUNTRY_PICKER_RESULT_LIMIT);
+  }
+
+  return options
+    .filter(
+      option => option.label.toLowerCase().includes(normalized) || option.value.toLowerCase().includes(normalized),
+    )
+    .slice(0, COUNTRY_PICKER_RESULT_LIMIT);
+}
+
+function SearchableCountrySelect({
+  disabled,
+  id,
+  label,
+  onChange,
+  value,
+}: {
+  disabled?: boolean;
+  id: string;
+  label: string;
+  onChange: (value: string | undefined) => void;
+  value?: string;
+}) {
+  const selectedOption = useMemo(() => (value ? findCountryOption(value) : undefined), [value]);
+  const [query, setQuery] = useState(selectedOption?.label ?? "");
+  const [isOpen, setIsOpen] = useState(false);
+  const filteredOptions = useMemo(() => filterCountryOptions(query), [query]);
+
+  useEffect(() => {
+    setQuery(selectedOption?.label ?? "");
+  }, [selectedOption?.label]);
+
+  const selectOption = useCallback(
+    (option: CountryOption | undefined) => {
+      onChange(option?.value);
+      setQuery(option?.label ?? "");
+      setIsOpen(false);
+    },
+    [onChange],
+  );
+
+  return (
+    <div className="form-control relative">
+      <label htmlFor={id} className="label-text text-base-content/65">
+        {label}
+      </label>
+      <input
+        id={id}
+        aria-label={label}
+        autoComplete="off"
+        className="input input-bordered mt-2 w-full bg-base-100"
+        disabled={disabled}
+        onBlur={() => {
+          window.setTimeout(() => {
+            setIsOpen(false);
+            setQuery(selectedOption?.label ?? "");
+          }, 120);
+        }}
+        onChange={event => {
+          const nextQuery = event.target.value;
+          setQuery(nextQuery);
+          setIsOpen(true);
+
+          if (!nextQuery.trim()) {
+            onChange(undefined);
+            return;
+          }
+
+          const exactOption = findCountryOption(nextQuery);
+          if (exactOption) {
+            onChange(exactOption.value);
+          }
+        }}
+        onFocus={() => setIsOpen(true)}
+        placeholder="Prefer not to say"
+        value={query}
+      />
+      {isOpen && !disabled ? (
+        <div className="absolute left-0 right-0 top-full z-30 mt-2 max-h-64 overflow-y-auto rounded-xl border border-base-300 bg-base-100 p-1 shadow-2xl">
+          {filteredOptions.length > 0 ? (
+            filteredOptions.map(option => (
+              <button
+                key={option.value}
+                type="button"
+                className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm text-base-content transition hover:bg-base-200 focus:bg-base-200 focus:outline-none"
+                onMouseDown={event => event.preventDefault()}
+                onClick={() => selectOption(option)}
+              >
+                <span>{option.label}</span>
+                <span className="font-mono text-xs text-base-content/45">{option.value}</span>
+              </button>
+            ))
+          ) : (
+            <div className="px-3 py-2 text-sm text-base-content/55">No countries found</div>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function NationalityPicker({
+  disabled,
+  onChange,
+  value,
+}: {
+  disabled?: boolean;
+  onChange: (value: string[]) => void;
+  value: readonly string[];
+}) {
+  const [query, setQuery] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const selectedValues = useMemo(() => new Set(value), [value]);
+  const selectedOptions = useMemo(
+    () =>
+      value
+        .map(countryValue => findCountryOption(countryValue))
+        .filter((option): option is CountryOption => Boolean(option)),
+    [value],
+  );
+  const filteredOptions = useMemo(() => filterCountryOptions(query, selectedValues), [query, selectedValues]);
+  const canAddMore = value.length < MAX_PROFILE_NATIONALITIES;
+
+  const addOption = useCallback(
+    (option: CountryOption | undefined) => {
+      if (!option || selectedValues.has(option.value) || value.length >= MAX_PROFILE_NATIONALITIES) return;
+      onChange([...value, option.value]);
+      setQuery("");
+      setIsOpen(false);
+    },
+    [onChange, selectedValues, value],
+  );
+
+  const removeOption = useCallback(
+    (optionValue: string) => {
+      onChange(value.filter(currentValue => currentValue !== optionValue));
+    },
+    [onChange, value],
+  );
+
+  return (
+    <div className="form-control relative lg:col-span-2">
+      <div className="flex items-center justify-between gap-3">
+        <label htmlFor="profile-nationalities" className="label-text text-base-content/65">
+          Nationalities
+        </label>
+        <span className="text-xs font-medium text-base-content/45">
+          {value.length}/{MAX_PROFILE_NATIONALITIES}
+        </span>
+      </div>
+
+      <div className="mt-2 rounded-xl border border-base-300 bg-base-100 px-3 py-2 focus-within:border-primary">
+        {selectedOptions.length > 0 ? (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {selectedOptions.map(option => (
+              <span
+                key={option.value}
+                className="inline-flex max-w-full items-center gap-2 rounded-full border border-base-300 bg-base-200 px-3 py-1 text-sm text-base-content"
+              >
+                <span className="truncate">{option.label}</span>
+                <button
+                  type="button"
+                  aria-label={`Remove ${option.label}`}
+                  className="rounded-full text-base-content/55 transition hover:text-error focus:outline-none focus:ring-2 focus:ring-primary"
+                  disabled={disabled}
+                  onClick={() => removeOption(option.value)}
+                >
+                  <XMarkIcon className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </span>
+            ))}
+          </div>
+        ) : null}
+
+        <input
+          id="profile-nationalities"
+          aria-label="Nationalities"
+          autoComplete="off"
+          className="w-full bg-transparent py-1 text-base-content outline-none placeholder:text-base-content/45 disabled:cursor-not-allowed"
+          disabled={disabled || !canAddMore}
+          onBlur={() => {
+            window.setTimeout(() => {
+              setIsOpen(false);
+              setQuery("");
+            }, 120);
+          }}
+          onChange={event => {
+            const nextQuery = event.target.value;
+            setQuery(nextQuery);
+            setIsOpen(true);
+
+            const exactOption = findCountryOption(nextQuery);
+            if (exactOption) {
+              addOption(exactOption);
+            }
+          }}
+          onFocus={() => setIsOpen(true)}
+          onKeyDown={event => {
+            if (event.key !== "Enter") return;
+            event.preventDefault();
+            addOption(filteredOptions[0]);
+          }}
+          placeholder={canAddMore ? "Search countries" : "Maximum selected"}
+          value={query}
+        />
+      </div>
+
+      {isOpen && !disabled && canAddMore ? (
+        <div className="absolute left-0 right-0 top-full z-30 mt-2 max-h-64 overflow-y-auto rounded-xl border border-base-300 bg-base-100 p-1 shadow-2xl">
+          {filteredOptions.length > 0 ? (
+            filteredOptions.map(option => (
+              <button
+                key={option.value}
+                type="button"
+                className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm text-base-content transition hover:bg-base-200 focus:bg-base-200 focus:outline-none"
+                onMouseDown={event => event.preventDefault()}
+                onClick={() => addOption(option)}
+              >
+                <span>{option.label}</span>
+                <span className="font-mono text-xs text-base-content/45">{option.value}</span>
+              </button>
+            ))
+          ) : (
+            <div className="px-3 py-2 text-sm text-base-content/55">No countries found</div>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function PublicProfileView({ address, embedded = false }: PublicProfileViewProps) {
   const normalizedAddress = address.toLowerCase() as `0x${string}`;
   const isPageVisible = usePageVisibility();
@@ -742,54 +995,30 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
                   </select>
                 </label>
 
-                <label className="form-control">
-                  <span className="label-text text-base-content/65">Country</span>
-                  <select
-                    aria-label="Country"
-                    className="select select-bordered mt-2 w-full bg-base-100"
-                    value={selfReportInput.residenceCountry ?? ""}
-                    onChange={event => {
-                      setSelfReportInput(
-                        normalizeProfileSelfReport({
-                          ...selfReportInput,
-                          residenceCountry: event.target.value || undefined,
-                        }),
-                      );
-                      setProfileError(null);
-                    }}
-                    disabled={isSavingProfile}
-                  >
-                    <option value="">Prefer not to say</option>
-                    {PROFILE_COUNTRY_OPTIONS.map(option => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <SearchableCountrySelect
+                  id="profile-country"
+                  label="Country"
+                  value={selfReportInput.residenceCountry}
+                  onChange={value => {
+                    setSelfReportInput(
+                      normalizeProfileSelfReport({
+                        ...selfReportInput,
+                        residenceCountry: value,
+                      }),
+                    );
+                    setProfileError(null);
+                  }}
+                  disabled={isSavingProfile}
+                />
 
-                <label className="form-control lg:col-span-2">
-                  <span className="label-text text-base-content/65">Nationalities</span>
-                  <select
-                    multiple
-                    size={5}
-                    aria-label="Nationalities"
-                    className="select select-bordered mt-2 h-36 w-full bg-base-100"
-                    value={selfReportInput.nationalities ?? []}
-                    onChange={event => {
-                      const values = Array.from(event.currentTarget.selectedOptions).map(option => option.value);
-                      setSelfReportInput(normalizeProfileSelfReport({ ...selfReportInput, nationalities: values }));
-                      setProfileError(null);
-                    }}
-                    disabled={isSavingProfile}
-                  >
-                    {PROFILE_COUNTRY_OPTIONS.map(option => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <NationalityPicker
+                  value={selfReportInput.nationalities ?? []}
+                  onChange={values => {
+                    setSelfReportInput(normalizeProfileSelfReport({ ...selfReportInput, nationalities: values }));
+                    setProfileError(null);
+                  }}
+                  disabled={isSavingProfile}
+                />
 
                 <div className="lg:col-span-2">
                   <div className="label-text text-base-content/65">Languages</div>
@@ -886,23 +1115,17 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
             <div className="mt-6 rounded-2xl bg-base-content/[0.04] px-5 py-4">
               <div className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/90">Audience context</div>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-base-content/55">{PROFILE_SELF_REPORT_NOTICE}</p>
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <dl className="mt-4 grid gap-x-8 divide-y divide-base-content/10 md:grid-cols-2 md:divide-y-0">
                 {currentSelfReportGroups.map(group => (
-                  <div key={group.label} className="rounded-2xl bg-base-content/[0.04] px-4 py-3">
-                    <div className="text-sm font-medium text-base-content/50">{group.label}</div>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {group.values.map(value => (
-                        <span
-                          key={value}
-                          className="rounded-full bg-base-content/[0.07] px-3 py-1 text-sm text-base-content/75"
-                        >
-                          {value}
-                        </span>
-                      ))}
-                    </div>
+                  <div
+                    key={group.label}
+                    className="flex flex-col gap-1 py-3 md:border-t md:border-base-content/10 md:first:border-t-0 md:[&:nth-child(2)]:border-t-0"
+                  >
+                    <dt className="text-sm font-medium text-base-content/50">{group.label}</dt>
+                    <dd className="text-base text-base-content/75">{group.values.join(", ")}</dd>
                   </div>
                 ))}
-              </div>
+              </dl>
             </div>
           ) : ownProfile ? (
             <div className="mt-6 rounded-2xl border border-dashed border-base-content/15 px-5 py-4">

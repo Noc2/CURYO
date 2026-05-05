@@ -76,7 +76,7 @@ test.describe("Profile management", () => {
     await nameInput.clear();
     await nameInput.fill(uniqueName);
     await page.getByLabel("Age group").selectOption("25-34");
-    await page.getByLabel("Country").selectOption("US");
+    await page.getByLabel("Country").fill("United States");
     await page.getByLabel("English").check();
 
     const saveBtn = page
@@ -114,7 +114,7 @@ test.describe("Profile management", () => {
     await nameInput.clear();
     await nameInput.fill(updatedName);
     await page.getByLabel("Age group").selectOption("35-44");
-    await page.getByLabel("Country").selectOption("DE");
+    await page.getByLabel("Country").fill("Germany");
     await page.getByLabel("Engineer").check();
 
     const saveBtn = page

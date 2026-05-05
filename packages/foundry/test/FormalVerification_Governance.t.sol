@@ -79,7 +79,7 @@ contract FormalVerification_GovernanceTest is Test {
 
     // ==================== Test 1: Bootstrap Quorum Floor Dominates Early ====================
 
-    /// @notice 1000 users x 1000 HREP = 1M circulating. Dynamic quorum is 40K, but the 1M floor dominates.
+    /// @notice 1000 users x 1000 HREP = 1M circulating. Dynamic quorum is 40K, but the 100K floor dominates.
     function test_EarlyCapture_First1000Claimants() public {
         // Simulate 1M circulating (1000 users x 1000 HREP) via single address
         _mintCirculating(address(100), 1_000_000e6);
@@ -87,17 +87,17 @@ contract FormalVerification_GovernanceTest is Test {
         vm.roll(block.number + 1);
 
         uint256 q = governor.quorum(block.number - 1);
-        // circulating = 1M, dynamic quorum = 40K, bootstrap floor = 1M
-        assertEq(q, 1_000_000e6, "Bootstrap floor holds quorum at 1M HREP with 1M circulating");
+        // circulating = 1M, dynamic quorum = 40K, bootstrap floor = 100K
+        assertEq(q, 100_000e6, "Bootstrap floor holds quorum at 100K HREP with 1M circulating");
 
-        // 1000 users x 1000 HREP = 1M = quorum
+        // 100 users x 1000 HREP = 100K = quorum
         uint256 usersForQuorum = q / 1000e6;
-        assertEq(usersForQuorum, 1000, "A 1M bootstrap quorum needs broad early participation");
+        assertEq(usersForQuorum, 100, "A 100K bootstrap quorum still needs broad early participation");
     }
 
     // ==================== Test 2: Minimum Floor Prevents Tiny Capture ====================
 
-    /// @notice 10 users x 1000 HREP = 10K circulating. Dynamic quorum = 400, but floor = 1M.
+    /// @notice 10 users x 1000 HREP = 10K circulating. Dynamic quorum = 400, but floor = 100K.
     function test_EarlyCapture_MinFloor_TinyCirculating() public {
         // Only 10K circulating
         _mintCirculating(address(100), 10_000e6);
@@ -105,8 +105,8 @@ contract FormalVerification_GovernanceTest is Test {
         vm.roll(block.number + 1);
 
         uint256 q = governor.quorum(block.number - 1);
-        // circulating = 10K, dynamic = 4% of 10K = 400, floor = 1M
-        assertEq(q, 1_000_000e6, "Floor of 1M HREP enforced");
+        // circulating = 10K, dynamic = 4% of 10K = 400, floor = 100K
+        assertEq(q, 100_000e6, "Floor of 100K HREP enforced");
 
         // Quorum intentionally exceeds live circulation during bootstrap.
         assertGt(q, 10_000e6, "Bootstrap quorum intentionally exceeds tiny circulating supply");
@@ -130,7 +130,7 @@ contract FormalVerification_GovernanceTest is Test {
         vm.roll(transferBlock + 1);
         uint256 qAfter = governor.quorum(transferBlock);
 
-        // Circulating went from 1M to 26M, quorum moves above the 1M floor to 1.04M.
+        // Circulating went from 1M to 26M, quorum moves above the 100K floor to 1.04M.
         assertGt(qAfter, qBefore, "Quorum increases as faucet drains");
         assertEq(qAfter, 1_040_000e6, "4% of 26M = 1.04M");
     }
@@ -228,7 +228,7 @@ contract FormalVerification_GovernanceTest is Test {
         _mintCirculating(coalition[0], 100_000e6);
         _mintCirculating(coalition[1], 100_000e6);
         _mintCirculating(coalition[2], 100_000e6);
-        // Total circulating = 500K, so the 1M bootstrap floor still applies.
+        // Total circulating = 500K, so the 100K bootstrap floor still applies.
 
         vm.roll(block.number + 1);
 

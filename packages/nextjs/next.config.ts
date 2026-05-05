@@ -7,7 +7,7 @@ import withBundleAnalyzer from "@next/bundle-analyzer";
 import type { NextConfig } from "next";
 
 const isDev = process.env.NODE_ENV === "development";
-const isVercelPreview = process.env.VERCEL_ENV === "preview";
+const isVercelDeployment = process.env.VERCEL === "1" || Boolean(process.env.VERCEL_ENV);
 const allowLocalE2EProductionBuild = isLocalE2EProductionBuildEnabled();
 const rpcOverrides = mergeRpcOverrides(
   RPC_OVERRIDES,
@@ -45,13 +45,13 @@ const rpcOrigins = rpcUrls
 // Build CSP directives. Production Ponder URL comes from env at build time.
 const ponderUrl =
   resolvePonderUrlValue(process.env.NEXT_PUBLIC_PONDER_URL, !isDev, allowLocalE2EProductionBuild).url ?? "";
-const vercelLiveScriptSources = isVercelPreview ? ["https://vercel.live"] : [];
-const vercelLiveStyleSources = isVercelPreview ? ["https://vercel.live"] : [];
-const vercelLiveFontSources = isVercelPreview ? ["https://vercel.live", "https://assets.vercel.com"] : [];
-const vercelLiveConnectSources = isVercelPreview
+const vercelLiveScriptSources = isVercelDeployment ? ["https://vercel.live"] : [];
+const vercelLiveStyleSources = isVercelDeployment ? ["https://vercel.live"] : [];
+const vercelLiveFontSources = isVercelDeployment ? ["https://vercel.live", "https://assets.vercel.com"] : [];
+const vercelLiveConnectSources = isVercelDeployment
   ? ["https://vercel.live", "https://*.pusher.com", "wss://*.pusher.com"]
   : [];
-const vercelLiveFrameSources = isVercelPreview ? ["https://vercel.live"] : [];
+const vercelLiveFrameSources = isVercelDeployment ? ["https://vercel.live"] : [];
 const cspDirectives = [
   "default-src 'self'",
   // Static CSP headers need inline bootstrap scripts for Next's production app shell.

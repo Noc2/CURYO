@@ -299,6 +299,52 @@ contract ProfileRegistryTest is Test {
         registry.setAvatarAccent(0xF26426);
     }
 
+    function test_RemintedVoterIdCanReclaimProfileNameAndAvatar() public {
+        vm.startPrank(user1);
+        registry.setProfile("alice", "{\"v\":1,\"expertise\":[\"science\"]}");
+        registry.setAvatarAccent(0xF26426);
+        vm.stopPrank();
+
+        uint256 nullifier = voterIdNFT.getNullifier(voterIdNFT.getTokenId(user1));
+        address remintedUser = address(9);
+        voterIdNFT.revokeVoterId(user1);
+        voterIdNFT.resetNullifier(nullifier);
+        voterIdNFT.mint(remintedUser, nullifier);
+
+        vm.prank(remintedUser);
+        registry.setProfile("alice", "{\"v\":2,\"expertise\":[\"science\"]}");
+
+        assertFalse(registry.hasProfile(user1));
+        assertTrue(registry.hasProfile(remintedUser));
+        assertEq(registry.getAddressByName("alice"), remintedUser);
+
+        IProfileRegistry.Profile memory oldProfile = registry.getProfile(user1);
+        assertEq(oldProfile.createdAt, 0);
+
+        IProfileRegistry.Profile memory profile = registry.getProfile(remintedUser);
+        assertEq(profile.name, "alice");
+        assertEq(profile.selfReport, "{\"v\":2,\"expertise\":[\"science\"]}");
+
+        (bool oldAccentEnabled,) = registry.getAvatarAccent(user1);
+        (bool accentEnabled, uint24 rgb) = registry.getAvatarAccent(remintedUser);
+        assertFalse(oldAccentEnabled);
+        assertTrue(accentEnabled);
+        assertEq(rgb, 0xF26426);
+    }
+
+    function test_DifferentNullifierCannotReclaimProfileName() public {
+        vm.prank(user1);
+        registry.setProfile("alice", "");
+
+        uint256 nullifier = voterIdNFT.getNullifier(voterIdNFT.getTokenId(user1));
+        voterIdNFT.revokeVoterId(user1);
+        voterIdNFT.resetNullifier(nullifier);
+
+        vm.prank(user2);
+        vm.expectRevert("Name already taken");
+        registry.setProfile("alice", "");
+    }
+
     function test_SetProfileRevertsWhenVoterIdNFTUnset() public {
         vm.startPrank(admin);
         ProfileRegistry impl = new ProfileRegistry();

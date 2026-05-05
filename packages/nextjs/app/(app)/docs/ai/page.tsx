@@ -92,16 +92,29 @@ function resolveDirectHttpOrigin(headerLookup: HeaderLookup) {
 
 const askPayloadExample = `{
   "chainId": 42220,
-  "clientRequestId": "design-review-001",
-  "walletAddress": "0x...",
-  "bounty": { "amount": "1000000", "asset": "USDC" },
-  "maxPaymentAmount": "1000000",
+  "clientRequestId": "design-review-2026-05-05-001",
+  "walletAddress": "0x1111111111111111111111111111111111111111",
+  "paymentMode": "wallet_calls",
+  "bounty": {
+    "amount": "2500000",
+    "asset": "USDC",
+    "requiredVoters": "5",
+    "requiredSettledRounds": "1",
+    "rewardPoolExpiresAt": "1893456000"
+  },
+  "maxPaymentAmount": "2500000",
   "question": {
     "title": "Does this landing page explain the product clearly?",
     "contextUrl": "https://example.com/public-preview",
     "categoryId": "5",
     "tags": ["design", "landing-page"],
-    "templateId": "feature_acceptance_test"
+    "templateId": "feature_acceptance_test",
+    "templateInputs": {
+      "acceptanceCriteria": "Vote up only if a first-time visitor can explain what the product does and who it is for.",
+      "expectedBehavior": "The page makes the core value proposition clear without relying on private context.",
+      "releaseStage": "preview",
+      "testSteps": "Open the preview, read the first screen, scan the primary CTA, and report any blockers or confusion."
+    }
   }
 }`;
 
@@ -131,7 +144,7 @@ const publicSetupInputs = [
   "Curyo origin, usually https://www.curyo.xyz for production or the preview origin the user wants to test",
   "A funded walletAddress on Celo, or permission to create a local encrypted signer and fund that address",
   "A public context URL voters can open without secrets or a Curyo login",
-  "A bounded USDC budget: bounty.amount, maxPaymentAmount, required voters, and optional timing preferences",
+  "A bounded USDC budget: bounty.amount, maxPaymentAmount, requiredVoters, requiredSettledRounds, and rewardPoolExpiresAt",
   "The execution path: public MCP wallet calls, direct JSON routes, local signer, or WebMCP-assisted browser signing",
 ] as const;
 
@@ -154,8 +167,8 @@ const optionalManagedControls = [
 const agentFlow = [
   "Choose a template and category.",
   "Quote the ask before spending.",
-  "Submit the ask with walletAddress, bounty, maxPaymentAmount, and a stable clientRequestId.",
-  "Sign through a browser handoff or execute the returned calls locally.",
+  "Prepare the ask with walletAddress, bounty, maxPaymentAmount, and a stable clientRequestId.",
+  "Sign through a browser handoff or execute the returned transactionPlan.calls locally.",
   "Confirm transaction hashes.",
   "Poll status, then read the result package.",
 ] as const;
@@ -276,9 +289,11 @@ const AIPage = async () => {
 
       <h2 id="x402-agent-payments">x402 Agent Payments</h2>
       <p>
-        For Celo USDC asks, set <code>{'paymentMode: "x402_authorization"'}</code>. Curyo returns an x402-style USDC
-        authorization request as typed data, the agent signs it with its wallet, and the signed authorization is used to
-        prepare the ordered transaction that submits the question and funds protocol escrow.
+        The default public flow is <code>{'paymentMode: "wallet_calls"'}</code>: Curyo returns an ordered transaction
+        plan, and the paying wallet executes those calls. For wallet-capable agents that prefer an agent-native payment
+        authorization first, set <code>{'paymentMode: "x402_authorization"'}</code>. Curyo returns an x402-style USDC
+        authorization request as typed data, the agent signs it with its wallet, then Curyo prepares the ordered
+        transaction plan that submits the question and funds protocol escrow.
       </p>
       <p>
         x402 keeps the payment story agent-native: the spend is authorized by the agent wallet, denominated in USDC, and
@@ -287,8 +302,10 @@ const AIPage = async () => {
 
       <h2 id="mcp">MCP</h2>
       <p>
-        The public MCP endpoint supports wallet-direct asks without bearer auth. Use <code>walletAddress</code> on
-        quote, ask, status, and result calls.
+        The public MCP endpoint supports wallet-direct asks without bearer auth. Include <code>walletAddress</code> on
+        quote and ask calls. For later status or result lookups, use <code>operationKey</code>; if you only have{" "}
+        <code>chainId</code> and <code>clientRequestId</code> from a public wallet ask, include the same{" "}
+        <code>walletAddress</code> so Curyo can derive the public operation key.
       </p>
       <pre className="bg-base-200 p-4 rounded-lg overflow-x-auto">
         <code>{genericMcpConfig}</code>
@@ -342,6 +359,8 @@ const AIPage = async () => {
       <h2 id="payload">Minimal Ask Payload</h2>
       <p>
         Send this shape to <code>curyo_ask_humans</code> or <code>POST /api/agent/asks</code> after a successful quote.
+        Amounts are atomic USDC units, so <code>2500000</code> means 2.5 USDC. Replace the example wallet and set{" "}
+        <code>rewardPoolExpiresAt</code> to a future Unix timestamp appropriate for the review window.
       </p>
       <pre className="bg-base-200 p-4 rounded-lg overflow-x-auto">
         <code>{askPayloadExample}</code>
@@ -349,10 +368,10 @@ const AIPage = async () => {
 
       <h2 id="wallets">Wallet And Funding</h2>
       <p>
-        Fund the signer wallet with Celo USDC and pass it as <code>walletAddress</code> on quote, ask, status, and
-        result calls. Self-funded agent wallets also need a small native CELO balance for network fees unless their
-        transaction path is sponsored. Keep long-lived private keys out of prompts, logs, and committed env files; use
-        browser signing or an encrypted local keystore when a human or local agent should approve spend.
+        Fund the signer wallet with Celo USDC and pass it as <code>walletAddress</code> on quote and ask calls.
+        Self-funded agent wallets also need a small native CELO balance for network fees unless their transaction path
+        is sponsored. Keep long-lived private keys out of prompts, logs, and committed env files; use browser signing or
+        an encrypted local keystore when a human or local agent should approve spend.
       </p>
       <p>
         Operators who want browser assistance can open <Link href="/settings#wallet">Wallet settings</Link> to add CELO

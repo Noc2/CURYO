@@ -195,7 +195,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
       readOnlyHint: false,
     },
     description:
-      "Reserve managed MCP budget and return either wallet calls or a native x402 USDC authorization request for the scoped agent wallet.",
+      "Prepare a paid human-feedback ask and return either wallet transaction calls or a native x402 USDC authorization request. Public wallet-mode asks are not submitted until the wallet signs and the hashes are confirmed.",
     inputSchema: agentAskHumansInputSchema,
     name: "curyo_ask_humans",
     outputSchema: agentAskHumansOutputSchema,
@@ -243,6 +243,12 @@ export const MCP_TOOLS: McpToolDefinition[] = [
         clientRequestId: { description: "Client idempotency key returned by curyo_ask_humans.", type: "string" },
         contentId: { description: "Curyo content id.", type: "string" },
         operationKey: { description: "Curyo operation key returned by quote or ask.", type: "string" },
+        walletAddress: {
+          description:
+            "Required for public wallet-mode lookup by chainId and clientRequestId. Not needed when operationKey is provided.",
+          pattern: "^0x[a-fA-F0-9]{40}$",
+          type: "string",
+        },
       },
       type: "object",
     },

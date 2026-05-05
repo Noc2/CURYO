@@ -747,6 +747,41 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(hrepToken.balanceOf(address(rewardPoolEscrow)), escrowBalanceBefore);
     }
 
+    function testBundleRoundSetCanSyncAfterVotingEngineRotation() public {
+        uint256[] memory contentIds = _submitBundleQuestions();
+        uint256 bundleId = _createSubmissionBundle(contentIds, funder, REWARD_ASSET_USDC, REWARD_POOL_AMOUNT, 3);
+
+        address[] memory voters = _threeVoters();
+        bool[] memory directions = _directions(true, true, false);
+        uint256 firstRoundId = _settleRoundWithoutBundleSync(voters, contentIds[0], directions);
+        uint256 secondRoundId = _settleRoundWithoutBundleSync(voters, contentIds[1], directions);
+        assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter1), 0);
+
+        RoundVotingEngine replacementEngine = RoundVotingEngine(
+            address(
+                new ERC1967Proxy(
+                    address(new RoundVotingEngine()),
+                    abi.encodeCall(
+                        RoundVotingEngine.initialize,
+                        (owner, address(hrepToken), address(registry), address(protocolConfig))
+                    )
+                )
+            )
+        );
+
+        vm.startPrank(owner);
+        registry.pause();
+        registry.setVotingEngine(address(replacementEngine));
+        registry.unpause();
+        vm.stopPrank();
+
+        vm.prank(address(votingEngine));
+        rewardPoolEscrow.recordBundleQuestionTerminal(contentIds[0], firstRoundId, true);
+        rewardPoolEscrow.syncBundleQuestionTerminal(contentIds[1], secondRoundId);
+
+        assertGt(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter1), 0);
+    }
+
     function testSetVotingEngineRejectsZeroAddress() public {
         vm.prank(owner);
         (bool ok,) = address(rewardPoolEscrow).call(abi.encodeWithSignature("setVotingEngine(address)", address(0)));
