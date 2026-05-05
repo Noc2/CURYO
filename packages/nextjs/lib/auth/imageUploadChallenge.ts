@@ -1,4 +1,5 @@
 import "server-only";
+import { getMaxImageUploadSizeBytes, isSupportedImageUploadMimeType } from "~~/lib/auth/imageUploadChallenge.shared";
 import { buildSignedActionMessage, hashSignedActionPayload } from "~~/lib/auth/signedActions";
 import { isValidWalletAddress, normalizeWalletAddress } from "~~/lib/watchlist/contentWatch";
 
@@ -18,16 +19,6 @@ type NormalizedResult<TPayload> = { ok: true; payload: TPayload } | { ok: false;
 
 const ATTACHMENT_ID_PATTERN = /^att_[A-Za-z0-9_-]{16,80}$/;
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
-const SUPPORTED_UPLOAD_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
-const MAX_IMAGE_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
-
-export function isSupportedImageUploadMimeType(value: string) {
-  return SUPPORTED_UPLOAD_MIME_TYPES.has(value);
-}
-
-export function getMaxImageUploadSizeBytes() {
-  return MAX_IMAGE_UPLOAD_SIZE_BYTES;
-}
 
 export function normalizeImageUploadChallengeInput(
   body: Record<string, unknown>,
@@ -53,7 +44,7 @@ export function normalizeImageUploadChallengeInput(
   }
 
   const sizeBytes = typeof body.sizeBytes === "number" ? body.sizeBytes : Number(body.sizeBytes);
-  if (!Number.isSafeInteger(sizeBytes) || sizeBytes <= 0 || sizeBytes > MAX_IMAGE_UPLOAD_SIZE_BYTES) {
+  if (!Number.isSafeInteger(sizeBytes) || sizeBytes <= 0 || sizeBytes > getMaxImageUploadSizeBytes()) {
     return { ok: false, error: "Image is too large." };
   }
 

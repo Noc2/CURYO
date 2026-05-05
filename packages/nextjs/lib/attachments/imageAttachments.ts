@@ -99,6 +99,10 @@ export function parseAttachmentIdFromImageUrl(value: string): string | null {
   }
 }
 
+export function validateImageAttachmentBlobPathname(attachmentId: string, blobPathname: string) {
+  return blobPathname.startsWith(`question-attachments/${attachmentId}/`);
+}
+
 export async function getImageAttachment(id: string): Promise<QuestionImageAttachment | null> {
   const [attachment] = await db
     .select()

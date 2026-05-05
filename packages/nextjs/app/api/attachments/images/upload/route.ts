@@ -8,11 +8,10 @@ import {
 import {
   UPLOAD_IMAGE_ACTION,
   buildImageUploadChallengeMessage,
-  getMaxImageUploadSizeBytes,
   hashImageUploadChallengePayload,
-  isSupportedImageUploadMimeType,
   normalizeImageUploadChallengeInput,
 } from "~~/lib/auth/imageUploadChallenge";
+import { getMaxImageUploadSizeBytes, isSupportedImageUploadMimeType } from "~~/lib/auth/imageUploadChallenge.shared";
 import { verifySignedActionChallenge } from "~~/lib/auth/signedRouteHelpers";
 import { MCP_SCOPES, authenticateMcpRequest } from "~~/lib/mcp/auth";
 import { checkRateLimit } from "~~/utils/rateLimit";

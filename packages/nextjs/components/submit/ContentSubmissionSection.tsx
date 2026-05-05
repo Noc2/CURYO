@@ -10,6 +10,7 @@ import { ChevronDownIcon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/reac
 import { ContentEmbed } from "~~/components/content/ContentEmbed";
 import { GasBalanceWarning } from "~~/components/shared/GasBalanceWarning";
 import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
+import { ImageAttachmentUploader } from "~~/components/submit/ImageAttachmentUploader";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { serializeTags } from "~~/constants/categories";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
@@ -98,10 +99,10 @@ type MediaMode = "images" | "video";
 
 const MEDIA_URL_CONFIG = {
   contextPlaceholder: "Paste the source or context link voters should judge",
-  imagePlaceholder: "Paste a direct image URL, e.g. https://example.com/image.jpg",
+  imagePlaceholder: "Paste a direct image URL or upload one below",
   videoPlaceholder: "Paste a YouTube URL, e.g. https://youtube.com/watch?v=...",
   imageHint:
-    "Optional. Add up to four direct image URLs. Landscape images fit the voting content area best; aim for 16:9 and at least 1280x720 px. Tall or square images may show extra padding.",
+    "Optional. Add up to four direct image URLs or upload JPG, PNG, and WEBP files for Curyo-hosted, moderated image context. Landscape images fit the voting content area best; aim for 16:9 and at least 1280x720 px.",
   videoHint: "Optional. Add one YouTube link as a preview; standard landscape videos fit the content area best.",
 };
 
@@ -559,6 +560,21 @@ export function ContentSubmissionSection() {
       return next;
     });
     setImageUrlErrors(prev => [...prev, null]);
+  };
+
+  const handleUploadedImageUrl = (uploadedImageUrl: string) => {
+    const emptyIndex = imageUrls.findIndex(url => !url.trim());
+    const next =
+      emptyIndex >= 0
+        ? imageUrls.map((url, index) => (index === emptyIndex ? uploadedImageUrl : url))
+        : imageUrls.length < MAX_SUBMISSION_IMAGE_URLS
+          ? [...imageUrls, uploadedImageUrl]
+          : imageUrls;
+
+    setMediaMode("images");
+    setImageUrls(next);
+    patchActiveQuestionDraft({ mediaMode: "images", imageUrls: next });
+    setImageUrlErrors(next.map((_, index) => imageUrlErrors[index] ?? null));
   };
 
   const handleRemoveImageUrl = (index: number) => {
@@ -2615,6 +2631,11 @@ export function ContentSubmissionSection() {
                       >
                         Add image
                       </button>
+                      <ImageAttachmentUploader
+                        address={connectedAddress}
+                        disabled={imageUrls.filter(url => url.trim()).length >= MAX_SUBMISSION_IMAGE_URLS}
+                        onUploaded={handleUploadedImageUrl}
+                      />
                     </div>
                   ) : (
                     <div>
