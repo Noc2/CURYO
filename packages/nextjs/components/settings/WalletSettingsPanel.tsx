@@ -1,7 +1,7 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { defineChain } from "thirdweb";
+import { BuyWidget } from "thirdweb/react";
 import { formatEther, isAddress } from "viem";
 import { celo } from "viem/chains";
 import { useAccount, useBalance } from "wagmi";
@@ -14,17 +14,6 @@ const CELO_MAINNET_CHAIN_ID = 42220;
 const DEFAULT_CELO_TOP_UP_AMOUNT = "1";
 const CELO_TOP_UP_PRESET_OPTIONS: [number, number, number] = [5, 10, 20];
 const THIRDWEB_CELO_CHAIN = defineChain(celo);
-const BuyWidget = dynamic(() => import("thirdweb/react").then(mod => mod.BuyWidget), {
-  ssr: false,
-  loading: () => (
-    <div className="rounded-2xl border border-base-300 bg-base-100/50 p-5">
-      <div className="flex items-center gap-3 text-sm text-base-content/65">
-        <span className="loading loading-spinner loading-sm text-primary" />
-        <span>Loading wallet funding...</span>
-      </div>
-    </div>
-  ),
-});
 
 function formatCeloBalance(value: bigint | undefined) {
   if (value === undefined) return "Loading...";
