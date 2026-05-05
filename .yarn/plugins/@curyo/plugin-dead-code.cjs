@@ -31,6 +31,10 @@ module.exports = {
 
       if (result.error) {
         console.error(`[dead-code] Failed to run ${command}: ${result.error.message}`);
+      } else if (result.signal) {
+        console.error(`[dead-code] ${command} terminated by signal ${result.signal}`);
+      } else {
+        console.error(`[dead-code] ${command} exited without a status code`);
       }
 
       return 1;
