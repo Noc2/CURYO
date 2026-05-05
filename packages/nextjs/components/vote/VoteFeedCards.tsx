@@ -487,6 +487,7 @@ function FeedContentMetaCard({
   const contextLabel = getSourceLabel(contextUrl);
   const hasContextLink = contextUrl.length > 0 && contextLabel.trim().length > 0;
   const rewardPoolTotal = item.rewardPoolSummary?.totalAvailable ?? 0n;
+  const rewardPoolCurrency = item.rewardPoolSummary?.currency;
   const feedbackBonusTotal = item.feedbackBonusSummary?.totalRemaining ?? 0n;
   const rewardDeadlineChips = getRewardDeadlineChips(item);
   const hideDockedActionButtons = isMobileViewport;
@@ -535,7 +536,7 @@ function FeedContentMetaCard({
         <div className={compact ? "space-y-2.5" : "space-y-3"}>
           <div className="flex min-w-0 items-center gap-2">
             <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-              <RewardPoolAmountDisplay amount={rewardPoolTotal} />
+              <RewardPoolAmountDisplay amount={rewardPoolTotal} currency={rewardPoolCurrency} />
               <FeedbackBonusAmountDisplay amount={feedbackBonusTotal} />
               {rewardDeadlineChips.map(chip => (
                 <div

@@ -41,6 +41,9 @@ export interface ContentOpenRoundSummary {
   estimatedSettlementTime: bigint | null;
 }
 
+export type RewardPoolCurrency = "HREP" | "USDC" | "MIXED";
+export type RewardPoolDisplayCurrency = "HREP" | "USD" | "MIXED";
+
 export interface ContentItem {
   id: bigint;
   url: string;
@@ -90,6 +93,10 @@ export interface ContentItem {
   thumbnailUrl: string | null;
   contentMetadata?: ContentMetadataResult;
   rewardPoolSummary?: {
+    asset?: number | null;
+    currency?: RewardPoolCurrency;
+    displayCurrency?: RewardPoolDisplayCurrency;
+    decimals?: number;
     totalFunded: bigint;
     totalAvailable: bigint;
     totalClaimed?: bigint;
@@ -172,6 +179,39 @@ function normalizeContentStatus(value: string | number | null | undefined): Cont
     default:
       return CONTENT_STATUS.Active;
   }
+}
+
+function normalizeRewardPoolCurrency(
+  currency: string | null | undefined,
+  asset: number | string | bigint | null | undefined,
+): RewardPoolCurrency {
+  const normalizedCurrency = currency?.toUpperCase();
+  if (normalizedCurrency === "HREP" || normalizedCurrency === "USDC" || normalizedCurrency === "MIXED") {
+    return normalizedCurrency;
+  }
+
+  if (asset === 0 || asset === "0" || asset === 0n) return "HREP";
+  if (asset === 1 || asset === "1" || asset === 1n) return "USDC";
+
+  return "USDC";
+}
+
+function normalizeRewardPoolDisplayCurrency(
+  displayCurrency: string | null | undefined,
+  currency: RewardPoolCurrency,
+): RewardPoolDisplayCurrency {
+  const normalizedDisplayCurrency = displayCurrency?.toUpperCase();
+  if (
+    normalizedDisplayCurrency === "HREP" ||
+    normalizedDisplayCurrency === "USD" ||
+    normalizedDisplayCurrency === "MIXED"
+  ) {
+    return normalizedDisplayCurrency;
+  }
+
+  if (currency === "HREP") return "HREP";
+  if (currency === "MIXED") return "MIXED";
+  return "USD";
 }
 
 export function isContentItemActive(item: Pick<ContentItem, "status">): boolean {
@@ -266,6 +306,10 @@ export function mapContentItem(
       estimatedSettlementTime: string | null;
     } | null;
     rewardPoolSummary?: {
+      asset?: number | string | bigint | null;
+      currency?: string | null;
+      displayCurrency?: string | null;
+      decimals?: number | null;
       totalFunded?: string | number | bigint | null;
       totalFundedAmount?: string | number | bigint | null;
       totalAvailable?: string | number | bigint | null;
@@ -340,6 +384,13 @@ export function mapContentItem(
   const ratingBps = item.ratingBps !== undefined ? BigInt(item.ratingBps) : undefined;
   const conservativeRatingBps =
     item.conservativeRatingBps !== undefined ? BigInt(item.conservativeRatingBps) : undefined;
+  const rewardPoolCurrency = item.rewardPoolSummary
+    ? normalizeRewardPoolCurrency(item.rewardPoolSummary.currency, item.rewardPoolSummary.asset)
+    : undefined;
+  const rewardPoolDisplayCurrency =
+    item.rewardPoolSummary && rewardPoolCurrency
+      ? normalizeRewardPoolDisplayCurrency(item.rewardPoolSummary.displayCurrency, rewardPoolCurrency)
+      : undefined;
   const displayedRating =
     mappedOpenRound?.referenceRatingBps !== undefined ? Number(mappedOpenRound.referenceRatingBps) / 100 : item.rating;
   const url = item.url ?? "";
@@ -405,6 +456,13 @@ export function mapContentItem(
     thumbnailUrl: null,
     rewardPoolSummary: item.rewardPoolSummary
       ? {
+          asset:
+            item.rewardPoolSummary.asset === undefined || item.rewardPoolSummary.asset === null
+              ? null
+              : Number(item.rewardPoolSummary.asset),
+          currency: rewardPoolCurrency,
+          displayCurrency: rewardPoolDisplayCurrency,
+          decimals: item.rewardPoolSummary.decimals ?? 6,
           totalFunded: BigInt(item.rewardPoolSummary.totalFunded ?? item.rewardPoolSummary.totalFundedAmount ?? 0),
           totalAvailable: BigInt(
             item.rewardPoolSummary.totalAvailable ?? item.rewardPoolSummary.currentRewardPoolAmount ?? 0,

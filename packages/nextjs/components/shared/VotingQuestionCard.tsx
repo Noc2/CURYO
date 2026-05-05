@@ -10,12 +10,12 @@ import { RatingOrb } from "~~/components/shared/RatingOrb";
 import { RoundProgress } from "~~/components/shared/RoundProgress";
 import { RoundRevealedBreakdown, RoundStats } from "~~/components/shared/RoundStats";
 import { HoverTooltip, InfoTooltip, TooltipAnchor } from "~~/components/ui/InfoTooltip";
-import type { ContentOpenRoundSummary } from "~~/hooks/contentFeed/shared";
+import type { ContentOpenRoundSummary, RewardPoolCurrency } from "~~/hooks/contentFeed/shared";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useParticipationRate } from "~~/hooks/useParticipationRate";
 import { useRoundSnapshot } from "~~/hooks/useRoundSnapshot";
 import type { VotingConfig } from "~~/lib/contracts/roundVotingEngine";
-import { formatUsdAmount } from "~~/lib/questionRewardPools";
+import { formatSubmissionRewardAmount, formatUsdAmount } from "~~/lib/questionRewardPools";
 import { formatVoteCooldownRemaining } from "~~/lib/vote/cooldown";
 import { describeOpenRoundActivity, formatHrepAmount, getRoundProgressMessaging } from "~~/lib/vote/voteIncentives";
 
@@ -47,6 +47,10 @@ const RATING_GUIDANCE_TEXT =
   "The community score runs from 0.0 to 10.0, where higher means better. Vote up when content deserves a better score and vote down when it deserves a worse one. Always vote down illegal, broken, or misdescribed content.";
 const REWARD_POOL_TOOLTIP_TEXT =
   "This question's bounty is shown in USD and backed by USDC on Celo. Eligible revealed voters can claim from it in qualified rounds, with 3% reserved for the eligible frontend operator.";
+const HREP_REWARD_POOL_TOOLTIP_TEXT =
+  "This question's bounty is funded in HREP on Celo. Eligible revealed voters can claim from it in qualified rounds, with 3% reserved for the eligible frontend operator.";
+const MIXED_REWARD_POOL_TOOLTIP_TEXT =
+  "This question's bounty includes multiple assets on Celo. Eligible revealed voters can claim from qualified rounds, with 3% reserved for the eligible frontend operator.";
 const FEEDBACK_BONUS_TOOLTIP_TEXT =
   "Feedback Bonuses are optional USDC rewards for useful voter feedback. Awarded feedback pays voters after settlement, with 3% reserved for the eligible frontend operator.";
 export const VOTING_SURFACE_BACKGROUND = "var(--curyo-surface-elevated)";
@@ -227,32 +231,63 @@ function LiveRoundActivity({
 
 function RewardAmountDisplay({
   amount,
+  amountLabel,
   label,
   tooltip,
   ariaLabel,
 }: {
   amount: bigint;
+  amountLabel?: string;
   label: string;
   tooltip: string;
   ariaLabel: string;
 }) {
-  const amountLabel = formatUsdAmount(amount);
+  const displayAmountLabel = amountLabel ?? formatUsdAmount(amount);
 
   return (
     <div
       className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-primary/25 bg-primary/12 px-3 py-1.5 text-sm font-semibold leading-none text-primary"
-      aria-label={`${amountLabel} ${ariaLabel}`}
+      aria-label={`${displayAmountLabel} ${ariaLabel}`}
     >
       <span>
-        <span className="tabular-nums">{amountLabel}</span> {label}
+        <span className="tabular-nums">{displayAmountLabel}</span> {label}
       </span>
       <InfoTooltip text={tooltip} position="bottom" className="[&>svg]:text-primary/90 [&>svg]:hover:text-primary" />
     </div>
   );
 }
 
-export function RewardPoolAmountDisplay({ amount }: { amount: bigint }) {
-  return <RewardAmountDisplay amount={amount} label="bounty" tooltip={REWARD_POOL_TOOLTIP_TEXT} ariaLabel="bounty" />;
+function getRewardPoolDisplay(amount: bigint, currency: RewardPoolCurrency | undefined) {
+  if (currency === "HREP") {
+    return {
+      amountLabel: formatSubmissionRewardAmount(amount, "hrep"),
+      tooltip: HREP_REWARD_POOL_TOOLTIP_TEXT,
+    };
+  }
+  if (currency === "MIXED") {
+    return {
+      amountLabel: "Mixed",
+      tooltip: MIXED_REWARD_POOL_TOOLTIP_TEXT,
+    };
+  }
+
+  return {
+    amountLabel: formatUsdAmount(amount),
+    tooltip: REWARD_POOL_TOOLTIP_TEXT,
+  };
+}
+
+export function RewardPoolAmountDisplay({ amount, currency }: { amount: bigint; currency?: RewardPoolCurrency }) {
+  const display = getRewardPoolDisplay(amount, currency);
+  return (
+    <RewardAmountDisplay
+      amount={amount}
+      amountLabel={display.amountLabel}
+      label="bounty"
+      tooltip={display.tooltip}
+      ariaLabel="bounty"
+    />
+  );
 }
 
 export function FeedbackBonusAmountDisplay({ amount }: { amount: bigint }) {

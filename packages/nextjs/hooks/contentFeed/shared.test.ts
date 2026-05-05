@@ -64,7 +64,7 @@ test("sortRpcFeed prioritizes stronger relevance matches for rpc search fallback
   );
 });
 
-test("sortRpcFeed orders bounty-backed items by available USD bounties", () => {
+test("sortRpcFeed orders bounty-backed items by available bounties", () => {
   const feed = [
     {
       ...buildItem(1n, "Funded", "A funded question", ["markets"]),
@@ -186,6 +186,10 @@ test("mapContentItem supports text-only questions and Ponder bounty summaries", 
     categoryId: "2",
     rating: 50,
     rewardPoolSummary: {
+      asset: 0,
+      currency: "HREP",
+      displayCurrency: "HREP",
+      decimals: 6,
       totalFundedAmount: "25000000",
       currentRewardPoolAmount: "18000000",
       totalClaimedAmount: "7000000",
@@ -210,6 +214,10 @@ test("mapContentItem supports text-only questions and Ponder bounty summaries", 
   assert.equal(item.question, "Would you book this hotel?");
   assert.equal(item.questionMetadataHash, `0x${"2".repeat(64)}`);
   assert.equal(item.resultSpecHash, `0x${"3".repeat(64)}`);
+  assert.equal(item.rewardPoolSummary?.asset, 0);
+  assert.equal(item.rewardPoolSummary?.currency, "HREP");
+  assert.equal(item.rewardPoolSummary?.displayCurrency, "HREP");
+  assert.equal(item.rewardPoolSummary?.decimals, 6);
   assert.equal(item.rewardPoolSummary?.totalFunded, 25_000_000n);
   assert.equal(item.rewardPoolSummary?.totalAvailable, 18_000_000n);
   assert.equal(item.rewardPoolSummary?.totalClaimed, 7_000_000n);

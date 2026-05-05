@@ -25,7 +25,7 @@ export const DISCOVER_FEED_MODE_OPTIONS: DiscoverFeedModeOption[] = [
   {
     value: "highest_rewards",
     label: "Top Bounties",
-    description: "Content with the largest available USDC bounties.",
+    description: "Content with the largest available bounties.",
   },
   {
     value: "contested",

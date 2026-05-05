@@ -1200,6 +1200,7 @@ test("agent status route includes live ask guidance for underfunded open markets
           ratingSettledRounds: 0,
           resultSpecHash: null,
           rewardPoolSummary: {
+            asset: 1,
             activeRewardPoolCount: 1,
             activeUnallocatedAmount: "1000000",
             claimableAllocatedAmount: "0",

@@ -44,6 +44,7 @@ function content(overrides: Partial<PonderContentItem> = {}): PonderContentItem 
     ratingSettledRounds: 0,
     resultSpecHash: null,
     rewardPoolSummary: {
+      asset: 1,
       activeRewardPoolCount: 1,
       activeUnallocatedAmount: "1000000",
       claimableAllocatedAmount: "0",
