@@ -160,6 +160,15 @@ type CountryOption = (typeof PROFILE_COUNTRY_OPTIONS)[number];
 const COUNTRY_PICKER_RESULT_LIMIT = 8;
 const MAX_PROFILE_NATIONALITIES = 3;
 
+function AudienceContextHeading() {
+  return (
+    <div className="inline-flex items-center gap-1.5 text-sm font-semibold uppercase tracking-[0.18em] text-primary/90">
+      <span>Audience context</span>
+      <InfoTooltip text={PROFILE_SELF_REPORT_NOTICE} />
+    </div>
+  );
+}
+
 function normalizeCountrySearch(value: string) {
   return value.trim().toLowerCase();
 }
@@ -957,11 +966,9 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
             <div className="mt-6 rounded-2xl bg-base-content/[0.04] px-5 py-4">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <div className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/90">
-                    Audience context
-                  </div>
+                  <AudienceContextHeading />
                   <p className="mt-2 max-w-3xl text-sm leading-6 text-base-content/55">
-                    {PROFILE_SELF_REPORT_NOTICE} AI tools and public readers may use it as context.
+                    AI tools and public readers may use it as context.
                   </p>
                 </div>
                 <button
@@ -1119,8 +1126,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
             </div>
           ) : hasCurrentSelfReport ? (
             <div className="mt-6 rounded-2xl bg-base-content/[0.04] px-5 py-4">
-              <div className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/90">Audience context</div>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-base-content/55">{PROFILE_SELF_REPORT_NOTICE}</p>
+              <AudienceContextHeading />
               <dl className="mt-4 grid gap-x-8 divide-y divide-base-content/10 md:grid-cols-2 md:divide-y-0">
                 {currentSelfReportGroups.map(group => (
                   <div
@@ -1135,8 +1141,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
             </div>
           ) : ownProfile ? (
             <div className="mt-6 rounded-2xl border border-dashed border-base-content/15 px-5 py-4">
-              <div className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/90">Audience context</div>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-base-content/55">{PROFILE_SELF_REPORT_NOTICE}</p>
+              <AudienceContextHeading />
               {!hasVoterId ? (
                 <Link
                   href="/governance#faucet"
