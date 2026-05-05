@@ -11,23 +11,6 @@ CREATE TABLE "api_rate_limits" (
 	"expires_at" bigint NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "content_metadata" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"url" text NOT NULL,
-	"thumbnail_url" text,
-	"title" text,
-	"description" text,
-	"image_url" text,
-	"authors" text,
-	"release_year" text,
-	"symbol" text,
-	"stars" integer,
-	"forks" integer,
-	"language" text,
-	"fetched_at" timestamp with time zone NOT NULL,
-	CONSTRAINT "content_metadata_url_unique" UNIQUE("url")
-);
---> statement-breakpoint
 CREATE TABLE "free_transaction_quotas" (
 	"identity_key" text PRIMARY KEY NOT NULL,
 	"voter_id_token_id" text NOT NULL,
@@ -130,15 +113,6 @@ CREATE TABLE "signed_write_sessions" (
 	"scope" text NOT NULL,
 	"expires_at" bigint NOT NULL,
 	"created_at" bigint NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE "url_validations" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"url" text NOT NULL,
-	"is_valid" boolean NOT NULL,
-	"platform" text NOT NULL,
-	"checked_at" timestamp with time zone NOT NULL,
-	CONSTRAINT "url_validations_url_unique" UNIQUE("url")
 );
 --> statement-breakpoint
 CREATE TABLE "watched_content" (

@@ -13,13 +13,17 @@ test("getReputationAvatarUrl includes the selected chain id when provided", () =
   );
 });
 
-test("getFallbackReputationAvatarDataUrl returns an inline empty-orb svg", () => {
+test("getFallbackReputationAvatarDataUrl returns an inline no-accuracy signal-disc svg", () => {
   const dataUrl = getFallbackReputationAvatarDataUrl("0xc1CD80C7cD37b5499560C362b164cbA1CfF71b44", 24);
 
   assert.ok(dataUrl);
   assert.match(dataUrl, /^data:image\/svg\+xml;charset=utf-8,/);
 
   const svg = decodeURIComponent(dataUrl!.split(",")[1] ?? "");
-  assert.match(svg, /orbital-avatar-empty-body/);
-  assert.doesNotMatch(svg, /orbital-avatar-flare-/);
+  assert.match(svg, /signal-disc-avatar-core/);
+  assert.doesNotMatch(svg, /signal-disc-avatar-badge/);
+  assert.doesNotMatch(svg, /fill="#05070B"/);
+  assert.doesNotMatch(svg, /signal-disc-avatar-rail/);
+  assert.doesNotMatch(svg, /signal-disc-avatar-progress/);
+  assert.doesNotMatch(svg, /orbital-avatar/);
 });

@@ -5,7 +5,7 @@ import {
   getVoterLeaderboardSnapshot,
   resolveVoterLeaderboardSelection,
 } from "~~/lib/governance/voterLeaderboardSnapshot";
-import { readCRepBalances, readProfileRegistryProfiles } from "~~/lib/profileRegistry/server";
+import { readHrepBalances, readProfileRegistryProfiles } from "~~/lib/profileRegistry/server";
 import { isPonderAvailable } from "~~/services/ponder/client";
 import { checkRateLimit } from "~~/utils/rateLimit";
 
@@ -14,7 +14,7 @@ const MAX_LIMIT = 100;
 
 async function buildIncludedAddressFallback(address: string, chainId: number) {
   const [balances, profiles] = await Promise.all([
-    readCRepBalances([address], { chainId }),
+    readHrepBalances([address], { chainId }),
     readProfileRegistryProfiles([address], { chainId }),
   ]);
 
@@ -33,8 +33,8 @@ async function buildIncludedAddressFallback(address: string, chainId: number) {
   });
 }
 
-// GET: Fetch cREP leaderboard data.
-// Uses Ponder when available for candidate discovery, then ranks by live on-chain cREP balances.
+// GET: Fetch HREP leaderboard data.
+// Uses Ponder when available for candidate discovery, then ranks by live on-chain HREP balances.
 export async function GET(request: NextRequest) {
   const limited = await checkRateLimit(request, RATE_LIMIT);
   if (limited) return limited;
@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
           limit,
         },
         {
-          readBalances: addresses => readCRepBalances(addresses, { chainId: parsedChainId! }),
+          readBalances: addresses => readHrepBalances(addresses, { chainId: parsedChainId! }),
         },
       );
       const profiles = await readProfileRegistryProfiles(selection.selectedAddresses, { chainId: parsedChainId! });

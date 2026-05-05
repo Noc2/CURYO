@@ -88,19 +88,7 @@ const cspDirectives = [
     ...vercelLiveConnectSources,
     // Coinbase Wallet SDK
     "https://cca-lite.coinbase.com",
-    // Content metadata APIs (platform handlers)
-    "https://en.wikipedia.org",
-    "https://api.themoviedb.org",
-    "https://openlibrary.org",
-    "https://api.coingecko.com",
-    "https://huggingface.co",
-    "https://api.rawg.io",
-    "https://api.github.com",
-    "https://cdn.syndication.twimg.com",
-    "https://api.scryfall.com",
-    "https://open.spotify.com",
     "https://www.youtube.com",
-    "https://api.twitch.tv",
     // Dev-only
     ...(isDev ? ["http://localhost:*", "http://127.0.0.1:*", "ws://localhost:*", "ws://127.0.0.1:*"] : []),
   ]
@@ -111,9 +99,6 @@ const cspDirectives = [
     "https://embedded-wallet.thirdweb.com",
     "https://www.youtube-nocookie.com",
     "https://youtube.com",
-    "https://clips.twitch.tv",
-    "https://player.twitch.tv",
-    "https://open.spotify.com",
     "https://self.xyz",
     "https://verify.walletconnect.com",
     ...vercelLiveFrameSources,
@@ -160,15 +145,5 @@ const nextConfig: NextConfig = {
     },
   ],
 };
-
-const isIpfs = process.env.NEXT_PUBLIC_IPFS_BUILD === "true";
-
-if (isIpfs) {
-  nextConfig.output = "export";
-  nextConfig.trailingSlash = true;
-  nextConfig.images = {
-    unoptimized: true,
-  };
-}
 
 module.exports = process.env.ANALYZE === "true" ? withBundleAnalyzer({ enabled: true })(nextConfig) : nextConfig;

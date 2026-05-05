@@ -29,7 +29,7 @@ function toHttpsOrigin(value: string | undefined): string | null {
   }
 }
 
-export function getContentShareOrigin(): string {
+function getContentShareOrigin(): string {
   return (
     getOptionalAppUrl() ??
     toHttpsOrigin(process.env.VERCEL_PROJECT_PRODUCTION_URL) ??

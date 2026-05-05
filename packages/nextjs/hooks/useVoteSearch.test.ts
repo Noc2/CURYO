@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 test("buildVoteSearchTarget trims whitespace and encodes the search query", () => {
-  assert.equal(buildVoteSearchTarget("  celo votes  "), "/vote?q=celo%20votes");
-  assert.equal(buildVoteSearchTarget(""), "/vote");
+  assert.equal(buildVoteSearchTarget("  celo votes  "), "/rate?q=celo+votes");
+  assert.equal(buildVoteSearchTarget(""), "/rate");
 });
 
 test("shouldSkipVoteSearchCommit blocks short generic queries when no vote search is active", () => {

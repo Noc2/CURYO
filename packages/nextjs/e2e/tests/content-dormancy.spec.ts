@@ -1,4 +1,4 @@
-import { approveCREP, markDormant, reviveContent, waitForPonderIndexed } from "../helpers/admin-helpers";
+import { approveHREP, markDormant, reviveContent, waitForPonderIndexed } from "../helpers/admin-helpers";
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
 import { fastForwardTime } from "../helpers/keeper";
@@ -20,7 +20,7 @@ test.describe("Content dormancy lifecycle", () => {
   test.describe.configure({ mode: "serial" });
 
   const CONTENT_REGISTRY = CONTRACT_ADDRESSES.ContentRegistry;
-  const CREP_TOKEN = CONTRACT_ADDRESSES.CuryoReputation;
+  const HREP_TOKEN = CONTRACT_ADDRESSES.HumanReputation;
 
   // DORMANCY_PERIOD = 30 days = 2_592_000 seconds
   const DORMANCY_SECONDS = 2_592_001; // 30 days + 1 second buffer
@@ -88,8 +88,8 @@ test.describe("Content dormancy lifecycle", () => {
     test.skip(!dormantContentId || !dormantSubmitterAddress, "No dormant content from previous test");
     test.setTimeout(60_000);
 
-    // Approve 5 cREP (5e6) to ContentRegistry for the revival stake
-    const approveSuccess = await approveCREP(CONTENT_REGISTRY, BigInt(5e6), dormantSubmitterAddress!, CREP_TOKEN);
+    // Approve 5 HREP (5e6) to ContentRegistry for the revival stake
+    const approveSuccess = await approveHREP(CONTENT_REGISTRY, BigInt(5e6), dormantSubmitterAddress!, HREP_TOKEN);
     expect(approveSuccess).toBe(true);
 
     // Revive content during the submitter-only exclusive window.
@@ -120,7 +120,7 @@ test.describe("Content dormancy lifecycle", () => {
     expect(markSuccess).toBe(true);
 
     // Approve + revive (2nd revival)
-    const approveSuccess = await approveCREP(CONTENT_REGISTRY, BigInt(5e6), dormantSubmitterAddress!, CREP_TOKEN);
+    const approveSuccess = await approveHREP(CONTENT_REGISTRY, BigInt(5e6), dormantSubmitterAddress!, HREP_TOKEN);
     expect(approveSuccess).toBe(true);
 
     const reviveSuccess = await reviveContent(BigInt(dormantContentId!), dormantSubmitterAddress!, CONTENT_REGISTRY);
@@ -149,8 +149,8 @@ test.describe("Content dormancy lifecycle", () => {
     const markSuccess = await markDormant(BigInt(dormantContentId!), ANVIL_ACCOUNTS.account0.address, CONTENT_REGISTRY);
     expect(markSuccess).toBe(true);
 
-    // Approve cREP for the revival attempt
-    await approveCREP(CONTENT_REGISTRY, BigInt(5e6), dormantSubmitterAddress!, CREP_TOKEN);
+    // Approve HREP for the revival attempt
+    await approveHREP(CONTENT_REGISTRY, BigInt(5e6), dormantSubmitterAddress!, HREP_TOKEN);
 
     // 3rd revival should FAIL (MAX_REVIVALS = 2)
     const reviveSuccess = await reviveContent(BigInt(dormantContentId!), dormantSubmitterAddress!, CONTENT_REGISTRY);

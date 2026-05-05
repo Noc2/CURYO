@@ -1,9 +1,9 @@
+import { expect, test } from "../fixtures/wallet";
 import { expectNoHorizontalOverflow, expectNoNextErrorOverlay } from "../helpers/layout";
 import { waitForFeedLoaded } from "../helpers/wait-helpers";
-import { expect, test } from "../fixtures/wallet";
 
 const PUBLIC_ROUTES = [
-  { path: "/", content: /Human Reputation at Stake|Discover|Vote/i },
+  { path: "/", content: /AI Asks,\s*Humans Earn|Rate|Vote/i },
   { path: "/docs", content: /Introduction/i },
   { path: "/legal", content: /^Legal$/i },
   { path: "/legal/terms", content: /Terms of Service/i },
@@ -19,15 +19,20 @@ test.describe("Browser compatibility smoke", () => {
 
       const main = page.locator("main");
       await expect(main, `${path} should expose visible main content`).toBeVisible({ timeout: 15_000 });
-      await expect(main.getByText(content).or(main.getByRole("heading", { name: content })).first()).toBeVisible({
+      await expect(
+        main
+          .getByText(content)
+          .or(main.getByRole("heading", { name: content }))
+          .first(),
+      ).toBeVisible({
         timeout: 15_000,
       });
       await expectNoHorizontalOverflow(page, `${path} browser compat`);
     });
   }
 
-  test("/vote loads the feed in a connected browser session", async ({ connectedPage: page }) => {
-    await page.goto("/vote", { waitUntil: "domcontentloaded" });
+  test("/rate loads the feed in a connected browser session", async ({ connectedPage: page }) => {
+    await page.goto("/rate", { waitUntil: "domcontentloaded" });
     await expectNoNextErrorOverlay(page);
     await waitForFeedLoaded(page, 30_000);
 
@@ -37,14 +42,14 @@ test.describe("Browser compatibility smoke", () => {
       page
         .getByRole("button", { name: VOTE_UP_BUTTON })
         .or(page.getByRole("button", { name: VOTE_DOWN_BUTTON }))
-        .or(page.getByText(/No content submitted yet|No content found/i))
+        .or(page.getByText(/No questions have been asked yet|No content found/i))
         .first(),
     ).toBeVisible({ timeout: 15_000 });
-    await expectNoHorizontalOverflow(page, "/vote browser compat");
+    await expectNoHorizontalOverflow(page, "/rate browser compat");
   });
 
-  test("/submit keeps the URL field usable in a connected browser session", async ({ connectedPage: page }) => {
-    await page.goto("/submit", { waitUntil: "domcontentloaded" });
+  test("/ask keeps the URL field usable in a connected browser session", async ({ connectedPage: page }) => {
+    await page.goto("/ask", { waitUntil: "domcontentloaded" });
     await expectNoNextErrorOverlay(page);
 
     const main = page.locator("main");
@@ -54,6 +59,6 @@ test.describe("Browser compatibility smoke", () => {
     await expect(urlInput).toBeVisible({ timeout: 15_000 });
     await urlInput.focus();
     await expect(urlInput).toBeFocused();
-    await expectNoHorizontalOverflow(page, "/submit browser compat");
+    await expectNoHorizontalOverflow(page, "/ask browser compat");
   });
 });

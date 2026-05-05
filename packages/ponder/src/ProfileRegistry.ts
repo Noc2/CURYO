@@ -7,14 +7,14 @@ import { globalStats, profile } from "ponder:schema";
 // (ContentSubmitted, VoteCommitted, VoteRevealed, RewardClaimed) as new events arrive.
 
 ponder.on("ProfileRegistry:ProfileCreated", async ({ event, context }) => {
-  const { user, name, strategy } = event.args;
+  const { user, name, selfReport } = event.args;
 
   await context.db
     .insert(profile)
     .values({
       address: user,
       name,
-      strategy,
+      selfReport,
       createdAt: event.block.timestamp,
       updatedAt: event.block.timestamp,
       totalVotes: 0,
@@ -40,13 +40,13 @@ ponder.on("ProfileRegistry:ProfileCreated", async ({ event, context }) => {
 });
 
 ponder.on("ProfileRegistry:ProfileUpdated", async ({ event, context }) => {
-  const { user, name, strategy } = event.args;
+  const { user, name, selfReport } = event.args;
 
   const existing = await context.db.find(profile, { address: user });
   if (existing) {
     await context.db.update(profile, { address: user }).set({
       name,
-      strategy,
+      selfReport,
       updatedAt: event.block.timestamp,
     });
   } else {
@@ -55,7 +55,7 @@ ponder.on("ProfileRegistry:ProfileUpdated", async ({ event, context }) => {
       .values({
         address: user,
         name,
-        strategy,
+        selfReport,
         createdAt: event.block.timestamp,
         updatedAt: event.block.timestamp,
         totalVotes: 0,

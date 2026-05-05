@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
 import { clampContentRating, formatCommunityRatingAriaLabel, formatRatingScoreOutOfTen } from "~~/lib/ui/ratingDisplay";
 
 const START_ANGLE = 0;
 const MIN_ANIMATION_MS = 500;
 const MAX_ANIMATION_MS = 1200;
+const PROGRESS_STROKE = "#ffffff";
+const INNER_ORANGE = "var(--curyo-ember)";
+const INNER_ORANGE_EDGE = "var(--curyo-ember-deep)";
 
 function easeOutCubic(progress: number) {
   return 1 - Math.pow(1 - progress, 3);
@@ -23,29 +26,45 @@ interface RatingOrbProps {
   rating: number;
   size?: number;
   className?: string;
-  showGlow?: boolean;
 }
 
-export function RatingOrb({ rating, size = 196, className = "", showGlow = true }: RatingOrbProps) {
+export function RatingOrb({ rating, size = 196, className = "" }: RatingOrbProps) {
   const orbId = useId().replace(/:/g, "");
   const clampedRating = clampContentRating(rating);
   const [animatedRating, setAnimatedRating] = useState(0);
   const animatedRatingRef = useRef(0);
   const center = size / 2;
   const trackRadius = size * 0.41;
-  const trackWidth = Math.max(8, size * 0.034);
   const displayedRating = clampContentRating(animatedRating);
   const displayedScore = formatRatingScoreOutOfTen(displayedRating);
   const progress = displayedRating / 100;
   const circumference = 2 * Math.PI * trackRadius;
   const progressLength = circumference * progress;
-  const flareStroke = `url(#${orbId}-flare)`;
-  const coreStroke = `url(#${orbId}-core)`;
   const endPoint = polarToCartesian(center, trackRadius, START_ANGLE + progress * 360);
+  const isTinyOrb = size <= 64;
+  const isCompactOrb = size <= 88;
   const isSmallOrb = size <= 100;
-  const ratingFontSize = isSmallOrb ? Math.max(30, size * 0.32) : Math.max(36, size * 0.25);
-  const scaleFontSize = isSmallOrb ? Math.max(12, ratingFontSize * 0.36) : Math.max(16, ratingFontSize * 0.4);
-  const scoreGapClassName = isSmallOrb ? "ml-1" : "ml-2";
+  const trackWidth = isTinyOrb ? Math.max(3, size * 0.065) : Math.max(8, size * 0.034);
+  const progressStrokeWidth = trackWidth * 0.6;
+  const progressHighlightStrokeWidth = Math.max(2, trackWidth * 0.22);
+  const innerCircleGap = Math.max(2, trackWidth * 0.5);
+  const innerCircleRadius = trackRadius - progressStrokeWidth / 2 - innerCircleGap;
+  const ratingFontSize = isTinyOrb
+    ? Math.max(12, size * 0.26)
+    : isCompactOrb
+      ? Math.max(21, size * 0.235)
+      : isSmallOrb
+        ? Math.max(24, size * 0.26)
+        : Math.max(34, size * 0.23);
+  const scaleFontSize = isTinyOrb
+    ? Math.max(6, ratingFontSize * 0.36)
+    : isCompactOrb
+      ? Math.max(8, ratingFontSize * 0.32)
+      : isSmallOrb
+        ? Math.max(10, ratingFontSize * 0.34)
+        : Math.max(15, ratingFontSize * 0.38);
+  const scoreGapClassName = isTinyOrb ? "ml-0.5" : isSmallOrb ? "ml-1" : "ml-2";
+  const scoreMaxWidth = isTinyOrb ? size * 0.84 : trackRadius * 1.7;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -98,78 +117,22 @@ export function RatingOrb({ rating, size = 196, className = "", showGlow = true 
     >
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="absolute inset-0 overflow-visible">
         <defs>
-          <linearGradient id={`${orbId}-flare`} x1="0%" y1="10%" x2="100%" y2="90%">
-            <stop offset="0%" stopColor="#B3341B" />
-            <stop offset="58%" stopColor="#F26426" />
-            <stop offset="100%" stopColor="#F5F0EB" />
-          </linearGradient>
-          <linearGradient id={`${orbId}-core`} x1="10%" y1="8%" x2="94%" y2="92%">
-            <stop offset="0%" stopColor="#F26426" />
-            <stop offset="100%" stopColor="#F5F0EB" />
-          </linearGradient>
-          <radialGradient id={`${orbId}-fill`} cx="50%" cy="42%" r="66%">
-            <stop offset="0%" stopColor="rgba(245,240,235,0.07)" />
-            <stop offset="72%" stopColor="rgba(245,240,235,0.02)" />
-            <stop offset="100%" stopColor="rgba(245,240,235,0)" />
+          <radialGradient id={`${orbId}-inner-fill`} cx="46%" cy="38%" r="72%">
+            <stop offset="0%" stopColor={INNER_ORANGE} stopOpacity="0.98" />
+            <stop offset="68%" stopColor={INNER_ORANGE} stopOpacity="0.92" />
+            <stop offset="100%" stopColor={INNER_ORANGE_EDGE} stopOpacity="0.95" />
           </radialGradient>
-          <filter id={`${orbId}-glow`} x="-35%" y="-35%" width="170%" height="170%">
-            <feGaussianBlur stdDeviation="9" />
-          </filter>
         </defs>
-
-        <circle
-          cx={center}
-          cy={center}
-          r={trackRadius + trackWidth * 0.95}
-          fill={showGlow ? "rgba(245,240,235,0.03)" : "transparent"}
-        />
-        <circle
-          cx={center}
-          cy={center}
-          r={trackRadius + trackWidth * 0.62}
-          fill="none"
-          stroke="rgba(245,240,235,0.04)"
-          strokeWidth="2"
-        />
-        <circle
-          cx={center}
-          cy={center}
-          r={trackRadius}
-          fill="none"
-          stroke="rgba(245,240,235,0.06)"
-          strokeWidth={trackWidth}
-        />
-        <circle
-          cx={center}
-          cy={center}
-          r={trackRadius}
-          fill="none"
-          stroke="rgba(179,52,27,0.2)"
-          strokeWidth={Math.max(3, trackWidth * 0.42)}
-        />
 
         {progress >= 1 ? (
           <>
-            {showGlow ? (
-              <circle
-                cx={center}
-                cy={center}
-                r={trackRadius}
-                fill="none"
-                stroke={flareStroke}
-                strokeWidth={trackWidth}
-                strokeLinecap="round"
-                filter={`url(#${orbId}-glow)`}
-                opacity="0.56"
-              />
-            ) : null}
             <circle
               cx={center}
               cy={center}
               r={trackRadius}
               fill="none"
-              stroke={flareStroke}
-              strokeWidth={trackWidth * 0.6}
+              stroke={PROGRESS_STROKE}
+              strokeWidth={progressStrokeWidth}
               strokeLinecap="round"
             />
             <circle
@@ -177,35 +140,21 @@ export function RatingOrb({ rating, size = 196, className = "", showGlow = true 
               cy={center}
               r={trackRadius}
               fill="none"
-              stroke={coreStroke}
-              strokeWidth={Math.max(2, trackWidth * 0.22)}
+              stroke={PROGRESS_STROKE}
+              strokeWidth={progressHighlightStrokeWidth}
               strokeLinecap="round"
+              opacity="0.82"
             />
           </>
         ) : progress > 0 ? (
           <>
-            {showGlow ? (
-              <circle
-                cx={center}
-                cy={center}
-                r={trackRadius}
-                fill="none"
-                stroke={flareStroke}
-                strokeWidth={trackWidth}
-                strokeLinecap="round"
-                filter={`url(#${orbId}-glow)`}
-                opacity="0.56"
-                strokeDasharray={`${progressLength} ${circumference}`}
-                transform={`rotate(-90 ${center} ${center})`}
-              />
-            ) : null}
             <circle
               cx={center}
               cy={center}
               r={trackRadius}
               fill="none"
-              stroke={flareStroke}
-              strokeWidth={trackWidth * 0.6}
+              stroke={PROGRESS_STROKE}
+              strokeWidth={progressStrokeWidth}
               strokeLinecap="round"
               strokeDasharray={`${progressLength} ${circumference}`}
               transform={`rotate(-90 ${center} ${center})`}
@@ -215,38 +164,37 @@ export function RatingOrb({ rating, size = 196, className = "", showGlow = true 
               cy={center}
               r={trackRadius}
               fill="none"
-              stroke={coreStroke}
-              strokeWidth={Math.max(2, trackWidth * 0.22)}
+              stroke={PROGRESS_STROKE}
+              strokeWidth={progressHighlightStrokeWidth}
               strokeLinecap="round"
+              opacity="0.82"
               strokeDasharray={`${progressLength} ${circumference}`}
               transform={`rotate(-90 ${center} ${center})`}
             />
-            <circle cx={endPoint.x} cy={endPoint.y} r={trackWidth * 0.3} fill="#F5F0EB" />
-            <circle cx={endPoint.x} cy={endPoint.y} r={trackWidth * 0.62} fill="rgba(242,100,38,0.22)" />
+            <circle cx={endPoint.x} cy={endPoint.y} r={trackWidth * 0.3} fill={PROGRESS_STROKE} />
           </>
         ) : null}
 
         <circle
           cx={center}
           cy={center}
-          r={trackRadius - trackWidth * 0.92}
-          fill="rgba(9,10,12,0.96)"
-          stroke="rgba(245,240,235,0.05)"
-          strokeWidth="1.8"
+          r={innerCircleRadius}
+          fill={`url(#${orbId}-inner-fill)`}
+          stroke="rgba(245,240,235,0.1)"
+          strokeWidth={Math.max(1, trackWidth * 0.12)}
         />
-        <circle cx={center} cy={center} r={trackRadius - trackWidth * 1.55} fill={`url(#${orbId}-fill)`} />
       </svg>
 
       <div className="relative z-10 flex flex-col items-center justify-center text-center">
         <span
-          className="display-metric inline-flex items-end justify-center text-base-content tabular-nums"
-          style={{ maxWidth: trackRadius * 1.7 }}
+          className="display-metric inline-flex items-end justify-center text-black tabular-nums"
+          style={{ maxWidth: scoreMaxWidth }}
         >
-          <span className="font-semibold tracking-[-0.04em]" style={{ fontSize: ratingFontSize }}>
+          <span className="font-semibold tracking-normal text-black" style={{ fontSize: ratingFontSize }}>
             {displayedScore}
           </span>
           <span
-            className={`${scoreGapClassName} mb-[0.12em] shrink-0 font-medium leading-[0.92] text-base-content/46`}
+            className={`${scoreGapClassName} mb-[0.12em] shrink-0 font-medium leading-[0.92] text-black/60`}
             style={{ fontSize: scaleFontSize }}
           >
             /10

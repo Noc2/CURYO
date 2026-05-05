@@ -9,7 +9,7 @@ import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { HumanReputation } from "../contracts/HumanReputation.sol";
 import { ParticipationPool } from "../contracts/ParticipationPool.sol";
 import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
 import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
@@ -24,7 +24,7 @@ import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.so
 ///         settle on already-settled, treasury=address(0), consensus reserve depletion,
 ///         small losing pool rounding, cancel after tie, state machine transitions.
 contract SettlementEdgeCasesTest is VotingTestBase {
-    CuryoReputation public crepToken;
+    HumanReputation public hrepToken;
     ContentRegistry public registry;
     RoundVotingEngine public engine;
     RoundRewardDistributor public rewardDistributor;
@@ -42,7 +42,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
     address public treasury = address(100);
     address public frontend1 = address(200);
 
-    uint256 public constant STAKE = 5e6; // 5 cREP
+    uint256 public constant STAKE = 5e6; // 5 HREP
     uint256 public constant MIN_STAKE = 1e6;
     uint256 public constant T0 = 1_000_000;
     uint256 public constant EPOCH = 1 hours;
@@ -51,8 +51,8 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         vm.warp(T0);
         vm.startPrank(owner);
 
-        crepToken = new CuryoReputation(owner, owner);
-        crepToken.grantRole(crepToken.MINTER_ROLE(), owner);
+        hrepToken = new HumanReputation(owner, owner);
+        hrepToken.grantRole(hrepToken.MINTER_ROLE(), owner);
 
         ContentRegistry registryImpl = new ContentRegistry();
         RoundVotingEngine engineImpl = new RoundVotingEngine();
@@ -62,7 +62,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(registryImpl),
-                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(crepToken)))
+                    abi.encodeCall(ContentRegistry.initializeWithTreasury, (owner, owner, owner, address(hrepToken)))
                 )
             )
         );
@@ -73,7 +73,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
                     address(engineImpl),
                     abi.encodeCall(
                         RoundVotingEngine.initialize,
-                        (owner, address(crepToken), address(registry), address(_deployProtocolConfig(owner)))
+                        (owner, address(hrepToken), address(registry), address(_deployProtocolConfig(owner)))
                     )
                 )
             )
@@ -85,7 +85,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
                     address(distImpl),
                     abi.encodeCall(
                         RoundRewardDistributor.initialize,
-                        (owner, address(crepToken), address(engine), address(registry))
+                        (owner, address(hrepToken), address(engine), address(registry))
                     )
                 )
             )
@@ -106,7 +106,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         frontendRegistry = FrontendRegistry(
             address(
                 new ERC1967Proxy(
-                    address(frImpl), abi.encodeCall(FrontendRegistry.initialize, (owner, owner, address(crepToken)))
+                    address(frImpl), abi.encodeCall(FrontendRegistry.initialize, (owner, owner, address(hrepToken)))
                 )
             )
         );
@@ -114,20 +114,20 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         frontendRegistry.addFeeCreditor(address(rewardDistributor));
         ProtocolConfig(address(engine.protocolConfig())).setFrontendRegistry(address(frontendRegistry));
 
-        participationPool = new ParticipationPool(address(crepToken), owner);
+        participationPool = new ParticipationPool(address(hrepToken), owner);
         participationPool.setAuthorizedCaller(address(rewardDistributor), true);
         participationPool.setAuthorizedCaller(address(registry), true);
         ProtocolConfig(address(engine.protocolConfig())).setParticipationPool(address(participationPool));
 
-        crepToken.mint(owner, 2_000_000e6);
-        crepToken.approve(address(participationPool), 500_000e6);
+        hrepToken.mint(owner, 2_000_000e6);
+        hrepToken.approve(address(participationPool), 500_000e6);
         participationPool.depositPool(500_000e6);
-        crepToken.approve(address(engine), 500_000e6);
+        hrepToken.approve(address(engine), 500_000e6);
         engine.addToConsensusReserve(500_000e6);
 
         address[8] memory users = [submitter, voter1, voter2, voter3, voter4, voter5, voter6, frontend1];
         for (uint256 i = 0; i < users.length; i++) {
-            crepToken.mint(users[i], 10_000e6);
+            hrepToken.mint(users[i], 10_000e6);
         }
 
         vm.stopPrank();
@@ -143,11 +143,31 @@ contract SettlementEdgeCasesTest is VotingTestBase {
     {
         salt = keccak256(abi.encodePacked(voter, block.timestamp));
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
-        bytes32 commitHash = _commitHash(isUp, salt, contentId, ciphertext);
+        uint16 referenceRatingBps = _currentRatingReferenceBps(contentId);
+        bytes32 commitHash = _commitHash(
+            isUp,
+            salt,
+            voter,
+            contentId,
+            referenceRatingBps,
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            ciphertext
+        );
         vm.prank(voter);
-        crepToken.approve(address(engine), stakeAmt);
+        hrepToken.approve(address(engine), stakeAmt);
+        uint256 cachedRoundContext1 = _roundContext(engine.previewCommitRoundId(contentId), referenceRatingBps);
         vm.prank(voter);
-        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, stakeAmt, address(0));
+        engine.commitVote(
+            contentId,
+            cachedRoundContext1,
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            commitHash,
+            ciphertext,
+            stakeAmt,
+            address(0)
+        );
         commitKey = keccak256(abi.encodePacked(voter, commitHash));
     }
 
@@ -157,7 +177,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
 
     function _submitContent() internal returns (uint256 contentId) {
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         _submitContentWithReservation(registry, "https://example.com/1", "test goal", "test goal", "test", 0);
         vm.stopPrank();
         contentId = 1;
@@ -165,7 +185,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
 
     function _submitContentN(uint256 n) internal returns (uint256) {
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         string memory url = string(abi.encodePacked("https://example.com/", vm.toString(n)));
         _submitContentWithReservation(registry, url, "test goal", "test goal", "test", 0);
         vm.stopPrank();
@@ -174,7 +194,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
 
     function _commitOnEngine(
         RoundVotingEngine votingEngine,
-        CuryoReputation token,
+        HumanReputation token,
         address voter,
         uint256 contentId,
         bool isUp,
@@ -184,21 +204,26 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         salt = keccak256(abi.encodePacked(voter, block.timestamp));
         targetRound = _tlockCommitTargetRound();
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId, targetRound, drandChainHash);
-        bytes32 commitHash = _commitHash(isUp, salt, contentId, targetRound, drandChainHash, ciphertext);
+        uint16 referenceRatingBps = _currentRatingReferenceBps(contentId);
+        bytes32 commitHash =
+            _commitHash(isUp, salt, voter, contentId, referenceRatingBps, targetRound, drandChainHash, ciphertext);
         vm.prank(voter);
         token.approve(address(votingEngine), stakeAmt);
+        uint256 cachedRoundContext2 = _roundContext(votingEngine.previewCommitRoundId(contentId), referenceRatingBps);
         vm.prank(voter);
-        votingEngine.commitVote(contentId, targetRound, drandChainHash, commitHash, ciphertext, stakeAmt, address(0));
+        votingEngine.commitVote(
+            contentId, cachedRoundContext2, targetRound, drandChainHash, commitHash, ciphertext, stakeAmt, address(0)
+        );
         commitKey = keccak256(abi.encodePacked(voter, commitHash));
     }
 
     function _deployZeroReserveHarness()
         internal
-        returns (CuryoReputation token, ContentRegistry registry_, RoundVotingEngine votingEngine)
+        returns (HumanReputation token, ContentRegistry registry_, RoundVotingEngine votingEngine)
     {
         vm.startPrank(owner);
 
-        token = new CuryoReputation(owner, owner);
+        token = new HumanReputation(owner, owner);
         token.grantRole(token.MINTER_ROLE(), owner);
 
         ContentRegistry registryImpl = new ContentRegistry();
@@ -209,7 +234,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(registryImpl),
-                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(token)))
+                    abi.encodeCall(ContentRegistry.initializeWithTreasury, (owner, owner, owner, address(token)))
                 )
             )
         );
@@ -254,7 +279,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         vm.stopPrank();
     }
 
-    function _submitContentOnRegistry(CuryoReputation token, ContentRegistry registry_, string memory url)
+    function _submitContentOnRegistry(HumanReputation token, ContentRegistry registry_, string memory url)
         internal
         returns (uint256 contentId)
     {
@@ -265,15 +290,18 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         contentId = 1;
     }
 
-    function _prepareUnanimousRoundOnEngine(RoundVotingEngine votingEngine, CuryoReputation token, uint256 contentId)
+    function _prepareUnanimousRoundOnEngine(RoundVotingEngine votingEngine, HumanReputation token, uint256 contentId)
         internal
         returns (uint256 roundId)
     {
-        (bytes32 ck1, bytes32 s1, uint64 targetRound1) = _commitOnEngine(votingEngine, token, voter1, contentId, true, STAKE);
+        (bytes32 ck1, bytes32 s1, uint64 targetRound1) =
+            _commitOnEngine(votingEngine, token, voter1, contentId, true, STAKE);
         vm.warp(block.timestamp + 1);
-        (bytes32 ck2, bytes32 s2, uint64 targetRound2) = _commitOnEngine(votingEngine, token, voter2, contentId, true, STAKE);
+        (bytes32 ck2, bytes32 s2, uint64 targetRound2) =
+            _commitOnEngine(votingEngine, token, voter2, contentId, true, STAKE);
         vm.warp(block.timestamp + 1);
-        (bytes32 ck3, bytes32 s3, uint64 targetRound3) = _commitOnEngine(votingEngine, token, voter3, contentId, true, STAKE);
+        (bytes32 ck3, bytes32 s3, uint64 targetRound3) =
+            _commitOnEngine(votingEngine, token, voter3, contentId, true, STAKE);
 
         roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
         uint64 maxTargetRound = targetRound1;
@@ -300,7 +328,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         RoundLib.Round memory r0 = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(r0.startTime + EPOCH + 1);
+        _warpPastTlockRevealTime(uint256(r0.startTime) + EPOCH);
 
         _reveal(contentId, roundId, ck1, v1Up, s1);
         _reveal(contentId, roundId, ck2, v2Up, s2);
@@ -341,7 +369,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         RoundLib.Round memory r0 = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(r0.startTime + EPOCH + 1);
+        _warpPastTlockRevealTime(uint256(r0.startTime) + EPOCH);
 
         _reveal(contentId, roundId, ck1, true, s1);
         _reveal(contentId, roundId, ck2, false, s2);
@@ -415,7 +443,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         RoundLib.Round memory r0 = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(r0.startTime + EPOCH + 1);
+        _warpPastTlockRevealTime(uint256(r0.startTime) + EPOCH);
 
         // Reveal all 3 — threshold reached
         _reveal(contentId, roundId, ck1, true, s1);
@@ -456,7 +484,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         RoundLib.Round memory r0 = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(r0.startTime + EPOCH + 1);
+        _warpPastTlockRevealTime(uint256(r0.startTime) + EPOCH);
 
         _reveal(contentId, roundId, ck1, true, s1);
         _reveal(contentId, roundId, ck2, false, s2);
@@ -496,17 +524,17 @@ contract SettlementEdgeCasesTest is VotingTestBase {
     function test_Settle_TreasuryReceivesFee() public {
         (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, false);
 
-        uint256 treasuryBefore = crepToken.balanceOf(treasury);
+        uint256 treasuryBefore = hrepToken.balanceOf(treasury);
 
         engine.settleRound(contentId, roundId);
 
-        uint256 treasuryAfter = crepToken.balanceOf(treasury);
+        uint256 treasuryAfter = hrepToken.balanceOf(treasury);
         // Treasury should receive some fee from the losing pool
         assertGt(treasuryAfter, treasuryBefore);
     }
 
     // =========================================================================
-    // 10. SMALL LOSING POOL: rounding edge case with 1 cREP losing pool
+    // 10. SMALL LOSING POOL: rounding edge case with 1 HREP losing pool
     // =========================================================================
 
     function test_Settle_MinimalLosingPool_NoRevert() public {
@@ -519,7 +547,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         RoundLib.Round memory r0 = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(r0.startTime + EPOCH + 1);
+        _warpPastTlockRevealTime(uint256(r0.startTime) + EPOCH);
 
         _reveal(contentId, roundId, ck1, true, s1);
         _reveal(contentId, roundId, ck2, true, s2);
@@ -568,13 +596,13 @@ contract SettlementEdgeCasesTest is VotingTestBase {
     // =========================================================================
 
     function test_Settle_Unanimous_ZeroReserve_SettlesWithZeroSubsidy() public {
-        (CuryoReputation crepToken2, ContentRegistry registry2, RoundVotingEngine engine2) = _deployZeroReserveHarness();
+        (HumanReputation hrepToken2, ContentRegistry registry2, RoundVotingEngine engine2) = _deployZeroReserveHarness();
 
         // DO NOT fund consensus reserve — leave at 0
         assertEq(engine2.consensusReserve(), 0);
 
-        uint256 contentId = _submitContentOnRegistry(crepToken2, registry2, "https://example.com/zero-reserve");
-        uint256 roundId = _prepareUnanimousRoundOnEngine(engine2, crepToken2, contentId);
+        uint256 contentId = _submitContentOnRegistry(hrepToken2, registry2, "https://example.com/zero-reserve");
+        uint256 roundId = _prepareUnanimousRoundOnEngine(engine2, hrepToken2, contentId);
 
         // Settle — should succeed even with zero reserve
         engine2.settleRound(contentId, roundId);
@@ -681,7 +709,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         RoundLib.Round memory r0 = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(r0.startTime + EPOCH + 1);
+        _warpPastTlockRevealTime(uint256(r0.startTime) + EPOCH);
 
         _reveal(contentId, roundId, ck1, true, s1);
         _reveal(contentId, roundId, ck2, false, s2);
@@ -726,13 +754,13 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, false);
         engine.settleRound(contentId, roundId);
 
-        uint256 balanceBefore = crepToken.balanceOf(voter3);
+        uint256 balanceBefore = hrepToken.balanceOf(voter3);
 
         // voter3 voted false (down) but up won
         vm.prank(voter3);
         rewardDistributor.claimReward(contentId, roundId);
 
-        uint256 balanceAfter = crepToken.balanceOf(voter3);
+        uint256 balanceAfter = hrepToken.balanceOf(voter3);
         assertEq(balanceAfter - balanceBefore, STAKE / 20);
     }
 
@@ -780,57 +808,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
     }
 
     // =========================================================================
-    // 23. SUBMITTER REWARD: non-submitter reverts
-    // =========================================================================
-
-    function test_SubmitterReward_NonSubmitter_Reverts() public {
-        (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, false);
-        engine.settleRound(contentId, roundId);
-
-        vm.prank(voter1); // Not the submitter
-        vm.expectRevert("Not submitter");
-        rewardDistributor.claimSubmitterReward(contentId, roundId);
-    }
-
-    // =========================================================================
-    // 24. SUBMITTER REWARD: double claim reverts
-    // =========================================================================
-
-    function test_SubmitterReward_DoubleClaim_Reverts() public {
-        (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, false);
-        engine.settleRound(contentId, roundId);
-
-        vm.prank(submitter);
-        rewardDistributor.claimSubmitterReward(contentId, roundId);
-
-        vm.prank(submitter);
-        vm.expectRevert("Already claimed");
-        rewardDistributor.claimSubmitterReward(contentId, roundId);
-    }
-
-    // =========================================================================
-    // 25. SUBMITTER REWARD: unanimous round has subsidy
-    // =========================================================================
-
-    function test_SubmitterReward_UnanimousRound_HasSubsidy() public {
-        (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, true);
-        engine.settleRound(contentId, roundId);
-
-        uint256 pending = engine.pendingSubmitterReward(contentId, roundId);
-        // Unanimous rounds get consensus subsidy split into voter+submitter
-        assertGt(pending, 0);
-
-        uint256 balanceBefore = crepToken.balanceOf(submitter);
-
-        vm.prank(submitter);
-        rewardDistributor.claimSubmitterReward(contentId, roundId);
-
-        uint256 balanceAfter = crepToken.balanceOf(submitter);
-        assertEq(balanceAfter - balanceBefore, pending);
-    }
-
-    // =========================================================================
-    // 26. REFUND ON TIED ROUND
+    // 24. REFUND ON TIED ROUND
     // =========================================================================
 
     function test_Refund_TiedRound_ReturnsStake() public {
@@ -843,7 +821,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         RoundLib.Round memory r0 = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(r0.startTime + EPOCH + 1);
+        _warpPastTlockRevealTime(uint256(r0.startTime) + EPOCH);
 
         _reveal(contentId, roundId, ck1, true, s1);
         _reveal(contentId, roundId, ck2, false, s2);
@@ -852,12 +830,12 @@ contract SettlementEdgeCasesTest is VotingTestBase {
 
         engine.settleRound(contentId, roundId);
 
-        uint256 balanceBefore = crepToken.balanceOf(voter1);
+        uint256 balanceBefore = hrepToken.balanceOf(voter1);
 
         vm.prank(voter1);
         engine.claimCancelledRoundRefund(contentId, roundId);
 
-        uint256 balanceAfter = crepToken.balanceOf(voter1);
+        uint256 balanceAfter = hrepToken.balanceOf(voter1);
         assertEq(balanceAfter - balanceBefore, STAKE);
     }
 
@@ -869,12 +847,12 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, false);
         engine.settleRound(contentId, roundId);
 
-        uint256 balanceBefore = crepToken.balanceOf(voter1);
+        uint256 balanceBefore = hrepToken.balanceOf(voter1);
 
         vm.prank(voter1);
         rewardDistributor.claimReward(contentId, roundId);
 
-        uint256 balanceAfter = crepToken.balanceOf(voter1);
+        uint256 balanceAfter = hrepToken.balanceOf(voter1);
         // Winner gets at least their stake back + some reward from losing pool
         assertGt(balanceAfter - balanceBefore, STAKE);
     }
@@ -886,14 +864,14 @@ contract SettlementEdgeCasesTest is VotingTestBase {
     function test_Settle_AsymmetricStakes_ProportionalRewards() public {
         uint256 contentId = _submitContent();
 
-        // voter1 stakes 10 cREP (up), voter2 stakes 5 cREP (up), voter3 stakes 5 cREP (down)
+        // voter1 stakes 10 HREP (up), voter2 stakes 5 HREP (up), voter3 stakes 5 HREP (down)
         (bytes32 ck1, bytes32 s1) = _commit(voter1, contentId, true, 10e6);
         (bytes32 ck2, bytes32 s2) = _commit(voter2, contentId, true, STAKE);
         (bytes32 ck3, bytes32 s3) = _commit(voter3, contentId, false, STAKE);
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         RoundLib.Round memory r0 = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(r0.startTime + EPOCH + 1);
+        _warpPastTlockRevealTime(uint256(r0.startTime) + EPOCH);
 
         _reveal(contentId, roundId, ck1, true, s1);
         _reveal(contentId, roundId, ck2, true, s2);
@@ -901,16 +879,16 @@ contract SettlementEdgeCasesTest is VotingTestBase {
 
         engine.settleRound(contentId, roundId);
 
-        uint256 bal1Before = crepToken.balanceOf(voter1);
-        uint256 bal2Before = crepToken.balanceOf(voter2);
+        uint256 bal1Before = hrepToken.balanceOf(voter1);
+        uint256 bal2Before = hrepToken.balanceOf(voter2);
 
         vm.prank(voter1);
         rewardDistributor.claimReward(contentId, roundId);
         vm.prank(voter2);
         rewardDistributor.claimReward(contentId, roundId);
 
-        uint256 reward1 = crepToken.balanceOf(voter1) - bal1Before;
-        uint256 reward2 = crepToken.balanceOf(voter2) - bal2Before;
+        uint256 reward1 = hrepToken.balanceOf(voter1) - bal1Before;
+        uint256 reward2 = hrepToken.balanceOf(voter2) - bal2Before;
 
         // voter1 staked 2x, so should get a larger reward
         assertGt(reward1, reward2);

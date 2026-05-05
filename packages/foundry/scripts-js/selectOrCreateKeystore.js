@@ -2,7 +2,6 @@ import { readdirSync, existsSync } from "fs";
 import { join } from "path";
 import { spawnSync, spawn } from "child_process";
 import readline from "readline";
-import { fileURLToPath } from "url";
 
 async function selectOrCreateKeystore() {
   // Create readline interface only when function is called
@@ -117,18 +116,6 @@ async function selectOrCreateKeystore() {
     // Ensure readline is closed
     rl.close();
   }
-}
-
-// Run the selection if this script is called directly
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  selectKeystore()
-    .then((keystore) => {
-      console.log("\n🔑 Selected keystore:", keystore);
-    })
-    .catch((error) => {
-      console.error(error);
-      process.exit(1);
-    });
 }
 
 export { selectOrCreateKeystore };

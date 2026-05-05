@@ -2,11 +2,13 @@ import { mergeRequestedContentIntoFeed } from "./requestedContent";
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { ContentItem } from "~~/hooks/useContentFeed";
+import { buildFallbackMediaItems } from "~~/lib/contentMedia";
 
 function buildItem(id: bigint): ContentItem {
   return {
     id,
     url: `https://example.com/${id}`,
+    media: buildFallbackMediaItems(`https://example.com/${id}`),
     title: `Item ${id}`,
     description: `Description ${id}`,
     tags: [],

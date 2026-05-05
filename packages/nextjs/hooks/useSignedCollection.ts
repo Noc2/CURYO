@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ensurePrivateAccountReadSession } from "~~/hooks/usePrivateAccountSession";
 import { isSignatureRejected } from "~~/utils/signatureErrors";
 
 export interface SignedCollectionResponse<TItem> {
@@ -96,14 +97,7 @@ async function getSignedCollectionSessionStatus(
 async function readSignedCollection<TItem>(
   config: Pick<
     UseSignedCollectionConfig<TItem, string>,
-    | "autoRead"
-    | "buildReadChallengeRequest"
-    | "buildSignedReadRequest"
-    | "challengePath"
-    | "collectionPath"
-    | "emptyResponse"
-    | "sessionPath"
-    | "signMessageAsync"
+    "autoRead" | "collectionPath" | "emptyResponse" | "sessionPath" | "signMessageAsync"
   >,
   address: string,
 ): Promise<{
@@ -135,26 +129,9 @@ async function readSignedCollection<TItem>(
     };
   }
 
-  const challengeRes = await fetch(config.challengePath, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(config.buildReadChallengeRequest(address)),
-  });
-  const challengeData = await readResponseBody<SignedChallengeResponse>(
-    challengeRes,
-    "Failed to create signature challenge",
-  );
+  await ensurePrivateAccountReadSession(address, config.signMessageAsync);
 
-  if (!challengeData.message || !challengeData.challengeId) {
-    throw new Error("Failed to create signature challenge");
-  }
-
-  const signature = await config.signMessageAsync({ message: challengeData.message });
-  const response = await fetch(config.collectionPath, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(config.buildSignedReadRequest(address, challengeData.challengeId, signature)),
-  });
+  const response = await fetch(`${config.collectionPath}?address=${encodeURIComponent(address)}`);
   const body = await readResponseBody<Partial<SignedCollectionResponse<TItem>>>(response, "Failed to fetch collection");
 
   return {
@@ -165,6 +142,7 @@ async function readSignedCollection<TItem>(
     sessionStatus: {
       ...sessionStatus,
       hasReadSession: true,
+      hasWriteSession: true,
     },
   };
 }
@@ -372,7 +350,7 @@ export function useSignedCollection<TItem, TId, TExtraReason extends string = ne
       return {
         ok: false,
         reason: "request_failed",
-        error: error instanceof Error ? error.message : "Failed to unlock collection",
+        error: error instanceof Error ? error.message : "Failed to load collection",
       };
     }
   }, [config, queryClient, sessionStatusQueryKey]);

@@ -13,7 +13,8 @@ const VIEWPORTS = [
   { name: "desktop", width: 1440, height: 900 },
 ];
 
-const ROUTES = ["/", "/vote", "/submit", "/governance", "/docs", "/legal"];
+const ROUTES = ["/", "/rate", "/ask", "/governance", "/docs", "/legal"];
+const WALLET_ROUTES = new Set(["/rate", "/ask", "/governance"]);
 const VOTE_UP_BUTTON = /^Vote up\b/i;
 const VOTE_DOWN_BUTTON = /^Vote down\b/i;
 
@@ -34,23 +35,31 @@ async function expectNavigationForViewport(page: Page, width: number): Promise<v
 async function expectRouteControls(page: Page, path: string, width: number): Promise<void> {
   const main = page.locator("main");
 
-  if (path === "/vote") {
+  if (path === "/rate") {
     await waitForFeedLoaded(page, 30_000);
     await expectNavigationForViewport(page, width);
     await expect(
       page
         .getByRole("button", { name: VOTE_UP_BUTTON })
         .or(page.getByRole("button", { name: VOTE_DOWN_BUTTON }))
-        .or(page.getByText(/No content submitted yet|No content found/i))
+        .or(page.getByText(/No questions have been asked yet|No content found/i))
         .first(),
       "Vote route should keep its primary feed state visible",
     ).toBeVisible({ timeout: 15_000 });
     return;
   }
 
-  if (path === "/submit") {
+  if (path === "/") {
+    await expectNavigationForViewport(page, width);
+    await expect(main.getByRole("heading", { name: /AI Asks,\s*Humans Earn/i }).first()).toBeVisible({
+      timeout: 15_000,
+    });
+    return;
+  }
+
+  if (path === "/ask") {
     const urlInput = main.getByPlaceholder(/paste/i).or(main.getByRole("textbox").first()).first();
-    await expect(urlInput, "Submit URL input should stay visible").toBeVisible({ timeout: 15_000 });
+    await expect(urlInput, "Ask URL input should stay visible").toBeVisible({ timeout: 15_000 });
     await urlInput.focus();
     await expect(urlInput).toBeFocused();
     return;
@@ -60,7 +69,7 @@ async function expectRouteControls(page: Page, path: string, width: number): Pro
     await expect(
       main
         .getByRole("button", { name: /Profile|Leaderboard|Governance|Voter ID/ })
-        .or(main.getByText(/Voting performance|Staked cREP|Checking Voter ID/i))
+        .or(main.getByText(/Voting performance|Staked HREP|Checking Voter ID/i))
         .first(),
       "Governance claim surface should stay visible",
     ).toBeVisible({ timeout: 15_000 });
@@ -83,7 +92,12 @@ test.describe("Responsive layout", () => {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
 
       for (const path of ROUTES) {
-        await gotoWithRetry(page, path, { ensureWalletConnected: true, timeout: 45_000 });
+        const needsWallet = WALLET_ROUTES.has(path);
+        await gotoWithRetry(page, path, {
+          ensureWalletConnected: needsWallet,
+          skipInjectedWalletConnectionCheck: !needsWallet,
+          timeout: 45_000,
+        });
         await expectNoNextErrorOverlay(page);
 
         const main = page.locator("main");
@@ -98,7 +112,7 @@ test.describe("Responsive layout", () => {
 
   test("stake selector dialog fits inside a phone viewport", async ({ connectedPage: page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await gotoWithRetry(page, "/vote", { ensureWalletConnected: true, timeout: 45_000 });
+    await gotoWithRetry(page, "/rate", { ensureWalletConnected: true, timeout: 45_000 });
     await waitForFeedLoaded(page, 30_000);
 
     const canVote = await ensureVoteableContent(page);
@@ -128,7 +142,7 @@ test.describe("Responsive layout", () => {
 
   test("desktop vote side padding remains inside the feed scroll hit area", async ({ connectedPage: page }) => {
     await page.setViewportSize({ width: 1366, height: 768 });
-    await gotoWithRetry(page, "/vote", { ensureWalletConnected: true, timeout: 45_000 });
+    await gotoWithRetry(page, "/rate", { ensureWalletConnected: true, timeout: 45_000 });
     await waitForFeedLoaded(page, 30_000);
 
     const metrics = await page.evaluate(() => {

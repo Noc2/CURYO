@@ -13,11 +13,11 @@ import { Footer } from "~~/components/Footer";
 import { Header } from "~~/components/Header";
 import { RouteScopedNotifiers } from "~~/components/RouteScopedNotifiers";
 import { ReferralAttributionCapture } from "~~/components/referrals/ReferralAttributionCapture";
-import { Faucet } from "~~/components/scaffold-eth";
-import { ClearLegacyBurnerSession } from "~~/components/thirdweb/ClearLegacyBurnerSession";
+import { FaucetModal, FaucetTrigger } from "~~/components/scaffold-eth";
 import { LocalTestWalletBridge } from "~~/components/thirdweb/LocalTestWalletBridge";
 import { ThirdwebAutoConnectBridge } from "~~/components/thirdweb/ThirdwebAutoConnectBridge";
 import { ThirdwebConnectorWalletBridge } from "~~/components/thirdweb/ThirdwebConnectorWalletBridge";
+import { RATE_ROUTE } from "~~/constants/routes";
 import { MobileHeaderVisibilityProvider } from "~~/contexts/MobileHeaderVisibilityContext";
 import { OptimisticVoteProvider } from "~~/contexts/OptimisticVoteContext";
 import { TermsAcceptanceProvider } from "~~/contexts/TermsAcceptanceContext";
@@ -31,7 +31,7 @@ const TermsAcceptanceModal = dynamic(
 
 const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname() ?? "";
-  const isVoteFeedRoute = pathname === "/vote";
+  const isVoteFeedRoute = pathname === RATE_ROUTE;
   const { targetNetwork } = useTargetNetwork();
   const showVoteFeedMobileFaucet = isVoteFeedRoute && targetNetwork.id === hardhat.id;
 
@@ -52,7 +52,7 @@ const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
             <div className="xl:hidden">
               <div className="pointer-events-none fixed bottom-0 left-0 z-10 flex w-full items-center justify-between p-4">
                 <div className="pointer-events-auto">
-                  <Faucet />
+                  <FaucetTrigger />
                 </div>
               </div>
             </div>
@@ -64,6 +64,7 @@ const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
       </div>
       <Toaster />
       <RouteScopedNotifiers />
+      <FaucetModal />
     </MobileHeaderVisibilityProvider>
   );
 };
@@ -83,7 +84,6 @@ export const ScaffoldEthAppWithProviders = ({ children }: { children: React.Reac
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
         <ThirdwebProvider>
-          <ClearLegacyBurnerSession />
           <LocalTestWalletBridge />
           <ThirdwebConnectorWalletBridge />
           <ThirdwebAutoConnectBridge />

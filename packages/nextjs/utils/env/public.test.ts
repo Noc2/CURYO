@@ -1,3 +1,4 @@
+import { listMissingRequiredTargetContracts } from "./requiredDeployments";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
@@ -17,4 +18,43 @@ test("browser-facing public env modules avoid computed process.env access", () =
       `${moduleUrl.pathname} should use static process.env access so Next can inline NEXT_PUBLIC variables`,
     );
   }
+});
+
+test("required deployment helper reports missing contract definitions per target chain", () => {
+  const missingContracts = listMissingRequiredTargetContracts(
+    [31337, 42220],
+    {
+      31337: {
+        ContentRegistry: {},
+        HumanReputation: {},
+        ProtocolConfig: {},
+      },
+      42220: {
+        ContentRegistry: {},
+        ProtocolConfig: {},
+      },
+    },
+    ["ContentRegistry", "HumanReputation"],
+  );
+
+  assert.deepEqual(missingContracts, ["42220:HumanReputation"]);
+});
+
+test("default required deployment list fails closed for core app contracts", () => {
+  const missingContracts = listMissingRequiredTargetContracts([42220], {
+    42220: {
+      CategoryRegistry: {},
+      ContentRegistry: {},
+      FrontendRegistry: {},
+      HumanFaucet: {},
+      ParticipationPool: {},
+      ProfileRegistry: {},
+      ProtocolConfig: {},
+      RoundRewardDistributor: {},
+      RoundVotingEngine: {},
+      VoterIdNFT: {},
+    },
+  });
+
+  assert.deepEqual(missingContracts, ["42220:HumanReputation"]);
 });

@@ -42,7 +42,6 @@ export interface CuryoContentItem {
   ratingEffectiveEvidence?: string;
   ratingSettledRounds?: number;
   ratingLowSince?: string;
-  submitterStakeReturned: boolean;
   createdAt: string;
   lastActivityAt: string;
   totalVotes: number;
@@ -142,11 +141,40 @@ export interface CuryoCategoryItem {
   [key: string]: unknown;
 }
 
+export interface CuryoSelfReportedAudienceBucket {
+  down: number;
+  total: number;
+  up: number;
+  value: string;
+}
+
+export interface CuryoSelfReportedAudienceContext {
+  fields: {
+    ageGroup: CuryoSelfReportedAudienceBucket[];
+    expertise: CuryoSelfReportedAudienceBucket[];
+    languages: CuryoSelfReportedAudienceBucket[];
+    nationalities: CuryoSelfReportedAudienceBucket[];
+    residenceCountry: CuryoSelfReportedAudienceBucket[];
+    roles: CuryoSelfReportedAudienceBucket[];
+  };
+  missingSelfReportCount: number;
+  note: string;
+  restrictedEligibility: false;
+  selfReportedProfileCount: number;
+  source: "self_reported_public_profiles";
+  totalRevealedVotes: number;
+  verified: false;
+}
+
 export interface CuryoProfileItem {
   address: `0x${string}`;
+  name?: string | null;
+  selfReport?: string | null;
   displayName?: string | null;
   bio?: string | null;
   avatar?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
   totalVotes?: number;
   totalContent?: number;
   totalRewardsClaimed?: string;
@@ -158,6 +186,9 @@ export interface CuryoGlobalStats {
   totalVotes?: number;
   totalRoundsSettled?: number;
   totalRewardsClaimed?: string;
+  totalQuestionRewardsPaid?: string;
+  totalQuestionRewardsPaidToVoters?: string;
+  totalQuestionRewardsPaidToFrontends?: string;
   totalProfiles?: number;
   totalVoterIds?: number;
   [key: string]: unknown;
@@ -173,6 +204,7 @@ export interface CuryoPaginatedResponse<T> {
 }
 
 export interface CuryoContentDetailsResponse {
+  audienceContext: CuryoSelfReportedAudienceContext;
   content: CuryoContentItem;
   rounds: CuryoRoundItem[];
   ratings: JsonRecord[];
@@ -224,7 +256,6 @@ export interface ListFrontendsParams {
 }
 
 export interface ListCategoriesParams {
-  status?: string;
   limit?: number;
   offset?: number;
 }

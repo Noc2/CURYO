@@ -1,77 +1,69 @@
-import { expect, test } from "../fixtures/wallet";
+import { type Page, expect, test } from "../fixtures/wallet";
+import { continueToBountyStep, selectAskCategory, selectAskSubcategory } from "../helpers/ask-form";
 
-test.describe("Submit form validation", () => {
-  test("submit shows a platform validation error before submission", async ({ connectedPage: page }) => {
-    await page.goto("/submit");
+async function fillRequiredQuestionFields(page: Page, contextUrl?: string): Promise<boolean> {
+  const selectedCategory = await selectAskCategory(page);
+  if (!selectedCategory) return false;
+
+  const uniqueId = Date.now();
+  await page.getByPlaceholder("Write a subjective question voters can rate").fill(`Validation test ${uniqueId}`);
+  await page.locator("textarea").first().fill(`Validation content ${uniqueId}`);
+
+  const selectedSubcategory = await selectAskSubcategory(page);
+  if (!selectedSubcategory) return false;
+
+  if (contextUrl !== undefined) {
+    await page.locator("input[type='url']").first().fill(contextUrl);
+  }
+
+  return true;
+}
+
+test.describe("Ask form validation", () => {
+  test("submit shows a category validation error before submitting", async ({ connectedPage: page }) => {
+    await page.goto("/ask");
     await page.waitForLoadState("domcontentloaded");
 
     // Wait for form to load
-    await expect(page.getByRole("heading", { name: "Submit Content" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Submit Question" })).toBeVisible({ timeout: 15_000 });
 
-    const submitBtn = page.getByRole("button", { name: /^Submit Content/i });
-    await expect(submitBtn).toBeVisible({ timeout: 5_000 });
-    await expect(submitBtn).toBeEnabled();
-    await submitBtn.click();
+    await continueToBountyStep(page);
 
-    await expect(page.getByText("Select a platform before submitting.")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("Select a category before submitting.")).toBeVisible({ timeout: 5_000 });
   });
 
-  test("submit shows a URL validation error before submission", async ({ connectedPage: page }) => {
-    await page.goto("/submit");
+  test("submit shows a URL validation error before submitting", async ({ connectedPage: page }) => {
+    await page.goto("/ask");
 
-    await expect(page.getByRole("heading", { name: "Submit Content" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Submit Question" })).toBeVisible({ timeout: 15_000 });
 
-    // Select a platform — dropdown shows category names like "AI", "Books", "Videos", etc.
-    const platformBtn = page.getByText("Select a platform...");
-    if (await platformBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
-      await platformBtn.click();
-      // Click the first available option in the dropdown
-      const firstOption = page.locator("[role='option'], [role='listbox'] > *").first();
-      if (await firstOption.isVisible({ timeout: 3_000 }).catch(() => false)) {
-        await firstOption.click();
-      } else {
-        // Fallback: click any visible option text in the dropdown
-        const anyOption = page
-          .locator(".absolute, [data-radix-popper-content-wrapper]")
-          .locator("div[role='option'], div:has-text('.')")
-          .first();
-        if (await anyOption.isVisible({ timeout: 2_000 }).catch(() => false)) {
-          await anyOption.click();
-        }
-      }
-    }
+    const formReady = await fillRequiredQuestionFields(page);
+    test.skip(!formReady, "Categories not loaded for context URL validation");
 
-    // Leave the URL blank and submit to trigger inline validation
-    const submitBtn = page.getByRole("button", { name: /^Submit Content/i });
-    await expect(submitBtn).toBeVisible({ timeout: 5_000 });
-    await expect(submitBtn).toBeEnabled();
-    await submitBtn.click();
+    await continueToBountyStep(page);
 
-    await expect(page.getByText("URL is required.")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("Add a context link before submitting.")).toBeVisible({ timeout: 5_000 });
   });
 
-  test("platform dropdown shows options", async ({ connectedPage: page }) => {
-    await page.goto("/submit");
+  test("category dropdown shows options", async ({ connectedPage: page }) => {
+    await page.goto("/ask");
 
-    await expect(page.getByRole("heading", { name: "Submit Content" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Submit Question" })).toBeVisible({ timeout: 15_000 });
 
-    // Click platform dropdown
-    const platformBtn = page.getByText("Select a platform...");
-    if (await platformBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
-      await platformBtn.click();
+    // Click category dropdown
+    const form = page.locator("form").first();
+    const categoryBtn = form.getByText("Select a category...");
+    if (await categoryBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
+      await categoryBtn.click();
 
-      // The dropdown should show category-based platform names.
-      // From the screenshot: AI, Books, Crypto Tokens, Games, Movies, Videos, etc.
-      // Just verify that at least 3 options are visible in the dropdown
-      const searchInput = page.getByPlaceholder("Search platforms...");
+      const searchInput = page.getByPlaceholder("Search categories...");
       await expect(searchInput).toBeVisible({ timeout: 3_000 });
 
-      // Count visible options by looking for text items below the search
-      // The dropdown contains items with category name + domain
-      const options = page
-        .locator(".absolute, [data-radix-popper-content-wrapper]")
-        .locator("div")
-        .filter({ hasText: /\.(com|co|org|io)/ });
+      // Just verify that at least 3 category buttons are visible in the dropdown.
+      const options = form
+        .locator(".absolute")
+        .locator("button")
+        .filter({ hasText: /Products|Media|General|Software/ });
       const optionCount = await options.count();
       expect(optionCount).toBeGreaterThanOrEqual(3);
 
@@ -80,38 +72,17 @@ test.describe("Submit form validation", () => {
   });
 
   test("invalid URL shows validation feedback", async ({ connectedPage: page }) => {
-    await page.goto("/submit");
+    await page.goto("/ask");
 
-    await expect(page.getByRole("heading", { name: "Submit Content" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Submit Question" })).toBeVisible({ timeout: 15_000 });
 
-    // Select a platform
-    const platformBtn = page.getByText("Select a platform...");
-    if (await platformBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
-      await platformBtn.click();
-      // Click first option with a domain
-      const option = page.getByText(/huggingface|openlibrary|coingecko/i).first();
-      if (await option.isVisible({ timeout: 3_000 }).catch(() => false)) {
-        await option.click();
-      }
-    }
+    const formReady = await fillRequiredQuestionFields(page, "not-a-valid-url");
+    test.skip(!formReady, "Categories not loaded for invalid URL validation");
 
-    // Enter an invalid URL
     const urlInput = page.locator("input[type='url']").first();
-    await expect(urlInput).toBeVisible({ timeout: 5_000 });
-    await urlInput.fill("not-a-valid-url");
-
-    // Tab away to trigger validation
     await urlInput.press("Tab");
+    await continueToBountyStep(page);
 
-    // Submit button should still be disabled with invalid URL
-    const submitBtn = page.getByRole("button", { name: /^Submit Content/i });
-    await expect(submitBtn).toBeVisible({ timeout: 5_000 });
-    const isDisabled = await submitBtn.isDisabled().catch(() => false);
-    // Either the button is disabled or there's a validation error visible
-    const hasError = await page
-      .getByText(/invalid|error|valid url/i)
-      .isVisible({ timeout: 2_000 })
-      .catch(() => false);
-    expect(isDisabled || hasError).toBe(true);
+    await expect(page.getByText(/Please enter a valid HTTPS URL/i)).toBeVisible({ timeout: 5_000 });
   });
 });

@@ -4,6 +4,9 @@ pragma solidity ^0.8.24;
 /// @title IRoundRewardDistributor
 /// @notice Minimal interface for direct reward-claim entrypoints.
 interface IRoundRewardDistributor {
+    /// @notice Voting engine this distributor is allowed to pay claims for.
+    function votingEngine() external view returns (address);
+
     /// @notice Snapshot and reserve participation rewards for a newly settled round.
     /// @dev Callable only by the voting engine during settlement.
     function snapshotParticipationRewards(
@@ -11,7 +14,7 @@ interface IRoundRewardDistributor {
         uint256 roundId,
         address rewardPool,
         uint256 rewardRateBps,
-        uint256 winningStake
+        uint256 weightedWinningStake
     ) external;
 
     /// @notice Claim frontend fees for a settled round.

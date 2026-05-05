@@ -1,3 +1,4 @@
+import { buildRateContentHref } from "~~/constants/routes";
 import { truncateContentTitle } from "~~/lib/contentTitle";
 
 interface SettlingSoonCandidate {
@@ -57,7 +58,7 @@ function buildSummary(
   return {
     kind,
     contentId: primary.contentId,
-    href: `/vote?content=${primary.contentId}`,
+    href: buildRateContentHref(primary.contentId),
     title:
       kind === "hour"
         ? additionalCount > 0

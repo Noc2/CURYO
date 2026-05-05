@@ -15,7 +15,7 @@ import {
 } from "~~/services/web3/wagmiConnectorTargets";
 import type { InjectedWalletProvider } from "~~/services/web3/wagmiConnectorTargets";
 
-const CURYO_THIRDWEB_ICON = "/favicon.svg";
+const CURYO_THIRDWEB_ICON = "/favicon.png";
 
 function createTargetedInjectedConnector(
   id: string,

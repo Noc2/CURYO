@@ -5,7 +5,7 @@ import { Test } from "forge-std/Test.sol";
 import { RewardMath } from "../contracts/libraries/RewardMath.sol";
 
 /// @title RewardMathFuzz
-/// @notice Fuzz tests for all 5 pure functions in RewardMath.sol.
+/// @notice Fuzz tests for the pure functions in RewardMath.sol.
 contract RewardMathFuzz is Test {
     using RewardMath for *;
 
@@ -22,7 +22,7 @@ contract RewardMathFuzz is Test {
         assertLe(rating, 100, "rating > 100");
     }
 
-    function testFuzz_calculateRating_ZeroStakeReturns50(uint256 otherStake) public pure {
+    function test_calculateRating_ZeroStakeReturns50() public pure {
         // When both stakes are zero, rating = 50
         uint16 rating = RewardMath.calculateRating(0, 0);
         assertEq(rating, 50, "zero-stake should return 50");
@@ -71,21 +71,20 @@ contract RewardMathFuzz is Test {
     function testFuzz_splitPool_SharesSumToInput(uint256 losingPool) public pure {
         losingPool = bound(losingPool, 0, type(uint128).max);
 
-        (uint256 voter, uint256 submitter, uint256 platform, uint256 treasury, uint256 consensus) =
-            RewardMath.splitPool(losingPool);
+        (uint256 voter, uint256 platform, uint256 treasury, uint256 consensus) = RewardMath.splitPool(losingPool);
 
-        uint256 total = voter + submitter + platform + treasury + consensus;
+        uint256 total = voter + platform + treasury + consensus;
         assertEq(total, losingPool, "shares do not sum to input");
     }
 
     function testFuzz_splitPool_VoterGetsRemainder(uint256 losingPool) public pure {
         losingPool = bound(losingPool, 10000, type(uint128).max); // Need enough for meaningful split
 
-        (uint256 voter,,,,) = RewardMath.splitPool(losingPool);
+        (uint256 voter,,,) = RewardMath.splitPool(losingPool);
 
-        // Voter share should be >= 80% (gets rounding remainder)
-        uint256 minVoter = (losingPool * 8000) / 10000;
-        assertGe(voter, minVoter, "voter share below 80% floor");
+        // Voter share should be >= 90% because it receives the unallocated rounding remainder.
+        uint256 minVoter = (losingPool * 9000) / 10000;
+        assertGe(voter, minVoter, "voter share below 90% floor");
     }
 
     // =========================================================================
@@ -110,82 +109,6 @@ contract RewardMathFuzz is Test {
     }
 
     // =========================================================================
-    // splitPoolAfterLoserRefund
-    // =========================================================================
-
-    function testFuzz_splitPoolAfterLoserRefund_SharesSumToInput(uint256 losingPool) public pure {
-        losingPool = bound(losingPool, 0, type(uint128).max);
-
-        (
-            uint256 loserRefundShare,
-            uint256 voterShare,
-            uint256 submitterShare,
-            uint256 platformShare,
-            uint256 treasuryShare,
-            uint256 consensusShare
-        ) = RewardMath.splitPoolAfterLoserRefund(losingPool);
-
-        uint256 total = loserRefundShare + voterShare + submitterShare + platformShare + treasuryShare + consensusShare;
-        assertEq(total, losingPool, "shares do not sum to input");
-    }
-
-    function testFuzz_splitPoolAfterLoserRefund_LoserRefundIsFivePercent(uint256 losingPool) public pure {
-        losingPool = bound(losingPool, 0, type(uint128).max);
-
-        (uint256 loserRefundShare,,,,,) = RewardMath.splitPoolAfterLoserRefund(losingPool);
-
-        uint256 expected = (losingPool * 500) / 10000;
-        assertEq(loserRefundShare, expected, "loser refund share != 5% of pool");
-    }
-
-    function testFuzz_splitPoolAfterLoserRefund_VoterGetsLargestShare(uint256 losingPool) public pure {
-        losingPool = bound(losingPool, 10000, type(uint128).max);
-
-        (
-            ,
-            uint256 voterShare,
-            uint256 submitterShare,
-            uint256 platformShare,
-            uint256 treasuryShare,
-            uint256 consensusShare
-        ) = RewardMath.splitPoolAfterLoserRefund(losingPool);
-
-        assertGe(voterShare, submitterShare, "voter share < submitter share");
-        assertGe(voterShare, platformShare, "voter share < platform share");
-        assertGe(voterShare, treasuryShare, "voter share < treasury share");
-        assertGe(voterShare, consensusShare, "voter share < consensus share");
-    }
-
-    function testFuzz_splitPoolAfterLoserRefund_MatchesManualNetSplit(uint256 losingPool) public pure {
-        losingPool = bound(losingPool, 0, type(uint128).max);
-
-        (
-            uint256 loserRefundShare,
-            uint256 voterShare,
-            uint256 submitterShare,
-            uint256 platformShare,
-            uint256 treasuryShare,
-            uint256 consensusShare
-        ) = RewardMath.splitPoolAfterLoserRefund(losingPool);
-
-        uint256 manualLoserRefundShare = RewardMath.calculateRevealedLoserRefund(losingPool);
-        (
-            uint256 manualVoterShare,
-            uint256 manualSubmitterShare,
-            uint256 manualPlatformShare,
-            uint256 manualTreasuryShare,
-            uint256 manualConsensusShare
-        ) = RewardMath.splitPool(losingPool - manualLoserRefundShare);
-
-        assertEq(manualLoserRefundShare, loserRefundShare, "manual loser refund != helper");
-        assertEq(manualVoterShare, voterShare, "manual voter share != helper");
-        assertEq(manualSubmitterShare, submitterShare, "manual submitter share != helper");
-        assertEq(manualPlatformShare, platformShare, "manual platform share != helper");
-        assertEq(manualTreasuryShare, treasuryShare, "manual treasury share != helper");
-        assertEq(manualConsensusShare, consensusShare, "manual consensus share != helper");
-    }
-
-    // =========================================================================
     // calculateConsensusSubsidy
     // =========================================================================
 
@@ -204,14 +127,4 @@ contract RewardMathFuzz is Test {
         assertLe(subsidy, reserveBalance, "subsidy exceeds reserve");
     }
 
-    // =========================================================================
-    // splitConsensusSubsidy
-    // =========================================================================
-
-    function testFuzz_splitConsensusSubsidy_SharesSumToInput(uint256 subsidy) public pure {
-        subsidy = bound(subsidy, 0, type(uint128).max);
-
-        (uint256 voterShare, uint256 submitterShare) = RewardMath.splitConsensusSubsidy(subsidy);
-        assertEq(voterShare + submitterShare, subsidy, "consensus shares do not sum to input");
-    }
 }

@@ -7,6 +7,7 @@
 
 # testing
 /coverage
+/e2e/artifacts/demo/*.webm
 /e2e/test-results/
 /e2e/playwright-report/
 /playwright-report/
@@ -36,6 +37,7 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
+.next-dev.lock
 
 # typescript
 *.tsbuildinfo

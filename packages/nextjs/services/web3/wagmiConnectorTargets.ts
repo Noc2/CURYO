@@ -5,6 +5,7 @@ const EXTERNAL_WALLET_FLAGS = [
   "isBlockWallet",
   "isBraveWallet",
   "isKuCoinWallet",
+  "isLedgerConnect",
   "isMathWallet",
   "isOkxWallet",
   "isOKExWallet",

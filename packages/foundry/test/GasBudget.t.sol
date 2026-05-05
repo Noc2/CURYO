@@ -11,9 +11,8 @@ import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
 
 contract GasBudgetTest is RoundIntegrationTest {
-    // Content submission now resolves canonical URLs through SubmissionCanonicalizer
-    // and a live CategoryRegistry lookup, so the baseline is higher than the initial
-    // pre-extraction measurement.
+    // Content submission validates media URLs and uses a live CategoryRegistry lookup,
+    // so the baseline is higher than the initial pre-media measurement.
     uint256 internal constant MAX_SUBMIT_CONTENT_GAS = 700_000;
     // commitVote now validates the full armored AGE envelope and persists the ciphertext payload,
     // so the post-tlock baseline is materially higher than the earlier pre-parser threshold.
@@ -50,25 +49,24 @@ contract GasBudgetTest is RoundIntegrationTest {
 
     function testGas_submitContent_underBudget() public {
         vm.pauseGasMetering();
+        uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
+        _ensureDefaultSubmitterVoterId(registry, submitter);
+        address rewardEscrow = _ensureDefaultQuestionRewardPoolEscrow(registry);
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(rewardEscrow, rewardAmount);
         vm.stopPrank();
 
-        (, bytes32 submissionKey) = registry.previewSubmissionKey("https://example.com/gas-submit", 0);
-        bytes32 salt = keccak256(
-            abi.encode(
-                "https://example.com/gas-submit",
-                "test goal",
-                "test goal",
-                "test",
-                uint256(0),
-                submitter,
-                block.timestamp,
-                block.number
-            )
+        string memory imageUrl = "https://example.com/gas-submit.jpg";
+        string[] memory imageUrls = _singleImageUrls(imageUrl);
+        (, bytes32 submissionKey) = registry.previewQuestionSubmissionKey(
+            "https://example.com/context", imageUrls, "", "test goal", "test goal", "test", 1
         );
-        bytes32 revealCommitment =
-            keccak256(abi.encode(submissionKey, "test goal", "test goal", "test", uint256(0), salt, submitter));
+        bytes32 salt = keccak256(
+            abi.encode(imageUrl, "test goal", "test goal", "test", uint256(1), submitter, block.timestamp, block.number)
+        );
+        bytes32 revealCommitment = _defaultQuestionRevealCommitment(
+            registry, submissionKey, imageUrls, "", "test goal", "test goal", "test", 1, salt, submitter
+        );
 
         uint256 reserveGasUsed = _measureCallAs(
             submitter, address(registry), abi.encodeCall(ContentRegistry.reserveSubmission, (revealCommitment))
@@ -77,9 +75,17 @@ contract GasBudgetTest is RoundIntegrationTest {
         uint256 revealGasUsed = _measureCallAs(
             submitter,
             address(registry),
-            abi.encodeCall(
-                ContentRegistry.submitContent,
-                ("https://example.com/gas-submit", "test goal", "test goal", "test", 0, salt)
+            abi.encodeWithSignature(
+                "submitQuestion(string,string[],string,string,string,string,uint256,bytes32,(bytes32,bytes32))",
+                "https://example.com/context",
+                imageUrls,
+                "",
+                "test goal",
+                "test goal",
+                "test",
+                1,
+                salt,
+                _defaultQuestionSpec()
             )
         );
         uint256 gasUsed = reserveGasUsed + revealGasUsed;
@@ -92,20 +98,20 @@ contract GasBudgetTest is RoundIntegrationTest {
         uint256 contentId = _submitContent();
         uint16 roundReferenceRatingBps = votingEngine.previewCommitReferenceRatingBps(contentId);
         bytes32 salt = keccak256(abi.encodePacked(voter1, contentId, true, uint256(1)));
-        bytes32 commitHash = _commitHash(true, salt, contentId);
+        bytes32 commitHash = _commitHash(true, salt, voter1, contentId);
         bytes memory ciphertext = _testCiphertext(true, salt, contentId);
 
         vm.startPrank(voter1);
-        crepToken.approve(address(votingEngine), STAKE);
+        hrepToken.approve(address(votingEngine), STAKE);
         vm.stopPrank();
 
         uint256 gasUsed = _measureCallAs(
             voter1,
             address(votingEngine),
             abi.encodeWithSelector(
-                bytes4(keccak256("commitVote(uint256,uint16,uint64,bytes32,bytes32,bytes,uint256,address)")),
+                bytes4(keccak256("commitVote(uint256,uint256,uint64,bytes32,bytes32,bytes,uint256,address)")),
                 contentId,
-                roundReferenceRatingBps,
+                _roundContext(votingEngine.previewCommitRoundId(contentId), roundReferenceRatingBps),
                 _tlockCommitTargetRound(),
                 _tlockDrandChainHash(),
                 commitHash,
@@ -122,16 +128,27 @@ contract GasBudgetTest is RoundIntegrationTest {
         vm.pauseGasMetering();
         uint256 contentId = _submitContent();
         bytes32 salt = keccak256(abi.encodePacked(voter1, contentId, true, uint256(2)));
-        bytes32 commitHash = _commitHash(true, salt, contentId);
+        bytes32 commitHash = _commitHash(true, salt, voter1, contentId);
         bytes memory ciphertext = _testCiphertext(true, salt, contentId);
 
         vm.startPrank(voter1);
-        crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, STAKE, address(0));
+        hrepToken.approve(address(votingEngine), STAKE);
+        uint256 cachedRoundContext1 =
+            _roundContext(votingEngine.previewCommitRoundId(contentId), _defaultRatingReferenceBps());
+        votingEngine.commitVote(
+            contentId,
+            cachedRoundContext1,
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            commitHash,
+            ciphertext,
+            STAKE,
+            address(0)
+        );
         vm.stopPrank();
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH_DURATION);
 
         uint256 gasUsed = _measureCall(
             address(votingEngine),
@@ -171,7 +188,7 @@ contract GasBudgetTest is RoundIntegrationTest {
 
         ProtocolConfig config = ProtocolConfig(address(votingEngine.protocolConfig()));
         vm.startPrank(owner);
-        config.setConfig(5 minutes, 7 days, 2, 200);
+        _setTlockRoundConfig(config, 5 minutes, 7 days, 2, 200);
         vm.stopPrank();
 
         uint256 contentId = _submitContent();
@@ -203,35 +220,67 @@ contract GasBudgetTest is RoundIntegrationTest {
         bytes32 s1 = keccak256(abi.encodePacked(voter1, contentId, true, uint256(1)));
         bytes32 s2 = keccak256(abi.encodePacked(voter2, contentId, true, uint256(2)));
         bytes32 s3 = keccak256(abi.encodePacked(voter3, contentId, false, uint256(3)));
-        bytes32 ch1 = _commitHash(true, s1, contentId);
-        bytes32 ch2 = _commitHash(true, s2, contentId);
-        bytes32 ch3 = _commitHash(false, s3, contentId);
+        bytes32 ch1 = _commitHash(true, s1, voter1, contentId);
+        bytes32 ch2 = _commitHash(true, s2, voter2, contentId);
+        bytes32 ch3 = _commitHash(false, s3, voter3, contentId);
 
         vm.startPrank(voter1);
-        crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch1, _testCiphertext(true, s1, contentId), STAKE, address(0));
+        hrepToken.approve(address(votingEngine), STAKE);
+        uint256 cachedRoundContext2 =
+            _roundContext(votingEngine.previewCommitRoundId(contentId), _defaultRatingReferenceBps());
+        votingEngine.commitVote(
+            contentId,
+            cachedRoundContext2,
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            ch1,
+            _testCiphertext(true, s1, contentId),
+            STAKE,
+            address(0)
+        );
         vm.stopPrank();
 
         vm.startPrank(voter2);
-        crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch2, _testCiphertext(true, s2, contentId), STAKE, address(0));
+        hrepToken.approve(address(votingEngine), STAKE);
+        uint256 cachedRoundContext3 =
+            _roundContext(votingEngine.previewCommitRoundId(contentId), _defaultRatingReferenceBps());
+        votingEngine.commitVote(
+            contentId,
+            cachedRoundContext3,
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            ch2,
+            _testCiphertext(true, s2, contentId),
+            STAKE,
+            address(0)
+        );
         vm.stopPrank();
 
         vm.startPrank(voter3);
-        crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch3, _testCiphertext(false, s3, contentId), STAKE, address(0));
+        hrepToken.approve(address(votingEngine), STAKE);
+        uint256 cachedRoundContext4 =
+            _roundContext(votingEngine.previewCommitRoundId(contentId), _defaultRatingReferenceBps());
+        votingEngine.commitVote(
+            contentId,
+            cachedRoundContext4,
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            ch3,
+            _testCiphertext(false, s3, contentId),
+            STAKE,
+            address(0)
+        );
         vm.stopPrank();
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
         RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
 
-        vm.warp(round.startTime + EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(uint256(round.startTime) + EPOCH_DURATION);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter1, ch1), true, s1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter2, ch2), true, s2);
 
         vm.warp(
-            round.startTime + EPOCH_DURATION
-                + ProtocolConfig(address(votingEngine.protocolConfig())).revealGracePeriod() + 1
+            round.startTime + 7 days + ProtocolConfig(address(votingEngine.protocolConfig())).revealGracePeriod() + 1
         );
         votingEngine.settleRound(contentId, roundId);
 
@@ -246,11 +295,22 @@ contract GasBudgetTest is RoundIntegrationTest {
         vm.pauseGasMetering();
         uint256 contentId = _submitContent();
         bytes32 salt = keccak256(abi.encodePacked(voter1, contentId, true, uint256(4)));
-        bytes32 commitHash = _commitHash(true, salt, contentId);
+        bytes32 commitHash = _commitHash(true, salt, voter1, contentId);
 
         vm.startPrank(voter1);
-        crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, _testCiphertext(true, salt, contentId), STAKE, address(0));
+        hrepToken.approve(address(votingEngine), STAKE);
+        uint256 cachedRoundContext5 =
+            _roundContext(votingEngine.previewCommitRoundId(contentId), _defaultRatingReferenceBps());
+        votingEngine.commitVote(
+            contentId,
+            cachedRoundContext5,
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            commitHash,
+            _testCiphertext(true, salt, contentId),
+            STAKE,
+            address(0)
+        );
         vm.stopPrank();
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);

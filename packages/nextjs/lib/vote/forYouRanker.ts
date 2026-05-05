@@ -1,8 +1,8 @@
 "use client";
 
-import { DEFAULT_ROUND_CONFIG } from "@curyo/contracts/protocol";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import type { InterestProfile } from "~~/hooks/useInterestProfile";
+import { DEFAULT_VOTING_CONFIG } from "~~/lib/contracts/roundVotingEngine";
 import { detectPlatform } from "~~/utils/platforms";
 
 interface RankForYouFeedOptions {
@@ -58,13 +58,21 @@ function getRoundCloseness(item: ContentItem) {
   return openRound.voteCount >= 2 ? 0.35 : 0;
 }
 
+function getRoundMinVoters(item: ContentItem) {
+  return item.openRound?.minVoters ?? item.roundConfig?.minVoters ?? DEFAULT_VOTING_CONFIG.minVoters;
+}
+
+function getRoundMaxDuration(item: ContentItem) {
+  return item.openRound?.maxDuration ?? item.roundConfig?.maxDuration ?? DEFAULT_VOTING_CONFIG.maxDuration;
+}
+
 function getTrendingOpportunity(item: ContentItem, nowSeconds: number) {
   const activitySeconds = parseTimestampSeconds(item.lastActivityAt ?? item.createdAt);
   const recency = getRecencyScore(activitySeconds, nowSeconds, 7 * 24 * 60 * 60);
   const voteScore = getLogScore(item.totalVotes, 36);
   const roundScore = getLogScore(item.totalRounds, 10);
   const openRoundBoost = item.openRound
-    ? 0.45 + 0.55 * Math.min(item.openRound.voteCount / Math.max(DEFAULT_ROUND_CONFIG.minVoters, 1), 1)
+    ? 0.45 + 0.55 * Math.min(item.openRound.voteCount / Math.max(getRoundMinVoters(item), 1), 1)
     : 0;
 
   return clamp01(recency * 0.42 + voteScore * 0.28 + roundScore * 0.1 + openRoundBoost * 0.2);
@@ -87,9 +95,9 @@ function getNearSettlementOpportunity(item: ContentItem, nowSeconds: number) {
   const estimatedSettlementTime = openRound.estimatedSettlementTime ? Number(openRound.estimatedSettlementTime) : null;
   const secondsUntilSettlement = estimatedSettlementTime
     ? Math.max(estimatedSettlementTime - nowSeconds, 0)
-    : DEFAULT_ROUND_CONFIG.maxDurationSeconds * 2;
+    : getRoundMaxDuration(item) * 2;
   const timingScore = estimatedSettlementTime ? 1 / (1 + secondsUntilSettlement / 3600) : 0;
-  const voteReadiness = Math.min(openRound.voteCount / Math.max(DEFAULT_ROUND_CONFIG.minVoters, 1), 1.5);
+  const voteReadiness = Math.min(openRound.voteCount / Math.max(getRoundMinVoters(item), 1), 1.5);
   const revealProgress = Math.min(openRound.revealedCount / Math.max(openRound.voteCount, 1), 1);
   const contestedBoost = getRoundCloseness(item) * 0.3;
 
@@ -141,7 +149,7 @@ function getVoteOpportunityScore(item: ContentItem, nowSeconds: number, hasVoted
   const openRoundBoost = openRound ? 0.28 : 0;
   const notVotedBoost = hasVoted ? 0 : 0.26;
   const quorumNeedBoost = openRound
-    ? 1 - Math.min(openRound.voteCount / Math.max(DEFAULT_ROUND_CONFIG.minVoters, 1), 1)
+    ? 1 - Math.min(openRound.voteCount / Math.max(getRoundMinVoters(item), 1), 1)
     : freshOpportunity * 0.7;
 
   return clamp01(

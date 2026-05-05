@@ -1,15 +1,22 @@
 import deployedContracts from "@curyo/contracts/deployedContracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const chain42220 = (deployedContracts as Record<number, Record<string, { address: `0x${string}` }>>)[42220];
-const chain11142220 = (deployedContracts as Record<number, Record<string, { address: `0x${string}` }>>)[11142220];
-const chain31337 = (deployedContracts as Record<number, Record<string, { address: `0x${string}` }>>)[31337];
+type DeploymentChain = Record<string, { address: `0x${string}` }>;
+
+const sharedDeployments = deployedContracts as Record<number, DeploymentChain | undefined>;
+const chain42220 = sharedDeployments[42220];
+const chain11142220 = sharedDeployments[11142220];
+const chain31337 = sharedDeployments[31337];
+const itWithCeloArtifacts = chain42220 ? it : it.skip;
 const ORIGINAL_ENV = { ...process.env };
 const VALID_ENV = {
   RPC_URL: "https://rpc.example.com",
   CHAIN_ID: "11142220",
   VOTING_ENGINE_ADDRESS: chain11142220?.RoundVotingEngine?.address ?? "0x1111111111111111111111111111111111111111",
   CONTENT_REGISTRY_ADDRESS: chain11142220?.ContentRegistry?.address ?? "0x2222222222222222222222222222222222222222",
+  ROUND_REWARD_DISTRIBUTOR_ADDRESS:
+    chain11142220?.RoundRewardDistributor?.address ?? "0x3333333333333333333333333333333333333333",
+  FRONTEND_REGISTRY_ADDRESS: chain11142220?.FrontendRegistry?.address ?? "0x4444444444444444444444444444444444444444",
   KEYSTORE_ACCOUNT: "keeper",
   KEYSTORE_PASSWORD: "secret",
 };
@@ -129,7 +136,7 @@ describe("keeper config", () => {
     expect(config.contracts.contentRegistry).toBe(LOCAL_CONTENT_REGISTRY);
   });
 
-  it("derives Celo mainnet contract addresses from shared deployment artifacts", async () => {
+  itWithCeloArtifacts("derives Celo mainnet contract addresses from shared deployment artifacts", async () => {
     const { config } = await loadKeeperConfig(
       {
         CHAIN_ID: "42220",
@@ -139,33 +146,44 @@ describe("keeper config", () => {
 
     expect(config.chainId).toBe(42220);
     expect(config.chainName).toBe("Celo");
-    expect(config.contracts.votingEngine).toBe(chain42220.RoundVotingEngine.address);
-    expect(config.contracts.contentRegistry).toBe(chain42220.ContentRegistry.address);
+    expect(config.contracts.votingEngine).toBe(chain42220!.RoundVotingEngine.address);
+    expect(config.contracts.contentRegistry).toBe(chain42220!.ContentRegistry.address);
   });
 
-  it("ignores stale local contract env values in favor of shared deployment artifacts", async () => {
+  it("prefers local hardhat contract env values over shared deployment artifacts", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const localVotingEngine = "0x196dBCBb54b8ec4958c959D8949EBFE87aC2Aaaf";
+    const localContentRegistry = "0x82Dc47734901ee7d4f4232f398752cB9Dd5dACcC";
     const { config } = await loadKeeperConfig({
       CHAIN_ID: "31337",
-      VOTING_ENGINE_ADDRESS: "0x196dBCBb54b8ec4958c959D8949EBFE87aC2Aaaf",
-      CONTENT_REGISTRY_ADDRESS: "0x82Dc47734901ee7d4f4232f398752cB9Dd5dACcC",
+      VOTING_ENGINE_ADDRESS: localVotingEngine,
+      CONTENT_REGISTRY_ADDRESS: localContentRegistry,
     });
 
-    expect(config.contracts.votingEngine).toBe(LOCAL_VOTING_ENGINE);
-    expect(config.contracts.contentRegistry).toBe(LOCAL_CONTENT_REGISTRY);
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Ignoring VOTING_ENGINE_ADDRESS"));
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Ignoring CONTENT_REGISTRY_ADDRESS"));
+    expect(config.contracts.votingEngine).toBe(localVotingEngine);
+    expect(config.contracts.contentRegistry).toBe(localContentRegistry);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Using VOTING_ENGINE_ADDRESS"));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Using CONTENT_REGISTRY_ADDRESS"));
   });
 
-  it("still requires contract env values when no shared deployment artifact exists for the chain", async () => {
+  itWithCeloArtifacts("rejects stale live contract env values when shared deployment artifacts exist", async () => {
     await expect(
-      loadKeeperConfig(
-        {
-          CHAIN_ID: "999999",
-        },
-        ["VOTING_ENGINE_ADDRESS", "CONTENT_REGISTRY_ADDRESS"],
-      ),
-    ).rejects.toThrow("VOTING_ENGINE_ADDRESS is required");
+      loadKeeperConfig({
+        CHAIN_ID: "42220",
+        VOTING_ENGINE_ADDRESS: "0x196dBCBb54b8ec4958c959D8949EBFE87aC2Aaaf",
+        CONTENT_REGISTRY_ADDRESS: "0x82Dc47734901ee7d4f4232f398752cB9Dd5dACcC",
+      }),
+    ).rejects.toThrow("conflicts with RoundVotingEngine from shared deployment artifacts");
+  });
+
+  it("rejects live env-only contract addresses when no shared deployment artifact exists for the chain", async () => {
+    await expect(
+      loadKeeperConfig({
+        CHAIN_ID: "999999",
+        VOTING_ENGINE_ADDRESS: "0x196dBCBb54b8ec4958c959D8949EBFE87aC2Aaaf",
+        CONTENT_REGISTRY_ADDRESS: "0x82Dc47734901ee7d4f4232f398752cB9Dd5dACcC",
+      }),
+    ).rejects.toThrow("Missing shared deployment artifact for RoundVotingEngine on chain 999999");
   });
 
   it("loads hosted frontend fee sweep settings from the environment", async () => {

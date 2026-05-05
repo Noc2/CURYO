@@ -2,8 +2,9 @@
 
 import { useAllClaimableRewards } from "~~/hooks/useAllClaimableRewards";
 import { useClaimAll } from "~~/hooks/useClaimAll";
+import { formatUsdAmount } from "~~/lib/questionRewardPools";
 
-function formatCrepAmount(value: bigint) {
+function formatHrepAmount(value: bigint) {
   return (Number(value) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 });
 }
 
@@ -14,10 +15,15 @@ type ClaimRewardsButtonProps = {
 };
 
 export function ClaimRewardsButton({ buttonClassName, className, showTokenSymbol = true }: ClaimRewardsButtonProps) {
-  const { claimableItems, totalClaimable, refetch: refetchClaimable } = useAllClaimableRewards();
+  const {
+    claimableItems,
+    totalHrepClaimable,
+    totalUsdcClaimable,
+    refetch: refetchClaimable,
+  } = useAllClaimableRewards();
   const { claimAll, isClaiming, isPreparingClaim, progress } = useClaimAll();
 
-  if (totalClaimable <= 0n) {
+  if (claimableItems.length === 0 || (totalHrepClaimable <= 0n && totalUsdcClaimable <= 0n)) {
     return null;
   }
 
@@ -33,11 +39,16 @@ export function ClaimRewardsButton({ buttonClassName, className, showTokenSymbol
         disabled={isClaiming || isPreparingClaim}
         className={buttonClassName ?? "btn btn-primary btn-sm w-full"}
       >
-        {isPreparingClaim
-          ? "Preparing..."
-          : isClaiming
-            ? `Claim ${progress.current}/${progress.total}`
-            : `Claim ${formatCrepAmount(totalClaimable)}${showTokenSymbol ? " cREP" : ""}`}
+        {isPreparingClaim ? "Preparing..." : isClaiming ? `Claim ${progress.current}/${progress.total}` : null}
+        {!isPreparingClaim && !isClaiming && totalHrepClaimable > 0n && totalUsdcClaimable > 0n
+          ? `Claim ${formatHrepAmount(totalHrepClaimable)}${showTokenSymbol ? " HREP" : ""} + ${formatUsdAmount(totalUsdcClaimable)}`
+          : null}
+        {!isPreparingClaim && !isClaiming && totalHrepClaimable > 0n && totalUsdcClaimable <= 0n
+          ? `Claim ${formatHrepAmount(totalHrepClaimable)}${showTokenSymbol ? " HREP" : ""}`
+          : null}
+        {!isPreparingClaim && !isClaiming && totalHrepClaimable <= 0n && totalUsdcClaimable > 0n
+          ? `Claim ${formatUsdAmount(totalUsdcClaimable)}`
+          : null}
       </button>
     </div>
   );

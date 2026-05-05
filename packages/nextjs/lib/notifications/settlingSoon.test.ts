@@ -26,7 +26,7 @@ test("pickSettlingSoonNotification groups multiple hour alerts into one summary"
   assert(summary);
   assert.equal(summary.kind, "hour");
   assert.equal(summary.title, "Rounds settling soon");
-  assert.equal(summary.href, "/vote?content=1");
+  assert.equal(summary.href, "/rate?content=1");
   assert.deepEqual(summary.itemIds, ["1-1", "2-1"]);
   assert.match(summary.body, /1 other tracked round/);
 });
@@ -54,7 +54,7 @@ test("pickSettlingSoonNotification prefers hour alerts over day alerts", () => {
 
   assert(summary);
   assert.equal(summary.kind, "hour");
-  assert.equal(summary.href, "/vote?content=12");
+  assert.equal(summary.href, "/rate?content=12");
 });
 
 test("pickSettlingSoonNotification returns null when all candidates were already seen", () => {
@@ -100,5 +100,5 @@ test("pickSettlingSoonNotification can fall back to day alerts when hour alerts 
 
   assert(summary);
   assert.equal(summary.kind, "day");
-  assert.equal(summary.href, "/vote?content=7");
+  assert.equal(summary.href, "/rate?content=7");
 });

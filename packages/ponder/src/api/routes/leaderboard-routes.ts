@@ -91,7 +91,7 @@ export function registerLeaderboardRoutes(app: ApiApp) {
       holderOnly = holders.map(holder => ({
         address: holder.address,
         name: "",
-        strategy: "",
+        selfReport: "",
         createdAt: holder.firstSeenAt,
         updatedAt: holder.firstSeenAt,
         totalVotes: 0,

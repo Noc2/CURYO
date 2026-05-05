@@ -19,16 +19,20 @@ export const AVAILABLE_TARGET_NETWORKS = {
 
 export type SupportedTargetNetwork = (typeof AVAILABLE_TARGET_NETWORKS)[keyof typeof AVAILABLE_TARGET_NETWORKS];
 
-export const DEFAULT_DEV_TARGET_NETWORKS = `${chains.foundry.id},${chains.celoSepolia.id}`;
+export const DEFAULT_DEV_TARGET_NETWORKS = `${chains.foundry.id}`;
 
 function parseTargetNetworkIds(value: string): number[] {
-  const ids = value
+  const rawIds = value
     .split(",")
     .map(item => item.trim())
-    .filter(Boolean)
-    .map(item => Number.parseInt(item, 10));
+    .filter(Boolean);
 
-  if (ids.length === 0 || ids.some(id => !Number.isInteger(id))) {
+  if (rawIds.length === 0 || rawIds.some(item => !/^\d+$/.test(item))) {
+    throw new Error("NEXT_PUBLIC_TARGET_NETWORKS must be a comma-separated list of numeric chain IDs.");
+  }
+
+  const ids = rawIds.map(item => Number(item));
+  if (ids.some(id => !Number.isSafeInteger(id))) {
     throw new Error("NEXT_PUBLIC_TARGET_NETWORKS must be a comma-separated list of numeric chain IDs.");
   }
 

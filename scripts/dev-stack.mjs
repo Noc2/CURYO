@@ -37,6 +37,8 @@ const keeperService = {
   command: yarnCommand,
   args: ["keeper:dev"],
 };
+const allowRemoteDbPushFlag = "--allow-remote-db-push";
+const skipDbPushFlag = "--skip-db-push";
 const resetColor = "\u001b[0m";
 const managedChildren = [];
 let shuttingDown = false;
@@ -151,25 +153,71 @@ function outputHasMissingRoleError(output) {
   return /role\s+"[^"]+"\s+does not exist/i.test(output);
 }
 
-function runDbPush(databaseConfig) {
+function envFlagIsEnabled(name) {
+  const value = process.env[name]?.trim().toLowerCase();
+  return value === "1" || value === "true" || value === "yes" || value === "on";
+}
+
+export function getDbPushPlan(databaseConfig, options = {}) {
+  if (options.skipDbPush) {
+    return {
+      shouldRun: false,
+      reason: "Next.js schema push was disabled",
+    };
+  }
+
   if (databaseConfig.isMemory) {
-    console.log("[dev-stack] Skipping Next.js schema push for the in-memory development database.");
+    return {
+      shouldRun: false,
+      reason: "DATABASE_URL uses the in-memory development database",
+    };
+  }
+
+  if (!databaseConfig.isLocal && !options.allowRemoteDbPush) {
+    return {
+      shouldRun: false,
+      reason: `DATABASE_URL points to non-local ${formatDatabaseTarget(databaseConfig)}`,
+      help:
+        "Run `yarn workspace @curyo/nextjs db:push` manually when you intend to migrate this database, " +
+        `or rerun dev-stack with ${allowRemoteDbPushFlag} / CURYO_DEV_STACK_ALLOW_REMOTE_DB_PUSH=1.`,
+    };
+  }
+
+  return {
+    shouldRun: true,
+  };
+}
+
+function runDbPush(databaseConfig, options = {}) {
+  const plan = getDbPushPlan(databaseConfig, options);
+  if (!plan.shouldRun) {
+    console.log(`[dev-stack] Skipping Next.js schema push because ${plan.reason}.`);
+    if (plan.help) {
+      console.log(`[dev-stack] ${plan.help}`);
+    }
     return;
+  }
+
+  if (!databaseConfig.isLocal) {
+    console.warn(`[dev-stack] Remote schema push explicitly enabled for ${formatDatabaseTarget(databaseConfig)}.`);
   }
 
   console.log(`[dev-stack] Applying the Next.js database schema at ${formatDatabaseTarget(databaseConfig)}...`);
 
+  const inheritStdio = Boolean(process.stdin.isTTY && process.stdout.isTTY);
   const result = spawnSync(yarnCommand, ["workspace", "@curyo/nextjs", "db:push"], {
     cwd: repoRoot,
-    encoding: "utf8",
+    ...(inheritStdio ? { stdio: "inherit" } : { encoding: "utf8" }),
     env: {
       ...process.env,
       DATABASE_URL: databaseConfig.url,
     },
   });
 
-  if (result.stdout) process.stdout.write(result.stdout);
-  if (result.stderr) process.stderr.write(result.stderr);
+  if (!inheritStdio) {
+    if (result.stdout) process.stdout.write(result.stdout);
+    if (result.stderr) process.stderr.write(result.stderr);
+  }
 
   const combinedOutput = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
   if (result.error) {
@@ -245,23 +293,32 @@ async function shutdown(exitCode = 0) {
 
 async function main() {
   if (process.argv.includes("--help") || process.argv.includes("-h")) {
-    console.log(`Usage: node scripts/dev-stack.mjs [--skip-db]
+    console.log(`Usage: node scripts/dev-stack.mjs [--skip-db] [--skip-db-push] [--allow-remote-db-push]
 
 Starts the local app stack:
   - local Postgres for the Next app
-  - Next.js schema push
+  - Next.js schema push for local databases
   - Ponder
   - Next.js
   - Keeper (when configured)
 
 Options:
-  --skip-db  Do not start the local Postgres container
+  --skip-db                 Do not start the local Postgres container
+  --skip-db-push            Do not apply the Next.js database schema
+  --allow-remote-db-push    Allow dev-stack to run db:push against a non-local DATABASE_URL
+
+Environment:
+  CURYO_DEV_STACK_SKIP_DB_PUSH=1
+  CURYO_DEV_STACK_ALLOW_REMOTE_DB_PUSH=1
 `);
     return;
   }
 
   const databaseConfig = resolveNextDatabaseConfig();
   const skipDb = process.argv.includes("--skip-db");
+  const skipDbPush = process.argv.includes(skipDbPushFlag) || envFlagIsEnabled("CURYO_DEV_STACK_SKIP_DB_PUSH");
+  const allowRemoteDbPush =
+    process.argv.includes(allowRemoteDbPushFlag) || envFlagIsEnabled("CURYO_DEV_STACK_ALLOW_REMOTE_DB_PUSH");
   const activeNextDevLock = readActiveNextDevLock();
   const keeperStartup = resolveKeeperStartupStatus();
 
@@ -295,7 +352,7 @@ Options:
     }
   }
 
-  runDbPush(databaseConfig);
+  runDbPush(databaseConfig, { skipDbPush, allowRemoteDbPush });
 
   const services = keeperStartup.enabled ? [...baseServices, keeperService] : baseServices;
   if (!keeperStartup.enabled) {

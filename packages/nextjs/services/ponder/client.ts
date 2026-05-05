@@ -1,4 +1,5 @@
 import type { RoundState } from "@curyo/contracts/protocol";
+import type { ProfileSelfReportAudienceContext } from "@curyo/node-utils/profileSelfReport";
 import { resolvePonderUrlValue } from "~~/utils/env/ponderUrl";
 
 const isProduction = process.env.NODE_ENV === "production";
@@ -289,9 +290,22 @@ export async function ponderGet<T>(path: string, params?: Record<string, string 
 
 export interface PonderContentItem {
   id: string; // bigint serialized as string
+  contentId?: string;
+  question?: string;
+  link?: string | null;
   submitter: string;
   contentHash: string;
-  url: string;
+  questionMetadataHash?: string | null;
+  resultSpecHash?: string | null;
+  url: string | null;
+  media?: Array<{
+    index?: number;
+    mediaIndex?: number;
+    mediaType: "image" | "video";
+    url: string;
+    canonicalUrl: string | null;
+    urlHost: string | null;
+  }>;
   title: string;
   description: string;
   tags: string;
@@ -304,12 +318,132 @@ export interface PonderContentItem {
   ratingEffectiveEvidence?: string;
   ratingSettledRounds?: number;
   ratingLowSince?: string;
-  submitterStakeReturned: boolean;
   createdAt: string;
   lastActivityAt: string;
   totalVotes: number;
   totalRounds: number;
+  bundleId?: string | null;
+  bundleIndex?: number | null;
+  bundle?: {
+    id: string;
+    asset: number;
+    fundedAmount: string;
+    claimedAmount: string;
+    refundedAmount: string;
+    unallocatedAmount?: string;
+    allocatedAmount?: string;
+    requiredCompleters: number;
+    requiredSettledRounds: number;
+    questionCount: number;
+    completedRoundSetCount: number;
+    totalRecordedQuestionRounds: number;
+    claimedCount: number;
+    bountyClosesAt?: string;
+    feedbackClosesAt?: string;
+    expiresAt?: string;
+    failed: boolean;
+    refunded: boolean;
+  } | null;
+  roundEpochDuration?: number | string | null;
+  roundMaxDuration?: number | string | null;
+  roundMinVoters?: number | string | null;
+  roundMaxVoters?: number | string | null;
   openRound: PonderContentOpenRoundSummary | null;
+  rewardPoolSummary?: PonderRewardPoolSummary | null;
+  feedbackBonusSummary?: PonderFeedbackBonusSummary | null;
+}
+
+export interface PonderRewardPoolSummary {
+  currency: "USDC";
+  displayCurrency: "USD";
+  decimals: 6;
+  rewardPoolCount: number;
+  activeRewardPoolCount: number;
+  expiredRewardPoolCount?: number;
+  totalFundedAmount: string;
+  totalUnallocatedAmount: string;
+  activeUnallocatedAmount?: string;
+  expiredUnallocatedAmount?: string;
+  totalAllocatedAmount: string;
+  totalClaimedAmount: string;
+  claimableAllocatedAmount?: string;
+  totalVoterClaimedAmount: string;
+  totalFrontendClaimedAmount: string;
+  totalRefundedAmount: string;
+  qualifiedRoundCount: number;
+  currentRewardPoolAmount: string;
+  hasActiveBounty?: boolean;
+  nextBountyClosesAt?: string | null;
+  nextFeedbackClosesAt?: string | null;
+}
+
+export interface PonderFeedbackBonusSummary {
+  currency: "USDC";
+  displayCurrency: "USD";
+  decimals: 6;
+  poolCount: number;
+  activePoolCount: number;
+  expiredPoolCount?: number;
+  totalFundedAmount: string;
+  totalRemainingAmount: string;
+  activeRemainingAmount?: string;
+  expiredRemainingAmount?: string;
+  totalAwardedAmount: string;
+  totalVoterAwardedAmount: string;
+  totalFrontendAwardedAmount: string;
+  totalForfeitedAmount: string;
+  awardCount: number;
+  hasActiveFeedbackBonus?: boolean;
+  nextFeedbackClosesAt?: string | null;
+}
+
+export interface PonderQuestionRewardClaimCandidate {
+  rewardPoolId: string;
+  contentId: string;
+  roundId: string;
+  title: string;
+  allocation: string | null;
+  eligibleVoters: number | null;
+  qualified: boolean;
+  currency: "USDC";
+  displayCurrency: "USD";
+  decimals: 6;
+}
+
+export interface PonderQuestionRewardClaimCandidatesResponse {
+  items: PonderQuestionRewardClaimCandidate[];
+  limit: number;
+  offset: number;
+}
+
+export interface PonderQuestionBundleRewardClaimCandidate {
+  bundleId: string;
+  roundSetIndex: number;
+  asset: number;
+  fundedAmount: string;
+  claimedAmount: string;
+  allocation: string;
+  roundSetClaimedAmount: string;
+  requiredCompleters: number;
+  requiredSettledRounds: number;
+  questionCount: number;
+  completedRoundSetCount: number;
+  totalRecordedQuestionRounds: number;
+  claimedCount: number;
+  roundSetClaimedCount: number;
+  bountyClosesAt: string;
+  feedbackClosesAt: string;
+  expiresAt: string;
+  updatedAt: string;
+  currency: "HREP" | "USDC";
+  displayCurrency: "HREP" | "USD";
+  decimals: 6;
+}
+
+export interface PonderQuestionBundleRewardClaimCandidatesResponse {
+  items: PonderQuestionBundleRewardClaimCandidate[];
+  limit: number;
+  offset: number;
 }
 
 export interface PonderContentResponse {
@@ -350,6 +484,10 @@ export interface PonderContentOpenRoundSummary {
   settledRounds?: number;
   lowSince?: string;
   startTime: string | null;
+  epochDuration?: number;
+  maxDuration?: number;
+  minVoters?: number;
+  maxVoters?: number;
   estimatedSettlementTime: string | null;
 }
 
@@ -376,6 +514,10 @@ export interface PonderRoundItem {
   losingPool: string | null;
   startTime: string | null;
   settledAt: string | null;
+  epochDuration?: number;
+  maxDuration?: number;
+  minVoters?: number;
+  maxVoters?: number;
   title: string | null;
   description: string | null;
   url: string | null;
@@ -422,10 +564,7 @@ export interface PonderRatingChange {
 export interface PonderCategory {
   id: string;
   name: string;
-  domain: string;
-  submitter: string;
-  status: number;
-  proposalId: string | null;
+  slug: string;
   createdAt: string;
   totalVotes: number;
   totalContent: number;
@@ -434,7 +573,7 @@ export interface PonderCategory {
 export interface PonderProfile {
   address: string;
   name: string;
-  strategy: string;
+  selfReport: string;
   createdAt: string;
   updatedAt: string;
   totalVotes: number;
@@ -544,7 +683,7 @@ export interface PonderRewardClaim {
   epochId: string | null;
   voter: string;
   stakeReturned: string;
-  crepReward: string;
+  hrepReward: string;
   claimedAt: string;
 }
 
@@ -579,17 +718,6 @@ export interface PonderTokenHoldersResponse {
   total: number;
   limit: number;
   offset: number;
-}
-
-export interface PonderSubmitterRewardClaim {
-  id: string;
-  contentId: string;
-  roundId: string;
-  epochId: string | null;
-  source: string;
-  submitter: string;
-  crepAmount: string;
-  claimedAt: string;
 }
 
 export interface PonderVoterStats {
@@ -652,6 +780,10 @@ export interface PonderVoteItem {
   committedAt: string;
   revealedAt: string | null;
   roundStartTime: string | null;
+  roundEpochDuration?: number;
+  roundMaxDuration?: number;
+  roundMinVoters?: number;
+  roundMaxVoters?: number;
   roundState: RoundState | null;
   roundUpWins: boolean | null;
 }
@@ -727,6 +859,7 @@ export const ponderApi = {
 
   getContentById(id: string) {
     return ponderGet<{
+      audienceContext: ProfileSelfReportAudienceContext;
       content: PonderContentItem;
       rounds: any[];
       ratings: PonderRatingChange[];
@@ -811,8 +944,8 @@ export const ponderApi = {
     );
   },
 
-  getCategories(status?: string) {
-    return ponderGet<{ items: PonderCategory[] }>("/categories", { status });
+  getCategories() {
+    return ponderGet<{ items: PonderCategory[] }>("/categories");
   },
 
   getCategoryPopularity() {
@@ -876,13 +1009,6 @@ export const ponderApi = {
     return ponderGet<PonderVotingStakes>("/voting-stakes", { voter });
   },
 
-  getSubmitterRewards(submitter: string, limit?: string) {
-    return ponderGet<{ items: PonderSubmitterRewardClaim[] }>("/submitter-rewards", {
-      submitter,
-      limit,
-    });
-  },
-
   getBalanceHistory(address: string, limit?: string) {
     return ponderGet<{ transfers: PonderTokenTransfer[]; address: string }>("/balance-history", {
       address,
@@ -896,6 +1022,14 @@ export const ponderApi = {
       totalVotes: number;
       totalRoundsSettled: number;
       totalRewardsClaimed: string;
+      totalQuestionRewardsPaid: string;
+      totalQuestionRewardsPaidToVoters: string;
+      totalQuestionRewardsPaidToFrontends: string;
+      totalFeedbackBonusesFunded: string;
+      totalFeedbackBonusesPaid: string;
+      totalFeedbackBonusesPaidToVoters: string;
+      totalFeedbackBonusesPaidToFrontends: string;
+      totalFeedbackBonusesForfeited: string;
       totalProfiles: number;
       totalVoterIds: number;
     }>("/stats");
@@ -937,6 +1071,20 @@ export const ponderApi = {
 
   getVoteCooldowns(params?: { voters?: string; contentIds?: string }) {
     return ponderGet<PonderVoteCooldownsResponse>("/vote-cooldowns", params);
+  },
+
+  getQuestionRewardClaimCandidates(voter: string, params?: { limit?: string; offset?: string }) {
+    return ponderGet<PonderQuestionRewardClaimCandidatesResponse>("/question-reward-claim-candidates", {
+      ...params,
+      voter,
+    });
+  },
+
+  getQuestionBundleRewardClaimCandidates(voter: string, params?: { limit?: string; offset?: string }) {
+    return ponderGet<PonderQuestionBundleRewardClaimCandidatesResponse>("/question-bundle-claim-candidates", {
+      ...params,
+      voter,
+    });
   },
 
   async getVotesWindow(params?: {

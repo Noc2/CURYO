@@ -1,7 +1,7 @@
 import { ponder } from "ponder:registry";
 import { frontend } from "ponder:schema";
 
-/** Must match FrontendRegistry.STAKE_AMOUNT (1000 cREP with 6 decimals). */
+/** Must match FrontendRegistry.STAKE_AMOUNT (1000 HREP with 6 decimals). */
 const STAKE_AMOUNT = 1000_000000n;
 
 ponder.on(
@@ -96,11 +96,11 @@ ponder.on(
 ponder.on(
   "FrontendRegistry:FeesCredited",
   async ({ event, context }) => {
-    const { frontend: addr, crepAmount } = event.args;
+    const { frontend: addr, hrepAmount } = event.args;
     await context.db
       .update(frontend, { address: addr })
       .set((row) => ({
-        totalFeesCredited: row.totalFeesCredited + crepAmount,
+        totalFeesCredited: row.totalFeesCredited + hrepAmount,
       }));
   },
 );
@@ -108,11 +108,11 @@ ponder.on(
 ponder.on(
   "FrontendRegistry:FeesClaimed",
   async ({ event, context }) => {
-    const { frontend: addr, crepAmount } = event.args;
+    const { frontend: addr, hrepAmount } = event.args;
     await context.db
       .update(frontend, { address: addr })
       .set((row) => ({
-        totalFeesClaimed: row.totalFeesClaimed + crepAmount,
+        totalFeesClaimed: row.totalFeesClaimed + hrepAmount,
       }));
   },
 );

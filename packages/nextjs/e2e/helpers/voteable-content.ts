@@ -1,4 +1,4 @@
-import { approveCREP, submitContentDirect, waitForPonderIndexed } from "./admin-helpers";
+import { approveHREP, submitContentDirect, waitForPonderIndexed } from "./admin-helpers";
 import { ANVIL_ACCOUNTS } from "./anvil-accounts";
 import { CONTRACT_ADDRESSES } from "./contracts";
 import { getContentList } from "./ponder-api";
@@ -15,7 +15,7 @@ type ContentListItem = {
 };
 
 type EnsureVoteableContentDeps = {
-  approveCREP: typeof approveCREP;
+  approveHREP: typeof approveHREP;
   submitContentDirect: typeof submitContentDirect;
   waitForPonderIndexed: typeof waitForPonderIndexed;
   getContentList: (params: { status: "all"; limit: number }) => Promise<{ items: ContentListItem[] }>;
@@ -26,7 +26,7 @@ type EnsureVoteableContentDeps = {
 };
 
 const defaultDeps: EnsureVoteableContentDeps = {
-  approveCREP,
+  approveHREP,
   submitContentDirect,
   waitForPonderIndexed,
   getContentList,
@@ -49,11 +49,11 @@ export async function ensureVoteableContentWithDeps(
   }
 
   const submitter = ANVIL_ACCOUNTS.account3.address;
-  const approved = await deps.approveCREP(
+  const approved = await deps.approveHREP(
     CONTRACT_ADDRESSES.ContentRegistry,
     SUBMIT_STAKE,
     submitter,
-    CONTRACT_ADDRESSES.CuryoReputation,
+    CONTRACT_ADDRESSES.HumanReputation,
   );
   if (!approved) {
     return false;
@@ -94,7 +94,7 @@ export async function ensureVoteableContentWithDeps(
       return false;
     }
 
-    await deps.gotoWithRetry(page, `/vote?content=${indexedContentId}`, {
+    await deps.gotoWithRetry(page, `/rate?content=${indexedContentId}`, {
       ensureWalletConnected: true,
       timeout: 45_000,
     });

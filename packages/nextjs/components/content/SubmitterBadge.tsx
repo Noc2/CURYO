@@ -57,7 +57,7 @@ export function SubmitterBadge({
       <Link
         href={profileHref}
         aria-label={`View profile for ${displayName}`}
-        className="group flex min-w-0 items-center gap-1.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+        className="group flex min-w-0 items-center gap-1.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/80"
         onClick={stopPropagation}
         onPointerDown={stopPropagation}
         onKeyDown={stopPropagation}
@@ -80,7 +80,7 @@ export function SubmitterBadge({
                 {displayName}
               </span>
               {inlineAddress ? (
-                <span className="truncate text-sm font-mono text-base-content/45 transition-colors group-hover:text-base-content/60">
+                <span className="truncate text-sm font-mono text-base-content/60 transition-colors group-hover:text-base-content/60">
                   {inlineAddress}
                 </span>
               ) : null}

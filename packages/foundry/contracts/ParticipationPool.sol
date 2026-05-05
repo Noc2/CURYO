@@ -8,8 +8,8 @@ import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/Reentran
 import { IParticipationPool } from "./interfaces/IParticipationPool.sol";
 
 /// @title ParticipationPool
-/// @notice Distributes cREP rewards proportional to stake for voting and submitting content, with distribution-based halving.
-/// @dev Funded with 34M cREP. Early participants earn more — the reward rate halves as cumulative cREP distributed grows.
+/// @notice Distributes HREP rewards proportional to stake for voting and submitting content, with distribution-based halving.
+/// @dev Funded with 12M HREP. Early participants earn more — the reward rate halves as cumulative HREP distributed grows.
 ///      Reward = stakeAmount × currentRateBps / 10000. Rate starts at 90% and halves per tier.
 contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
@@ -19,27 +19,27 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
     /// @notice Initial reward rate in basis points (90%)
     uint256 public constant INITIAL_RATE_BPS = 9000;
 
-    /// @notice cREP distributed in the first halving tier (2M cREP, 6 decimals)
-    uint256 public constant INITIAL_TIER_AMOUNT = 2_000_000e6;
+    /// @notice HREP distributed in the first halving tier (1.5M HREP, 6 decimals)
+    uint256 public constant INITIAL_TIER_AMOUNT = 1_500_000e6;
 
     /// @notice Minimum reward rate floor in basis points (1%)
     uint256 public constant MIN_RATE_BPS = 100;
 
     // --- State ---
 
-    /// @notice The cREP token contract
-    IERC20 public immutable crepToken;
+    /// @notice The HREP token contract
+    IERC20 public immutable hrepToken;
 
     /// @notice The governance address — ownership can only be transferred here
-    address public immutable governance;
+    address public governance;
 
-    /// @notice Cumulative cREP distributed from the pool (drives halving schedule)
+    /// @notice Cumulative HREP distributed from the pool (drives halving schedule)
     uint256 public totalDistributed;
 
-    /// @notice Remaining cREP balance tracked internally
+    /// @notice Remaining HREP balance tracked internally
     uint256 public poolBalance;
 
-    /// @notice Total cREP reserved for future pull-based claims but not yet withdrawn.
+    /// @notice Total HREP reserved for future pull-based claims but not yet withdrawn.
     uint256 public reservedBalance;
 
     /// @notice Addresses authorized to trigger rewards (VotingEngine, ContentRegistry)
@@ -51,9 +51,7 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
     // --- Events ---
 
     /// @notice Emitted when a participation reward is distributed
-    event ParticipationReward(
-        address indexed recipient, uint256 amount, bool isSubmission, uint256 totalDistributedAfter
-    );
+    event ParticipationReward(address indexed recipient, uint256 amount, uint256 totalDistributedAfter);
 
     /// @notice Emitted when an authorized caller is added or removed
     event AuthorizedCallerUpdated(address indexed caller, bool authorized);
@@ -79,6 +77,9 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
     /// @notice Emitted when reserved rewards are released back into the pool.
     event ReservedRewardReleased(address indexed beneficiary, uint256 amount, uint256 totalDistributedAfter);
 
+    /// @notice Emitted when the governance migration target is updated.
+    event GovernanceUpdated(address indexed governance);
+
     // --- Modifiers ---
 
     modifier onlyAuthorized() {
@@ -88,12 +89,12 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
 
     // --- Constructor ---
 
-    /// @param _crepToken Address of the cREP token contract
+    /// @param _hrepToken Address of the HREP token contract
     /// @param _governance The governance address (timelock)
-    constructor(address _crepToken, address _governance) Ownable(msg.sender) {
-        require(_crepToken != address(0), "Invalid token");
+    constructor(address _hrepToken, address _governance) Ownable(msg.sender) {
+        require(_hrepToken != address(0), "Invalid token");
         require(_governance != address(0), "Invalid governance");
-        crepToken = IERC20(_crepToken);
+        hrepToken = IERC20(_hrepToken);
         governance = _governance;
     }
 
@@ -110,6 +111,14 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
 
     // --- Admin Functions ---
 
+    /// @notice Update the governance address that ownership may migrate to.
+    /// @dev Current owner can retarget this before a governance timelock migration.
+    function setGovernance(address newGovernance) external onlyOwner {
+        require(newGovernance != address(0), "Invalid governance");
+        governance = newGovernance;
+        emit GovernanceUpdated(newGovernance);
+    }
+
     /// @notice Add or remove an authorized caller
     /// @param caller The address to authorize/deauthorize
     /// @param authorized Whether the caller is authorized
@@ -119,29 +128,30 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
         emit AuthorizedCallerUpdated(caller, authorized);
     }
 
-    /// @notice Deposit cREP tokens into the participation pool
-    /// @param amount Amount of cREP to deposit
+    /// @notice Deposit HREP tokens into the participation pool
+    /// @param amount Amount of HREP to deposit
     function depositPool(uint256 amount) external {
         require(amount > 0, "Zero amount");
-        crepToken.safeTransferFrom(msg.sender, address(this), amount);
+        hrepToken.safeTransferFrom(msg.sender, address(this), amount);
         poolBalance += amount;
         emit PoolDeposit(amount);
     }
 
-    /// @notice Withdraw undistributed and unreserved cREP tracked in poolBalance.
+    /// @notice Withdraw undistributed and unreserved HREP tracked in poolBalance.
     /// @dev This emergency path is owner-only (governance timelock after handoff) and cannot
     ///      touch funds reserved for beneficiary contracts via reserveReward().
     /// @param to Address to receive tokens
     /// @param amount Amount to withdraw (use type(uint256).max for full tracked pool balance)
     function withdrawRemaining(address to, uint256 amount) external onlyOwner nonReentrant {
         require(to != address(0), "Invalid address");
+        require(owner() == governance, "Governance handoff required");
 
         uint256 withdrawable = poolBalance;
         uint256 withdrawAmount = amount > withdrawable ? withdrawable : amount;
         require(withdrawAmount > 0, "Nothing to withdraw");
 
         poolBalance = withdrawable - withdrawAmount;
-        crepToken.safeTransfer(to, withdrawAmount);
+        hrepToken.safeTransfer(to, withdrawAmount);
 
         emit PoolWithdrawal(to, withdrawAmount);
     }
@@ -157,20 +167,20 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
     {
         require(to != address(0), "Invalid address");
 
-        uint256 actualBalance = crepToken.balanceOf(address(this));
+        uint256 actualBalance = hrepToken.balanceOf(address(this));
         uint256 accountedBalance = poolBalance + reservedBalance;
         uint256 surplus = actualBalance > accountedBalance ? actualBalance - accountedBalance : 0;
         recoveredAmount = amount > surplus ? surplus : amount;
         require(recoveredAmount > 0, "Nothing to recover");
 
-        crepToken.safeTransfer(to, recoveredAmount);
+        hrepToken.safeTransfer(to, recoveredAmount);
         emit SurplusRecovered(to, recoveredAmount);
     }
 
     // --- View Functions ---
 
     /// @notice Get the current reward rate in basis points based on the distribution halving schedule
-    /// @dev Each tier doubles in cREP amount and halves the rate. Starts at 90% (9000 BPS), floor at 1% (100 BPS).
+    /// @dev Each tier doubles in HREP amount and halves the rate. Starts at 90% (9000 BPS), floor at 1% (100 BPS).
     /// @return The current rate in basis points
     function getCurrentRateBps() public view returns (uint256) {
         uint256 rate = INITIAL_RATE_BPS;
@@ -186,22 +196,6 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
 
     // --- Reward Functions ---
 
-    /// @notice Reward a voter for casting a vote. Called by RoundVotingEngine.
-    /// @param voter The address to reward
-    /// @param stakeAmount The amount staked on this vote
-    function rewardVote(address voter, uint256 stakeAmount) external onlyAuthorized nonReentrant {
-        uint256 reward = stakeAmount * getCurrentRateBps() / 10000;
-        _distribute(voter, reward, false);
-    }
-
-    /// @notice Reward a submitter for submitting content. Called by ContentRegistry.
-    /// @param submitter The address to reward
-    /// @param stakeAmount The submitter stake amount
-    function rewardSubmission(address submitter, uint256 stakeAmount) external onlyAuthorized nonReentrant {
-        uint256 reward = stakeAmount * getCurrentRateBps() / 10000;
-        _distribute(submitter, reward, true);
-    }
-
     /// @notice Distribute a pre-computed reward amount. Called by RoundVotingEngine for pull-based claims.
     /// @dev Uses a rate snapshotted at settlement time rather than the live rate.
     /// @param voter The address to reward
@@ -213,7 +207,7 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
         nonReentrant
         returns (uint256 paidAmount)
     {
-        return _distribute(voter, amount, false);
+        return _distribute(voter, amount);
     }
 
     /// @inheritdoc IParticipationPool
@@ -253,7 +247,7 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
 
         reservedRewards[msg.sender] = reservedForBeneficiary - paidAmount;
         reservedBalance -= paidAmount;
-        crepToken.safeTransfer(recipient, paidAmount);
+        hrepToken.safeTransfer(recipient, paidAmount);
 
         emit ReservedRewardWithdrawn(msg.sender, recipient, paidAmount);
     }
@@ -274,7 +268,7 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
     }
 
     /// @dev Internal distribution logic — caps at remaining pool balance
-    function _distribute(address recipient, uint256 reward, bool isSubmission) internal returns (uint256 paidAmount) {
+    function _distribute(address recipient, uint256 reward) internal returns (uint256 paidAmount) {
         if (reward > poolBalance) {
             emit RewardCapped(recipient, reward, poolBalance);
             reward = poolBalance;
@@ -283,9 +277,9 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
 
         totalDistributed += reward;
         poolBalance -= reward;
-        crepToken.safeTransfer(recipient, reward);
+        hrepToken.safeTransfer(recipient, reward);
 
-        emit ParticipationReward(recipient, reward, isSubmission, totalDistributed);
+        emit ParticipationReward(recipient, reward, totalDistributed);
         return reward;
     }
 }

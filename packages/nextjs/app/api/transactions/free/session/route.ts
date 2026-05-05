@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildUnavailableFreeTransactionSummary, isFreeTransactionStoreUnavailableError } from "./fallback";
 import { isAddress } from "viem";
-import { getPrimaryServerTargetNetwork } from "~~/lib/env/server";
+import { getPrimaryServerTargetNetwork, getServerTargetNetworkById } from "~~/lib/env/server";
 import { getFreeTransactionAllowanceSummary } from "~~/lib/thirdweb/freeTransactions";
 import { checkRateLimit } from "~~/utils/rateLimit";
 
@@ -25,6 +25,9 @@ export async function GET(request: NextRequest) {
 
   if (!Number.isFinite(parsedChainId)) {
     return NextResponse.json({ error: "Invalid chain" }, { status: 400 });
+  }
+  if (!getServerTargetNetworkById(parsedChainId!)) {
+    return NextResponse.json({ error: "Unsupported chain" }, { status: 400 });
   }
 
   try {

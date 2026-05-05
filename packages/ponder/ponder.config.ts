@@ -5,11 +5,13 @@ import { http } from "viem";
 import {
   CategoryRegistryAbi,
   ContentRegistryAbi,
-  CuryoReputationAbi,
+  HumanReputationAbi,
+  FeedbackBonusEscrowAbi,
   FrontendRegistryAbi,
   HumanFaucetAbi,
   ParticipationPoolAbi,
   ProfileRegistryAbi,
+  QuestionRewardPoolEscrowAbi,
   RoundRewardDistributorAbi,
   RoundVotingEngineAbi,
   VoterIdNFTAbi,
@@ -72,6 +74,7 @@ function getActiveNetwork(): PonderNetworkName {
 
 const activeNetwork = getActiveNetwork();
 const activeChainId = NETWORKS[activeNetwork].chainId;
+let warnedAboutHardhatStartBlocks = false;
 
 function readEnv(key: string): string | undefined {
   const value = process.env[key]?.trim();
@@ -112,17 +115,39 @@ function resolveAddress(key: string, contractName: string): `0x${string}` {
   const sharedAddress = getSharedArtifactAddress(activeChainId, contractName);
   const envValue = readEnv(key);
 
+  if (activeNetwork === "hardhat") {
+    if (envValue) {
+      if (!isAddress(envValue)) {
+        throw new Error(`${key} must be a valid address.`);
+      }
+
+      if (sharedAddress && envValue.toLowerCase() !== sharedAddress.toLowerCase()) {
+        console.warn(
+          `[ponder config] Using ${key}=${envValue} for local hardhat; shared ${contractName} artifact points at ${sharedAddress}.`,
+        );
+      }
+
+      return envValue as `0x${string}`;
+    }
+
+    if (sharedAddress) {
+      return sharedAddress;
+    }
+
+    throw new Error(
+      `Missing ${key}. Run \`yarn deploy --network <network>\` to sync Ponder addresses for ${activeNetwork}.`,
+    );
+  }
+
   if (sharedAddress) {
     if (envValue) {
-      if (isAddress(envValue)) {
-        if (envValue.toLowerCase() !== sharedAddress.toLowerCase()) {
-          console.warn(
-            `[ponder config] Ignoring ${key}=${envValue} for chain ${activeChainId}; using ${contractName} from shared deployment artifacts (${sharedAddress}).`,
-          );
-        }
-      } else {
-        console.warn(
-          `[ponder config] Ignoring invalid ${key} value for chain ${activeChainId}; using ${contractName} from shared deployment artifacts (${sharedAddress}).`,
+      if (!isAddress(envValue)) {
+        throw new Error(`${key} must be a valid address when provided for chain ${activeChainId}.`);
+      }
+
+      if (envValue.toLowerCase() !== sharedAddress.toLowerCase()) {
+        throw new Error(
+          `${key}=${envValue} conflicts with ${contractName} from shared deployment artifacts (${sharedAddress}) for chain ${activeChainId}. Remove the env override or refresh shared deployments.`,
         );
       }
     }
@@ -130,55 +155,44 @@ function resolveAddress(key: string, contractName: string): `0x${string}` {
     return sharedAddress;
   }
 
-  if (!envValue) {
-    throw new Error(
-      `Missing ${key}. Run \`yarn deploy --network <network>\` to sync Ponder addresses for ${activeNetwork}.`,
-    );
-  }
-
-  if (!isAddress(envValue)) {
-    throw new Error(`${key} must be a valid address.`);
-  }
-
-  return envValue as `0x${string}`;
+  /*
+   * Non-local networks intentionally do not fall back to PONDER_* address env vars.
+   * The frontend, keeper, and indexer must agree on the same shared deployment artifacts.
+   */
+  throw new Error(
+    `Missing shared deployment artifact for ${contractName} on chain ${activeChainId}. Run \`yarn deploy --network <network>\` to refresh shared deployments before starting Ponder for ${activeNetwork}.`,
+  );
 }
 
 function resolveStartBlock(key: string, contractName: string): number {
-  const sharedStartBlock = getSharedArtifactStartBlock(activeChainId, contractName);
   const envValue = readEnv(key);
+
+  if (activeNetwork === "hardhat") {
+    if (!warnedAboutHardhatStartBlocks && envValue) {
+      console.warn(
+        "[ponder config] Ignoring hardhat start block overrides; using start block 0 so local Ponder can boot before or after Anvil resets.",
+      );
+      warnedAboutHardhatStartBlocks = true;
+    }
+
+    return 0;
+  }
+
+  const sharedStartBlock = getSharedArtifactStartBlock(activeChainId, contractName);
 
   if (sharedStartBlock !== undefined) {
     if (envValue) {
       const parsedEnvValue = Number(envValue);
       if (!Number.isFinite(parsedEnvValue) || !Number.isInteger(parsedEnvValue) || parsedEnvValue < 0) {
-        console.warn(
-          `[ponder config] Ignoring invalid ${key} value for chain ${activeChainId}; using ${contractName} start block from shared deployment artifacts (${sharedStartBlock}).`,
-        );
+        throw new Error(`${key} must be a non-negative integer when provided for chain ${activeChainId}.`);
       } else if (parsedEnvValue !== sharedStartBlock) {
-        console.warn(
-          `[ponder config] Ignoring ${key}=${envValue} for chain ${activeChainId}; using ${contractName} start block from shared deployment artifacts (${sharedStartBlock}).`,
+        throw new Error(
+          `${key}=${envValue} conflicts with ${contractName} start block from shared deployment artifacts (${sharedStartBlock}) for chain ${activeChainId}. Remove the env override or refresh shared deployments.`,
         );
       }
     }
 
     return sharedStartBlock;
-  }
-
-  if (activeNetwork === "hardhat") {
-    if (envValue) {
-      const parsedEnvValue = Number(envValue);
-      if (!Number.isFinite(parsedEnvValue) || !Number.isInteger(parsedEnvValue) || parsedEnvValue < 0) {
-        console.warn(
-          `[ponder config] Ignoring invalid ${key} value for hardhat; using local start block 0 for ${contractName}.`,
-        );
-      } else if (parsedEnvValue !== 0) {
-        console.warn(
-          `[ponder config] Ignoring ${key}=${envValue} for hardhat; using local start block 0 for ${contractName}.`,
-        );
-      }
-    }
-
-    return 0;
   }
 
   if (!envValue) return 0;
@@ -199,9 +213,11 @@ const addresses = {
   profileRegistry: resolveAddress("PONDER_PROFILE_REGISTRY_ADDRESS", "ProfileRegistry"),
   frontendRegistry: resolveAddress("PONDER_FRONTEND_REGISTRY_ADDRESS", "FrontendRegistry"),
   voterIdNFT: resolveAddress("PONDER_VOTER_ID_NFT_ADDRESS", "VoterIdNFT"),
-  curyoReputation: resolveAddress("PONDER_CREP_ADDRESS", "CuryoReputation"),
+  humanReputation: resolveAddress("PONDER_HREP_ADDRESS", "HumanReputation"),
   humanFaucet: resolveAddress("PONDER_HUMAN_FAUCET_ADDRESS", "HumanFaucet"),
   participationPool: resolveAddress("PONDER_PARTICIPATION_POOL_ADDRESS", "ParticipationPool"),
+  questionRewardPoolEscrow: resolveAddress("PONDER_QUESTION_REWARD_POOL_ESCROW_ADDRESS", "QuestionRewardPoolEscrow"),
+  feedbackBonusEscrow: resolveAddress("PONDER_FEEDBACK_BONUS_ESCROW_ADDRESS", "FeedbackBonusEscrow"),
 };
 
 const startBlocks = {
@@ -212,9 +228,11 @@ const startBlocks = {
   profileRegistry: resolveStartBlock("PONDER_PROFILE_REGISTRY_START_BLOCK", "ProfileRegistry"),
   frontendRegistry: resolveStartBlock("PONDER_FRONTEND_REGISTRY_START_BLOCK", "FrontendRegistry"),
   voterIdNFT: resolveStartBlock("PONDER_VOTER_ID_NFT_START_BLOCK", "VoterIdNFT"),
-  curyoReputation: resolveStartBlock("PONDER_CREP_START_BLOCK", "CuryoReputation"),
+  humanReputation: resolveStartBlock("PONDER_HREP_START_BLOCK", "HumanReputation"),
   humanFaucet: resolveStartBlock("PONDER_HUMAN_FAUCET_START_BLOCK", "HumanFaucet"),
   participationPool: resolveStartBlock("PONDER_PARTICIPATION_POOL_START_BLOCK", "ParticipationPool"),
+  questionRewardPoolEscrow: resolveStartBlock("PONDER_QUESTION_REWARD_POOL_ESCROW_START_BLOCK", "QuestionRewardPoolEscrow"),
+  feedbackBonusEscrow: resolveStartBlock("PONDER_FEEDBACK_BONUS_ESCROW_START_BLOCK", "FeedbackBonusEscrow"),
 };
 
 function contractOnActiveNetwork(address: `0x${string}`, startBlock: number) {
@@ -264,9 +282,9 @@ export default createConfig({
       abi: VoterIdNFTAbi,
       network: contractOnActiveNetwork(addresses.voterIdNFT, startBlocks.voterIdNFT),
     },
-    CuryoReputation: {
-      abi: CuryoReputationAbi,
-      network: contractOnActiveNetwork(addresses.curyoReputation, startBlocks.curyoReputation),
+    HumanReputation: {
+      abi: HumanReputationAbi,
+      network: contractOnActiveNetwork(addresses.humanReputation, startBlocks.humanReputation),
     },
     HumanFaucet: {
       abi: HumanFaucetAbi,
@@ -275,6 +293,14 @@ export default createConfig({
     ParticipationPool: {
       abi: ParticipationPoolAbi,
       network: contractOnActiveNetwork(addresses.participationPool, startBlocks.participationPool),
+    },
+    QuestionRewardPoolEscrow: {
+      abi: QuestionRewardPoolEscrowAbi,
+      network: contractOnActiveNetwork(addresses.questionRewardPoolEscrow, startBlocks.questionRewardPoolEscrow),
+    },
+    FeedbackBonusEscrow: {
+      abi: FeedbackBonusEscrowAbi,
+      network: contractOnActiveNetwork(addresses.feedbackBonusEscrow, startBlocks.feedbackBonusEscrow),
     },
   },
 });

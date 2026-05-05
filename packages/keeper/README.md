@@ -25,17 +25,18 @@ yarn keeper:start  # Production mode (long-running service)
 
 Copy `.env.example` to `.env.local` and configure:
 
-For `CHAIN_ID` `31337`, `11142220`, and `42220`, Keeper reads the latest contract addresses from `@curyo/contracts`.
-Only set address vars on unsupported chains.
+For live `CHAIN_ID` values `11142220` and `42220`, Keeper reads the latest contract addresses from `@curyo/contracts`.
+For local `31337`, address vars override the shared artifact so a fresh Anvil deploy can be used without committing
+machine-specific local addresses. Only set address vars on unsupported chains or local Hardhat/Anvil.
 
 | Variable | Default | Description |
 |---|---|---|
 | `RPC_URL` | — | Blockchain RPC endpoint (required) |
 | `CHAIN_ID` | — | Network chain ID (required) |
-| `VOTING_ENGINE_ADDRESS` | Auto-derived for supported chains | Fallback RoundVotingEngine address when no shared deployment artifact exists for `CHAIN_ID` |
-| `CONTENT_REGISTRY_ADDRESS` | Auto-derived for supported chains | Fallback ContentRegistry address when no shared deployment artifact exists for `CHAIN_ID` |
-| `ROUND_REWARD_DISTRIBUTOR_ADDRESS` | Auto-derived when frontend-fee sweep is enabled on supported chains | Fallback RoundRewardDistributor address |
-| `FRONTEND_REGISTRY_ADDRESS` | Auto-derived when frontend-fee sweep is enabled on supported chains | Fallback FrontendRegistry address |
+| `VOTING_ENGINE_ADDRESS` | Auto-derived for supported chains | Local `31337` override only; live chains require shared deployment artifacts |
+| `CONTENT_REGISTRY_ADDRESS` | Auto-derived for supported chains | Local `31337` override only; live chains require shared deployment artifacts |
+| `ROUND_REWARD_DISTRIBUTOR_ADDRESS` | Auto-derived when frontend-fee sweep is enabled on supported chains | Local `31337` override only; live chains require shared deployment artifacts |
+| `FRONTEND_REGISTRY_ADDRESS` | Auto-derived when frontend-fee sweep is enabled on supported chains | Local `31337` override only; live chains require shared deployment artifacts |
 | `CHAIN_NAME` | Auto-derived from `CHAIN_ID` | Optional human-readable chain label |
 | `KEYSTORE_ACCOUNT` | — | Foundry keystore account name (preferred) |
 | `KEYSTORE_PASSWORD` | — | Keystore decryption password |

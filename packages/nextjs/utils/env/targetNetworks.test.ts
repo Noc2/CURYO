@@ -25,6 +25,16 @@ test("production builds can explicitly opt into the local Foundry chain", () => 
   );
 });
 
+test("target network parsing rejects chain IDs with non-numeric suffixes", () => {
+  assert.throws(
+    () =>
+      resolveTargetNetworks(`${chains.celo.id}abc`, {
+        production: true,
+      }),
+    /comma-separated list of numeric chain IDs/,
+  );
+});
+
 test("configured RPC overrides become the preferred browser transport for target chains", () => {
   const [network] = resolveTargetNetworks(`${chains.celoSepolia.id}`, {
     production: false,

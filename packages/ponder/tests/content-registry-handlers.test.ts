@@ -21,6 +21,7 @@ vi.mock("ponder:registry", () => ({
 vi.mock("ponder:schema", () => ({
   category: "category",
   content: "content",
+  contentMedia: "contentMedia",
   globalStats: "globalStats",
   profile: "profile",
   ratingChange: "ratingChange",
@@ -47,6 +48,7 @@ function createDb(existingRound = { id: "1-2" }) {
           insertCalls.push({ table, values });
           return {
             onConflictDoNothing: vi.fn(async () => undefined),
+            onConflictDoUpdate: vi.fn(async () => undefined),
           };
         }),
       })),
@@ -74,6 +76,158 @@ afterEach(() => {
 });
 
 describe("ContentRegistry ponder handlers", () => {
+  it("indexes selected round config when content is submitted", async () => {
+    const { db, insertCalls } = createDb();
+    const readContract = vi.fn(async () => ({
+      epochDuration: 600,
+      maxDuration: 7200,
+      minVoters: 5,
+      maxVoters: 50,
+    }));
+
+    const registeredHandlers = await loadHandlers();
+    const handler = registeredHandlers.get("ContentRegistry:ContentSubmitted");
+
+    expect(handler).toBeDefined();
+
+    await handler!({
+      event: {
+        args: {
+          contentId: 7n,
+          submitter: "0x0000000000000000000000000000000000000001",
+          contentHash: "0xabc",
+          url: "https://example.com/question",
+          title: "Question?",
+          description: "Context",
+          tags: "tag",
+          categoryId: 1n,
+        },
+        block: {
+          number: 42n,
+          timestamp: 999n,
+        },
+      },
+      context: {
+        client: { readContract },
+        contracts: {
+          ContentRegistry: {
+            address: "0x000000000000000000000000000000000000c0de",
+          },
+        },
+        db,
+      },
+    });
+
+    expect(readContract).toHaveBeenCalledWith({
+      abi: [],
+      address: "0x000000000000000000000000000000000000c0de",
+      args: [7n],
+      functionName: "getContentRoundConfig",
+    });
+    expect(insertCalls).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          table: "content",
+          values: expect.objectContaining({
+            roundEpochDuration: 600,
+            roundMaxDuration: 7200,
+            roundMinVoters: 5,
+            roundMaxVoters: 50,
+          }),
+        }),
+      ]),
+    );
+  });
+
+  it("updates content-level round config from ContentRoundConfigSet events", async () => {
+    const { db, updateCalls } = createDb({ id: 7n });
+
+    const registeredHandlers = await loadHandlers();
+    const handler = registeredHandlers.get("ContentRegistry:ContentRoundConfigSet");
+
+    expect(handler).toBeDefined();
+
+    await handler!({
+      event: {
+        args: {
+          contentId: 7n,
+          epochDuration: 600,
+          maxDuration: 7200,
+          minVoters: 5,
+          maxVoters: 50,
+        },
+        block: {
+          number: 42n,
+          timestamp: 999n,
+        },
+      },
+      context: { db },
+    });
+
+    expect(updateCalls).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          table: "content",
+          values: expect.objectContaining({
+            roundEpochDuration: 600,
+            roundMaxDuration: 7200,
+            roundMinVoters: 5,
+            roundMaxVoters: 50,
+          }),
+        }),
+      ]),
+    );
+  });
+
+  it("indexes content media rows from ContentMediaSubmitted events", async () => {
+    const { db, insertCalls } = createDb();
+
+    const registeredHandlers = await loadHandlers();
+    const handler = registeredHandlers.get("ContentRegistry:ContentMediaSubmitted");
+
+    expect(handler).toBeDefined();
+
+    await handler!({
+      event: {
+        args: {
+          contentId: 7n,
+          imageUrls: ["https://example.com/a.jpg", "https://example.com/b.webp"],
+          videoUrl: "",
+        },
+        block: {
+          number: 42n,
+          timestamp: 999n,
+        },
+      },
+      context: { db },
+    });
+
+    expect(insertCalls).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          table: "contentMedia",
+          values: expect.objectContaining({
+            id: "7-0",
+            contentId: 7n,
+            mediaIndex: 0,
+            mediaType: "image",
+            url: "https://example.com/a.jpg",
+          }),
+        }),
+        expect.objectContaining({
+          table: "contentMedia",
+          values: expect.objectContaining({
+            id: "7-1",
+            contentId: 7n,
+            mediaIndex: 1,
+            mediaType: "image",
+            url: "https://example.com/b.webp",
+          }),
+        }),
+      ]),
+    );
+  });
+
   it("does not create synthetic rating history rows for RatingUpdated display refreshes", async () => {
     const { db, insertCalls, updateCalls } = createDb();
 

@@ -14,8 +14,9 @@ import { notification } from "~~/utils/scaffold-eth";
 // Account index to use from generated hardhat accounts.
 const FAUCET_ACCOUNT_INDEX = 0;
 
-// cREP token has 6 decimals
-const CREP_DECIMALS = 6;
+// HREP token has 6 decimals
+const HREP_DECIMALS = 6;
+const USDC_DECIMALS = 6;
 
 const localWalletClient = createWalletClient({
   chain: hardhat,
@@ -27,8 +28,8 @@ const localPublicClient = createPublicClient({
   transport: http(),
 });
 
-// Minimal ABI for CuryoReputation token functions we need
-const curyoBetaAbi = [
+// Minimal ABI for local mintable ERC20 token functions we need
+const localMintableTokenAbi = [
   {
     type: "function",
     name: "mint",
@@ -54,6 +55,16 @@ const curyoBetaAbi = [
     name: "balanceOf",
     inputs: [{ name: "account", type: "address" }],
     outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+  },
+] as const;
+
+const questionRewardPoolEscrowAbi = [
+  {
+    type: "function",
+    name: "usdcToken",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
     stateMutability: "view",
   },
 ] as const;
@@ -87,18 +98,50 @@ const voterIdNFTAbi = [
 ] as const;
 
 /**
- * Faucet modal which lets you send ETH and claim cREP tokens on local testnet.
+ * Shared ID used by faucet triggers and the single app-level modal.
  */
-export const Faucet = () => {
+const FAUCET_MODAL_ID = "faucet-modal";
+
+type FaucetTriggerProps = {
+  className?: string;
+  textClassName?: string;
+};
+
+export const FaucetTrigger = ({
+  className = "flex items-center justify-center xl:justify-start gap-3 xl:px-4 py-3 rounded-xl transition-colors text-base-content/60 hover:text-base-content hover:bg-base-200 w-full cursor-pointer",
+  textClassName = "hidden xl:inline",
+}: FaucetTriggerProps) => {
+  const { chain: connectedChain } = useAccount();
+
+  if (connectedChain?.id !== hardhat.id) {
+    return null;
+  }
+
+  return (
+    <label htmlFor={FAUCET_MODAL_ID} className={className}>
+      <GiftIcon className="w-6 h-6 shrink-0" />
+      <span className={textClassName}>Faucet</span>
+    </label>
+  );
+};
+
+/**
+ * Faucet modal which lets you send ETH and claim HREP tokens on local testnet.
+ */
+export const FaucetModal = () => {
   const [loading, setLoading] = useState(false);
-  const [curyoLoading, setCuryoLoading] = useState(false);
+  const [hrepLoading, setHrepLoading] = useState(false);
+  const [usdcLoading, setUsdcLoading] = useState(false);
   const [voterIdLoading, setVoterIdLoading] = useState(false);
   const [inputAddress, setInputAddress] = useState<AddressType>();
   const [faucetAddress, setFaucetAddress] = useState<AddressType>();
   const [sendValue, setSendValue] = useState("");
-  const [curyoAmount, setCuryoAmount] = useState("1000");
+  const [hrepAmount, setHrepAmount] = useState("1000");
+  const [usdcAmount, setUsdcAmount] = useState("1000");
+  const [mockUsdcTokenAddress, setMockUsdcTokenAddress] = useState<AddressType>();
   const [hasVoterId, setHasVoterId] = useState<boolean | null>(null);
   const [voterIdTokenId, setVoterIdTokenId] = useState<bigint | null>(null);
+  const [voterIdReadFailed, setVoterIdReadFailed] = useState(false);
   const { chain: ConnectedChain, address: connectedAddress } = useAccount();
 
   const isHardhat = ConnectedChain?.id === hardhat.id;
@@ -107,8 +150,12 @@ export const Faucet = () => {
   const queryClient = useQueryClient();
 
   // Get contract addresses from localhost deployment
-  const crepTokenAddress = (deployedContracts as any)[31337]?.CuryoReputation?.address as AddressType | undefined;
+  const hrepTokenAddress = (deployedContracts as any)[31337]?.HumanReputation?.address as AddressType | undefined;
   const voterIdNFTAddress = (deployedContracts as any)[31337]?.VoterIdNFT?.address as AddressType | undefined;
+  const directMockUsdcTokenAddress = (deployedContracts as any)[31337]?.MockERC20?.address as AddressType | undefined;
+  const questionRewardPoolEscrowAddress = (deployedContracts as any)[31337]?.QuestionRewardPoolEscrow?.address as
+    | AddressType
+    | undefined;
 
   useEffect(() => {
     if (!isHardhat) return;
@@ -134,6 +181,47 @@ export const Faucet = () => {
     getFaucetAddress();
   }, [isHardhat]);
 
+  useEffect(() => {
+    if (!isHardhat) {
+      setMockUsdcTokenAddress(undefined);
+      return;
+    }
+
+    if (directMockUsdcTokenAddress) {
+      setMockUsdcTokenAddress(directMockUsdcTokenAddress);
+      return;
+    }
+
+    if (!questionRewardPoolEscrowAddress) {
+      setMockUsdcTokenAddress(undefined);
+      return;
+    }
+
+    let active = true;
+    const resolveMockUsdcAddress = async () => {
+      try {
+        const address = await localPublicClient.readContract({
+          address: questionRewardPoolEscrowAddress,
+          abi: questionRewardPoolEscrowAbi,
+          functionName: "usdcToken",
+        });
+        if (active) {
+          setMockUsdcTokenAddress(address as AddressType);
+        }
+      } catch {
+        if (active) {
+          setMockUsdcTokenAddress(undefined);
+        }
+      }
+    };
+
+    void resolveMockUsdcAddress();
+
+    return () => {
+      active = false;
+    };
+  }, [directMockUsdcTokenAddress, isHardhat, questionRewardPoolEscrowAddress]);
+
   // Set input address to connected address by default
   useEffect(() => {
     if (connectedAddress && !inputAddress) {
@@ -149,6 +237,7 @@ export const Faucet = () => {
       if (!inputAddress || !voterIdNFTAddress) {
         setHasVoterId(null);
         setVoterIdTokenId(null);
+        setVoterIdReadFailed(false);
         return;
       }
 
@@ -172,9 +261,12 @@ export const Faucet = () => {
         } else {
           setVoterIdTokenId(null);
         }
-      } catch {
+        setVoterIdReadFailed(false);
+      } catch (error) {
+        console.warn("[Faucet] Unable to read local VoterIdNFT contract", error);
         setHasVoterId(null);
         setVoterIdTokenId(null);
+        setVoterIdReadFailed(true);
       }
     };
 
@@ -199,21 +291,21 @@ export const Faucet = () => {
     }
   };
 
-  const claimCURYO = async () => {
-    if (!inputAddress || !crepTokenAddress) {
-      notification.error("Missing destination address or CuryoReputation contract");
+  const claimHREP = async () => {
+    if (!inputAddress || !hrepTokenAddress) {
+      notification.error("Missing destination address or HumanReputation contract");
       return;
     }
 
     const humanFaucetAddr = (deployedContracts as any)[31337]?.HumanFaucet?.address as AddressType | undefined;
 
     try {
-      setCuryoLoading(true);
-      const amount = parseUnits(curyoAmount, CREP_DECIMALS);
+      setHrepLoading(true);
+      const amount = parseUnits(hrepAmount, HREP_DECIMALS);
 
       if (humanFaucetAddr) {
         // Deploy script mints 100% of MAX_SUPPLY, so direct mint() reverts.
-        // Instead, impersonate the HumanFaucet contract (holds ~52M cREP) and transfer.
+        // Instead, impersonate the HumanFaucet contract (holds ~52M HREP) and transfer.
         // The impersonated address needs ETH for gas.
         await (localPublicClient as any).request({
           method: "anvil_setBalance",
@@ -224,8 +316,8 @@ export const Faucet = () => {
           params: [humanFaucetAddr],
         });
         const txHash = await localWalletClient.writeContract({
-          address: crepTokenAddress,
-          abi: curyoBetaAbi,
+          address: hrepTokenAddress,
+          abi: localMintableTokenAbi,
           functionName: "transfer",
           args: [inputAddress, amount],
           account: humanFaucetAddr,
@@ -238,8 +330,8 @@ export const Faucet = () => {
       } else if (faucetAddress) {
         // Fallback: try mint (works only if supply allows)
         const txHash = await localWalletClient.writeContract({
-          address: crepTokenAddress,
-          abi: curyoBetaAbi,
+          address: hrepTokenAddress,
+          abi: localMintableTokenAbi,
           functionName: "mint",
           args: [inputAddress, amount],
           account: faucetAddress,
@@ -247,16 +339,48 @@ export const Faucet = () => {
         await localPublicClient.waitForTransactionReceipt({ hash: txHash });
       } else {
         notification.error("Missing faucet address");
-        setCuryoLoading(false);
+        setHrepLoading(false);
         return;
       }
 
       queryClient.invalidateQueries();
-      notification.success(`Sent ${curyoAmount} cREP to ${inputAddress.slice(0, 6)}...${inputAddress.slice(-4)}`);
-      setCuryoLoading(false);
+      notification.success(`Sent ${hrepAmount} HREP to ${inputAddress.slice(0, 6)}...${inputAddress.slice(-4)}`);
+      setHrepLoading(false);
     } catch (error: any) {
-      notification.error(error?.message || "Failed to claim cREP tokens");
-      setCuryoLoading(false);
+      notification.error(error?.message || "Failed to claim HREP tokens");
+      setHrepLoading(false);
+    }
+  };
+
+  const claimUSDC = async () => {
+    if (!inputAddress || !mockUsdcTokenAddress) {
+      notification.error("Missing destination address or mock USDC contract");
+      return;
+    }
+    if (!faucetAddress) {
+      notification.error("Missing faucet address");
+      return;
+    }
+
+    try {
+      setUsdcLoading(true);
+      const amount = parseUnits(usdcAmount, USDC_DECIMALS);
+
+      const txHash = await localWalletClient.writeContract({
+        address: mockUsdcTokenAddress,
+        abi: localMintableTokenAbi,
+        functionName: "mint",
+        args: [inputAddress, amount],
+        account: faucetAddress,
+      });
+      await localPublicClient.waitForTransactionReceipt({ hash: txHash });
+
+      queryClient.invalidateQueries();
+      notification.success(`Sent ${usdcAmount} mock USDC to ${inputAddress.slice(0, 6)}...${inputAddress.slice(-4)}`);
+      setUsdcLoading(false);
+    } catch (error: any) {
+      notification.error(error?.message || "Failed to claim mock USDC");
+      setUsdcLoading(false);
     }
   };
 
@@ -272,6 +396,12 @@ export const Faucet = () => {
 
     if (hasVoterId) {
       notification.error("Address already has a Voter ID");
+      return;
+    }
+    if (voterIdReadFailed) {
+      notification.error(
+        "Local VoterIdNFT reads are failing. Restart Anvil and run yarn deploy so deployedContracts.ts matches the chain.",
+      );
       return;
     }
 
@@ -311,21 +441,14 @@ export const Faucet = () => {
   }
 
   return (
-    <div className="w-full">
-      <label
-        htmlFor="faucet-modal"
-        className="flex items-center justify-center xl:justify-start gap-3 xl:px-4 py-3 rounded-xl transition-colors text-base-content/60 hover:text-base-content hover:bg-base-200 w-full cursor-pointer"
-      >
-        <GiftIcon className="w-6 h-6 shrink-0" />
-        <span className="hidden xl:inline">Faucet</span>
-      </label>
-      <input type="checkbox" id="faucet-modal" className="modal-toggle" />
-      <label htmlFor="faucet-modal" className="modal cursor-pointer">
+    <div>
+      <input type="checkbox" id={FAUCET_MODAL_ID} className="modal-toggle" />
+      <label htmlFor={FAUCET_MODAL_ID} className="modal cursor-pointer">
         <label className="modal-box relative">
           {/* dummy input to capture event onclick on modal box */}
           <input className="h-0 w-0 absolute top-0 left-0" />
           <h3 className="text-xl font-bold mb-3">Local Testnet Faucet</h3>
-          <label htmlFor="faucet-modal" className="btn btn-ghost btn-sm btn-circle absolute right-3 top-3">
+          <label htmlFor={FAUCET_MODAL_ID} className="btn btn-ghost btn-sm btn-circle absolute right-3 top-3">
             ✕
           </label>
           <div className="space-y-4">
@@ -376,32 +499,61 @@ export const Faucet = () => {
               </>
             )}
 
-            {/* cREP Faucet Section */}
+            {/* HREP Faucet Section */}
             <div className="bg-primary/10 rounded-xl p-4 space-y-3">
-              <h4 className="font-semibold text-primary">Claim cREP Tokens</h4>
-              <p className="text-base text-base-content/60">Mint cREP tokens directly to your wallet for testing.</p>
+              <h4 className="font-semibold text-primary">Claim HREP Tokens</h4>
+              <p className="text-base text-base-content/60">Mint HREP tokens directly to your wallet for testing.</p>
               <div className="flex gap-2">
                 <input
                   type="number"
                   className="input input-bordered input-sm flex-1"
                   placeholder="Amount"
-                  value={curyoAmount}
-                  onChange={e => setCuryoAmount(e.target.value)}
+                  value={hrepAmount}
+                  onChange={e => setHrepAmount(e.target.value)}
                   min="1"
                 />
-                <span className="self-center text-base font-medium">cREP</span>
+                <span className="self-center text-base font-medium">HREP</span>
               </div>
               <button
                 className="h-10 btn btn-primary btn-sm px-4 rounded-full w-full"
-                onClick={claimCURYO}
-                disabled={curyoLoading || !curyoAmount || !inputAddress}
+                onClick={claimHREP}
+                disabled={hrepLoading || !hrepAmount || !inputAddress}
               >
-                {!curyoLoading ? (
+                {!hrepLoading ? (
                   <GiftIcon className="h-5 w-5" />
                 ) : (
                   <span className="loading loading-spinner loading-sm"></span>
                 )}
-                <span>Claim cREP</span>
+                <span>Claim HREP</span>
+              </button>
+            </div>
+
+            {/* Mock USDC Faucet Section */}
+            <div className="bg-accent/10 rounded-xl p-4 space-y-3">
+              <h4 className="font-semibold text-primary">Claim Mock USDC</h4>
+              <p className="text-base text-base-content/60">Fund local bounties without using real USDC.</p>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  className="input input-bordered input-sm flex-1"
+                  placeholder="Amount"
+                  value={usdcAmount}
+                  onChange={e => setUsdcAmount(e.target.value)}
+                  min="1"
+                />
+                <span className="self-center text-base font-medium">USDC</span>
+              </div>
+              <button
+                className="h-10 btn btn-primary btn-sm px-4 rounded-full w-full"
+                onClick={claimUSDC}
+                disabled={usdcLoading || !usdcAmount || !inputAddress || !mockUsdcTokenAddress}
+              >
+                {!usdcLoading ? (
+                  <GiftIcon className="h-5 w-5" />
+                ) : (
+                  <span className="loading loading-spinner loading-sm"></span>
+                )}
+                <span>Claim Mock USDC</span>
               </button>
             </div>
 
@@ -409,9 +561,15 @@ export const Faucet = () => {
             <div className="bg-secondary/10 rounded-xl p-4 space-y-3">
               <h4 className="font-semibold text-secondary">Claim Voter ID</h4>
               <p className="text-base text-base-content/60">
-                Create a non-transferable Voter ID. Required for voting and submitting content.
+                Create a non-transferable Voter ID. Required for voting and profile actions.
               </p>
-              {hasVoterId === true && voterIdTokenId !== null ? (
+              {voterIdReadFailed && (
+                <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm text-warning">
+                  Local VoterIdNFT reads are failing. The running Anvil chain is likely out of sync with{" "}
+                  <code>deployedContracts.ts</code>; restart <code>yarn chain</code> and run <code>yarn deploy</code>.
+                </div>
+              )}
+              {hasVoterId === true ? (
                 <div className="flex items-center gap-2 text-success">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                     <path
@@ -420,13 +578,15 @@ export const Faucet = () => {
                       clipRule="evenodd"
                     />
                   </svg>
-                  <span className="font-medium">Voter ID #{voterIdTokenId.toString()} owned</span>
+                  <span className="font-medium">
+                    {voterIdTokenId !== null ? `Voter ID #${voterIdTokenId.toString()} owned` : "Voter ID owned"}
+                  </span>
                 </div>
               ) : (
                 <button
                   className="h-10 btn btn-secondary btn-sm px-4 rounded-full w-full"
                   onClick={claimVoterId}
-                  disabled={voterIdLoading || !inputAddress || hasVoterId === true}
+                  disabled={voterIdLoading || !inputAddress || voterIdReadFailed}
                 >
                   {!voterIdLoading ? (
                     <GiftIcon className="h-5 w-5" />

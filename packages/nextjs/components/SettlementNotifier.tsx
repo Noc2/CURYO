@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useAccount } from "wagmi";
+import { buildRateContentHref } from "~~/constants/routes";
 import { getClaimableRoundKey } from "~~/hooks/claimableRewards";
 import { useScaffoldWatchContractEvent } from "~~/hooks/scaffold-eth";
 import { useAllClaimableRewards } from "~~/hooks/useAllClaimableRewards";
@@ -268,9 +269,9 @@ export function SettlementNotifier() {
       const shortTitle = truncateContentTitle(item.title);
       notifyWithLink(
         "success",
-        "Followed curator submitted",
-        `${displayName} submitted "${shortTitle}".`,
-        `/vote?content=${item.contentId}`,
+        "Followed curator asked",
+        `${displayName} asked "${shortTitle}".`,
+        buildRateContentHref(item.contentId),
         FOLLOWED_CURATOR_TOAST_ID,
       );
     }
@@ -290,7 +291,7 @@ export function SettlementNotifier() {
         "success",
         "Followed curator resolved",
         `${displayName} ${action} a call on "${shortTitle}".`,
-        `/vote?content=${item.contentId}`,
+        buildRateContentHref(item.contentId),
         FOLLOWED_CURATOR_TOAST_ID,
       );
     }
@@ -417,7 +418,7 @@ export function SettlementNotifier() {
           "success",
           "Watched Content Resolved!",
           `Watched content resolved! Content #${contentId} round #${args.roundId.toString()} is ready to review.`,
-          `/vote?content=${contentId}`,
+          buildRateContentHref(contentId),
         );
       }
     },

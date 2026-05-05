@@ -4,21 +4,17 @@ pragma solidity ^0.8.20;
 import { ICategoryRegistry } from "../interfaces/ICategoryRegistry.sol";
 
 contract MockCategoryRegistry is ICategoryRegistry {
-    mapping(uint256 => bool) public approved;
-    mapping(uint256 => address) public submitters;
-    mapping(uint256 => string) public domains;
-    mapping(bytes32 => uint256) public domainToId;
-    mapping(uint256 => bytes32) public approvalDigests;
-    mapping(uint256 => uint256) public createdBlocks;
+    mapping(uint256 => bool) public categoryExists;
+    mapping(uint256 => string) public slugs;
+    mapping(bytes32 => uint256) public slugToId;
 
-    function seedApprovedCategory(uint256 id, string memory domain, address submitter) external {
-        setDomain(id, domain);
-        setSubmitter(id, submitter);
-        setApproved(id, true);
+    function seedCategory(uint256 id, string memory slug) external {
+        setSlug(id, slug);
+        setCategoryExists(id, true);
     }
 
     function seedDefaultTestCategories() external {
-        string[24] memory defaultDomains = [
+        string[24] memory defaultSlugs = [
             "example.com",
             "batch-test-1.com",
             "batch-test-2.com",
@@ -45,119 +41,70 @@ contract MockCategoryRegistry is ICategoryRegistry {
             "openlibrary.org"
         ];
 
-        for (uint256 i = 0; i < defaultDomains.length; i++) {
+        for (uint256 i = 0; i < defaultSlugs.length; i++) {
             uint256 categoryId = i + 1;
-            setDomain(categoryId, defaultDomains[i]);
-            setApproved(categoryId, true);
+            setSlug(categoryId, defaultSlugs[i]);
+            setCategoryExists(categoryId, true);
         }
 
-        setDomain(25, "huggingface.co");
-        setApproved(25, true);
-        setDomain(26, "coingecko.com");
-        setApproved(26, true);
-        setDomain(27, "open.spotify.com");
-        setApproved(27, true);
-        setDomain(28, "scryfall.com");
-        setApproved(28, true);
-        setDomain(29, "t.co");
-        setApproved(29, true);
-        setDomain(30, "twitter.com");
-        setApproved(30, true);
-        setDomain(31, "youtu.be");
-        setApproved(31, true);
+        setSlug(25, "huggingface.co");
+        setCategoryExists(25, true);
+        setSlug(26, "coingecko.com");
+        setCategoryExists(26, true);
+        setSlug(27, "open.spotify.com");
+        setCategoryExists(27, true);
+        setSlug(28, "scryfall.com");
+        setCategoryExists(28, true);
+        setSlug(29, "t.co");
+        setCategoryExists(29, true);
+        setSlug(30, "twitter.com");
+        setCategoryExists(30, true);
+        setSlug(31, "youtu.be");
+        setCategoryExists(31, true);
     }
 
-    function setApproved(uint256 id, bool val) public {
-        approved[id] = val;
+    function setCategoryExists(uint256 id, bool val) public {
+        categoryExists[id] = val;
     }
 
-    function setDomain(uint256 id, string memory domain) public {
-        string memory existing = domains[id];
+    function setSlug(uint256 id, string memory slug) public {
+        string memory existing = slugs[id];
         if (bytes(existing).length != 0) {
-            delete domainToId[keccak256(bytes(existing))];
+            delete slugToId[keccak256(bytes(existing))];
         }
 
-        string memory normalized = _normalizeDomain(domain);
-        domains[id] = normalized;
-        domainToId[keccak256(bytes(normalized))] = id;
+        string memory normalized = _normalizeSlug(slug);
+        slugs[id] = normalized;
+        slugToId[keccak256(bytes(normalized))] = id;
     }
 
-    function setSubmitter(uint256 id, address s) public {
-        submitters[id] = s;
-    }
-
-    function setApprovalDigest(uint256 id, bytes32 digest) external {
-        approvalDigests[id] = digest;
-    }
-
-    function setCreatedBlock(uint256 id, uint256 createdBlock) external {
-        createdBlocks[id] = createdBlock;
-    }
-
-    function isApprovedCategory(uint256 categoryId) external view override returns (bool) {
-        return approved[categoryId];
+    function isCategory(uint256 categoryId) external view override returns (bool) {
+        return categoryExists[categoryId];
     }
 
     function getCategory(uint256 categoryId) external view override returns (Category memory) {
-        require(bytes(domains[categoryId]).length != 0, "Category does not exist");
+        require(bytes(slugs[categoryId]).length != 0, "Category does not exist");
         return _category(categoryId);
     }
 
-    function getCategoryByDomain(string calldata domain) external view override returns (Category memory) {
-        uint256 categoryId = domainToId[keccak256(bytes(_normalizeDomain(domain)))];
-        require(categoryId != 0, "Domain not registered");
+    function getCategoryBySlug(string calldata slug) external view override returns (Category memory) {
+        uint256 categoryId = slugToId[keccak256(bytes(_normalizeSlug(slug)))];
+        require(categoryId != 0, "Slug not registered");
         return _category(categoryId);
     }
 
-    function getApprovedCategoryIdsPaginated(uint256, uint256)
-        external
-        pure
-        override
-        returns (uint256[] memory, uint256)
-    {
+    function getCategoryIdsPaginated(uint256, uint256) external pure override returns (uint256[] memory, uint256) {
         return (new uint256[](0), 0);
-    }
-
-    function isDomainRegistered(string calldata domain) external view override returns (bool) {
-        return domainToId[keccak256(bytes(_normalizeDomain(domain)))] != 0;
-    }
-
-    function getSubmitter(uint256 categoryId) external view override returns (address) {
-        return submitters[categoryId];
-    }
-
-    function getCategoryStatus(uint256 categoryId) external view override returns (CategoryStatus) {
-        require(bytes(domains[categoryId]).length != 0, "Category does not exist");
-        return approved[categoryId] ? CategoryStatus.Approved : CategoryStatus.Pending;
-    }
-
-    function getCategoryApprovalDigest(uint256 categoryId) external view override returns (bytes32) {
-        require(bytes(domains[categoryId]).length != 0, "Category does not exist");
-        return approvalDigests[categoryId];
-    }
-
-    function getCategoryCreatedBlock(uint256 categoryId) external view override returns (uint256) {
-        require(bytes(domains[categoryId]).length != 0, "Category does not exist");
-        return createdBlocks[categoryId];
     }
 
     function _category(uint256 categoryId) internal view returns (Category memory) {
         string[] memory subcategories = new string[](0);
-        return Category({
-            id: categoryId,
-            name: "",
-            domain: domains[categoryId],
-            subcategories: subcategories,
-            submitter: submitters[categoryId],
-            stakeAmount: 0,
-            status: approved[categoryId] ? CategoryStatus.Approved : CategoryStatus.Pending,
-            proposalId: 0,
-            createdAt: 0
-        });
+        return
+            Category({ id: categoryId, name: "", slug: slugs[categoryId], subcategories: subcategories, createdAt: 0 });
     }
 
-    function _normalizeDomain(string memory domain) internal pure returns (string memory) {
-        bytes memory b = bytes(domain);
+    function _normalizeSlug(string memory slug) internal pure returns (string memory) {
+        bytes memory b = bytes(slug);
         uint256 startIndex = 0;
 
         if (b.length >= 8 && b[0] == "h" && b[1] == "t" && b[2] == "t" && b[3] == "p") {
@@ -215,14 +162,14 @@ contract MockCategoryRegistry is ICategoryRegistry {
         for (uint256 i = 0; i < resultIndex; i++) {
             trimmed[i] = result[i];
         }
-        return _canonicalizeDomainAlias(string(trimmed));
+        return _canonicalizeSlugAlias(string(trimmed));
     }
 
-    function _canonicalizeDomainAlias(string memory domain) internal pure returns (string memory) {
-        if (_equals(domain, "youtu.be") || _equals(domain, "m.youtube.com")) return "youtube.com";
-        if (_equals(domain, "clips.twitch.tv") || _equals(domain, "m.twitch.tv")) return "twitch.tv";
-        if (_equals(domain, "twitter.com") || _equals(domain, "mobile.twitter.com")) return "x.com";
-        return domain;
+    function _canonicalizeSlugAlias(string memory slug) internal pure returns (string memory) {
+        if (_equals(slug, "youtu.be") || _equals(slug, "m.youtube.com")) return "youtube.com";
+        if (_equals(slug, "clips.twitch.tv") || _equals(slug, "m.twitch.tv")) return "twitch.tv";
+        if (_equals(slug, "twitter.com") || _equals(slug, "mobile.twitter.com")) return "x.com";
+        return slug;
     }
 
     function _equals(string memory a, string memory b) internal pure returns (bool) {

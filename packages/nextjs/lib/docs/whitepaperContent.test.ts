@@ -40,66 +40,122 @@ function collectWhitepaperText(): string {
   return parts.join("\n");
 }
 
-test("whitepaper metadata reflects the updated title-case brand deck", () => {
-  assert.equal(META.subtitle, "Human Reputation at Stake");
-  assert.equal(META.deck, "Get Verified, Claim cREP, and Rate with Stake");
+test("whitepaper metadata reflects the agent-first brand deck", () => {
+  assert.equal(META.subtitle, "Public Human Evaluation for AI Agents");
+  assert.equal(META.deck, "AI Asks, Humans Earn");
 });
 
-test("whitepaper metadata reflects the April 2026 protocol revision", () => {
-  assert.equal(META.version, "0.4");
-  assert.equal(META.date, "April 2026");
+test("whitepaper metadata reflects the May 2026 product and AI revision", () => {
+  assert.equal(META.version, "0.5");
+  assert.equal(META.date, "May 2026");
+});
+
+test("whitepaper reflects current launch allocations and governance threshold", () => {
+  const whitepaperText = collectWhitepaperText();
+
+  assert.match(whitepaperText, /Bootstrap Pool \(12M HREP\)/i);
+  assert.match(whitepaperText, /pool is funded with 12M HREP/i);
+  assert.match(whitepaperText, /treasury starts with 32M HREP/i);
+  assert.match(whitepaperText, /bootstrap proposal threshold is 1,000 HREP/i);
+
+  assert.doesNotMatch(whitepaperText, /Bootstrap Pool \(24M HREP\)/i);
+  assert.doesNotMatch(whitepaperText, /pool is funded with 24M HREP/i);
+  assert.doesNotMatch(whitepaperText, /treasury starts with 20M HREP/i);
+  assert.doesNotMatch(whitepaperText, /10,000 HREP proposal threshold/i);
+  assert.doesNotMatch(whitepaperText, /bootstrap proposal threshold is 10,000 HREP/i);
 });
 
 test("whitepaper introduction surfaces the updated lead copy", () => {
   assert.equal(SECTIONS[0]?.title, "Introduction");
-  assert.equal(SECTIONS[0]?.lead, "Get Verified, Claim cREP, and Rate with Stake");
+  assert.equal(
+    SECTIONS[0]?.lead,
+    "Curyo is a public, paid, verified-human evaluation layer for agents and AI product teams.",
+  );
 });
 
-test("whitepaper contents include the current eight sections", () => {
-  assert.equal(SECTIONS.length, 8);
+test("whitepaper contents include the current nine sections", () => {
+  assert.equal(SECTIONS.length, 9);
   assert.deepEqual(
     SECTIONS.map(section => section.title),
     [
       "Introduction",
-      "How It Works",
-      "tlock Commit-Reveal Voting",
-      "Tokenomics",
-      "Governance",
-      "Curyo & AI",
-      "Known Limitations",
-      "Rating Research Basis",
+      "Why Agents Need Human Judgment",
+      "How Curyo Works",
+      "Product Experience",
+      "Signal Integrity",
+      "Incentives & Token Flows",
+      "Agent Interfaces",
+      "Governance & Public Infrastructure",
+      "Limitations & Future Work",
     ],
   );
 });
 
-test("whitepaper executive summary preserves the updated brand framing", () => {
-  const summaryBlock = EXECUTIVE_SUMMARY[1];
+test("whitepaper executive summary centers the agent-first thesis", () => {
+  const whitepaperText = collectWhitepaperText();
 
-  assert.equal(summaryBlock?.type, "paragraph");
-  if (!summaryBlock || summaryBlock.type !== "paragraph") {
-    throw new Error("Expected executive summary block to be a paragraph");
-  }
-
-  assert.match(summaryBlock.text, /stake-weighted prediction games/i);
-  assert.match(summaryBlock.text, /preventing herding/i);
+  assert.match(whitepaperText, /public, paid, verified-human evaluation layer/i);
+  assert.match(whitepaperText, /AI Asks, Humans Earn/i);
+  assert.match(whitepaperText, /structured result templates/i);
 });
 
-test("whitepaper avoids stale protocol audit phrases", () => {
+test("whitepaper surfaces the agent integration path", () => {
+  const whitepaperText = collectWhitepaperText();
+
+  assert.match(whitepaperText, /accountless by default/i);
+  assert.match(whitepaperText, /Public MCP/i);
+  assert.match(whitepaperText, /direct JSON routes/i);
+  assert.match(whitepaperText, /x402_authorization/i);
+  assert.match(whitepaperText, /browser signing/i);
+  assert.match(whitepaperText, /local signer CLI/i);
+  assert.match(whitepaperText, /curyo_quote_question/i);
+  assert.match(whitepaperText, /curyo_confirm_ask_transactions/i);
+  assert.match(whitepaperText, /curyo_get_result/i);
+  assert.match(whitepaperText, /Feedback Bonuses/i);
+});
+
+test("whitepaper reflects the current AI template catalog", () => {
+  const whitepaperText = collectWhitepaperText();
+
+  for (const templateId of [
+    "llm_answer_quality",
+    "rag_grounding_check",
+    "claim_verification",
+    "source_credibility_check",
+    "agent_action_go_no_go",
+    "feature_acceptance_test",
+    "agent_trace_review",
+    "proposal_review",
+    "pairwise_output_preference",
+  ]) {
+    assert.match(whitepaperText, new RegExp(templateId, "i"));
+  }
+});
+
+test("whitepaper reflects the current product design surface", () => {
+  const whitepaperText = collectWhitepaperText();
+
+  assert.match(whitepaperText, /AI ask -> human earning loop/i);
+  assert.match(whitepaperText, /app sidebar shell/i);
+  assert.match(whitepaperText, /\/ask\?tab=agent/i);
+  assert.match(whitepaperText, /\/agent\/sign\/\{intentId\}/i);
+  assert.match(whitepaperText, /Earn USDC/i);
+});
+
+test("whitepaper removes legacy section framing", () => {
   const whitepaperText = collectWhitepaperText();
 
   for (const stalePhrase of [
-    /46-scenario/i,
-    /50 cREP \(hardcoded\)/i,
-    /within seconds/i,
-    /cannot be purchased/i,
-    /recalculated at settlement from revealed raw stakes/i,
-    /settle as tied\/consensus/i,
-    /commitHash = keccak256\(isUp, salt, contentId, keccak256\(ciphertext\)\)/i,
-    /participation rewards after round settlement regardless of vote outcome/i,
+    /tlock Commit-Reveal Voting/i,
+    /^Tokenomics$/im,
+    /Curyo & AI/i,
+    /Rating Research Basis/i,
+    /decentralized content curation protocol/i,
   ]) {
     assert.doesNotMatch(whitepaperText, stalePhrase);
   }
 
-  assert.match(whitepaperText, /49-scenario/i);
-  assert.match(whitepaperText, /SDK, MCP & Reference Stack/i);
+  assert.match(whitepaperText, /question-first/i);
+  assert.match(whitepaperText, /USDC on Celo/i);
+  assert.match(whitepaperText, /public infrastructure/i);
 });

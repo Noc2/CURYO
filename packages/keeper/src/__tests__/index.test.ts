@@ -38,7 +38,6 @@ async function loadKeeperIndex(options: KeeperIndexOptions = {}) {
     roundsRevealFailedFinalized: 0,
     votesRevealed: 0,
     cleanupBatchesProcessed: 0,
-    submitterStakesResolved: 0,
     contentMarkedDormant: 0,
   });
   const validateKeeperContracts = vi.fn().mockResolvedValue(undefined);

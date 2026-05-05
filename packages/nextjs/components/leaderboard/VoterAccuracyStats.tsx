@@ -81,11 +81,11 @@ export function VoterAccuracyStats() {
           <div className="flex flex-wrap gap-2">
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-base-content/[0.06] text-base">
               <span className="text-base-content/50">Won</span>
-              <span className="font-mono tabular-nums text-success">{formatStake(stats.totalStakeWon)} cREP</span>
+              <span className="font-mono tabular-nums text-success">{formatStake(stats.totalStakeWon)} HREP</span>
             </div>
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-base-content/[0.06] text-base">
               <span className="text-base-content/50">Lost</span>
-              <span className="font-mono tabular-nums text-error">{formatStake(stats.totalStakeLost)} cREP</span>
+              <span className="font-mono tabular-nums text-error">{formatStake(stats.totalStakeLost)} HREP</span>
             </div>
           </div>
         </div>

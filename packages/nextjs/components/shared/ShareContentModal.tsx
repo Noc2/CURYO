@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { CheckIcon, ClipboardIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { buildRateContentHref } from "~~/constants/routes";
 import { useCopyToClipboard } from "~~/hooks/scaffold-eth";
 import { truncateContentTitle } from "~~/lib/contentTitle";
 import { type ContentShareContentInput, buildContentShareData } from "~~/lib/social/contentShare";
@@ -47,7 +48,7 @@ export function ShareContentModal({
   const shareDetails = useMemo(() => {
     if (typeof window === "undefined") return { ratingLabel: null, url: "" };
 
-    const fallbackUrl = `${window.location.origin}/vote?content=${contentId}`;
+    const fallbackUrl = `${window.location.origin}${buildRateContentHref(contentId)}`;
     const hasRatingSignal =
       rating !== undefined || ratingBps !== undefined || openRound?.referenceRatingBps !== undefined;
     if (!hasRatingSignal) return { ratingLabel: null, url: fallbackUrl };
@@ -104,7 +105,9 @@ export function ShareContentModal({
 
         <h3 className="text-lg font-semibold text-center mb-1">Share this content</h3>
         <p className="mb-2 text-center text-base font-medium text-base-content line-clamp-2">{title}</p>
-        <p className="mb-5 text-center text-sm text-base-content/75 line-clamp-2">{description}</p>
+        {description ? (
+          <p className="mb-5 text-center text-sm text-base-content/75 line-clamp-2">{description}</p>
+        ) : null}
 
         {/* Share buttons */}
         <div className="space-y-2.5">

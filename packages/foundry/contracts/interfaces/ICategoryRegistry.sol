@@ -2,64 +2,30 @@
 pragma solidity ^0.8.20;
 
 /// @title ICategoryRegistry Interface
-/// @notice Interface for the CategoryRegistry contract that manages content categories/platforms
+/// @notice Interface for seed-only discovery category metadata.
 interface ICategoryRegistry {
-    enum CategoryStatus {
-        Pending,
-        Approved,
-        Rejected,
-        Canceled
-    }
-
     struct Category {
         uint256 id;
         string name;
-        string domain;
+        string slug;
         string[] subcategories;
-        address submitter;
-        uint256 stakeAmount;
-        CategoryStatus status;
-        uint256 proposalId;
         uint256 createdAt;
     }
 
-    // Events
-    event CategorySubmitted(
-        uint256 indexed categoryId, address indexed submitter, string name, string domain, uint256 proposalId
-    );
-    event CategoryProposalLinked(uint256 indexed categoryId, uint256 indexed proposalId, bytes32 descriptionHash);
-    event CategoryApproved(uint256 indexed categoryId);
-    event CategoryRejected(uint256 indexed categoryId);
-    event CategoryCanceled(uint256 indexed categoryId);
-    event CategoryAdded(uint256 indexed categoryId, string name, string domain);
+    event CategoryAdded(uint256 indexed categoryId, string name, string slug);
 
-    /// @notice Check if a category is approved and active
-    function isApprovedCategory(uint256 categoryId) external view returns (bool);
+    /// @notice Check if a seeded category exists.
+    function isCategory(uint256 categoryId) external view returns (bool);
 
     /// @notice Get category details by ID
     function getCategory(uint256 categoryId) external view returns (Category memory);
 
-    /// @notice Get category by domain
-    function getCategoryByDomain(string calldata domain) external view returns (Category memory);
+    /// @notice Get category by slug.
+    function getCategoryBySlug(string calldata slug) external view returns (Category memory);
 
-    /// @notice Get approved category IDs with pagination
-    function getApprovedCategoryIdsPaginated(uint256 offset, uint256 limit)
+    /// @notice Get seeded category IDs with pagination.
+    function getCategoryIdsPaginated(uint256 offset, uint256 limit)
         external
         view
         returns (uint256[] memory categoryIds, uint256 total);
-
-    /// @notice Check if a domain is already registered
-    function isDomainRegistered(string calldata domain) external view returns (bool);
-
-    /// @notice Get the submitter address for a category
-    function getSubmitter(uint256 categoryId) external view returns (address);
-
-    /// @notice Get the current status for a category
-    function getCategoryStatus(uint256 categoryId) external view returns (CategoryStatus);
-
-    /// @notice Get the current approval digest that governance proposals must bind to for this category
-    function getCategoryApprovalDigest(uint256 categoryId) external view returns (bytes32);
-
-    /// @notice Get the block number where the category was submitted
-    function getCategoryCreatedBlock(uint256 categoryId) external view returns (uint256);
 }

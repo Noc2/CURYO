@@ -24,14 +24,25 @@ test("tracks the current epoch when the round is already in a later window", () 
   assert.equal(deriveCommitVoteRuntimeNowMs(params), 2_201_000);
 });
 
+test("targets the following epoch when the next block can land on the boundary", () => {
+  const params = {
+    latestBlockTimestampSeconds: 2_199,
+    epochDurationSeconds: 1_200,
+    roundStartTimeSeconds: 1_000,
+  };
+
+  assert.equal(deriveCommitVoteTargetTimeSeconds(params), 3_401);
+  assert.equal(deriveCommitVoteRuntimeNowMs(params), 2_201_000);
+});
+
 test("adds a confirmation buffer for the first vote in a new round", () => {
   const params = {
     latestBlockTimestampSeconds: 1_500,
     epochDurationSeconds: 1_200,
   };
 
-  assert.equal(deriveCommitVoteTargetTimeSeconds(params), 2_760);
-  assert.equal(deriveCommitVoteRuntimeNowMs(params), 1_560_000);
+  assert.equal(deriveCommitVoteTargetTimeSeconds(params), 2_761);
+  assert.equal(deriveCommitVoteRuntimeNowMs(params), 1_561_000);
 });
 
 test("caps the new round confirmation buffer below the epoch duration", () => {
@@ -40,6 +51,6 @@ test("caps the new round confirmation buffer below the epoch duration", () => {
     epochDurationSeconds: 30,
   };
 
-  assert.equal(deriveCommitVoteTargetTimeSeconds(params), 1_559);
-  assert.equal(deriveCommitVoteRuntimeNowMs(params), 1_529_000);
+  assert.equal(deriveCommitVoteTargetTimeSeconds(params), 1_560);
+  assert.equal(deriveCommitVoteRuntimeNowMs(params), 1_530_000);
 });

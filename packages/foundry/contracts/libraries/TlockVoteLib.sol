@@ -26,7 +26,7 @@ library TlockVoteLib {
         pure
         returns (
             uint256 contentId,
-            uint16 roundReferenceRatingBps,
+            uint256 roundContext,
             bytes32 commitHash,
             bytes memory ciphertext,
             uint64 targetRound,
@@ -35,8 +35,8 @@ library TlockVoteLib {
         )
     {
         if (data.length < 224) revert InvalidCiphertext();
-        (contentId, roundReferenceRatingBps, commitHash, ciphertext, frontend, targetRound, drandChainHash) =
-            abi.decode(data, (uint256, uint16, bytes32, bytes, address, uint64, bytes32));
+        (contentId, roundContext, commitHash, ciphertext, frontend, targetRound, drandChainHash) =
+            abi.decode(data, (uint256, uint256, bytes32, bytes, address, uint64, bytes32));
     }
 
     function validateCommitData(
@@ -56,7 +56,11 @@ library TlockVoteLib {
         if (embeddedTargetRound != targetRound || embeddedDrandChainHash != drandChainHash) revert InvalidCiphertext();
     }
 
-    function targetRoundTimestamp(uint64 targetRound, uint64 genesisTime, uint64 period) external pure returns (uint256) {
+    function targetRoundTimestamp(uint64 targetRound, uint64 genesisTime, uint64 period)
+        external
+        pure
+        returns (uint256)
+    {
         if (targetRound == 0 || genesisTime == 0 || period == 0) revert TargetRoundOutOfWindow();
         return uint256(genesisTime) + (uint256(targetRound) - 1) * uint256(period);
     }
@@ -64,7 +68,9 @@ library TlockVoteLib {
     function buildExpectedCommitHash(
         bool isUp,
         bytes32 salt,
+        address voter,
         uint256 contentId,
+        uint256 roundId,
         uint16 roundReferenceRatingBps,
         uint64 targetRound,
         bytes32 drandChainHash,
@@ -72,7 +78,17 @@ library TlockVoteLib {
     ) external pure returns (bytes32) {
         bytes32 ciphertextHash = keccak256(ciphertext);
         return keccak256(
-            abi.encodePacked(isUp, salt, contentId, roundReferenceRatingBps, targetRound, drandChainHash, ciphertextHash)
+            abi.encodePacked(
+                isUp,
+                salt,
+                voter,
+                contentId,
+                roundId,
+                roundReferenceRatingBps,
+                targetRound,
+                drandChainHash,
+                ciphertextHash
+            )
         );
     }
 
@@ -110,15 +126,18 @@ library TlockVoteLib {
         if (period == 0 || targetRound == 0) revert TargetRoundOutOfWindow();
         if (revealableAfter < genesisTime) revert TargetRoundOutOfWindow();
 
-        uint64 minTargetRound = _roundAt(revealableAfter, genesisTime, period);
+        uint64 minTargetRound = _roundAtOrAfter(revealableAfter, genesisTime, period);
         uint64 maxTargetRound = _roundAt(revealableAfter + epochDuration, genesisTime, period);
         if (targetRound < minTargetRound || targetRound > maxTargetRound) revert TargetRoundOutOfWindow();
     }
 
-    function _extractTlockMetadata(bytes memory ciphertext) private pure returns (uint64 targetRound, bytes32 drandChainHash) {
+    function _extractTlockMetadata(bytes memory ciphertext)
+        private
+        pure
+        returns (uint64 targetRound, bytes32 drandChainHash)
+    {
         uint256 trimmedLength = _trimTrailingNewlines(ciphertext);
-        bytes memory decoded =
-            _decodeBase64Payload(ciphertext, AGE_HEADER.length, trimmedLength - AGE_FOOTER.length);
+        bytes memory decoded = _decodeBase64Payload(ciphertext, AGE_HEADER.length, trimmedLength - AGE_FOOTER.length);
 
         uint256 cursor = 0;
         (uint256 lineStart, uint256 lineEnd, uint256 nextCursor) = _readLineBounds(decoded, cursor);
@@ -155,7 +174,17 @@ library TlockVoteLib {
         return uint64(((timestamp - genesisTime) / period) + 1);
     }
 
-    function _decodeBase64Payload(bytes memory data, uint256 start, uint256 end) private pure returns (bytes memory out) {
+    function _roundAtOrAfter(uint256 timestamp, uint64 genesisTime, uint64 period) private pure returns (uint64) {
+        if (period == 0 || timestamp < genesisTime) return 0;
+        uint256 elapsed = timestamp - genesisTime;
+        return uint64(((elapsed + uint256(period) - 1) / uint256(period)) + 1);
+    }
+
+    function _decodeBase64Payload(bytes memory data, uint256 start, uint256 end)
+        private
+        pure
+        returns (bytes memory out)
+    {
         bytes memory clean = _stripBase64Whitespace(data, start, end);
         if (clean.length == 0 || clean.length % 4 != 0) revert InvalidCiphertext();
 
@@ -189,7 +218,11 @@ library TlockVoteLib {
         }
     }
 
-    function _stripBase64Whitespace(bytes memory data, uint256 start, uint256 end) private pure returns (bytes memory clean) {
+    function _stripBase64Whitespace(bytes memory data, uint256 start, uint256 end)
+        private
+        pure
+        returns (bytes memory clean)
+    {
         uint256 cleanLength = 0;
         for (uint256 i = start; i < end; i++) {
             bytes1 ch = data[i];
@@ -332,7 +365,11 @@ library TlockVoteLib {
         }
     }
 
-    function _lineEquals(bytes memory data, uint256 start, uint256 end, bytes memory expected) private pure returns (bool) {
+    function _lineEquals(bytes memory data, uint256 start, uint256 end, bytes memory expected)
+        private
+        pure
+        returns (bool)
+    {
         if (end - start != expected.length) return false;
         for (uint256 i = 0; i < expected.length; i++) {
             if (data[start + i] != expected[i]) return false;

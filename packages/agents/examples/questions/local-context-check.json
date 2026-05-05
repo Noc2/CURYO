@@ -1,0 +1,25 @@
+{
+  "clientRequestId": "local-context-check-demo",
+  "chainId": 42220,
+  "templateId": "generic_rating",
+  "maxPaymentAmount": "1000000",
+  "bounty": {
+    "asset": "USDC",
+    "amount": "1000000",
+    "requiredVoters": "3",
+    "requiredSettledRounds": "1"
+  },
+  "question": {
+    "templateId": "generic_rating",
+    "templateInputs": {
+      "audience": "people familiar with the place or context",
+      "goal": "avoid acting on stale or misleading local information",
+      "successSignal": "Vote up if the linked place looks open and trustworthy."
+    },
+    "title": "Does this venue look open and trustworthy?",
+    "description": "Review the linked venue page or listing. Vote up only if it looks current, open, and suitable for the proposed plan.",
+    "contextUrl": "https://example.com/venue",
+    "categoryId": "1",
+    "tags": ["agent", "local-context", "venue"]
+  }
+}

@@ -1,5 +1,5 @@
 import { E2E_BASE_URL } from "../helpers/service-urls";
-import { expect, test, type Page } from "@playwright/test";
+import { type Page, expect, test } from "@playwright/test";
 
 async function gotoPath(page: Page, path: string): Promise<void> {
   await page.goto(new URL(path, E2E_BASE_URL).toString(), { waitUntil: "domcontentloaded" });
@@ -13,9 +13,9 @@ test.describe("Page smoke tests", () => {
     // The page title should contain "Curyo" regardless of redirects
     await expect(page).toHaveTitle(/Curyo/i);
 
-    // The landing page may redirect to /governance or /vote if a test wallet
+    // The landing page may redirect to /governance or /rate if a test wallet
     // session is already active. Either the hero section or a redirected page is acceptable.
-    const heroHeading = page.getByRole("heading", { name: /Human Reputation at Stake/i }).first();
+    const heroHeading = page.getByRole("heading", { name: /AI Asks,\s*Humans Earn/i }).first();
     const governancePage = page.getByRole("button", { name: /Profile|Leaderboard|Faucet/i }).first();
     const feedPage = page.getByRole("button", { name: /Vote up|Vote down/i }).first();
 
@@ -29,11 +29,11 @@ test.describe("Page smoke tests", () => {
     const introHeading = page.getByRole("heading", { name: /Introduction/i }).first();
     await expect(introHeading).toBeVisible({ timeout: 10_000 });
 
-    const keyPrinciplesHeading = page.getByRole("heading", { name: /Key Principles/i }).first();
-    await expect(keyPrinciplesHeading).toBeVisible({ timeout: 5_000 });
+    const whatCuryoDoesHeading = page.getByRole("heading", { name: /What Curyo Does/i }).first();
+    await expect(whatCuryoDoesHeading).toBeVisible({ timeout: 5_000 });
 
-    const skinInGame = page.getByText("Skin in the Game");
-    await expect(skinInGame).toBeVisible({ timeout: 5_000 });
+    const agentFeedback = page.locator("#main-content").getByText("AI Asks, Humans Earn");
+    await expect(agentFeedback).toBeVisible({ timeout: 5_000 });
   });
 
   test("legal page shows legal cards", async ({ page }) => {

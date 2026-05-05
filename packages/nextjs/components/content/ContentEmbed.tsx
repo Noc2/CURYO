@@ -3,64 +3,37 @@
 import React from "react";
 import dynamic from "next/dynamic";
 import { GenericLinkCard } from "./embeds";
-import { ExternalLinkBehaviorProvider } from "~~/components/shared/SafeExternalLink";
-import { getUsablePrefetchedMetadata, shouldWaitForPrefetchedMetadata } from "~~/lib/content/embedLoadStrategy";
-import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
+import { ExternalLinkBehaviorProvider, SafeExternalLink } from "~~/components/shared/SafeExternalLink";
+import { isDirectImageUrl } from "~~/lib/contentMedia";
 import { detectPlatform } from "~~/utils/platforms";
 
 const EmbedSpinner = () => (
   <div className="flex h-full w-full items-center justify-center p-8">
-    <span className="loading loading-spinner loading-md text-base-content/30" />
+    <span className="loading loading-spinner loading-md text-base-content/60" />
   </div>
 );
 
 const YouTubeEmbed = dynamic(() => import("./embeds/YouTubeEmbed").then(m => m.YouTubeEmbed), {
   loading: EmbedSpinner,
 });
-const TwitchEmbed = dynamic(() => import("./embeds/TwitchEmbed").then(m => m.TwitchEmbed), {
-  ssr: false,
-  loading: EmbedSpinner,
-});
-const ScryfallEmbed = dynamic(() => import("./embeds/ScryfallEmbed").then(m => m.ScryfallEmbed), {
-  loading: EmbedSpinner,
-});
-const TmdbEmbed = dynamic(() => import("./embeds/TmdbEmbed").then(m => m.TmdbEmbed), { loading: EmbedSpinner });
-const WikipediaEmbed = dynamic(() => import("./embeds/WikipediaEmbed").then(m => m.WikipediaEmbed), {
-  loading: EmbedSpinner,
-});
-const RawgEmbed = dynamic(() => import("./embeds/RawgEmbed").then(m => m.RawgEmbed), { loading: EmbedSpinner });
-const OpenLibraryEmbed = dynamic(() => import("./embeds/OpenLibraryEmbed").then(m => m.OpenLibraryEmbed), {
-  loading: EmbedSpinner,
-});
-const SpotifyEmbed = dynamic(() => import("./embeds/SpotifyEmbed").then(m => m.SpotifyEmbed), {
-  loading: EmbedSpinner,
-});
-const CoinGeckoEmbed = dynamic(() => import("./embeds/CoinGeckoEmbed").then(m => m.CoinGeckoEmbed), {
-  loading: EmbedSpinner,
-});
-const GitHubEmbed = dynamic(() => import("./embeds/GitHubEmbed").then(m => m.GitHubEmbed), {
-  loading: EmbedSpinner,
-});
-const HuggingFaceEmbed = dynamic(() => import("./embeds/HuggingFaceEmbed").then(m => m.HuggingFaceEmbed), {
-  loading: EmbedSpinner,
-});
-const TwitterEmbed = dynamic(() => import("./embeds/TwitterEmbed").then(m => m.TwitterEmbed), {
-  ssr: false,
-  loading: EmbedSpinner,
-});
 
 interface ContentEmbedProps {
-  url: string;
+  url?: string | null;
+  title?: string;
+  description?: string;
+  thumbnailUrl?: string | null;
   compact?: boolean;
+  showTextHeading?: boolean;
   isActive?: boolean;
-  deferClientFetch?: boolean;
-  prefetchedMetadata?: ContentMetadataResult;
   interactionMode?: "default" | "vote";
+  imageFit?: "cover" | "contain";
+  imageLinkUrl?: string | null;
+  onImageLinkClick?: React.MouseEventHandler<HTMLElement>;
 }
 
 /** Error boundary that catches render errors in embed components and falls back to a link card. */
 class EmbedErrorBoundary extends React.Component<
-  { url: string; compact: boolean; children: React.ReactNode },
+  { url: string; compact: boolean; thumbnailUrl?: string | null; children: React.ReactNode },
   { hasError: boolean }
 > {
   state = { hasError: false };
@@ -71,7 +44,9 @@ class EmbedErrorBoundary extends React.Component<
 
   render() {
     if (this.state.hasError) {
-      return <GenericLinkCard url={this.props.url} compact={this.props.compact} />;
+      return (
+        <GenericLinkCard url={this.props.url} compact={this.props.compact} thumbnailUrl={this.props.thumbnailUrl} />
+      );
     }
     return this.props.children;
   }
@@ -83,22 +58,68 @@ class EmbedErrorBoundary extends React.Component<
  */
 export function ContentEmbed({
   url,
+  title,
+  description,
+  thumbnailUrl,
   compact = false,
+  showTextHeading = true,
   isActive = true,
-  deferClientFetch = false,
-  prefetchedMetadata,
   interactionMode = "default",
+  imageFit = "cover",
+  imageLinkUrl,
+  onImageLinkClick,
 }: ContentEmbedProps) {
-  const platformInfo = detectPlatform(url);
-  const usablePrefetchedMetadata = getUsablePrefetchedMetadata(platformInfo.type, prefetchedMetadata);
-  const disableExternalNavigation = interactionMode === "vote";
-
-  if (shouldWaitForPrefetchedMetadata(platformInfo.type, deferClientFetch, usablePrefetchedMetadata)) {
+  if (!url?.trim()) {
     return (
-      <ExternalLinkBehaviorProvider disableNavigation={disableExternalNavigation}>
-        <GenericLinkCard url={url} compact={compact} />
-      </ExternalLinkBehaviorProvider>
+      <div className={`flex h-full min-h-[12rem] flex-col justify-center bg-base-100 ${compact ? "p-4" : "p-6"}`}>
+        {showTextHeading && title ? (
+          <p className="text-sm font-semibold uppercase text-base-content/60">Question</p>
+        ) : null}
+        {showTextHeading && title ? (
+          <h3 className="mt-2 text-xl font-semibold leading-tight text-base-content">{title}</h3>
+        ) : null}
+        {description ? (
+          <p
+            className={`whitespace-pre-wrap break-words text-base leading-relaxed text-base-content/75 ${
+              showTextHeading && title ? "mt-3" : ""
+            }`}
+          >
+            {description}
+          </p>
+        ) : null}
+      </div>
     );
+  }
+
+  const disableExternalNavigation = interactionMode === "vote";
+  const platformInfo = detectPlatform(url);
+
+  if (isDirectImageUrl(url)) {
+    const image = (
+      <img
+        src={url}
+        alt={title || "Question media"}
+        className={`h-full w-full ${imageFit === "contain" ? "object-contain" : "object-cover"}`}
+        loading={isActive ? "eager" : "lazy"}
+      />
+    );
+
+    if (imageLinkUrl?.trim()) {
+      return (
+        <SafeExternalLink
+          href={imageLinkUrl}
+          allowExternalOpen
+          className="block h-full w-full cursor-pointer"
+          title={title ? `Open context for ${title}` : "Open context"}
+          ariaLabel={title ? `Open context for ${title}` : "Open context"}
+          onClick={onImageLinkClick}
+        >
+          {image}
+        </SafeExternalLink>
+      );
+    }
+
+    return image;
   }
 
   let embed: React.ReactNode;
@@ -106,107 +127,17 @@ export function ContentEmbed({
     case "youtube":
       embed = <YouTubeEmbed key={url} info={platformInfo} compact={compact} isActive={isActive} />;
       break;
-    case "twitch":
-      embed = <TwitchEmbed key={url} info={platformInfo} compact={compact} />;
-      break;
-    case "scryfall":
-      embed = <ScryfallEmbed key={url} info={platformInfo} compact={compact} isActive={isActive} />;
-      break;
-    case "tmdb":
-      embed = (
-        <TmdbEmbed
-          key={url}
-          info={platformInfo}
-          compact={compact}
-          isActive={isActive}
-          prefetchedMetadata={usablePrefetchedMetadata}
-        />
-      );
-      break;
-    case "wikipedia":
-      embed = (
-        <WikipediaEmbed
-          key={url}
-          info={platformInfo}
-          compact={compact}
-          isActive={isActive}
-          prefetchedMetadata={usablePrefetchedMetadata}
-        />
-      );
-      break;
-    case "rawg":
-      embed = (
-        <RawgEmbed
-          key={url}
-          info={platformInfo}
-          compact={compact}
-          isActive={isActive}
-          prefetchedMetadata={usablePrefetchedMetadata}
-          fillMediaSurface={interactionMode === "vote"}
-        />
-      );
-      break;
-    case "openlibrary":
-      embed = (
-        <OpenLibraryEmbed
-          key={url}
-          info={platformInfo}
-          compact={compact}
-          isActive={isActive}
-          prefetchedMetadata={usablePrefetchedMetadata}
-        />
-      );
-      break;
-    case "spotify":
-      embed = <SpotifyEmbed key={url} info={platformInfo} compact={compact} />;
-      break;
-    case "coingecko":
-      embed = (
-        <CoinGeckoEmbed
-          key={url}
-          info={platformInfo}
-          compact={compact}
-          isActive={isActive}
-          prefetchedMetadata={usablePrefetchedMetadata}
-        />
-      );
-      break;
-    case "huggingface":
-      embed = (
-        <HuggingFaceEmbed
-          key={url}
-          info={platformInfo}
-          compact={compact}
-          isActive={isActive}
-          prefetchedMetadata={usablePrefetchedMetadata}
-        />
-      );
-      break;
-    case "twitter":
-      embed = <TwitterEmbed key={url} info={platformInfo} compact={compact} />;
-      break;
-    case "github":
-      embed = (
-        <GitHubEmbed
-          key={url}
-          info={platformInfo}
-          compact={compact}
-          isActive={isActive}
-          prefetchedMetadata={usablePrefetchedMetadata}
-        />
-      );
-      break;
     default:
       return (
         <ExternalLinkBehaviorProvider disableNavigation={disableExternalNavigation}>
-          <GenericLinkCard url={url} compact={compact} />
+          <GenericLinkCard url={url} compact={compact} thumbnailUrl={thumbnailUrl} />
         </ExternalLinkBehaviorProvider>
       );
   }
 
   return (
     <ExternalLinkBehaviorProvider disableNavigation={disableExternalNavigation}>
-      <EmbedErrorBoundary key={url} url={url} compact={compact}>
+      <EmbedErrorBoundary key={url} url={url} compact={compact} thumbnailUrl={thumbnailUrl}>
         {embed}
       </EmbedErrorBoundary>
     </ExternalLinkBehaviorProvider>

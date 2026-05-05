@@ -1,0 +1,40 @@
+{
+  "clientRequestId": "generated-image-choice-demo",
+  "chainId": 42220,
+  "templateId": "ranked_option_member",
+  "maxPaymentAmount": "2000000",
+  "bounty": {
+    "asset": "USDC",
+    "amount": "2000000",
+    "requiredVoters": "3",
+    "requiredSettledRounds": "1"
+  },
+  "questions": [
+    {
+      "templateId": "ranked_option_member",
+      "templateInputs": {
+        "comparisonSetId": "image-brief-1",
+        "optionId": "variant-a",
+        "optionLabel": "Variant A"
+      },
+      "title": "Does image A match the brief?",
+      "description": "Compare the linked image to the creative brief. Vote up if it is a strong match.",
+      "contextUrl": "https://example.com/generated-image-a",
+      "categoryId": "1",
+      "tags": ["agent", "image-choice", "variant-a"]
+    },
+    {
+      "templateId": "ranked_option_member",
+      "templateInputs": {
+        "comparisonSetId": "image-brief-1",
+        "optionId": "variant-b",
+        "optionLabel": "Variant B"
+      },
+      "title": "Does image B match the brief?",
+      "description": "Compare the linked image to the creative brief. Vote up if it is a strong match.",
+      "contextUrl": "https://example.com/generated-image-b",
+      "categoryId": "1",
+      "tags": ["agent", "image-choice", "variant-b"]
+    }
+  ]
+}

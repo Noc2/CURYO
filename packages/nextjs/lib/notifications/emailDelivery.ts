@@ -1,5 +1,6 @@
 import { and, eq, isNotNull, or } from "drizzle-orm";
 import "server-only";
+import { RATE_ROUTE } from "~~/constants/routes";
 import { db, dbClient } from "~~/lib/db";
 import { notificationEmailDeliveries, notificationEmailSubscriptions, watchedContent } from "~~/lib/db/schema";
 import { getNotificationDeliverySecret, getOptionalAppUrl } from "~~/lib/env/server";
@@ -175,7 +176,7 @@ function getDisplayName(address: string, profileName: string | null) {
 }
 
 function getAbsoluteVoteUrl(contentId: string, appUrl: string) {
-  const url = new URL("/vote", appUrl);
+  const url = new URL(RATE_ROUTE, appUrl);
   url.searchParams.set("content", contentId);
   return url.toString();
 }
@@ -214,7 +215,7 @@ function buildCandidates(
       const body =
         source === "watched"
           ? `${bodyPrefix}: "${item.title}".`
-          : `${bodyPrefix}: "${item.title}". Open Governance to claim your cREP from this round.`;
+          : `${bodyPrefix}: "${item.title}". Open Governance to claim your HREP from this round.`;
 
       candidates.set(eventKey, {
         walletAddress: subscription.walletAddress,
@@ -265,8 +266,8 @@ function buildCandidates(
         eventKey,
         eventType: "followed_submission",
         contentId: item.contentId,
-        subject: `${displayName} submitted something new on Curyo`,
-        body: `${displayName} just submitted "${item.title}".`,
+        subject: `${displayName} asked something new on Curyo`,
+        body: `${displayName} just asked "${item.title}".`,
         href: getAbsoluteVoteUrl(item.contentId, appUrl),
       });
     }

@@ -22,10 +22,8 @@ type TlockClient = {
 };
 type TlockEncryptFn = (targetRound: number, payload: Uint8Array, client: unknown) => Promise<string>;
 type TlockDecryptFn = (ciphertext: string, client: unknown) => Promise<Uint8Array>;
-type TlockRoundAtFn = (targetTimeMs: number, chainInfo: TlockChainInfo) => number;
 type TlockModule = {
   mainnetClient: () => TlockClient;
-  roundAt: TlockRoundAtFn;
   timelockEncrypt: TlockEncryptFn;
   timelockDecrypt: TlockDecryptFn;
 };
@@ -40,6 +38,7 @@ let tlockModulePromise: Promise<TlockModule> | undefined;
 
 export interface VoteTransferPayload {
   contentId: bigint;
+  roundId: bigint;
   roundReferenceRatingBps: number;
   commitHash: VoteCommitHash;
   ciphertext: VoteCiphertext;
@@ -50,13 +49,14 @@ export interface VoteTransferPayload {
 export type VoteTlockRuntime = {
   client?: TlockClient;
   now?: () => number;
+  targetRound?: bigint | number;
   encryptFn?: TlockEncryptFn;
   decryptFn?: TlockDecryptFn;
 };
 
 const voteTransferPayloadParams = [
   { name: "contentId", type: "uint256" },
-  { name: "roundReferenceRatingBps", type: "uint16" },
+  { name: "roundContext", type: "uint256" },
   { name: "commitHash", type: "bytes32" },
   { name: "ciphertext", type: "bytes" },
   { name: "frontend", type: "address" },
@@ -75,11 +75,29 @@ const UNPADDED_BASE64_LINE = /^[A-Za-z0-9+/]+$/;
 const AGE_MAC_LENGTH = 32;
 const MIN_TLOCK_STANZA_BODY_LENGTH = 80;
 const MIN_ENCRYPTED_BODY_LENGTH = 65;
+const ROUND_REFERENCE_RATING_MASK = 0xffffn;
+
+export function packVoteRoundContext(roundId: bigint, roundReferenceRatingBps: number): bigint {
+  if (roundId <= 0n) {
+    throw new Error("roundId must be positive");
+  }
+  if (!Number.isInteger(roundReferenceRatingBps) || roundReferenceRatingBps < 0 || roundReferenceRatingBps > 65_535) {
+    throw new Error("roundReferenceRatingBps must fit uint16");
+  }
+
+  return (roundId << 16n) | BigInt(roundReferenceRatingBps);
+}
+
+export function unpackVoteRoundContext(roundContext: bigint): { roundId: bigint; roundReferenceRatingBps: number } {
+  return {
+    roundId: roundContext >> 16n,
+    roundReferenceRatingBps: Number(roundContext & ROUND_REFERENCE_RATING_MASK),
+  };
+}
 
 async function loadTlockModule(): Promise<TlockModule> {
   tlockModulePromise ??= import("tlock-js").then(module => ({
     mainnetClient: module.mainnetClient as TlockModule["mainnetClient"],
-    roundAt: module.roundAt as TlockModule["roundAt"],
     timelockEncrypt: module.timelockEncrypt as TlockModule["timelockEncrypt"],
     timelockDecrypt: module.timelockDecrypt as TlockModule["timelockDecrypt"],
   }));
@@ -146,7 +164,9 @@ export function decodeVotePlaintext(plaintext: Uint8Array): { isUp: boolean; sal
 export function buildCommitHash(
   isUp: boolean,
   salt: VoteSalt,
+  voter: Address,
   contentId: bigint,
+  roundId: bigint,
   roundReferenceRatingBps: number,
   targetRound: bigint,
   drandChainHash: VoteDrandChainHash,
@@ -154,8 +174,8 @@ export function buildCommitHash(
 ): VoteCommitHash {
   return keccak256(
     encodePacked(
-      ["bool", "bytes32", "uint256", "uint16", "uint64", "bytes32", "bytes32"],
-      [isUp, salt, contentId, roundReferenceRatingBps, targetRound, drandChainHash, keccak256(ciphertext)],
+      ["bool", "bytes32", "address", "uint256", "uint256", "uint16", "uint64", "bytes32", "bytes32"],
+      [isUp, salt, voter, contentId, roundId, roundReferenceRatingBps, targetRound, drandChainHash, keccak256(ciphertext)],
     ),
   );
 }
@@ -165,9 +185,10 @@ export function buildCommitKey(voter: Address, commitHash: `0x${string}`): `0x${
 }
 
 export function encodeVoteTransferPayload(payload: VoteTransferPayload): `0x${string}` {
+  const roundContext = packVoteRoundContext(payload.roundId, payload.roundReferenceRatingBps);
   return encodeAbiParameters(voteTransferPayloadParams, [
     payload.contentId,
-    payload.roundReferenceRatingBps,
+    roundContext,
     payload.commitHash,
     payload.ciphertext,
     payload.frontend,
@@ -178,14 +199,14 @@ export function encodeVoteTransferPayload(payload: VoteTransferPayload): `0x${st
 
 export function decodeVoteTransferPayload(data: `0x${string}`): VoteTransferPayload {
   try {
-    const [contentId, roundReferenceRatingBps, commitHash, ciphertext, frontend, targetRound, drandChainHash] =
-      decodeAbiParameters(
+    const [contentId, roundContext, commitHash, ciphertext, frontend, targetRound, drandChainHash] = decodeAbiParameters(
       voteTransferPayloadParams,
       data,
     );
+    const { roundId, roundReferenceRatingBps } = unpackVoteRoundContext(roundContext);
     const reencoded = encodeAbiParameters(voteTransferPayloadParams, [
       contentId,
-      roundReferenceRatingBps,
+      roundContext,
       commitHash,
       ciphertext,
       frontend,
@@ -198,6 +219,7 @@ export function decodeVoteTransferPayload(data: `0x${string}`): VoteTransferPayl
 
     return {
       contentId,
+      roundId,
       roundReferenceRatingBps,
       commitHash,
       ciphertext,
@@ -338,19 +360,53 @@ async function createTlockVoteArtifacts(
   epochDurationSeconds: number,
   runtime: VoteTlockRuntime = {},
 ): Promise<{ ciphertext: VoteCiphertext; targetRound: bigint; drandChainHash: VoteDrandChainHash }> {
-  const { mainnetClient, roundAt, timelockEncrypt } = await loadTlockModule();
+  const { mainnetClient, timelockEncrypt } = await loadTlockModule();
   const client = runtime.client ?? mainnetClient();
   const now = runtime.now ?? Date.now;
   const encryptFn = runtime.encryptFn ?? timelockEncrypt;
   const chainInfo = await client.chain().info();
-  const targetTime = now() + epochDurationSeconds * 1000;
-  const targetRound = roundAt(targetTime, chainInfo);
+  const targetRound =
+    runtime.targetRound != null
+      ? normalizeTlockTargetRound(runtime.targetRound)
+      : roundAtOrAfter(now() + epochDurationSeconds * 1000, chainInfo);
   const armored = await encryptFn(targetRound, Buffer.from(encodeVotePlaintext(isUp, salt)), client);
   return {
     ciphertext: stringToHex(armored) as VoteCiphertext,
     targetRound: BigInt(targetRound),
     drandChainHash: `0x${chainInfo.hash}` as VoteDrandChainHash,
   };
+}
+
+function roundAtOrAfter(targetTimeMs: number, chainInfo: TlockChainInfo): number {
+  if (!Number.isFinite(targetTimeMs)) {
+    throw new Error("Cannot use Infinity or NaN as a beacon time");
+  }
+
+  const genesisTimeMs = chainInfo.genesis_time * 1000;
+  const periodMs = chainInfo.period * 1000;
+  if (!Number.isFinite(genesisTimeMs) || !Number.isFinite(periodMs) || periodMs <= 0) {
+    throw new Error("Invalid tlock chain timing");
+  }
+  if (targetTimeMs < genesisTimeMs) {
+    throw new Error("Cannot request a round before the genesis time");
+  }
+
+  return Math.ceil((targetTimeMs - genesisTimeMs) / periodMs) + 1;
+}
+
+function normalizeTlockTargetRound(targetRound: bigint | number): number {
+  const normalized =
+    typeof targetRound === "bigint"
+      ? Number(targetRound)
+      : Number.isInteger(targetRound)
+        ? targetRound
+        : Number.NaN;
+
+  if (!Number.isSafeInteger(normalized) || normalized <= 0) {
+    throw new Error("targetRound must be a positive safe integer");
+  }
+
+  return normalized;
 }
 
 export async function tlockEncryptVote(
@@ -376,10 +432,11 @@ export async function decryptTlockCiphertext(
 }
 
 export async function createTlockVoteCommit(params: {
-  voter?: Address;
+  voter: Address;
   isUp: boolean;
   salt: VoteSalt;
   contentId: bigint;
+  roundId: bigint;
   roundReferenceRatingBps: number;
   epochDurationSeconds: number;
 }, runtime: VoteTlockRuntime = {}): Promise<{
@@ -388,7 +445,7 @@ export async function createTlockVoteCommit(params: {
   targetRound: bigint;
   drandChainHash: VoteDrandChainHash;
   roundReferenceRatingBps: number;
-  commitKey?: `0x${string}`;
+  commitKey: `0x${string}`;
 }> {
   const { ciphertext, targetRound, drandChainHash } = await createTlockVoteArtifacts(
     params.isUp,
@@ -399,7 +456,9 @@ export async function createTlockVoteCommit(params: {
   const commitHash = buildCommitHash(
     params.isUp,
     params.salt,
+    params.voter,
     params.contentId,
+    params.roundId,
     params.roundReferenceRatingBps,
     targetRound,
     drandChainHash,
@@ -412,6 +471,6 @@ export async function createTlockVoteCommit(params: {
     targetRound,
     drandChainHash,
     roundReferenceRatingBps: params.roundReferenceRatingBps,
-    commitKey: params.voter ? buildCommitKey(params.voter, commitHash) : undefined,
+    commitKey: buildCommitKey(params.voter, commitHash),
   };
 }

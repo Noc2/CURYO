@@ -1,6 +1,9 @@
 import { CURYO_E2E_TEST_WALLET_PRIVATE_KEY_STORAGE_KEY } from "../../services/thirdweb/testWalletStorage";
 import type { Locator, Page } from "@playwright/test";
 
+const VOTE_UP_BUTTON_NAME = /^Vote up\b/i;
+const VOTE_DOWN_BUTTON_NAME = /^Vote down\b/i;
+
 const RETRIABLE_GOTO_ERROR_PATTERNS = [
   /ERR_ABORTED/i,
   /ERR_CONNECTION_RESET/i,
@@ -8,11 +11,14 @@ const RETRIABLE_GOTO_ERROR_PATTERNS = [
   /frame was detached/i,
   /page\.goto: Timeout .*exceeded/i,
   /page\.goto: Navigation to .* is interrupted by another navigation/i,
+  /Timeout .*exceeded/i,
   /Test timeout/i,
 ];
 
 const DEFAULT_E2E_TIMEOUT_MS = 30_000;
 const CI_MIN_E2E_TIMEOUT_MS = 60_000;
+const WALLET_CONNECT_RECOVERY_WAIT_MS = 12_000;
+const WALLET_CONNECT_CLICK_TIMEOUT_MS = 5_000;
 
 function isRetriableGotoError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
@@ -54,6 +60,7 @@ async function hasInjectedLocalTestWallet(page: Page): Promise<boolean> {
 
 export async function ensureInjectedWalletConnected(page: Page, timeout: number): Promise<void> {
   const effectiveTimeout = getEffectiveE2ETimeout(timeout);
+  const recoveryWaitTimeout = Math.min(effectiveTimeout, WALLET_CONNECT_RECOVERY_WAIT_MS);
 
   if (!(await hasInjectedLocalTestWallet(page))) {
     return;
@@ -72,13 +79,13 @@ export async function ensureInjectedWalletConnected(page: Page, timeout: number)
     const connectButton = getVisibleAuthConnectButton(page).first();
     const signInVisible = await connectButton.isVisible().catch(() => false);
     if (!signInVisible) {
-      await connectedWallet.waitFor({ state: "visible", timeout: effectiveTimeout }).catch(() => undefined);
+      await connectedWallet.waitFor({ state: "visible", timeout: recoveryWaitTimeout }).catch(() => undefined);
       if (await connectedWallet.isVisible().catch(() => false)) {
         return;
       }
     } else {
-      await connectButton.click({ timeout: 5_000 }).catch(() => undefined);
-      await connectedWallet.waitFor({ state: "visible", timeout: effectiveTimeout }).catch(() => undefined);
+      await connectButton.click({ timeout: WALLET_CONNECT_CLICK_TIMEOUT_MS }).catch(() => undefined);
+      await connectedWallet.waitFor({ state: "visible", timeout: recoveryWaitTimeout }).catch(() => undefined);
       if (await connectedWallet.isVisible().catch(() => false)) {
         return;
       }
@@ -91,7 +98,7 @@ export async function ensureInjectedWalletConnected(page: Page, timeout: number)
     await page.reload({ waitUntil: "domcontentloaded", timeout: effectiveTimeout });
   }
 
-  await waitForWalletConnected(page, effectiveTimeout);
+  await getVisibleConnectedWallet(page).first().waitFor({ state: "visible", timeout: recoveryWaitTimeout });
 }
 
 export async function gotoWithRetry(
@@ -100,6 +107,7 @@ export async function gotoWithRetry(
   options: {
     attempts?: number;
     ensureWalletConnected?: boolean;
+    skipInjectedWalletConnectionCheck?: boolean;
     timeout?: number;
     waitUntil?: "load" | "domcontentloaded" | "networkidle" | "commit";
   } = {},
@@ -107,6 +115,7 @@ export async function gotoWithRetry(
   const {
     attempts = 3,
     ensureWalletConnected = false,
+    skipInjectedWalletConnectionCheck = false,
     timeout = DEFAULT_E2E_TIMEOUT_MS,
     waitUntil = "domcontentloaded",
   } = options;
@@ -122,7 +131,7 @@ export async function gotoWithRetry(
         await page.reload({ timeout: effectiveTimeout, waitUntil: "domcontentloaded" });
       }
 
-      if (ensureWalletConnected || (await hasInjectedLocalTestWallet(page))) {
+      if (ensureWalletConnected || (!skipInjectedWalletConnectionCheck && (await hasInjectedLocalTestWallet(page)))) {
         await ensureInjectedWalletConnected(page, effectiveTimeout);
       }
 
@@ -153,18 +162,19 @@ export async function gotoWithRetry(
 
 /**
  * Wait until the content feed has loaded — either content cards appear
- * or the "No content submitted yet" empty state shows.
+ * or the "No questions have been asked yet" empty state shows.
  */
 export async function waitForFeedLoaded(page: Page, timeout = 15_000): Promise<void> {
+  const effectiveTimeout = getEffectiveE2ETimeout(timeout);
   const feedContent = () =>
     page
-      .getByRole("button", { name: "Vote up" })
-      .or(page.getByRole("button", { name: "Vote down" }))
+      .getByRole("button", { name: VOTE_UP_BUTTON_NAME })
+      .or(page.getByRole("button", { name: VOTE_DOWN_BUTTON_NAME }))
       .or(page.getByText(/Voted(?: hidden| Up| Down)?/i))
-      .or(page.getByText("Your submission"))
+      .or(page.getByText("Your question"))
       .or(page.getByText(/Cooldown/))
       .or(page.getByText("Round full"))
-      .or(page.getByText("No content submitted yet"))
+      .or(page.getByText("No questions have been asked yet"))
       .or(page.getByText(/No content found/i));
   const connectButton = getVisibleAuthConnectButton(page);
 
@@ -180,11 +190,11 @@ export async function waitForFeedLoaded(page: Page, timeout = 15_000): Promise<v
       ) {
         await connectButton
           .first()
-          .waitFor({ state: "hidden", timeout: Math.min(timeout, 10_000) })
+          .waitFor({ state: "hidden", timeout: Math.min(effectiveTimeout, 10_000) })
           .catch(() => undefined);
       }
 
-      await feedContent().first().waitFor({ state: "visible", timeout });
+      await feedContent().first().waitFor({ state: "visible", timeout: effectiveTimeout });
       return;
     } catch (error) {
       lastError = error;
@@ -207,8 +217,8 @@ export async function waitForFeedLoaded(page: Page, timeout = 15_000): Promise<v
         throw error;
       }
 
-      await page.reload({ waitUntil: "domcontentloaded" });
-      await page.waitForLoadState("networkidle").catch(() => undefined);
+      await page.reload({ waitUntil: "domcontentloaded", timeout: effectiveTimeout });
+      await page.waitForLoadState("networkidle", { timeout: Math.min(effectiveTimeout, 10_000) }).catch(() => undefined);
     }
   }
 
@@ -266,7 +276,7 @@ export async function waitForVisibleWithReload(
  * Returns true if voteable content was found.
  */
 export async function findVoteableContent(page: Page): Promise<boolean> {
-  const voteBtn = page.getByRole("button", { name: "Vote up" });
+  const voteBtn = page.getByRole("button", { name: VOTE_UP_BUTTON_NAME });
   let canVote = await voteBtn
     .waitFor({ state: "visible", timeout: 5_000 })
     .then(() => true)

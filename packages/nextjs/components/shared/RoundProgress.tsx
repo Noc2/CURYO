@@ -134,11 +134,11 @@ export function RoundProgress({ snapshot }: RoundProgressProps) {
             <span
               className={`tabular-nums text-base ${
                 progressMessaging.detailTone === "success"
-                  ? "text-success/80"
+                  ? "text-success"
                   : progressMessaging.detailTone === "warning"
                     ? "text-warning"
                     : progressMessaging.detailTone === "primary"
-                      ? "text-primary/80"
+                      ? "text-primary/90"
                       : "text-base-content/75"
               }`}
             >

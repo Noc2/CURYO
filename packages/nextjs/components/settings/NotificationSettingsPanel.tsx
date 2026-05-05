@@ -79,14 +79,14 @@ export function NotificationSettingsPanel({
 }) {
   const { openConnectModal } = useCuryoConnectModal();
   const { preferences, isSaving, isLoading, updatePreference } = useNotificationPreferences(address, {
-    autoRead: false,
+    autoRead: true,
   });
   const {
     settings: emailSettings,
     isLoading: isEmailLoading,
     isSaving: isEmailSaving,
     updateSettings: updateEmailSettings,
-  } = useEmailNotificationSettings(address);
+  } = useEmailNotificationSettings(address, { autoRead: true });
   const [browserPermission, setBrowserPermission] = useState<NotificationPermission | "unsupported">("default");
   const [emailDraft, setEmailDraft] = useState("");
   const [emailQueryStatus, setEmailQueryStatus] = useState<string | null>(null);

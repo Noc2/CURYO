@@ -1,32 +1,60 @@
 "use client";
 
 import { encodeAbiParameters, keccak256, toHex } from "viem";
+import {
+  type QuestionRoundConfig,
+  type SerializedQuestionRoundConfig,
+  coerceQuestionRoundConfig,
+  questionRoundConfigsEqual,
+  serializeQuestionRoundConfig,
+} from "~~/lib/questionRoundConfig";
+import { buildQuestionSubmissionRevealCommitment } from "~~/lib/questionSubmissionCommitment";
 
 const RESERVED_SUBMISSION_STORAGE_PREFIX = "curyo:reserved-submission:";
 const RESERVED_SUBMISSION_SECRET_STORAGE_KEY = `${RESERVED_SUBMISSION_STORAGE_PREFIX}secret`;
 
 type SubmissionDraft = {
   categoryId: bigint;
+  contextUrl: string;
   description: string;
+  imageUrls: string[];
+  questionMetadataHash: `0x${string}`;
+  rewardPoolExpiresAt: bigint;
+  feedbackClosesAt: bigint;
+  roundConfig: QuestionRoundConfig;
+  rewardAmount: bigint;
+  rewardAsset: number;
+  resultSpecHash: `0x${string}`;
+  requiredSettledRounds: bigint;
+  requiredVoters: bigint;
   submissionKey: `0x${string}`;
   tags: string;
   title: string;
-  url: string;
+  videoUrl: string;
 };
 
 type StoredSubmissionReservation = {
   categoryId: string;
   chainId: number;
+  contextUrl: string;
   description: string;
+  imageUrls: string[];
+  questionMetadataHash: `0x${string}`;
+  rewardPoolExpiresAt: string;
+  feedbackClosesAt: string;
+  roundConfig: SerializedQuestionRoundConfig;
+  rewardAmount: string;
+  rewardAsset: number;
+  resultSpecHash: `0x${string}`;
   revealCommitment: `0x${string}`;
   salt: `0x${string}`;
+  requiredSettledRounds: string;
+  requiredVoters: string;
   submissionKey: `0x${string}`;
   tags: string;
   title: string;
-  url: string;
+  videoUrl: string;
 };
-
-type LegacyStoredSubmissionReservation = Omit<StoredSubmissionReservation, "chainId">;
 
 function isHexValue(value: unknown): value is `0x${string}` {
   return typeof value === "string" && value.startsWith("0x");
@@ -62,15 +90,6 @@ export function buildSubmissionReservationStorageKey(
   )}`;
 }
 
-export function buildLegacySubmissionReservationStorageKey(
-  address: `0x${string}`,
-  submissionKey: `0x${string}`,
-): string {
-  return `${RESERVED_SUBMISSION_STORAGE_PREFIX}${keccak256(
-    encodeAbiParameters([{ type: "address" }, { type: "bytes32" }], [address, submissionKey]),
-  )}`;
-}
-
 export function deriveSubmissionReservationSalt(
   draft: SubmissionDraft,
   submitterAddress: `0x${string}`,
@@ -84,9 +103,23 @@ export function deriveSubmissionReservationSalt(
         { type: "address" },
         { type: "bytes32" },
         { type: "string" },
+        { type: "string[]" },
+        { type: "string" },
         { type: "string" },
         { type: "string" },
         { type: "uint256" },
+        { type: "uint8" },
+        { type: "uint256" },
+        { type: "uint256" },
+        { type: "uint256" },
+        { type: "uint256" },
+        { type: "uint256" },
+        { type: "uint32" },
+        { type: "uint32" },
+        { type: "uint16" },
+        { type: "uint16" },
+        { type: "bytes32" },
+        { type: "bytes32" },
       ],
       [
         getSubmissionReservationSecret(),
@@ -94,9 +127,23 @@ export function deriveSubmissionReservationSalt(
         submitterAddress,
         draft.submissionKey,
         draft.title,
+        draft.imageUrls,
+        draft.videoUrl,
         draft.description,
         draft.tags,
         draft.categoryId,
+        draft.rewardAsset,
+        draft.rewardAmount,
+        draft.requiredVoters,
+        draft.requiredSettledRounds,
+        draft.rewardPoolExpiresAt,
+        draft.feedbackClosesAt,
+        Number(draft.roundConfig.epochDuration),
+        Number(draft.roundConfig.maxDuration),
+        Number(draft.roundConfig.minVoters),
+        Number(draft.roundConfig.maxVoters),
+        draft.questionMetadataHash,
+        draft.resultSpecHash,
       ],
     ),
   );
@@ -107,20 +154,26 @@ export function buildSubmissionRevealCommitment(
   salt: `0x${string}`,
   submitterAddress: `0x${string}`,
 ): `0x${string}` {
-  return keccak256(
-    encodeAbiParameters(
-      [
-        { type: "bytes32" },
-        { type: "string" },
-        { type: "string" },
-        { type: "string" },
-        { type: "uint256" },
-        { type: "bytes32" },
-        { type: "address" },
-      ],
-      [draft.submissionKey, draft.title, draft.description, draft.tags, draft.categoryId, salt, submitterAddress],
-    ),
-  );
+  return buildQuestionSubmissionRevealCommitment({
+    categoryId: draft.categoryId,
+    description: draft.description,
+    imageUrls: draft.imageUrls,
+    questionMetadataHash: draft.questionMetadataHash,
+    rewardAmount: draft.rewardAmount,
+    rewardAsset: draft.rewardAsset,
+    requiredSettledRounds: draft.requiredSettledRounds,
+    requiredVoters: draft.requiredVoters,
+    resultSpecHash: draft.resultSpecHash,
+    rewardPoolExpiresAt: draft.rewardPoolExpiresAt,
+    feedbackClosesAt: draft.feedbackClosesAt,
+    roundConfig: draft.roundConfig,
+    salt,
+    submissionKey: draft.submissionKey,
+    submitter: submitterAddress,
+    tags: draft.tags,
+    title: draft.title,
+    videoUrl: draft.videoUrl,
+  });
 }
 
 export function createStoredSubmissionReservation(
@@ -132,14 +185,29 @@ export function createStoredSubmissionReservation(
   return {
     categoryId: draft.categoryId.toString(),
     chainId,
+    contextUrl: draft.contextUrl,
     description: draft.description,
+    imageUrls: draft.imageUrls,
+    questionMetadataHash: draft.questionMetadataHash,
+    rewardAmount: draft.rewardAmount.toString(),
+    rewardAsset: draft.rewardAsset,
+    resultSpecHash: draft.resultSpecHash,
+    roundConfig: serializeQuestionRoundConfig(draft.roundConfig),
     revealCommitment,
     salt,
+    requiredSettledRounds: draft.requiredSettledRounds.toString(),
+    requiredVoters: draft.requiredVoters.toString(),
+    rewardPoolExpiresAt: draft.rewardPoolExpiresAt.toString(),
+    feedbackClosesAt: draft.feedbackClosesAt.toString(),
     submissionKey: draft.submissionKey,
     tags: draft.tags,
     title: draft.title,
-    url: draft.url,
+    videoUrl: draft.videoUrl,
   };
+}
+
+function stringArraysEqual(left: readonly string[], right: readonly string[]): boolean {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 
 export function submissionReservationMatchesDraft(
@@ -148,11 +216,22 @@ export function submissionReservationMatchesDraft(
 ): boolean {
   return (
     reservation.categoryId === draft.categoryId.toString() &&
+    reservation.contextUrl === draft.contextUrl &&
     reservation.description === draft.description &&
+    reservation.rewardAmount === draft.rewardAmount.toString() &&
+    reservation.rewardAsset === draft.rewardAsset &&
+    reservation.rewardPoolExpiresAt === draft.rewardPoolExpiresAt.toString() &&
+    reservation.feedbackClosesAt === draft.feedbackClosesAt.toString() &&
+    questionRoundConfigsEqual(coerceQuestionRoundConfig(reservation.roundConfig), draft.roundConfig) &&
+    reservation.requiredSettledRounds === draft.requiredSettledRounds.toString() &&
+    reservation.requiredVoters === draft.requiredVoters.toString() &&
     reservation.submissionKey === draft.submissionKey &&
+    reservation.questionMetadataHash === draft.questionMetadataHash &&
+    reservation.resultSpecHash === draft.resultSpecHash &&
     reservation.tags === draft.tags &&
     reservation.title === draft.title &&
-    reservation.url === draft.url
+    reservation.videoUrl === draft.videoUrl &&
+    stringArraysEqual(reservation.imageUrls, draft.imageUrls)
   );
 }
 
@@ -172,55 +251,41 @@ function parseStoredSubmissionReservation(value: unknown): StoredSubmissionReser
   if (
     typeof parsedValue.categoryId !== "string" ||
     typeof parsedValue.chainId !== "number" ||
+    typeof parsedValue.contextUrl !== "string" ||
     typeof parsedValue.description !== "string" ||
+    !isHexValue(parsedValue.questionMetadataHash) ||
     !isHexValue(parsedValue.revealCommitment) ||
+    typeof parsedValue.rewardAmount !== "string" ||
+    typeof parsedValue.rewardAsset !== "number" ||
+    !isHexValue(parsedValue.resultSpecHash) ||
+    (parsedValue.roundConfig !== undefined && typeof parsedValue.roundConfig !== "object") ||
+    ![0, 1].includes(parsedValue.rewardAsset) ||
+    typeof parsedValue.requiredSettledRounds !== "string" ||
+    typeof parsedValue.requiredVoters !== "string" ||
+    typeof parsedValue.rewardPoolExpiresAt !== "string" ||
+    (parsedValue.feedbackClosesAt !== undefined && typeof parsedValue.feedbackClosesAt !== "string") ||
     !isHexValue(parsedValue.salt) ||
     !isHexValue(parsedValue.submissionKey) ||
     typeof parsedValue.tags !== "string" ||
-    typeof parsedValue.title !== "string" ||
-    typeof parsedValue.url !== "string"
-  ) {
-    return null;
-  }
-
-  return parsedValue as StoredSubmissionReservation;
-}
-
-function parseLegacyStoredSubmissionReservation(value: unknown, chainId: number): StoredSubmissionReservation | null {
-  const parsedValue = value as Partial<LegacyStoredSubmissionReservation>;
-  if (
-    typeof parsedValue.categoryId !== "string" ||
-    typeof parsedValue.description !== "string" ||
-    !isHexValue(parsedValue.revealCommitment) ||
-    !isHexValue(parsedValue.salt) ||
-    !isHexValue(parsedValue.submissionKey) ||
-    typeof parsedValue.tags !== "string" ||
-    typeof parsedValue.title !== "string" ||
-    typeof parsedValue.url !== "string"
+    typeof parsedValue.title !== "string"
   ) {
     return null;
   }
 
   return {
     ...parsedValue,
-    chainId,
+    imageUrls: Array.isArray(parsedValue.imageUrls)
+      ? parsedValue.imageUrls.filter((url): url is string => typeof url === "string")
+      : [parsedValue.contextUrl],
+    roundConfig: serializeQuestionRoundConfig(coerceQuestionRoundConfig(parsedValue.roundConfig)),
+    feedbackClosesAt: parsedValue.feedbackClosesAt ?? parsedValue.rewardPoolExpiresAt,
+    videoUrl: typeof parsedValue.videoUrl === "string" ? parsedValue.videoUrl : "",
   } as StoredSubmissionReservation;
 }
 
 export function getStoredSubmissionReservation(storageKey: string): StoredSubmissionReservation | null {
   try {
     return parseStoredSubmissionReservation(readStoredSubmissionReservationValue(storageKey));
-  } catch {
-    return null;
-  }
-}
-
-export function getLegacyStoredSubmissionReservation(
-  storageKey: string,
-  chainId: number,
-): StoredSubmissionReservation | null {
-  try {
-    return parseLegacyStoredSubmissionReservation(readStoredSubmissionReservationValue(storageKey), chainId);
   } catch {
     return null;
   }

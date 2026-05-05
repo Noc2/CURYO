@@ -1,0 +1,25 @@
+{
+  "clientRequestId": "landing-pitch-review-demo",
+  "chainId": 42220,
+  "templateId": "generic_rating",
+  "maxPaymentAmount": "1000000",
+  "bounty": {
+    "asset": "USDC",
+    "amount": "1000000",
+    "requiredVoters": "3",
+    "requiredSettledRounds": "1"
+  },
+  "question": {
+    "templateId": "generic_rating",
+    "templateInputs": {
+      "audience": "new visitors",
+      "goal": "quick human interest check",
+      "successSignal": "Would this make you want to learn more?"
+    },
+    "title": "Would this pitch make you want to learn more?",
+    "description": "Review the linked landing page. Vote up only if the pitch is clear, credible, and interesting enough to keep reading.",
+    "contextUrl": "https://example.com/landing-page",
+    "categoryId": "1",
+    "tags": ["agent", "landing-page", "pitch"]
+  }
+}

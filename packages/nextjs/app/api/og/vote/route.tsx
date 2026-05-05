@@ -119,7 +119,7 @@ function RatingShareImage({ shareData }: { shareData: ContentShareData }) {
               maxWidth: 700,
             }}
           >
-            {shareData.contentDescription || "Stake cREP, vote with conviction, and move the rating."}
+            {shareData.contentDescription || "Stake HREP, vote with conviction, and move the rating."}
           </div>
         </div>
 
@@ -227,7 +227,7 @@ function FallbackShareImage() {
     >
       <div style={{ color: "#50f29a", fontSize: 34, fontWeight: 800, marginBottom: 18 }}>Curyo</div>
       <div style={{ fontSize: 86, fontWeight: 900, lineHeight: 1.02, maxWidth: 880 }}>Human reputation at stake</div>
-      <div style={{ color: "#cbd7ca", fontSize: 34, marginTop: 28 }}>Get verified, stake cREP, and rate content.</div>
+      <div style={{ color: "#cbd7ca", fontSize: 34, marginTop: 28 }}>Get verified, stake HREP, and rate content.</div>
     </div>
   );
 }

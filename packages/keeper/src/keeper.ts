@@ -11,15 +11,18 @@
  *      terminal rounds that still have unrevealed stake to sweep/refund.
  *   5. Call `cancelExpiredRound(contentId, roundId)` for rounds past maxDuration that
  *      never reached commit quorum.
- *   6. Call `resolveSubmitterStake(contentId)` once the slash/healthy-return window opens,
- *      and `markDormant(contentId)` for stale content.
+ *   6. Call `markDormant(contentId)` for stale content.
  *
  * Vote ciphertext is tlock-encrypted to a future drand round. After the epoch ends,
  * the drand beacon makes the decryption key available and the keeper can decrypt.
  */
 import type { PublicClient, WalletClient, Chain, Account } from "viem";
 import { timelockDecrypt, mainnetClient } from "tlock-js";
-import { ContentRegistryAbi, RoundVotingEngineAbi } from "@curyo/contracts/abis";
+import {
+  ContentRegistryAbi,
+  QuestionRewardPoolEscrowAbi,
+  RoundVotingEngineAbi,
+} from "@curyo/contracts/abis";
 import { parseTlockCiphertextMetadata } from "@curyo/contracts/voting";
 import {
   type CommitData,
@@ -47,24 +50,12 @@ export interface KeeperResult {
   roundsRevealFailedFinalized: number;
   votesRevealed: number;
   cleanupBatchesProcessed: number;
-  submitterStakesResolved: number;
   contentMarkedDormant: number;
 }
 interface CleanupCursor {
   contentId: bigint;
   roundId: bigint;
   nextIndex: number;
-}
-
-interface ContentResolutionState {
-  exists: boolean;
-  createdAt: bigint;
-  submitterStakeReturned: boolean;
-}
-
-interface RatingResolutionState {
-  settledRounds: bigint;
-  lowSince: bigint;
 }
 
 const MAX_CLEANUP_BATCHES_PER_TICK = 4;
@@ -80,64 +71,8 @@ function emptyResult(): KeeperResult {
     roundsRevealFailedFinalized: 0,
     votesRevealed: 0,
     cleanupBatchesProcessed: 0,
-    submitterStakesResolved: 0,
     contentMarkedDormant: 0,
   };
-}
-
-function toBigInt(value: unknown, fallback = 0n): bigint {
-  return typeof value === "bigint" ? value : typeof value === "number" ? BigInt(value) : fallback;
-}
-
-function parseContentResolutionState(rawContent: unknown): ContentResolutionState {
-  const content = rawContent as (Record<string, unknown> & unknown[]) | null | undefined;
-  if (!content) {
-    return { exists: false, createdAt: 0n, submitterStakeReturned: false };
-  }
-
-  if (content.id != null) {
-    return {
-      exists: toBigInt(content.id) > 0n,
-      createdAt: toBigInt(content.createdAt),
-      submitterStakeReturned: Boolean(content.submitterStakeReturned),
-    };
-  }
-
-  if (Array.isArray(content) && content.length >= 10) {
-    return {
-      exists: toBigInt(content[0]) > 0n,
-      createdAt: toBigInt(content[4]),
-      submitterStakeReturned: Boolean(content[9]),
-    };
-  }
-
-  return { exists: false, createdAt: 0n, submitterStakeReturned: false };
-}
-
-function parseRatingResolutionState(rawState: unknown): RatingResolutionState {
-  const ratingState = rawState as (Record<string, unknown> & unknown[]) | null | undefined;
-  const nestedState = ratingState?.state as (Record<string, unknown> & unknown[]) | null | undefined;
-  const candidate = nestedState ?? ratingState;
-
-  if (!candidate) {
-    return { settledRounds: 0n, lowSince: 0n };
-  }
-
-  if (candidate.settledRounds != null) {
-    return {
-      settledRounds: toBigInt(candidate.settledRounds),
-      lowSince: toBigInt(candidate.lowSince),
-    };
-  }
-
-  if (Array.isArray(candidate) && candidate.length >= 8) {
-    return {
-      settledRounds: toBigInt(candidate[3]),
-      lowSince: toBigInt(candidate[7]),
-    };
-  }
-
-  return { settledRounds: 0n, lowSince: 0n };
 }
 
 export { validateKeeperContracts } from "./contract-reads.js";
@@ -220,6 +155,56 @@ function markCleanupCompleted(contentId: bigint, roundId: bigint): void {
     const toRemove = entries.slice(0, entries.length - MAX_CLEANUP_COMPLETED);
     for (const entry of toRemove) {
       cleanupCompletedRounds.delete(entry);
+    }
+  }
+}
+
+/**
+ * Best-effort: after a settled round, drive bundle qualification by calling
+ * `syncBundleQuestionTerminal` on the registry's `questionRewardPoolEscrow`. The escrow
+ * function is permissionless and idempotent — it is a no-op for non-bundled content and
+ * for bundles where the round set is not yet complete. Failures are logged but do not
+ * propagate, since the keeper has already produced its primary settle effect.
+ */
+async function _syncBundleQuestionTerminal(
+  publicClient: PublicClient,
+  walletClient: WalletClient,
+  chain: Chain,
+  account: Account,
+  registryAddr: `0x${string}`,
+  contentId: bigint,
+  roundId: bigint,
+  logger: Logger,
+): Promise<void> {
+  try {
+    const escrow = (await publicClient.readContract({
+      address: registryAddr,
+      abi: ContentRegistryAbi,
+      functionName: "questionRewardPoolEscrow",
+      args: [],
+    })) as `0x${string}`;
+    if (escrow === "0x0000000000000000000000000000000000000000") return;
+
+    await writeContractAndConfirm(publicClient, walletClient, {
+      chain,
+      account,
+      address: escrow,
+      abi: QuestionRewardPoolEscrowAbi,
+      functionName: "syncBundleQuestionTerminal",
+      args: [contentId, roundId],
+    });
+    logger.debug("Synced bundle question terminal", {
+      contentId: Number(contentId),
+      roundId: Number(roundId),
+    });
+  } catch (err: unknown) {
+    const reason = getRevertReason(err);
+    if (!isExpectedRevert(reason)) {
+      logger.debug("Bundle sync skipped", {
+        contentId: Number(contentId),
+        roundId: Number(roundId),
+        error: reason,
+      });
     }
   }
 }
@@ -328,7 +313,6 @@ export async function resolveRounds(
   }
 
   const result: KeeperResult = emptyResult();
-  const fourDaysSeconds = 4n * 24n * 60n * 60n;
 
   // --- Get total content count ---
   let nextContentId: bigint;
@@ -401,6 +385,23 @@ export async function resolveRounds(
             });
             result.roundsSettled++;
             enqueueRoundForCleanup(contentId, activeRoundId);
+
+            // Drive bundle qualification (no-op for non-bundled content). Settlement only
+            // records the round into the bundle slot; qualification — which iterates voters
+            // and bundle questions — is intentionally deferred to keep settlement O(1).
+            // A hostile funder could otherwise wait for the refund window and reclaim
+            // rewards voters have earned, since `refundQuestionBundleReward` reads
+            // `bundle.completedRoundSets` (which only advances on qualification).
+            await _syncBundleQuestionTerminal(
+              publicClient,
+              walletClient,
+              chain,
+              account,
+              registryAddr,
+              contentId,
+              activeRoundId,
+              logger,
+            );
           } catch (err: unknown) {
             const reason = getRevertReason(err);
             if (!isExpectedRevert(reason)) {
@@ -507,83 +508,7 @@ export async function resolveRounds(
         });
       }
 
-      // --- 6. Resolve submitter stakes once their policy window opens ---
-      try {
-        const [rawContent, rawRatingState] = await Promise.all([
-          publicClient.readContract({
-            address: registryAddr,
-            abi: ContentRegistryAbi,
-            functionName: "contents",
-            args: [contentId],
-          }),
-          publicClient.readContract({
-            address: registryAddr,
-            abi: ContentRegistryAbi,
-            functionName: "getRatingState",
-            args: [contentId],
-          }),
-        ]);
-
-        const contentState = parseContentResolutionState(rawContent);
-        const ratingState = parseRatingResolutionState(rawRatingState);
-
-        let submitterStakeResolvable = false;
-        if (contentState.exists && !contentState.submitterStakeReturned) {
-          if (ratingState.settledRounds === 0n) {
-            const currentOpenRoundId = (await publicClient.readContract({
-              address: engineAddr,
-              abi: RoundVotingEngineAbi,
-              functionName: "currentRoundId",
-              args: [contentId],
-            })) as bigint;
-
-            submitterStakeResolvable = currentOpenRoundId === 0n && now >= contentState.createdAt + config.dormancyPeriod;
-          } else {
-            const [slashable, milestoneZeroTermsSnapshotted] = await Promise.all([
-              publicClient.readContract({
-                address: registryAddr,
-                abi: ContentRegistryAbi,
-                functionName: "isSubmitterStakeSlashable",
-                args: [contentId],
-              }) as Promise<boolean>,
-              publicClient.readContract({
-                address: registryAddr,
-                abi: ContentRegistryAbi,
-                functionName: "milestoneZeroSubmitterTermsSnapshotted",
-                args: [contentId],
-              }) as Promise<boolean>,
-            ]);
-
-            submitterStakeResolvable = slashable
-              || (!milestoneZeroTermsSnapshotted
-                ? true
-                : now >= contentState.createdAt + fourDaysSeconds && ratingState.lowSince === 0n);
-          }
-        }
-
-        if (submitterStakeResolvable) {
-          await writeContractAndConfirm(publicClient, walletClient, {
-            chain,
-            account,
-            address: engineAddr,
-            abi: RoundVotingEngineAbi,
-            functionName: "resolveSubmitterStake",
-            args: [contentId],
-          });
-          logger.info("Resolved submitter stake", { contentId: Number(contentId) });
-          result.submitterStakesResolved++;
-        }
-      } catch (err: unknown) {
-        const reason = getRevertReason(err);
-        if (!isExpectedRevert(reason)) {
-          logger.debug("Could not resolve submitter stake", {
-            contentId: Number(contentId),
-            error: reason,
-          });
-        }
-      }
-
-      // --- 7. Dormancy sweep ---
+      // --- 6. Dormancy sweep ---
       try {
         const dormancyEligible = (await publicClient.readContract({
           address: registryAddr,

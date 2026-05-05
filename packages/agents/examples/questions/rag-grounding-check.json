@@ -1,0 +1,26 @@
+{
+  "clientRequestId": "rag-grounding-check-demo",
+  "chainId": 42220,
+  "templateId": "rag_grounding_check",
+  "maxPaymentAmount": "1000000",
+  "bounty": {
+    "asset": "USDC",
+    "amount": "1000000",
+    "requiredVoters": "3",
+    "requiredSettledRounds": "1"
+  },
+  "question": {
+    "templateId": "rag_grounding_check",
+    "templateInputs": {
+      "answerId": "rag-answer-42",
+      "claimScope": "delivery policy answer",
+      "sourceSetId": "policy-docs-2026-04",
+      "unsupportedClaimPolicy": "Vote down if important claims are not visible in the sources."
+    },
+    "title": "Is this answer grounded in the linked sources?",
+    "description": "Compare the generated answer against the linked source bundle. Vote up only if the answer is well supported and does not add unsupported claims.",
+    "contextUrl": "https://example.com/rag-answer-with-sources",
+    "categoryId": "6",
+    "tags": ["agent", "rag", "grounding"]
+  }
+}

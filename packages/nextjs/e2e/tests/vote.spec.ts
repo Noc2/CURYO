@@ -18,7 +18,7 @@ test.describe("Voting flow — 3-voter threshold", () => {
     });
 
     await setupWallet(page, ANVIL_ACCOUNTS.account3.privateKey);
-    await gotoWithRetry(page, "/vote", { ensureWalletConnected: true });
+    await gotoWithRetry(page, "/rate", { ensureWalletConnected: true });
     await waitForFeedLoaded(page);
     await page.waitForTimeout(1_000);
 
@@ -31,7 +31,7 @@ test.describe("Voting flow — 3-voter threshold", () => {
     const page = await context.newPage();
     // Account #3 viewing the feed
     await setupWallet(page, ANVIL_ACCOUNTS.account3.privateKey);
-    await gotoWithRetry(page, "/vote", { ensureWalletConnected: true });
+    await gotoWithRetry(page, "/rate", { ensureWalletConnected: true });
     await waitForFeedLoaded(page);
 
     // Verify the wallet is connected by checking for any voting-related UI,
@@ -39,11 +39,11 @@ test.describe("Voting flow — 3-voter threshold", () => {
     const connectedIndicators = page
       .getByRole("button", { name: "Vote up" })
       .or(page.getByRole("button", { name: "Vote down" }))
-      .or(page.getByText("Your submission"))
+      .or(page.getByText("Your question"))
       .or(page.getByText(/Cooldown/))
       .or(page.getByText(/Voted(?: hidden| Up| Down)?/i))
       .or(page.getByText("Round full"))
-      .or(page.getByText("No content submitted yet"));
+      .or(page.getByText("No questions have been asked yet"));
 
     await expect(connectedIndicators.first()).toBeVisible({ timeout: 15_000 });
     await context.close();
@@ -52,7 +52,7 @@ test.describe("Voting flow — 3-voter threshold", () => {
   // Extend timeout: 3 accounts × ~45s each (load + thumbnail cycling + tx + revert handling)
   test("three accounts can vote on the same content", async ({ browser }) => {
     test.setTimeout(180_000);
-    // Use accounts #8, #9, #10 — these have 1000 cREP + VoterID.
+    // Use accounts #8, #9, #10 — these have 1000 HREP + VoterID.
     // Accounts #3-#7 are reserved for settlement/reward-claim tests to avoid cooldown collisions.
     const voters = [
       { account: ANVIL_ACCOUNTS.account8, direction: "up" as const },

@@ -31,7 +31,7 @@ export function FooterLinks({
   className = "",
   listClassName = "",
   linkClassName = "link link-hover",
-  separatorClassName = "text-base-content/40",
+  separatorClassName = "text-base-content/60",
 }: FooterLinksProps) {
   return (
     <nav aria-label="Footer" className={className}>
@@ -52,7 +52,7 @@ export function FooterLinks({
                     {item.label}
                   </a>
                 ) : (
-                  <Link href={item.href} className={linkClassName}>
+                  <Link href={item.href} prefetch={false} className={linkClassName}>
                     {item.label}
                   </Link>
                 )}

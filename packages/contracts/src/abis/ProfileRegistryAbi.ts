@@ -45,7 +45,7 @@ export const ProfileRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "MAX_STRATEGY_LENGTH",
+    "name": "MAX_SELF_REPORT_LENGTH",
     "inputs": [],
     "outputs": [
       {
@@ -141,7 +141,7 @@ export const ProfileRegistryAbi = [
             "internalType": "string"
           },
           {
-            "name": "strategy",
+            "name": "selfReport",
             "type": "string",
             "internalType": "string"
           },
@@ -308,6 +308,19 @@ export const ProfileRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "releaseName",
+    "inputs": [
+      {
+        "name": "user",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "renounceRole",
     "inputs": [
       {
@@ -365,7 +378,7 @@ export const ProfileRegistryAbi = [
         "internalType": "string"
       },
       {
-        "name": "strategy",
+        "name": "selfReport",
         "type": "string",
         "internalType": "string"
       }
@@ -480,7 +493,26 @@ export const ProfileRegistryAbi = [
         "internalType": "string"
       },
       {
-        "name": "strategy",
+        "name": "selfReport",
+        "type": "string",
+        "indexed": false,
+        "internalType": "string"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ProfileNameReleased",
+    "inputs": [
+      {
+        "name": "user",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "name",
         "type": "string",
         "indexed": false,
         "internalType": "string"
@@ -505,7 +537,7 @@ export const ProfileRegistryAbi = [
         "internalType": "string"
       },
       {
-        "name": "strategy",
+        "name": "selfReport",
         "type": "string",
         "indexed": false,
         "internalType": "string"

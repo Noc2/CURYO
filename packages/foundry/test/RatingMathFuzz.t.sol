@@ -55,7 +55,7 @@ contract RatingMathFuzzTest is Test {
         });
     }
 
-    function testFuzz_LogitRoundTrip_Stable(uint16 ratingBps) public view {
+    function testFuzz_LogitRoundTrip_Stable(uint16 ratingBps) public pure {
         ratingBps = RatingMath.clampRatingBps(ratingBps);
         uint16 roundTrip = RatingMath.logitX18ToRatingBps(RatingMath.ratingBpsToLogitX18(ratingBps));
         assertApproxEqAbs(roundTrip, ratingBps, 1, "round-trip drift too large");
@@ -66,7 +66,7 @@ contract RatingMathFuzzTest is Test {
         uint16 referenceB,
         uint256 upStake,
         uint256 downStake
-    ) public view {
+    ) public pure {
         referenceA = RatingMath.clampRatingBps(referenceA);
         referenceB = RatingMath.clampRatingBps(referenceB);
         upStake = bound(upStake, 1, 500e6);
@@ -92,7 +92,7 @@ contract RatingMathFuzzTest is Test {
 
     function testFuzz_ConservativePenalty_WeakensWithConfidence(uint16 ratingBps, uint256 confidenceMass)
         public
-        view
+        pure
     {
         ratingBps = RatingMath.clampRatingBps(ratingBps);
         confidenceMass = bound(confidenceMass, 1, 1_000e6);
@@ -108,7 +108,7 @@ contract RatingMathFuzzTest is Test {
         uint256 previousConfidenceMass,
         uint256 roundEvidence,
         uint256 lessSurprisingUp
-    ) public view {
+    ) public pure {
         previousConfidenceMass = bound(previousConfidenceMass, 1, 500e6);
         roundEvidence = bound(roundEvidence, 1, 500e6);
         lessSurprisingUp = bound(lessSurprisingUp, 45e6, 55e6);

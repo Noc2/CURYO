@@ -10,7 +10,7 @@ import { getGasBalanceErrorMessage } from "~~/lib/transactionErrors";
 
 interface Profile {
   name: string;
-  strategy: string;
+  selfReport: string;
   createdAt: bigint;
   updatedAt: bigint;
 }
@@ -105,11 +105,12 @@ export function useProfileRegistry(address?: string) {
   const profile: Profile | null = profileData
     ? (() => {
         const d = profileData as unknown as Record<string, unknown>;
+        const tuple = Array.isArray(profileData) ? (profileData as unknown[]) : [];
         return {
-          name: typeof d.name === "string" ? d.name : "",
-          strategy: typeof d.strategy === "string" ? d.strategy : "",
-          createdAt: typeof d.createdAt === "bigint" ? d.createdAt : 0n,
-          updatedAt: typeof d.updatedAt === "bigint" ? d.updatedAt : 0n,
+          name: typeof d.name === "string" ? d.name : typeof tuple[0] === "string" ? tuple[0] : "",
+          selfReport: typeof d.selfReport === "string" ? d.selfReport : typeof tuple[1] === "string" ? tuple[1] : "",
+          createdAt: typeof d.createdAt === "bigint" ? d.createdAt : typeof tuple[2] === "bigint" ? tuple[2] : 0n,
+          updatedAt: typeof d.updatedAt === "bigint" ? d.updatedAt : typeof tuple[3] === "bigint" ? tuple[3] : 0n,
         };
       })()
     : null;
@@ -149,8 +150,8 @@ export function useIsNameTaken(name: string) {
 export function useSetProfile() {
   const { isPending, writeProfileRegistry } = useProfileRegistryWrite();
 
-  const setProfile = async (name: string, strategy: string) => {
-    await writeProfileRegistry("setProfile", [name, strategy], "profile update");
+  const setProfile = async (name: string, selfReport: string) => {
+    await writeProfileRegistry("setProfile", [name, selfReport], "profile update");
   };
 
   return {

@@ -1,5 +1,5 @@
 import {
-  approveCREP,
+  approveHREP,
   commitVoteDirect,
   evmIncreaseTime,
   getActiveRoundId,
@@ -35,9 +35,9 @@ test.describe("Multi-round succession", () => {
   test.describe.configure({ mode: "serial" });
 
   const VOTING_ENGINE = CONTRACT_ADDRESSES.RoundVotingEngine;
-  const CREP_TOKEN = CONTRACT_ADDRESSES.CuryoReputation;
+  const HREP_TOKEN = CONTRACT_ADDRESSES.HumanReputation;
   const CONTENT_REGISTRY = CONTRACT_ADDRESSES.ContentRegistry;
-  const STAKE = BigInt(10e6); // 10 cREP (must be >= MIN_STAKE_FOR_RATING for rating delta > 0)
+  const STAKE = BigInt(10e6); // 10 HREP (must be >= MIN_STAKE_FOR_RATING for rating delta > 0)
   const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
   const EPOCH_DURATION = 300; // 5 min — contract minimum is 5 minutes
 
@@ -56,7 +56,7 @@ test.describe("Multi-round succession", () => {
 
     const submitter = ANVIL_ACCOUNTS.account10;
 
-    const approved = await approveCREP(CONTENT_REGISTRY, BigInt(10e6), submitter.address, CREP_TOKEN);
+    const approved = await approveHREP(CONTENT_REGISTRY, BigInt(10e6), submitter.address, HREP_TOKEN);
     expect(approved).toBe(true);
 
     const uniqueId = Date.now();
@@ -101,7 +101,7 @@ test.describe("Multi-round succession", () => {
     const commits: { commitKey: `0x${string}`; isUp: boolean; salt: `0x${string}` }[] = [];
 
     for (let i = 0; i < voters.length; i++) {
-      await approveCREP(VOTING_ENGINE, STAKE, voters[i].address, CREP_TOKEN);
+      await approveHREP(VOTING_ENGINE, STAKE, voters[i].address, HREP_TOKEN);
       const result = await commitVoteDirect(
         BigInt(contentId!),
         true, // UP
@@ -168,7 +168,7 @@ test.describe("Multi-round succession", () => {
     const commits: { commitKey: `0x${string}`; isUp: boolean; salt: `0x${string}` }[] = [];
 
     for (let i = 0; i < voters.length; i++) {
-      await approveCREP(VOTING_ENGINE, STAKE, voters[i].address, CREP_TOKEN);
+      await approveHREP(VOTING_ENGINE, STAKE, voters[i].address, HREP_TOKEN);
       const result = await commitVoteDirect(
         BigInt(contentId!),
         false, // DOWN

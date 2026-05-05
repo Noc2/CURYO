@@ -13,7 +13,6 @@ import {
 } from "abitype";
 import type { ExtractAbiFunctionNames } from "abitype";
 import type { Simplify } from "type-fest";
-import type { MergeDeepRecord } from "type-fest/source/merge-deep";
 import {
   Address,
   Block,
@@ -29,50 +28,20 @@ import {
 import { Config, UseReadContractParameters, UseWatchContractEventParameters, UseWriteContractParameters } from "wagmi";
 import { WriteContractParameters, WriteContractReturnType, simulateContract } from "wagmi/actions";
 import { WriteContractVariables } from "wagmi/query";
-import externalContractsData from "~~/contracts/externalContracts";
 import scaffoldConfig from "~~/scaffold.config";
 
-type AddExternalFlag<T> = {
-  [ChainId in keyof T]: {
-    [ContractName in keyof T[ChainId]]: T[ChainId][ContractName] & { external?: true };
-  };
-};
+const contractsData = deployedContractsData;
 
-const deepMergeContracts = <L extends Record<PropertyKey, any>, E extends Record<PropertyKey, any>>(
-  local: L,
-  external: E,
-) => {
-  const result: Record<PropertyKey, any> = {};
-  const allKeys = Array.from(new Set([...Object.keys(external), ...Object.keys(local)]));
-  for (const key of allKeys) {
-    if (!external[key]) {
-      result[key] = local[key];
-      continue;
-    }
-    const amendedExternal = Object.fromEntries(
-      Object.entries(external[key] as Record<string, Record<string, unknown>>).map(([contractName, declaration]) => [
-        contractName,
-        { ...declaration, external: true },
-      ]),
-    );
-    result[key] = { ...local[key], ...amendedExternal };
-  }
-  return result as MergeDeepRecord<AddExternalFlag<L>, AddExternalFlag<E>, { arrayMergeMode: "replace" }>;
-};
+type InheritedFunctions = { readonly [key: string]: string };
 
-const contractsData = deepMergeContracts(deployedContractsData, externalContractsData);
-
-export type InheritedFunctions = { readonly [key: string]: string };
-
-export type GenericContract = {
+type GenericContract = {
   address: Address;
   abi: Abi;
   inheritedFunctions?: InheritedFunctions;
-  external?: true;
   deployedOnBlock?: number;
 };
 
-export type GenericContractsDeclaration = {
+type GenericContractsDeclaration = {
   [chainId: number]: {
     [contractName: string]: GenericContract;
   };

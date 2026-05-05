@@ -17,6 +17,7 @@ import { useContentFeedMetadata } from "~~/hooks/useContentFeedMetadata";
 import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { usePonderAvailability } from "~~/hooks/usePonderAvailability";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
+import { buildFallbackMediaItems } from "~~/lib/contentMedia";
 import { ponderApi } from "~~/services/ponder/client";
 import { publicEnv } from "~~/utils/env/public";
 
@@ -101,12 +102,14 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
           categoryId?: bigint;
         };
 
-        if (!args.contentId || !args.url || !args.title || !args.description) return null;
+        if (!args.contentId || !args.title || args.description === undefined) return null;
 
         const eventSubmitter = args.submitter || "";
         return {
           id: args.contentId,
-          url: args.url,
+          url: args.url ?? "",
+          media: buildFallbackMediaItems(args.url),
+          question: args.title,
           title: args.title,
           description: args.description,
           tags: parseTags(args.tags || ""),
@@ -126,6 +129,8 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
           openRound: null,
           isValidUrl: null,
           thumbnailUrl: null,
+          rewardPoolSummary: null,
+          feedbackBonusSummary: null,
         };
       })
       .filter((item): item is ContentItem => item !== null);

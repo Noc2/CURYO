@@ -50,9 +50,9 @@ export function buildAllowedContentCondition(fields: {
 }
 
 export function buildAllowedCategoryCondition(fields: {
-  domain: unknown;
   name: unknown;
+  slug: unknown;
 }) {
-  const blockedCondition = or(buildBlockedDomainCondition(fields.domain), buildBlockedTextCondition(fields.name));
+  const blockedCondition = or(buildBlockedTextCondition(fields.name), buildBlockedTextCondition(fields.slug));
   return sql<boolean>`not (${blockedCondition})`;
 }

@@ -17,7 +17,6 @@ function makeResult(overrides: Partial<KeeperResult> = {}): KeeperResult {
     roundsRevealFailedFinalized: 0,
     votesRevealed: 0,
     cleanupBatchesProcessed: 0,
-    submitterStakesResolved: 0,
     contentMarkedDormant: 0,
     ...overrides,
   };
@@ -69,7 +68,6 @@ describe("metrics", () => {
       makeResult({
         roundsRevealFailedFinalized: 2,
         cleanupBatchesProcessed: 3,
-        submitterStakesResolved: 4,
       }),
       75,
     );
@@ -78,7 +76,6 @@ describe("metrics", () => {
     const metricsBody = getMetricsText();
     expect(metricsBody).toContain("keeper_rounds_reveal_failed_finalized_total 2");
     expect(metricsBody).toContain("keeper_unrevealed_cleanup_batches_total 3");
-    expect(metricsBody).toContain("keeper_submitter_stakes_resolved_total 4");
     expect(metricsBody).toContain("keeper_consensus_reserve_wei 4000000000000");
 
     const health = getHealthSnapshot();
@@ -86,7 +83,6 @@ describe("metrics", () => {
     expect(JSON.parse(health.body)).toMatchObject({
       roundsRevealFailedFinalized: 2,
       cleanupBatchesProcessed: 3,
-      submitterStakesResolved: 4,
       consensusReserveWei: "4000000000000",
     });
   });

@@ -17,7 +17,7 @@ const postgresServiceName = "next-postgres";
 
 export class MissingDockerComposeError extends Error {
   constructor() {
-    super("Docker Compose is required. Install Docker Desktop or docker-compose to use local Postgres.");
+    super("Docker Compose is required. Install Docker Desktop to use local Postgres.");
     this.name = "MissingDockerComposeError";
   }
 }
@@ -51,25 +51,12 @@ function parseEnvFile(filePath) {
   return values;
 }
 
-function isLegacyLocalDatabaseUrl(value) {
-  return value === "file:local.db" || value.startsWith("file:") || value.startsWith("sqlite:");
-}
-
 export function resolveNextDatabaseConfig() {
   const envFileValues = parseEnvFile(nextEnvLocalFile);
   const envDatabaseUrl = process.env.DATABASE_URL?.trim();
   const fileDatabaseUrl = envFileValues.DATABASE_URL?.trim();
   const rawUrl = envDatabaseUrl || fileDatabaseUrl;
-  const usesLegacyLocalDatabaseUrl = rawUrl ? isLegacyLocalDatabaseUrl(rawUrl) : false;
-  const url = rawUrl ? (usesLegacyLocalDatabaseUrl ? IN_MEMORY_DATABASE_URL : rawUrl) : DEFAULT_DATABASE_URL;
-
-  if (rawUrl && usesLegacyLocalDatabaseUrl) {
-    const source = envDatabaseUrl ? "the current shell environment" : "packages/nextjs/.env.local";
-    console.warn(
-      `[dev-db] Mapping legacy SQLite DATABASE_URL (${rawUrl}) from ${source} to ${IN_MEMORY_DATABASE_URL}. ` +
-        "Update it to `memory:` or a PostgreSQL URL when convenient.",
-    );
-  }
+  const url = rawUrl || DEFAULT_DATABASE_URL;
 
   if (url === IN_MEMORY_DATABASE_URL) {
     return {
@@ -127,14 +114,6 @@ function getComposeCommand() {
   });
   if (dockerCompose.status === 0) {
     return { command: "docker", args: ["compose"] };
-  }
-
-  const legacyCompose = spawnSync("docker-compose", ["version"], {
-    cwd: repoRoot,
-    stdio: "ignore",
-  });
-  if (legacyCompose.status === 0) {
-    return { command: "docker-compose", args: [] };
   }
 
   throw new MissingDockerComposeError();

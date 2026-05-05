@@ -1,28 +1,30 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatUnits, isAddress, parseUnits } from "viem";
 import { useAccount } from "wagmi";
 import { ArrowsRightLeftIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
+import { GOVERNANCE_ROUTE } from "~~/constants/routes";
 import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { useDelegation } from "~~/hooks/useDelegation";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
-import { formatCrepAmount } from "~~/lib/vote/voteIncentives";
+import { formatHrepAmount } from "~~/lib/vote/voteIncentives";
 import { notification } from "~~/utils/scaffold-eth";
 import { ZERO_ADDRESS } from "~~/utils/scaffold-eth/common";
 
-const CREP_DECIMALS = 6;
+const HREP_DECIMALS = 6;
 
-function parseCrepAmount(value: string): bigint | null {
+function parseHrepAmount(value: string): bigint | null {
   const trimmedValue = value.trim();
   if (!trimmedValue) {
     return null;
   }
 
   try {
-    return parseUnits(trimmedValue, CREP_DECIMALS);
+    return parseUnits(trimmedValue, HREP_DECIMALS);
   } catch {
     return null;
   }
@@ -42,14 +44,14 @@ export function DelegationSection() {
     writeContractAsync,
     refetch,
   } = useDelegation(address);
-  const { data: crepBalance, refetch: refetchCrepBalance } = useScaffoldReadContract({
-    contractName: "CuryoReputation",
+  const { data: hrepBalance, refetch: refetchHrepBalance } = useScaffoldReadContract({
+    contractName: "HumanReputation",
     functionName: "balanceOf",
     args: [address],
     query: { enabled: !!address },
   });
-  const { writeContractAsync: writeCrepContractAsync, isPending: isTransferPending } = useScaffoldWriteContract({
-    contractName: "CuryoReputation",
+  const { writeContractAsync: writeHrepContractAsync, isPending: isTransferPending } = useScaffoldWriteContract({
+    contractName: "HumanReputation",
   });
 
   const [delegateInput, setDelegateInput] = useState("");
@@ -61,17 +63,17 @@ export function DelegationSection() {
   const normalizedDelegateInput = delegateInput.trim();
   const isValidAddress = normalizedDelegateInput.length > 0 && isAddress(normalizedDelegateInput);
   const isSelfAddress = normalizedDelegateInput.toLowerCase() === address?.toLowerCase();
-  const crepBalanceMicro = typeof crepBalance === "bigint" ? crepBalance : 0n;
-  const formattedBalance = formatCrepAmount(crepBalanceMicro, 6);
+  const hrepBalanceMicro = typeof hrepBalance === "bigint" ? hrepBalance : 0n;
+  const formattedBalance = formatHrepAmount(hrepBalanceMicro, 6);
 
   const normalizedTransferAddress = transferAddressInput.trim();
-  const parsedTransferAmount = useMemo(() => parseCrepAmount(transferAmountInput), [transferAmountInput]);
+  const parsedTransferAmount = useMemo(() => parseHrepAmount(transferAmountInput), [transferAmountInput]);
   const hasTransferAmount = transferAmountInput.trim().length > 0;
   const isValidTransferAddress = normalizedTransferAddress.length > 0 && isAddress(normalizedTransferAddress);
   const isTransferSelfAddress = normalizedTransferAddress.toLowerCase() === address?.toLowerCase();
   const isTransferZeroAddress = normalizedTransferAddress.toLowerCase() === ZERO_ADDRESS.toLowerCase();
   const isValidTransferAmount = parsedTransferAmount !== null && parsedTransferAmount > 0n;
-  const exceedsTransferBalance = parsedTransferAmount !== null && parsedTransferAmount > crepBalanceMicro;
+  const exceedsTransferBalance = parsedTransferAmount !== null && parsedTransferAmount > hrepBalanceMicro;
   const canSubmitTransfer =
     isValidTransferAddress &&
     !isTransferZeroAddress &&
@@ -153,17 +155,17 @@ export function DelegationSection() {
     setTransferError(null);
 
     try {
-      await writeCrepContractAsync({
+      await writeHrepContractAsync({
         functionName: "transfer",
         args: [normalizedTransferAddress as `0x${string}`, parsedTransferAmount],
       });
-      notification.success(`Sent ${formatCrepAmount(parsedTransferAmount, 6)} cREP`);
+      notification.success(`Sent ${formatHrepAmount(parsedTransferAmount, 6)} HREP`);
       setTransferAmountInput("");
-      await refetchCrepBalance();
+      await refetchHrepBalance();
       void queryClient.invalidateQueries();
     } catch (e: any) {
-      console.error("Transfer cREP failed:", e);
-      setTransferError(e?.shortMessage || e?.message || "Failed to transfer cREP");
+      console.error("Transfer HREP failed:", e);
+      setTransferError(e?.shortMessage || e?.message || "Failed to transfer HREP");
     }
   };
 
@@ -179,7 +181,21 @@ export function DelegationSection() {
   }
 
   if (!hasVoterId) {
-    return null;
+    return (
+      <div className="surface-card rounded-2xl p-6 space-y-4">
+        <h2 className="text-xl font-semibold flex items-center gap-2">
+          <ShieldCheckIcon className="w-6 h-6" />
+          Voter ID required for delegation
+        </h2>
+        <p className="text-base leading-7 text-base-content/70">
+          Delegation is only available from the wallet that holds a Voter ID. Claim a Voter ID first, then return here
+          to authorize a delegate wallet or move HREP.
+        </p>
+        <Link href={`${GOVERNANCE_ROUTE}#faucet`} className="btn btn-primary w-full rounded-lg sm:w-auto">
+          Open HREP faucet
+        </Link>
+      </div>
+    );
   }
 
   return (
@@ -187,14 +203,14 @@ export function DelegationSection() {
       <h2 className="text-xl font-semibold flex items-center gap-2">
         <ShieldCheckIcon className="w-6 h-6" />
         Delegated Vote ID
-        <InfoTooltip text="Authorize a delegate address (hot wallet) to vote and submit content on behalf of your Voter ID. Your main key stays safely offline." />
+        <InfoTooltip text="Authorize a delegate address (hot wallet) to vote on behalf of your Voter ID. Your main key stays safely offline." />
       </h2>
 
       <div className="rounded-xl border border-base-300 bg-base-200/40 p-4 text-base text-base-content/75 space-y-2">
         <p>Keep your Voter ID on a cold wallet and use a separate hot wallet for daily actions.</p>
         <p>
-          Your delegate can vote, submit content, and use profile or frontend actions, but only the Voter ID holder can
-          set or remove delegation.
+          Your delegate can vote and use profile or frontend actions, but only the Voter ID holder can set or remove
+          delegation. Submissions themselves do not need delegation.
         </p>
         <p>
           If the hot wallet is compromised, remove it here, set a new delegate, and only fund the delegate as needed.
@@ -235,7 +251,7 @@ export function DelegationSection() {
         <div className="space-y-3">
           <label className="flex items-center gap-1.5 text-base font-medium">
             Delegate Address
-            <InfoTooltip text="Enter the address of your secondary wallet. This address will be able to vote and submit content using your Voter ID." />
+            <InfoTooltip text="Enter the address of your secondary wallet. This address will be able to vote using your Voter ID." />
           </label>
           <input
             type="text"
@@ -284,12 +300,12 @@ export function DelegationSection() {
       <div className="border-t border-base-300 pt-5 space-y-4">
         <h3 className="text-lg font-semibold flex items-center gap-2">
           <ArrowsRightLeftIcon className="w-5 h-5" />
-          Transfer cREP
-          <InfoTooltip text="Send cREP to your delegate or any other address." />
+          Transfer HREP
+          <InfoTooltip text="Send HREP to your delegate or any other address." />
         </h3>
 
         <div className="space-y-1 text-base text-base-content/60">
-          <p>Balance {formattedBalance} cREP</p>
+          <p>Balance {formattedBalance} HREP</p>
           {address ? <p className="font-mono text-sm break-all">Connected wallet {address}</p> : null}
         </div>
 
@@ -343,12 +359,12 @@ export function DelegationSection() {
               type="button"
               className="btn btn-ghost btn-xs"
               onClick={() => {
-                setTransferAmountInput(formatUnits(crepBalanceMicro, CREP_DECIMALS));
+                setTransferAmountInput(formatUnits(hrepBalanceMicro, HREP_DECIMALS));
                 if (transferError) {
                   setTransferError(null);
                 }
               }}
-              disabled={isTransferPending || crepBalanceMicro === 0n}
+              disabled={isTransferPending || hrepBalanceMicro === 0n}
             >
               Max
             </button>
@@ -387,7 +403,7 @@ export function DelegationSection() {
                 Sending...
               </span>
             ) : (
-              "Send cREP"
+              "Send HREP"
             )}
           </button>
         </div>

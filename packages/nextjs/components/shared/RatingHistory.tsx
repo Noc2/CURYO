@@ -20,12 +20,7 @@ interface RatingHistoryProps {
  * SVG sparkline chart showing the content's rating over time.
  * Plots data from RatingUpdated events + current on-chain rating.
  */
-export function RatingHistory({
-  contentId,
-  variant = "default",
-  showHeader = true,
-  fallbackRating,
-}: RatingHistoryProps) {
+export function RatingHistory({ contentId, showHeader = true, fallbackRating }: RatingHistoryProps) {
   const rpcFallbackEnabled = publicEnv.rpcFallbackEnabled;
   const ponderAvailable = usePonderAvailability(rpcFallbackEnabled);
   const rpcFallbackActive = rpcFallbackEnabled && ponderAvailable === false;
@@ -116,13 +111,13 @@ export function RatingHistory({
   if ((isLoading || (rpcFallbackActive && eventsLoading)) && !hasRenderableChart) {
     return (
       <div className="h-16 flex items-center justify-center">
-        <span className="loading loading-spinner loading-xs text-base-content/20"></span>
+        <span className="loading loading-spinner loading-xs text-base-content/60"></span>
       </div>
     );
   }
 
   if ((error || (rpcFallbackActive && eventsError)) && !hasRenderableChart) {
-    const textColor = variant === "dark" ? "text-base-content/40" : "text-base-content/25";
+    const textColor = "text-base-content/60";
     return (
       <div className={`h-16 flex items-center justify-center text-base ${textColor}`}>
         Unable to load rating history
@@ -132,12 +127,12 @@ export function RatingHistory({
 
   // Need at least 2 points to draw a line
   if (dataPoints.length < 2) {
-    const textColor = variant === "dark" ? "text-base-content/40" : "text-base-content/25";
+    const textColor = "text-base-content/60";
     return <div className={`h-16 flex items-center justify-center text-base ${textColor}`}>No rating history yet</div>;
   }
 
   const currentRatingValue = dataPoints[dataPoints.length - 1];
-  const textColor = variant === "dark" ? "text-base-content/60" : "text-base-content/40";
+  const textColor = "text-base-content/60";
   const currentRatingScore = formatRatingScoreOutOfTen(currentRatingValue);
   const containerOpacityClassName =
     isLoading || (rpcFallbackActive && eventsLoading) ? "opacity-[0.85]" : "opacity-100";

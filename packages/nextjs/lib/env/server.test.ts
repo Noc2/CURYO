@@ -77,8 +77,8 @@ test("getServerRpcOverrides includes public per-chain RPC overrides", () => {
   });
 });
 
-test("getDatabaseConfig maps legacy sqlite-style local urls to memory in development", () => {
-  env.DATABASE_URL = "file:local.db";
+test("getDatabaseConfig preserves explicit in-memory urls", () => {
+  env.DATABASE_URL = "memory:";
   assert.deepEqual(getDatabaseConfig(), { url: "memory:" });
 });
 

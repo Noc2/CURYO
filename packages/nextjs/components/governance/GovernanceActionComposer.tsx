@@ -1,9 +1,8 @@
 "use client";
 
 import { type FormEvent, useMemo, useState } from "react";
-import { CategoryRegistryAbi } from "@curyo/contracts/abis";
 import { useQueryClient } from "@tanstack/react-query";
-import { Address, encodeFunctionData, isAddress, parseUnits } from "viem";
+import { Address, encodeFunctionData, formatUnits, isAddress, parseUnits } from "viem";
 import { useAccount, useConfig } from "wagmi";
 import { waitForTransactionReceipt } from "wagmi/actions";
 import { ArrowsRightLeftIcon } from "@heroicons/react/24/outline";
@@ -17,7 +16,7 @@ import {
   useGovernanceWrite,
 } from "~~/hooks/useGovernance";
 
-type ComposerFieldType = "address" | "uint" | "crep" | "string" | "textarea" | "csv" | "bytes32";
+type ComposerFieldType = "address" | "uint" | "hrep" | "string" | "textarea" | "csv" | "bytes32";
 
 type ComposerField = {
   key: string;
@@ -31,7 +30,7 @@ type ComposerField = {
 type FieldParser = {
   address: (key: string, label: string) => Address;
   uint: (key: string, label: string) => bigint;
-  crep: (key: string, label: string) => bigint;
+  hrep: (key: string, label: string) => bigint;
   bytes32: (key: string, label: string) => `0x${string}`;
   string: (key: string, label: string) => string;
   csv: (key: string) => string[];
@@ -42,8 +41,7 @@ type GovernanceActionTemplate = {
   group: string;
   label: string;
   mode: "proposal" | "direct";
-  proposalMode?: "generic" | "categoryApproval";
-  contractName: "CuryoGovernor" | "CategoryRegistry" | "FrontendRegistry" | "ContentRegistry";
+  contractName: "CuryoGovernor" | "HumanReputation" | "FrontendRegistry" | "ContentRegistry" | "ProtocolConfig";
   functionName: string;
   description: string;
   allowCustomDescription?: boolean;
@@ -57,6 +55,66 @@ type GovernanceActionTemplate = {
   ) => readonly unknown[];
   buildDescription?: (values: Record<string, string>) => string;
 };
+
+const TREASURY_GRANT_ACTION_ID = "treasury-grant";
+
+function cleanDescriptionValue(value: string | undefined, fallback: string) {
+  const cleaned = value?.trim();
+  return cleaned ? cleaned : fallback;
+}
+
+function buildTreasuryGrantDescription(values: Record<string, string>) {
+  const amount = cleanDescriptionValue(values.amount, "0");
+  const recipient = cleanDescriptionValue(values.recipient, "recipient");
+  const recipientType = cleanDescriptionValue(values.recipientType, "Unspecified");
+  const track = cleanDescriptionValue(values.track, "Unspecified");
+  const purpose = cleanDescriptionValue(values.purpose, "Unspecified");
+  const impact = cleanDescriptionValue(values.impact, "Unspecified");
+  const milestones = cleanDescriptionValue(values.milestones, "Unspecified");
+
+  return [
+    `Treasury grant: ${amount} HREP to ${recipient}`,
+    "",
+    `Track: ${track}`,
+    `Recipient type: ${recipientType}`,
+    `Purpose: ${purpose}`,
+    `Expected impact: ${impact}`,
+    `Milestones/reporting: ${milestones}`,
+    "",
+    "This proposal transfers HREP from the governance timelock treasury to the recipient. HREP carries voting power and is intended for protocol-aligned ecosystem participation, not as a protocol-backed payment.",
+  ].join("\n");
+}
+
+function parsePreviewHrepAmount(value: string | undefined) {
+  const trimmed = value?.trim();
+  if (!trimmed) return undefined;
+
+  try {
+    const amount = parseUnits(trimmed, 6);
+    return amount > 0n ? amount : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function formatHrepAmount(value: bigint | undefined) {
+  if (value === undefined) return "—";
+
+  const formatted = formatUnits(value, 6);
+  const [whole, fraction = ""] = formatted.split(".");
+  const wholePart = Number(whole).toLocaleString();
+  const trimmedFraction = fraction.replace(/0+$/, "").slice(0, 2);
+
+  return trimmedFraction ? `${wholePart}.${trimmedFraction} HREP` : `${wholePart} HREP`;
+}
+
+function formatPercentOf(value: bigint | undefined, total: bigint | undefined) {
+  if (value === undefined || total === undefined || total === 0n) return "—";
+  if (value > 0n && (value * 10_000n) / total === 0n) return "<0.01%";
+
+  const percentTimes100 = Number((value * 10_000n) / total);
+  return `${(percentTimes100 / 100).toLocaleString(undefined, { maximumFractionDigits: 2 })}%`;
+}
 
 const actionTemplates: readonly GovernanceActionTemplate[] = [
   {
@@ -90,10 +148,14 @@ const actionTemplates: readonly GovernanceActionTemplate[] = [
     mode: "proposal",
     contractName: "CuryoGovernor",
     functionName: "setProposalThreshold",
-    description: "Create a proposal to update the cREP required to create new proposals.",
-    fields: [{ key: "threshold", label: "Proposal threshold (cREP)", type: "crep", required: true }],
-    buildArgs: (_, parser) => [parser.crep("threshold", "Proposal threshold")],
-    buildDescription: values => `Set proposal threshold to ${values.threshold || "0"} cREP`,
+    description: "Create a proposal to update the HREP required to create new proposals.",
+    fields: [{ key: "threshold", label: "Proposal threshold (HREP)", type: "hrep", required: true }],
+    buildArgs: (_, parser) => {
+      const threshold = parser.hrep("threshold", "Proposal threshold");
+      if (threshold === 0n) throw new Error("Proposal threshold must be greater than zero.");
+      return [threshold];
+    },
+    buildDescription: values => `Set proposal threshold to ${values.threshold || "0"} HREP`,
   },
   {
     id: "governor-update-quorum",
@@ -108,129 +170,71 @@ const actionTemplates: readonly GovernanceActionTemplate[] = [
     buildDescription: values => `Update governor quorum numerator to ${values.quorum || "0"}%`,
   },
   {
-    id: "category-approve",
-    group: "Category Registry",
-    label: "Approve category",
+    id: TREASURY_GRANT_ACTION_ID,
+    group: "Treasury",
+    label: "Treasury grant",
     mode: "proposal",
-    proposalMode: "categoryApproval",
-    contractName: "CuryoGovernor",
-    functionName: "proposeCategoryApproval",
-    description: "Create a lower-threshold governor proposal to sponsor and approve a pending category submission.",
+    contractName: "HumanReputation",
+    functionName: "transfer",
+    description: "Create a proposal to send HREP from the governance timelock treasury to a recipient.",
     allowCustomDescription: false,
-    note: "The description is fixed and the proposal is bound to the current pending submission, so stale category approvals cannot be reused.",
-    fields: [{ key: "categoryId", label: "Category ID", type: "uint", required: true }],
-    buildArgs: (_, parser) => [parser.uint("categoryId", "Category ID")],
-    buildDescription: values => `Approve category #${values.categoryId || "0"}`,
-  },
-  {
-    id: "category-link-approval",
-    group: "Category Registry",
-    label: "Link approval proposal",
-    mode: "direct",
-    contractName: "CategoryRegistry",
-    functionName: "linkApprovalProposal",
-    description:
-      "Directly link an existing governor proposal to a pending category when the proposal was created outside this composer.",
-    note: "Must be called by the original category submitter. Only proposals created after the current submission can link.",
-    advanced: true,
     fields: [
-      { key: "categoryId", label: "Category ID", type: "uint", required: true },
       {
-        key: "descriptionHash",
-        label: "Description hash",
-        type: "bytes32",
+        key: "recipient",
+        label: "Recipient address",
+        type: "address",
         required: true,
-        helperText: "keccak256 hash of the exact governor proposal description string.",
+        helperText: "The wallet or multisig that will receive the grant and its voting power.",
+      },
+      {
+        key: "amount",
+        label: "Grant amount (HREP)",
+        type: "hrep",
+        required: true,
+        helperText: "Use a narrow amount that matches the requested ecosystem role.",
+      },
+      {
+        key: "track",
+        label: "Grant track",
+        type: "string",
+        required: true,
+        placeholder: "Partner activation, integration support, research/data, community growth, protocol development",
+      },
+      {
+        key: "recipientType",
+        label: "Recipient type",
+        type: "string",
+        required: true,
+        placeholder: "Company, integration partner, researcher, community contributor",
+      },
+      {
+        key: "purpose",
+        label: "Purpose",
+        type: "textarea",
+        required: true,
+        helperText: "Explain why this recipient should hold HREP.",
+      },
+      {
+        key: "impact",
+        label: "Expected impact",
+        type: "textarea",
+        required: true,
+        helperText: "Describe how this helps grow or improve the Curyo feedback network.",
+      },
+      {
+        key: "milestones",
+        label: "Milestones / reporting expectations",
+        type: "textarea",
+        required: true,
+        helperText: "State any deliverables, reporting cadence, or follow-up evidence voters should expect.",
       },
     ],
-    buildArgs: (_, parser) => [
-      parser.uint("categoryId", "Category ID"),
-      parser.bytes32("descriptionHash", "Description hash"),
-    ],
-  },
-  {
-    id: "category-clear-approval",
-    group: "Category Registry",
-    label: "Clear canceled or expired approval",
-    mode: "direct",
-    contractName: "CategoryRegistry",
-    functionName: "clearApprovalProposal",
-    description:
-      "Clear a linked approval proposal after it was canceled or expired so the submitter can retry within 7 days or cancel and reclaim stake afterward.",
-    note: "Must be called by the original category submitter.",
-    advanced: true,
-    fields: [{ key: "categoryId", label: "Category ID", type: "uint", required: true }],
-    buildArgs: (_, parser) => [parser.uint("categoryId", "Category ID")],
-  },
-  {
-    id: "category-reject",
-    group: "Category Registry",
-    label: "Reject failed category",
-    mode: "direct",
-    contractName: "CategoryRegistry",
-    functionName: "rejectCategory",
-    description: "Directly reject a category whose linked governance proposal has been defeated.",
-    fields: [{ key: "categoryId", label: "Category ID", type: "uint", required: true }],
-    buildArgs: (_, parser) => [parser.uint("categoryId", "Category ID")],
-  },
-  {
-    id: "category-cancel-unlinked",
-    group: "Category Registry",
-    label: "Cancel unsponsored category",
-    mode: "direct",
-    contractName: "CategoryRegistry",
-    functionName: "cancelUnlinkedCategory",
-    description:
-      "Cancel your pending category submission and reclaim the 500 cREP stake after 7 days if no approval proposal was linked.",
-    fields: [{ key: "categoryId", label: "Category ID", type: "uint", required: true }],
-    buildArgs: (_, parser) => [parser.uint("categoryId", "Category ID")],
-  },
-  {
-    id: "category-add-approved",
-    group: "Category Registry",
-    label: "Add approved category",
-    mode: "proposal",
-    contractName: "CategoryRegistry",
-    functionName: "addApprovedCategory",
-    description: "Create a proposal to seed an already-approved category directly.",
-    advanced: true,
-    fields: [
-      { key: "name", label: "Name", type: "string", required: true },
-      { key: "domain", label: "Domain", type: "string", required: true },
-      { key: "subcategories", label: "Subcategories", type: "csv", required: true, helperText: "Comma-separated" },
-    ],
-    buildArgs: (_, parser) => [
-      parser.string("name", "Name"),
-      parser.string("domain", "Domain").toLowerCase(),
-      parser.csv("subcategories"),
-    ],
-    buildDescription: values => `Add approved category: ${values.name || "Unnamed"} (${values.domain || "domain"})`,
-  },
-  {
-    id: "category-set-voter-id",
-    group: "Category Registry",
-    label: "Set category Voter ID contract",
-    mode: "proposal",
-    contractName: "CategoryRegistry",
-    functionName: "setVoterIdNFT",
-    description: "Create a proposal to update the VoterIdNFT used by CategoryRegistry.",
-    advanced: true,
-    fields: [{ key: "voterId", label: "VoterIdNFT address", type: "address", required: true }],
-    buildArgs: (_, parser) => [parser.address("voterId", "VoterIdNFT address")],
-    buildDescription: values => `Set CategoryRegistry VoterIdNFT to ${values.voterId || "address"}`,
-  },
-  {
-    id: "category-set-voting-engine",
-    group: "Category Registry",
-    label: "Set category voting engine",
-    mode: "proposal",
-    contractName: "CategoryRegistry",
-    functionName: "setVotingEngine",
-    description: "Create a proposal to update the voting engine used by CategoryRegistry.",
-    advanced: true,
-    fields: [{ key: "votingEngine", label: "Voting engine address", type: "address", required: true }],
-    buildArgs: (_, parser) => [parser.address("votingEngine", "Voting engine address")],
-    buildDescription: values => `Set CategoryRegistry voting engine to ${values.votingEngine || "address"}`,
+    buildArgs: (_, parser) => {
+      const amount = parser.hrep("amount", "Grant amount");
+      if (amount <= 0n) throw new Error("Grant amount must be greater than 0 HREP.");
+      return [parser.address("recipient", "Recipient address"), amount];
+    },
+    buildDescription: buildTreasuryGrantDescription,
   },
   {
     id: "frontend-slash",
@@ -242,15 +246,15 @@ const actionTemplates: readonly GovernanceActionTemplate[] = [
     description: "Create a proposal to slash a frontend's stake and disable it.",
     fields: [
       { key: "frontend", label: "Frontend address", type: "address", required: true },
-      { key: "amount", label: "Slash amount (cREP)", type: "crep", required: true },
+      { key: "amount", label: "Slash amount (HREP)", type: "hrep", required: true },
       { key: "reason", label: "Reason", type: "textarea", required: true },
     ],
     buildArgs: (_, parser) => [
       parser.address("frontend", "Frontend address"),
-      parser.crep("amount", "Slash amount"),
+      parser.hrep("amount", "Slash amount"),
       parser.string("reason", "Reason"),
     ],
-    buildDescription: values => `Slash frontend ${values.frontend || "address"} by ${values.amount || "0"} cREP`,
+    buildDescription: values => `Slash frontend ${values.frontend || "address"} by ${values.amount || "0"} HREP`,
   },
   {
     id: "frontend-unslash",
@@ -365,19 +369,6 @@ const actionTemplates: readonly GovernanceActionTemplate[] = [
     buildDescription: values => `Set ContentRegistry voting engine to ${values.votingEngine || "address"}`,
   },
   {
-    id: "content-set-category-registry",
-    group: "Content Registry",
-    label: "Set content category registry",
-    mode: "proposal",
-    contractName: "ContentRegistry",
-    functionName: "setCategoryRegistry",
-    description: "Create a proposal to update the CategoryRegistry used by ContentRegistry.",
-    advanced: true,
-    fields: [{ key: "categoryRegistry", label: "CategoryRegistry address", type: "address", required: true }],
-    buildArgs: (_, parser) => [parser.address("categoryRegistry", "CategoryRegistry address")],
-    buildDescription: values => `Set ContentRegistry CategoryRegistry to ${values.categoryRegistry || "address"}`,
-  },
-  {
     id: "content-set-voter-id",
     group: "Content Registry",
     label: "Set content Voter ID contract",
@@ -392,16 +383,16 @@ const actionTemplates: readonly GovernanceActionTemplate[] = [
   },
   {
     id: "content-set-participation-pool",
-    group: "Content Registry",
+    group: "Protocol Config",
     label: "Set participation pool",
     mode: "proposal",
-    contractName: "ContentRegistry",
+    contractName: "ProtocolConfig",
     functionName: "setParticipationPool",
-    description: "Create a proposal to update the ParticipationPool used by ContentRegistry.",
+    description: "Create a proposal to update the ParticipationPool used by protocol settlement.",
     advanced: true,
     fields: [{ key: "participationPool", label: "ParticipationPool address", type: "address", required: true }],
     buildArgs: (_, parser) => [parser.address("participationPool", "ParticipationPool address")],
-    buildDescription: values => `Set ContentRegistry ParticipationPool to ${values.participationPool || "address"}`,
+    buildDescription: values => `Set ProtocolConfig ParticipationPool to ${values.participationPool || "address"}`,
   },
   {
     id: "content-set-bonus-pool",
@@ -424,7 +415,7 @@ const actionTemplates: readonly GovernanceActionTemplate[] = [
     mode: "proposal",
     contractName: "ContentRegistry",
     functionName: "setTreasury",
-    description: "Create a proposal to update the treasury that receives slashed submitter stakes.",
+    description: "Create a proposal to update the treasury that receives protocol fees.",
     advanced: true,
     fields: [{ key: "treasury", label: "Treasury address", type: "address", required: true }],
     buildArgs: (_, parser) => [parser.address("treasury", "Treasury address")],
@@ -432,19 +423,13 @@ const actionTemplates: readonly GovernanceActionTemplate[] = [
   },
 ];
 
-const CATEGORY_REGISTRY_EXTENDED_FUNCTIONS = new Set([
-  "linkApprovalProposal",
-  "clearApprovalProposal",
-  "cancelUnlinkedCategory",
-]);
-
 export function GovernanceActionComposer() {
   const queryClient = useQueryClient();
   const { address } = useAccount();
   const wagmiConfig = useConfig();
-  const { governorAddress, hasGovernorContract, isGovernorContractLoading, knownContractsByName } =
+  const { governorAddress, hasGovernorContract, isGovernorContractLoading, knownContractsByName, timelockAddress } =
     useGovernanceContracts();
-  const { proposalThreshold, categoryProposalThreshold: categoryProposalThresholdRaw } = useGovernanceStats();
+  const { currentQuorum, maxProposalThreshold, proposalThreshold } = useGovernanceStats();
   const { writeContractAsync, isPending } = useGovernanceWrite();
   const [selectedActionId, setSelectedActionId] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -453,7 +438,7 @@ export function GovernanceActionComposer() {
   const [formError, setFormError] = useState<string | null>(null);
 
   const { data: votingPowerRaw } = useScaffoldReadContract({
-    contractName: "CuryoReputation",
+    contractName: "HumanReputation",
     functionName: "getVotes" as any,
     args: [address] as any,
     query: { enabled: !!address },
@@ -467,13 +452,47 @@ export function GovernanceActionComposer() {
   );
 
   const selectedTemplate = visibleTemplates.find(template => template.id === selectedActionId);
+  const isTreasuryGrant = selectedTemplate?.id === TREASURY_GRANT_ACTION_ID;
 
   const defaultDescription = selectedTemplate?.buildDescription?.(formValues) ?? selectedTemplate?.label ?? "";
   const effectiveDescription = customDescription.trim() || defaultDescription;
-  const activeProposalThreshold =
-    selectedTemplate?.proposalMode === "categoryApproval"
-      ? (categoryProposalThresholdRaw ?? 500n * 1_000_000n)
-      : proposalThreshold;
+  const activeProposalThreshold = proposalThreshold;
+
+  const grantAmount = useMemo(
+    () => (isTreasuryGrant ? parsePreviewHrepAmount(formValues.amount) : undefined),
+    [formValues.amount, isTreasuryGrant],
+  );
+
+  const { data: timelockTreasuryBalance } = useScaffoldReadContract({
+    contractName: "HumanReputation",
+    functionName: "balanceOf" as any,
+    args: [timelockAddress] as any,
+    query: { enabled: isTreasuryGrant && !!timelockAddress },
+  });
+
+  const { data: configuredTreasuryAddress } = useScaffoldReadContract({
+    contractName: "ContentRegistry",
+    functionName: "treasury" as any,
+    query: { enabled: isTreasuryGrant },
+  });
+
+  const treasuryBalance = timelockTreasuryBalance as bigint | undefined;
+  const treasuryAddressMismatch =
+    isTreasuryGrant &&
+    !!timelockAddress &&
+    typeof configuredTreasuryAddress === "string" &&
+    configuredTreasuryAddress.toLowerCase() !== timelockAddress.toLowerCase();
+  const grantExceedsTreasury =
+    isTreasuryGrant && grantAmount !== undefined && treasuryBalance !== undefined && grantAmount > treasuryBalance;
+  const thresholdUpdateAmount = useMemo(
+    () =>
+      selectedTemplate?.id === "governor-set-threshold" ? parsePreviewHrepAmount(formValues.threshold) : undefined,
+    [formValues.threshold, selectedTemplate?.id],
+  );
+  const thresholdUpdateExceedsMax =
+    thresholdUpdateAmount !== undefined &&
+    maxProposalThreshold !== undefined &&
+    thresholdUpdateAmount > maxProposalThreshold;
 
   const groupedTemplates = useMemo(() => {
     const grouped = new Map<string, GovernanceActionTemplate[]>();
@@ -502,12 +521,12 @@ export function GovernanceActionComposer() {
       if (!/^\d+$/.test(value)) throw new Error(`${label} must be a whole number.`);
       return BigInt(value);
     },
-    crep: (key, label) => {
+    hrep: (key, label) => {
       const value = formValues[key]?.trim() ?? "";
       try {
         return parseUnits(value, 6);
       } catch {
-        throw new Error(`${label} must be a valid cREP amount.`);
+        throw new Error(`${label} must be a valid HREP amount.`);
       }
     },
     bytes32: (key, label) => {
@@ -556,12 +575,6 @@ export function GovernanceActionComposer() {
         throw new Error("This action is unavailable on this network.");
       }
 
-      const actionAbi =
-        selectedTemplate.contractName === "CategoryRegistry" &&
-        CATEGORY_REGISTRY_EXTENDED_FUNCTIONS.has(selectedTemplate.functionName)
-          ? CategoryRegistryAbi
-          : targetContract.abi;
-
       if (selectedTemplate.mode === "proposal" && isGovernorContractLoading) {
         throw new Error("Checking governance availability. Try again in a moment.");
       }
@@ -581,39 +594,32 @@ export function GovernanceActionComposer() {
       }
 
       const proposalDescriptionHash =
-        selectedTemplate.mode === "proposal" &&
-        selectedTemplate.proposalMode !== "categoryApproval" &&
-        effectiveDescription
+        selectedTemplate.mode === "proposal" && effectiveDescription
           ? getProposalDescriptionHash(effectiveDescription)
           : undefined;
       const args = selectedTemplate.buildArgs(formValues, parser, proposalDescriptionHash);
+      if (selectedTemplate.id === "governor-set-threshold" && thresholdUpdateExceedsMax) {
+        throw new Error(`Proposal threshold cannot exceed ${formatHrepAmount(maxProposalThreshold)}.`);
+      }
 
       if (selectedTemplate.mode === "proposal") {
-        const txHash =
-          selectedTemplate.proposalMode === "categoryApproval"
-            ? await writeContractAsync({
-                address: governorAddress!,
-                abi: governorAbi,
-                functionName: "proposeCategoryApproval",
+        const txHash = await writeContractAsync({
+          address: governorAddress!,
+          abi: governorAbi,
+          functionName: "propose",
+          args: [
+            [targetContract.address],
+            [0n],
+            [
+              encodeFunctionData({
+                abi: targetContract.abi,
+                functionName: selectedTemplate.functionName,
                 args,
-              })
-            : await writeContractAsync({
-                address: governorAddress!,
-                abi: governorAbi,
-                functionName: "propose",
-                args: [
-                  [targetContract.address],
-                  [0n],
-                  [
-                    encodeFunctionData({
-                      abi: targetContract.abi,
-                      functionName: selectedTemplate.functionName,
-                      args,
-                    } as any),
-                  ],
-                  effectiveDescription,
-                ],
-              });
+              } as any),
+            ],
+            effectiveDescription,
+          ],
+        });
 
         if (!txHash) return;
 
@@ -621,7 +627,7 @@ export function GovernanceActionComposer() {
       } else {
         const txHash = await writeContractAsync({
           address: targetContract.address,
-          abi: actionAbi,
+          abi: targetContract.abi,
           functionName: selectedTemplate.functionName,
           args,
         });
@@ -752,15 +758,66 @@ export function GovernanceActionComposer() {
               </div>
               <p className="text-base text-base-content/70">
                 {selectedTemplate.mode === "proposal"
-                  ? selectedTemplate.proposalMode === "categoryApproval"
-                    ? "Create a category approval proposal using the lower category threshold."
-                    : `Create a proposal targeting ${selectedTemplate.contractName}.${selectedTemplate.functionName}.`
+                  ? `Create a proposal targeting ${selectedTemplate.contractName}.${selectedTemplate.functionName}.`
                   : `Send a direct transaction to ${selectedTemplate.contractName}.${selectedTemplate.functionName}.`}
               </p>
               {selectedTemplate.mode === "proposal" && (
                 <p className="text-base text-base-content/50">
                   Description: <span className="text-base-content/80">{effectiveDescription || "—"}</span>
                 </p>
+              )}
+              {isTreasuryGrant && (
+                <div className="space-y-2 pt-2">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                    <div>
+                      <p className="text-base text-base-content/50">Timelock treasury balance</p>
+                      <p className="font-mono text-base text-base-content/80">{formatHrepAmount(treasuryBalance)}</p>
+                    </div>
+                    <div>
+                      <p className="text-base text-base-content/50">Share of treasury</p>
+                      <p className="font-mono text-base text-base-content/80">
+                        {formatPercentOf(grantAmount, treasuryBalance)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-base text-base-content/50">Share of proposal threshold</p>
+                      <p className="font-mono text-base text-base-content/80">
+                        {formatPercentOf(grantAmount, activeProposalThreshold)}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-base text-base-content/50">
+                    Current quorum impact:{" "}
+                    <span className="font-mono text-base-content/80">
+                      {formatPercentOf(grantAmount, currentQuorum)}
+                    </span>
+                  </p>
+                  {treasuryAddressMismatch && (
+                    <p className="text-base text-warning">
+                      The ContentRegistry treasury address is not the governor timelock. This proposal spends HREP held
+                      by the timelock treasury.
+                    </p>
+                  )}
+                  {grantExceedsTreasury && (
+                    <p className="text-base text-warning">
+                      The grant amount exceeds the current timelock HREP balance, so execution would fail unless the
+                      treasury receives more HREP before execution.
+                    </p>
+                  )}
+                </div>
+              )}
+              {selectedTemplate.id === "governor-set-threshold" && (
+                <div className="space-y-1 pt-2">
+                  <p className="text-base text-base-content/50">
+                    Maximum proposal threshold:{" "}
+                    <span className="font-mono text-base-content/80">{formatHrepAmount(maxProposalThreshold)}</span>
+                  </p>
+                  {thresholdUpdateExceedsMax && (
+                    <p className="text-base text-warning">
+                      The proposed threshold exceeds the governor cap and would revert.
+                    </p>
+                  )}
+                </div>
               )}
               {selectedTemplate.mode === "proposal" && isGovernorContractLoading && (
                 <p className="text-base text-base-content/50">Checking governance availability...</p>
@@ -770,9 +827,7 @@ export function GovernanceActionComposer() {
               )}
               {proposalBlocked && (
                 <p className="text-base text-warning">
-                  Your current voting power is below the live{" "}
-                  {selectedTemplate.proposalMode === "categoryApproval" ? "category proposal" : "governor"} threshold,
-                  so this proposal would revert.
+                  Your current voting power is below the live governor threshold, so this proposal would revert.
                 </p>
               )}
             </div>
@@ -782,7 +837,9 @@ export function GovernanceActionComposer() {
             <button
               className="btn btn-primary w-full"
               disabled={
-                isPending || (selectedTemplate.mode === "proposal" && (!hasGovernorContract || proposalBlocked))
+                isPending ||
+                thresholdUpdateExceedsMax ||
+                (selectedTemplate.mode === "proposal" && (!hasGovernorContract || proposalBlocked))
               }
             >
               {selectedTemplate.mode === "proposal" ? "Create Proposal" : "Send Transaction"}

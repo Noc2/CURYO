@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import React, { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
@@ -20,6 +20,7 @@ import { CuryoLogo } from "~~/components/CuryoLogo";
 import { CuryoConnectButton } from "~~/components/scaffold-eth";
 import { AddressInfoDropdown } from "~~/components/scaffold-eth/ConnectButton/AddressInfoDropdown";
 import { DOCS_NAV } from "~~/constants/docsNav";
+import { ASK_ROUTE, RATE_ROUTE } from "~~/constants/routes";
 import { useMobileHeaderVisibility, useMobileHeaderVoteControls } from "~~/contexts/MobileHeaderVisibilityContext";
 import { useOutsideClick } from "~~/hooks/scaffold-eth";
 import { useVoteSearch } from "~~/hooks/useVoteSearch";
@@ -31,9 +32,9 @@ type HeaderMenuLink = {
 };
 
 const menuLinks: HeaderMenuLink[] = [
-  { label: "Discover", href: "/vote", icon: GlobeAltIcon },
-  { label: "Submit", href: "/submit", icon: PlusCircleIcon },
-  { label: "cREP", href: "/governance", icon: IdentificationIcon },
+  { label: "Discover", href: RATE_ROUTE, icon: GlobeAltIcon },
+  { label: "Submit", href: ASK_ROUTE, icon: PlusCircleIcon },
+  { label: "Reputation", href: "/governance", icon: IdentificationIcon },
   { label: "Docs", href: "/docs", icon: BookOpenIcon },
 ];
 
@@ -47,8 +48,7 @@ type HeaderNavLinkProps = {
   label: string;
 };
 
-const navIndicatorClassName =
-  "absolute right-2 top-2 bottom-2 w-1 rounded-full bg-linear-to-b from-[#F5F0EB] via-[#F26426] to-[#B3341B] shadow-[0_0_18px_rgba(242,100,38,0.45)]";
+const navIndicatorClassName = "absolute right-2 top-2 bottom-2 w-1 rounded-full bg-[#F26426]";
 const headerChromeSurfaceClassName = "bg-[#000]";
 const headerChromeBorderClassName = "border-[color:var(--curyo-shell-border-strong)]";
 
@@ -66,6 +66,7 @@ const HeaderNavLink = ({
   return (
     <Link
       href={href}
+      prefetch={false}
       className={`group relative flex w-full items-center gap-3 overflow-hidden rounded-xl ${
         compact ? "px-3 py-2.5" : "px-4 py-3"
       } ${className ?? ""} transition-colors duration-200 ${
@@ -125,6 +126,7 @@ const HeaderMenuLinks = ({ variant = "mobile" }: { variant?: "mobile" | "desktop
                       <h3 className="mb-1.5 w-full">
                         <Link
                           href={sectionHref}
+                          prefetch={false}
                           className={`block w-full rounded-lg px-3 text-base font-semibold uppercase tracking-wider transition-colors ${isSectionActive ? "text-base-content/80" : "text-base-content/55 hover:text-base-content/80"}`}
                         >
                           {group.section}
@@ -137,6 +139,7 @@ const HeaderMenuLinks = ({ variant = "mobile" }: { variant?: "mobile" | "desktop
                             <Link
                               key={link.href}
                               href={link.href}
+                              prefetch={false}
                               className={`block w-full px-3 py-1.5 text-base rounded-lg transition-colors ${
                                 isLinkActive
                                   ? "bg-primary/10 text-primary font-medium"
@@ -208,19 +211,27 @@ const MOBILE_HEADER_SCROLL_SOURCE_ATTRIBUTE = "data-mobile-header-scroll-source"
 const MOBILE_HEADER_SCROLL_SYNC_ATTRIBUTE = "data-mobile-header-scroll-sync";
 const MOBILE_HEADER_SCROLL_SYNC_OFFSET_ATTRIBUTE = "data-mobile-header-scroll-sync-offset";
 
-const HeaderBrand = ({ className, compact = false }: { className?: string; compact?: boolean }) => (
+const HeaderBrand = ({
+  brandIdPrefix,
+  className,
+  compact = false,
+}: {
+  brandIdPrefix: string;
+  className?: string;
+  compact?: boolean;
+}) => (
   <Link href={EXPLICIT_LANDING_HREF} className={`flex min-w-0 items-center gap-2 ${className ?? ""}`}>
-    <CuryoLogo className={compact ? "h-8 w-8 shrink-0" : "h-9 w-9 shrink-0"} />
+    <CuryoLogo className={compact ? "h-8 w-8 shrink-0" : "h-9 w-9 shrink-0"} idPrefix={brandIdPrefix} />
     <div className={`flex min-w-0 flex-col gap-0.5 ${compact ? "" : "items-start"}`}>
       <span
-        className={`font-display leading-none tracking-[0.08em] text-base-content ${
-          compact ? "truncate text-[1.35rem]" : "text-[1.4rem]"
+        className={`font-display whitespace-nowrap leading-none tracking-normal text-base-content ${
+          compact ? "truncate text-[1.35rem]" : "text-[1.2rem]"
         }`}
       >
-        CURYO (BETA)
+        Curyo (Beta)
       </span>
       <span className={`${compact ? "truncate" : ""} text-base-content/75`} style={{ fontSize: "14px" }}>
-        Human Reputation
+        AI Asks, Humans Earn
       </span>
     </div>
   </Link>
@@ -229,7 +240,8 @@ const HeaderBrand = ({ className, compact = false }: { className?: string; compa
 const HeaderSearchBar = ({ className }: { className?: string }) => {
   const { activeQuery, commitSearch } = useVoteSearch();
   const [inputValue, setInputValue] = useState(activeQuery);
-  const searchInputId = useId();
+  const isSidebar = className?.includes("sidebar");
+  const searchInputId = isSidebar ? "header-search-sidebar-input" : "header-search-top-input";
 
   useEffect(() => {
     setInputValue(activeQuery);
@@ -256,13 +268,12 @@ const HeaderSearchBar = ({ className }: { className?: string }) => {
     };
   }, [activeQuery, commitSearch, inputValue]);
 
-  const isSidebar = className?.includes("sidebar");
   return (
     <div className={`relative ${className ?? ""} ${isSidebar ? "w-full min-w-0" : "hidden sm:block"}`}>
       <label htmlFor={searchInputId} className="sr-only">
         Search content
       </label>
-      <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/45 pointer-events-none" />
+      <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/60 pointer-events-none" />
       <input
         id={searchInputId}
         name="vote-search"
@@ -297,7 +308,7 @@ const HeaderSearchBar = ({ className }: { className?: string }) => {
 const MobileHeaderSearch = ({ onClose }: { onClose: () => void }) => {
   const { activeQuery, commitSearch } = useVoteSearch();
   const [draftValue, setDraftValue] = useState(activeQuery);
-  const searchInputId = useId();
+  const searchInputId = "header-search-mobile-input";
 
   useEffect(() => {
     setDraftValue(activeQuery);
@@ -326,7 +337,7 @@ const MobileHeaderSearch = ({ onClose }: { onClose: () => void }) => {
         <label htmlFor={searchInputId} className="sr-only">
           Search content
         </label>
-        <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-base-content/30" />
+        <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-base-content/60" />
         <input
           id={searchInputId}
           name="vote-search-mobile"
@@ -349,7 +360,7 @@ const MobileHeaderSearch = ({ onClose }: { onClose: () => void }) => {
           </button>
         ) : null}
       </div>
-      <button type="submit" className="btn btn-sm btn-primary border-none px-3" aria-label="Submit search">
+      <button type="submit" className="btn btn-sm btn-primary border-none px-3" aria-label="Search">
         <MagnifyingGlassIcon className="h-4 w-4" />
       </button>
     </form>
@@ -365,7 +376,7 @@ export const Header = () => {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const { isMobileHeaderVisible, setIsMobileHeaderVisible, setMobileHeaderHeight } = useMobileHeaderVisibility();
   const mobileHeaderVoteControls = useMobileHeaderVoteControls();
-  const shouldUseVoteLayoutCollapse = pathname === "/vote";
+  const shouldUseVoteLayoutCollapse = pathname === RATE_ROUTE;
 
   const burgerMenuRef = useRef<HTMLDetailsElement>(null);
   const mobileHeaderMeasureRef = useRef<HTMLDivElement>(null);
@@ -810,7 +821,7 @@ export const Header = () => {
                       </Suspense>
                     </ul>
                   </details>
-                  <HeaderBrand compact />
+                  <HeaderBrand brandIdPrefix="curyo-mobile-header-logo" compact />
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <button
@@ -852,7 +863,7 @@ export const Header = () => {
       <aside
         className={`fixed left-0 top-0 z-20 hidden h-screen w-52 shrink-0 flex-col items-stretch border-r py-4 shadow-[18px_0_48px_rgba(9,10,12,0.24)] backdrop-blur-xl xl:flex ${headerChromeSurfaceClassName} ${headerChromeBorderClassName}`}
       >
-        <HeaderBrand className="mb-4 shrink-0 px-4" />
+        <HeaderBrand brandIdPrefix="curyo-sidebar-logo" className="mb-4 shrink-0 px-4" />
         <div className="mb-4 w-full min-w-0 px-2.5">
           <Suspense>
             <HeaderSearchBar className="sidebar" />

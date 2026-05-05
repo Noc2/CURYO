@@ -1,111 +1,35 @@
-import { shouldReuseCachedContentMetadata } from "./server";
+import { resolveContentMetadata } from "./server";
 import assert from "node:assert/strict";
+import { afterEach } from "node:test";
 import test from "node:test";
 
-const NOW = Date.parse("2026-04-08T14:45:00Z");
+const originalFetch = globalThis.fetch;
 
-test("shouldReuseCachedContentMetadata refreshes fresh Hugging Face entries that never resolved an image", () => {
-  assert.equal(
-    shouldReuseCachedContentMetadata(
-      "https://huggingface.co/dealignai/Gemma-4-31B-JANG_4M-CRACK",
-      {
-        thumbnailUrl: null,
-        imageUrl: null,
-        fetchedAt: new Date(NOW - 5 * 60 * 1000),
-      },
-      NOW,
-    ),
-    false,
-  );
+afterEach(() => {
+  globalThis.fetch = originalFetch;
 });
 
-test("shouldReuseCachedContentMetadata refreshes fresh CoinGecko entries that never resolved an image", () => {
-  assert.equal(
-    shouldReuseCachedContentMetadata(
-      "https://www.coingecko.com/en/coins/figure-heloc",
-      {
-        thumbnailUrl: null,
-        imageUrl: null,
-        fetchedAt: new Date(NOW - 5 * 60 * 1000),
-      },
-      NOW,
-    ),
-    false,
-  );
+test("resolveContentMetadata returns direct image URLs without fetching metadata", async () => {
+  assert.deepEqual(await resolveContentMetadata("https://example.com/photo.webp?size=large"), {
+    thumbnailUrl: "https://example.com/photo.webp?size=large",
+  });
 });
 
-test("shouldReuseCachedContentMetadata keeps fresh Hugging Face entries once an image is cached", () => {
-  assert.equal(
-    shouldReuseCachedContentMetadata(
-      "https://huggingface.co/dealignai/Gemma-4-31B-JANG_4M-CRACK",
-      {
-        thumbnailUrl: "https://huggingface.co/dealignai/Gemma-4-31B-JANG_4M-CRACK/raw/main/dealign_mascot.png",
-        imageUrl: "https://huggingface.co/dealignai/Gemma-4-31B-JANG_4M-CRACK/raw/main/dealign_mascot.png",
-        fetchedAt: new Date(NOW - 5 * 60 * 1000),
+test("resolveContentMetadata does not follow redirects when fetching page metadata", async () => {
+  let observedRedirect: RequestRedirect | undefined;
+  globalThis.fetch = async (_input, init) => {
+    observedRedirect = init?.redirect;
+    return new Response(null, {
+      headers: {
+        location: "https://169.254.169.254/latest/meta-data/",
       },
-      NOW,
-    ),
-    true,
-  );
-});
+      status: 302,
+      statusText: "Found",
+    });
+  };
 
-test("shouldReuseCachedContentMetadata refreshes Hugging Face entries with only an avatar image", () => {
-  assert.equal(
-    shouldReuseCachedContentMetadata(
-      "https://huggingface.co/Jackrong/Gemopus-4-E4B-it",
-      {
-        thumbnailUrl:
-          "https://cdn-avatars.huggingface.co/v1/production/uploads/66309bd090589b7c65950665/RcOk7ysh7nEt5YlHHzauj.jpeg&quot;,&quot;type&quot;:&quot;update&quot;",
-        imageUrl: null,
-        fetchedAt: new Date(NOW - 5 * 60 * 1000),
-      },
-      NOW,
-    ),
-    false,
-  );
-});
-
-test("shouldReuseCachedContentMetadata keeps Hugging Face entries with avatar and display image URLs", () => {
-  assert.equal(
-    shouldReuseCachedContentMetadata(
-      "https://huggingface.co/k2-fsa/OmniVoice",
-      {
-        thumbnailUrl: "https://cdn-avatars.huggingface.co/v1/production/uploads/org/k2-fsa.png",
-        imageUrl: "https://cdn-thumbnails.huggingface.co/social-thumbnails/models/k2-fsa/OmniVoice.png",
-        fetchedAt: new Date(NOW - 5 * 60 * 1000),
-      },
-      NOW,
-    ),
-    true,
-  );
-});
-
-test("shouldReuseCachedContentMetadata refreshes unsafe Hugging Face image cache entries", () => {
-  assert.equal(
-    shouldReuseCachedContentMetadata(
-      "https://huggingface.co/Jackrong/Gemopus-4-E4B-it",
-      {
-        thumbnailUrl: "https://example.com/not-hugging-face.png",
-        imageUrl: null,
-        fetchedAt: new Date(NOW - 5 * 60 * 1000),
-      },
-      NOW,
-    ),
-    false,
-  );
-});
-
-test("shouldReuseCachedContentMetadata still expires entries after the normal TTL", () => {
-  assert.equal(
-    shouldReuseCachedContentMetadata(
-      "https://en.wikipedia.org/wiki/Avatar_(2009_film)",
-      {
-        thumbnailUrl: "https://upload.wikimedia.org/example.png",
-        imageUrl: "https://upload.wikimedia.org/example.png",
-        fetchedAt: new Date(NOW - 8 * 24 * 60 * 60 * 1000),
-      },
-      NOW,
-    ),
-    false,
-  );
+  assert.deepEqual(await resolveContentMetadata("https://example.com/article"), {
+    thumbnailUrl: null,
+  });
+  assert.equal(observedRedirect, "manual");
 });

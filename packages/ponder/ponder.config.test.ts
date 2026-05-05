@@ -1,24 +1,56 @@
-import deployedContracts from "@curyo/contracts/deployedContracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import deployedContracts from "@curyo/contracts/deployedContracts";
 
-const chain42220 = (deployedContracts as Record<number, Record<string, { address: `0x${string}`; deployedOnBlock?: number }>>)[
-  42220
-];
-const chain11142220 = (deployedContracts as Record<number, Record<string, { address: `0x${string}`; deployedOnBlock?: number }>>)[
-  11142220
-];
-const expectedChain42220StartBlock = Math.min(
-  ...Object.values(chain42220)
+type DeploymentChain = Record<string, { address: `0x${string}`; deployedOnBlock?: number }>;
+
+const sharedDeployments = deployedContracts as Record<number, DeploymentChain | undefined>;
+const chain31337 = sharedDeployments[31337];
+const chain42220 = sharedDeployments[42220];
+const chain11142220 = sharedDeployments[11142220];
+const REQUIRED_PONDER_CONTRACTS = [
+  "ContentRegistry",
+  "RoundVotingEngine",
+  "RoundRewardDistributor",
+  "CategoryRegistry",
+  "ProfileRegistry",
+  "FrontendRegistry",
+  "VoterIdNFT",
+  "HumanReputation",
+  "HumanFaucet",
+  "ParticipationPool",
+  "QuestionRewardPoolEscrow",
+  "FeedbackBonusEscrow",
+] as const;
+
+function getMissingPonderContracts(chain: DeploymentChain | undefined) {
+  return REQUIRED_PONDER_CONTRACTS.filter(contractName => !chain?.[contractName]?.address);
+}
+
+function getExpectedChainStartBlock(chain: DeploymentChain | undefined) {
+  const deployedBlocks = Object.values(chain ?? {})
     .map(contract => contract.deployedOnBlock)
-    .filter((value): value is number => Number.isInteger(value) && value >= 0),
-);
-const expectedContentRegistry42220StartBlock = chain42220.ContentRegistry.deployedOnBlock ?? expectedChain42220StartBlock;
-const expectedChainStartBlock = Math.min(
-  ...Object.values(chain11142220)
-    .map(contract => contract.deployedOnBlock)
-    .filter((value): value is number => Number.isInteger(value) && value >= 0),
-);
-const expectedContentRegistryStartBlock = chain11142220.ContentRegistry.deployedOnBlock ?? expectedChainStartBlock;
+    .filter((value): value is number => Number.isInteger(value) && value >= 0);
+
+  return deployedBlocks.length > 0 ? Math.min(...deployedBlocks) : 0;
+}
+
+const expectedChain42220StartBlock = getExpectedChainStartBlock(chain42220);
+const expectedContentRegistry42220StartBlock =
+  chain42220?.ContentRegistry?.deployedOnBlock ?? expectedChain42220StartBlock;
+const expectedChainStartBlock = getExpectedChainStartBlock(chain11142220);
+const expectedContentRegistryStartBlock = chain11142220?.ContentRegistry?.deployedOnBlock ?? expectedChainStartBlock;
+const expectedQuestionRewardPoolEscrowStartBlock =
+  chain11142220?.QuestionRewardPoolEscrow?.deployedOnBlock ?? expectedChainStartBlock;
+const expectedFeedbackBonusEscrowStartBlock =
+  chain11142220?.FeedbackBonusEscrow?.deployedOnBlock ?? expectedChainStartBlock;
+const missingSepoliaPonderContracts = getMissingPonderContracts(chain11142220);
+const missingCeloPonderContracts = getMissingPonderContracts(chain42220);
+const missingHardhatPonderContracts = getMissingPonderContracts(chain31337);
+const itWithSepoliaPonderArtifacts = chain11142220 && missingSepoliaPonderContracts.length === 0 ? it : it.skip;
+const itWithSepoliaContentRegistryArtifact = chain11142220?.ContentRegistry ? it : it.skip;
+const itWithMissingSepoliaPonderArtifacts = chain11142220 && missingSepoliaPonderContracts.length > 0 ? it : it.skip;
+const itWithCeloPonderArtifacts = chain42220 && missingCeloPonderContracts.length === 0 ? it : it.skip;
+const itWithHardhatArtifacts = chain31337 && missingHardhatPonderContracts.length === 0 ? it : it.skip;
 const ORIGINAL_ENV = { ...process.env };
 const VALID_ENV = {
   PONDER_NETWORK: "celoSepolia",
@@ -33,7 +65,16 @@ const VALID_ENV = {
   PONDER_FRONTEND_REGISTRY_ADDRESS:
     chain11142220?.FrontendRegistry?.address ?? "0x6666666666666666666666666666666666666666",
   PONDER_VOTER_ID_NFT_ADDRESS: chain11142220?.VoterIdNFT?.address ?? "0x7777777777777777777777777777777777777777",
-  PONDER_CREP_ADDRESS: chain11142220?.CuryoReputation?.address ?? "0x8888888888888888888888888888888888888888",
+  PONDER_HREP_ADDRESS: chain11142220?.HumanReputation?.address ?? "0x8888888888888888888888888888888888888888",
+  PONDER_HUMAN_FAUCET_ADDRESS: chain11142220?.HumanFaucet?.address ?? "0x9999999999999999999999999999999999999999",
+  PONDER_PARTICIPATION_POOL_ADDRESS:
+    chain11142220?.ParticipationPool?.address ?? "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  PONDER_QUESTION_REWARD_POOL_ESCROW_ADDRESS:
+    chain11142220?.QuestionRewardPoolEscrow?.address ?? "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  PONDER_QUESTION_REWARD_POOL_ESCROW_START_BLOCK: String(expectedQuestionRewardPoolEscrowStartBlock),
+  PONDER_FEEDBACK_BONUS_ESCROW_ADDRESS:
+    chain11142220?.FeedbackBonusEscrow?.address ?? "0xcccccccccccccccccccccccccccccccccccccccc",
+  PONDER_FEEDBACK_BONUS_ESCROW_START_BLOCK: String(expectedFeedbackBonusEscrowStartBlock),
   PONDER_CONTENT_REGISTRY_START_BLOCK: String(expectedContentRegistryStartBlock),
 };
 
@@ -59,7 +100,7 @@ afterEach(() => {
 });
 
 describe("ponder config", () => {
-  it("derives supported-chain addresses and start blocks from shared deployment artifacts", async () => {
+  itWithSepoliaPonderArtifacts("derives supported-chain addresses and start blocks from shared deployment artifacts", async () => {
     const { default: config } = await loadPonderConfig(
       {},
       [
@@ -70,24 +111,34 @@ describe("ponder config", () => {
         "PONDER_PROFILE_REGISTRY_ADDRESS",
         "PONDER_FRONTEND_REGISTRY_ADDRESS",
         "PONDER_VOTER_ID_NFT_ADDRESS",
-        "PONDER_CREP_ADDRESS",
+        "PONDER_HREP_ADDRESS",
+        "PONDER_HUMAN_FAUCET_ADDRESS",
+        "PONDER_PARTICIPATION_POOL_ADDRESS",
+        "PONDER_QUESTION_REWARD_POOL_ESCROW_ADDRESS",
+        "PONDER_FEEDBACK_BONUS_ESCROW_ADDRESS",
         "PONDER_CONTENT_REGISTRY_START_BLOCK",
+        "PONDER_QUESTION_REWARD_POOL_ESCROW_START_BLOCK",
+        "PONDER_FEEDBACK_BONUS_ESCROW_START_BLOCK",
       ],
     );
 
     const loadedConfig = config as any;
 
-    expect(loadedConfig.contracts.ContentRegistry.network.celoSepolia.address).toBe(chain11142220.ContentRegistry.address);
-    expect(loadedConfig.contracts.RoundVotingEngine.network.celoSepolia.address).toBe(
-      chain11142220.RoundVotingEngine.address,
+    expect(loadedConfig.contracts.ContentRegistry.network.celoSepolia.address).toBe(
+      chain11142220!.ContentRegistry.address,
     );
-    expect(loadedConfig.contracts.CuryoReputation.network.celoSepolia.address).toBe(chain11142220.CuryoReputation.address);
+    expect(loadedConfig.contracts.RoundVotingEngine.network.celoSepolia.address).toBe(
+      chain11142220!.RoundVotingEngine.address,
+    );
+    expect(loadedConfig.contracts.HumanReputation.network.celoSepolia.address).toBe(
+      chain11142220!.HumanReputation.address,
+    );
     expect(loadedConfig.contracts.ContentRegistry.network.celoSepolia.startBlock).toBe(
       expectedContentRegistryStartBlock,
     );
-  });
+  }, 10_000);
 
-  it("derives Celo mainnet addresses and start blocks from shared deployment artifacts", async () => {
+  itWithCeloPonderArtifacts("derives Celo mainnet addresses and start blocks from shared deployment artifacts", async () => {
     const { default: config } = await loadPonderConfig(
       {
         PONDER_NETWORK: "celo",
@@ -101,36 +152,102 @@ describe("ponder config", () => {
         "PONDER_PROFILE_REGISTRY_ADDRESS",
         "PONDER_FRONTEND_REGISTRY_ADDRESS",
         "PONDER_VOTER_ID_NFT_ADDRESS",
-        "PONDER_CREP_ADDRESS",
+        "PONDER_HREP_ADDRESS",
         "PONDER_HUMAN_FAUCET_ADDRESS",
         "PONDER_PARTICIPATION_POOL_ADDRESS",
+        "PONDER_QUESTION_REWARD_POOL_ESCROW_ADDRESS",
+        "PONDER_FEEDBACK_BONUS_ESCROW_ADDRESS",
         "PONDER_CONTENT_REGISTRY_START_BLOCK",
+        "PONDER_QUESTION_REWARD_POOL_ESCROW_START_BLOCK",
+        "PONDER_FEEDBACK_BONUS_ESCROW_START_BLOCK",
       ],
     );
 
     const loadedConfig = config as any;
 
-    expect(loadedConfig.contracts.ContentRegistry.network.celo.address).toBe(chain42220.ContentRegistry.address);
-    expect(loadedConfig.contracts.RoundVotingEngine.network.celo.address).toBe(chain42220.RoundVotingEngine.address);
-    expect(loadedConfig.contracts.CuryoReputation.network.celo.address).toBe(chain42220.CuryoReputation.address);
-    expect(loadedConfig.contracts.HumanFaucet.network.celo.address).toBe(chain42220.HumanFaucet.address);
+    expect(loadedConfig.contracts.ContentRegistry.network.celo.address).toBe(chain42220!.ContentRegistry.address);
+    expect(loadedConfig.contracts.RoundVotingEngine.network.celo.address).toBe(chain42220!.RoundVotingEngine.address);
+    expect(loadedConfig.contracts.HumanReputation.network.celo.address).toBe(chain42220!.HumanReputation.address);
+    expect(loadedConfig.contracts.HumanFaucet.network.celo.address).toBe(chain42220!.HumanFaucet.address);
     expect(loadedConfig.contracts.ContentRegistry.network.celo.startBlock).toBe(expectedContentRegistry42220StartBlock);
   });
 
-  it("ignores stale Ponder env overrides when shared deployment artifacts exist", async () => {
+  itWithSepoliaContentRegistryArtifact(
+    "rejects stale Ponder address env overrides when shared deployment artifacts exist",
+    async () => {
+      await expect(
+        loadPonderConfig({
+          PONDER_CONTENT_REGISTRY_ADDRESS: "0x1111111111111111111111111111111111111111",
+        }),
+      ).rejects.toThrow("conflicts with ContentRegistry from shared deployment artifacts");
+    },
+  );
+
+  itWithSepoliaPonderArtifacts("rejects stale Ponder start block env overrides when shared deployment artifacts exist", async () => {
+    await expect(
+      loadPonderConfig({
+        PONDER_CONTENT_REGISTRY_START_BLOCK: String(expectedContentRegistryStartBlock + 1),
+      }),
+    ).rejects.toThrow("conflicts with ContentRegistry start block from shared deployment artifacts");
+  });
+
+  itWithMissingSepoliaPonderArtifacts("rejects non-local env address fallbacks when shared artifacts are missing", async () => {
+    await expect(loadPonderConfig()).rejects.toThrow(
+      `Missing shared deployment artifact for ${missingSepoliaPonderContracts[0]} on chain 11142220`,
+    );
+  }, 10_000);
+
+  itWithHardhatArtifacts("uses start block 0 for local hardhat even when artifacts contain deployment blocks", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { default: config } = await loadPonderConfig(
+      {
+        PONDER_NETWORK: "hardhat",
+        PONDER_RPC_URL_31337: "http://127.0.0.1:8545",
+        PONDER_CONTENT_REGISTRY_START_BLOCK: String(chain31337!.ContentRegistry.deployedOnBlock ?? 1),
+      },
+      [
+        "PONDER_CONTENT_REGISTRY_ADDRESS",
+        "PONDER_ROUND_VOTING_ENGINE_ADDRESS",
+        "PONDER_ROUND_REWARD_DISTRIBUTOR_ADDRESS",
+        "PONDER_CATEGORY_REGISTRY_ADDRESS",
+        "PONDER_PROFILE_REGISTRY_ADDRESS",
+        "PONDER_FRONTEND_REGISTRY_ADDRESS",
+        "PONDER_VOTER_ID_NFT_ADDRESS",
+        "PONDER_HREP_ADDRESS",
+        "PONDER_HUMAN_FAUCET_ADDRESS",
+        "PONDER_PARTICIPATION_POOL_ADDRESS",
+        "PONDER_QUESTION_REWARD_POOL_ESCROW_ADDRESS",
+        "PONDER_FEEDBACK_BONUS_ESCROW_ADDRESS",
+      ],
+    );
+
+    const loadedConfig = config as any;
+
+    expect(loadedConfig.contracts.ContentRegistry.network.hardhat.address).toBe(chain31337!.ContentRegistry.address);
+    expect(loadedConfig.contracts.ContentRegistry.network.hardhat.startBlock).toBe(0);
+    expect(loadedConfig.contracts.HumanReputation.network.hardhat.startBlock).toBe(0);
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("using start block 0"));
+  });
+
+  itWithHardhatArtifacts("prefers local hardhat env addresses over shared deployment artifacts", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const localContentRegistryAddress = "0x1111111111111111111111111111111111111111";
     const { default: config } = await loadPonderConfig({
-      PONDER_CONTENT_REGISTRY_ADDRESS: "0x1111111111111111111111111111111111111111",
-      PONDER_CONTENT_REGISTRY_START_BLOCK: "1",
+      PONDER_NETWORK: "hardhat",
+      PONDER_RPC_URL_31337: "http://127.0.0.1:8545",
+      PONDER_CONTENT_REGISTRY_ADDRESS: localContentRegistryAddress,
+      PONDER_CONTENT_REGISTRY_START_BLOCK: String(chain31337!.ContentRegistry.deployedOnBlock ?? 1),
     });
 
     const loadedConfig = config as any;
 
-    expect(loadedConfig.contracts.ContentRegistry.network.celoSepolia.address).toBe(chain11142220.ContentRegistry.address);
-    expect(loadedConfig.contracts.ContentRegistry.network.celoSepolia.startBlock).toBe(
-      expectedContentRegistryStartBlock,
+    expect(loadedConfig.contracts.ContentRegistry.network.hardhat.address).toBe(localContentRegistryAddress);
+    expect(loadedConfig.contracts.ContentRegistry.network.hardhat.address).not.toBe(
+      chain31337!.ContentRegistry.address,
     );
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Ignoring PONDER_CONTENT_REGISTRY_ADDRESS"));
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Ignoring PONDER_CONTENT_REGISTRY_START_BLOCK"));
+    expect(loadedConfig.contracts.ContentRegistry.network.hardhat.startBlock).toBe(0);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Using PONDER_CONTENT_REGISTRY_ADDRESS"));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("using start block 0"));
   });
 });

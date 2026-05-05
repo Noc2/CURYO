@@ -1,5 +1,4 @@
 import {
-  LEGACY_REFERRER_STORAGE_KEY,
   REFERRAL_ATTRIBUTION_STORAGE_KEY,
   REFERRAL_ATTRIBUTION_TTL_MS,
   buildReferralLandingUrl,
@@ -192,29 +191,16 @@ test("blocked storage reads and cleanup do not throw", () => {
   assert.doesNotThrow(() => clearStoredReferralAttribution({ localStorage, sessionStorage }));
 });
 
-test("reads legacy session referrers", () => {
-  const localStorage = new MemoryStorage();
-  const sessionStorage = new MemoryStorage();
-  sessionStorage.setItem(LEGACY_REFERRER_STORAGE_KEY, REFERRER);
-
-  const attribution = readStoredReferralAttribution({ localStorage, now: 1_000, sessionStorage });
-
-  assert.equal(attribution?.referrer, REFERRER);
-  assert.equal(attribution?.source, "url");
-});
-
-test("clears referral attribution from current and legacy storage keys", () => {
+test("clears referral attribution from current storage keys", () => {
   const localStorage = new MemoryStorage();
   const sessionStorage = new MemoryStorage();
 
   storeReferralAttributionFromValue(REFERRER, { localStorage, now: 1_000, sessionStorage });
-  sessionStorage.setItem(LEGACY_REFERRER_STORAGE_KEY, REFERRER);
 
   clearStoredReferralAttribution({ localStorage, sessionStorage });
 
   assert.equal(localStorage.getItem(REFERRAL_ATTRIBUTION_STORAGE_KEY), null);
   assert.equal(sessionStorage.getItem(REFERRAL_ATTRIBUTION_STORAGE_KEY), null);
-  assert.equal(sessionStorage.getItem(LEGACY_REFERRER_STORAGE_KEY), null);
 });
 
 test("builds landing-page referral links with landing override", () => {

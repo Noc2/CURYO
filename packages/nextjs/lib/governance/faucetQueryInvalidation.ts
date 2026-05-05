@@ -19,7 +19,7 @@ export function shouldRefreshAfterFaucetClaim(queryKey: QueryKey, address?: stri
     return normalizeAddress(queryKey[1]) === normalizedAddress;
   }
 
-  if (scope === "wallet-crep-balance") {
+  if (scope === "wallet-hrep-balance") {
     return normalizeAddress(queryKey[1]) === normalizedAddress;
   }
 

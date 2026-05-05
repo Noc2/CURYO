@@ -9,7 +9,7 @@ import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { HumanReputation } from "../contracts/HumanReputation.sol";
 import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
 import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
 
@@ -27,7 +27,7 @@ contract SelectiveRevelationTest is VotingTestBase {
         bytes32 commitKey;
     }
 
-    CuryoReputation public crepToken;
+    HumanReputation public hrepToken;
     ContentRegistry public registry;
     RoundVotingEngine public engine;
     RoundRewardDistributor public rewardDistributor;
@@ -38,7 +38,7 @@ contract SelectiveRevelationTest is VotingTestBase {
     address[10] public voters;
     address public treasury = address(100);
 
-    uint256 public constant STAKE = 5e6; // 5 cREP
+    uint256 public constant STAKE = 5e6; // 5 HREP
     uint256 public constant T0 = 1_000_000;
     uint256 public constant EPOCH = 1 hours;
     uint256 public constant GRACE_PERIOD = 60 minutes;
@@ -47,8 +47,8 @@ contract SelectiveRevelationTest is VotingTestBase {
         vm.warp(T0);
         vm.startPrank(owner);
 
-        crepToken = new CuryoReputation(owner, owner);
-        crepToken.grantRole(crepToken.MINTER_ROLE(), owner);
+        hrepToken = new HumanReputation(owner, owner);
+        hrepToken.grantRole(hrepToken.MINTER_ROLE(), owner);
 
         ContentRegistry registryImpl = new ContentRegistry();
         RoundVotingEngine engineImpl = new RoundVotingEngine();
@@ -58,7 +58,7 @@ contract SelectiveRevelationTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(registryImpl),
-                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(crepToken)))
+                    abi.encodeCall(ContentRegistry.initializeWithTreasury, (owner, owner, owner, address(hrepToken)))
                 )
             )
         );
@@ -69,7 +69,7 @@ contract SelectiveRevelationTest is VotingTestBase {
                     address(engineImpl),
                     abi.encodeCall(
                         RoundVotingEngine.initialize,
-                        (owner, address(crepToken), address(registry), address(_deployProtocolConfig(owner)))
+                        (owner, address(hrepToken), address(registry), address(_deployProtocolConfig(owner)))
                     )
                 )
             )
@@ -81,7 +81,7 @@ contract SelectiveRevelationTest is VotingTestBase {
                     address(distImpl),
                     abi.encodeCall(
                         RoundRewardDistributor.initialize,
-                        (owner, address(crepToken), address(engine), address(registry))
+                        (owner, address(hrepToken), address(engine), address(registry))
                     )
                 )
             )
@@ -97,17 +97,17 @@ contract SelectiveRevelationTest is VotingTestBase {
         _setTlockRoundConfig(ProtocolConfig(address(engine.protocolConfig())), EPOCH, 7 days, 3, 1000);
         ProtocolConfig(address(engine.protocolConfig())).setRevealGracePeriod(GRACE_PERIOD);
 
-        crepToken.mint(owner, 2_000_000e6);
-        crepToken.approve(address(engine), 500_000e6);
+        hrepToken.mint(owner, 2_000_000e6);
+        hrepToken.approve(address(engine), 500_000e6);
         engine.addToConsensusReserve(500_000e6);
 
         // Set up 10 voters
         for (uint256 i = 0; i < 10; i++) {
             voters[i] = address(uint160(10 + i));
-            crepToken.mint(voters[i], 10_000e6);
+            hrepToken.mint(voters[i], 10_000e6);
         }
 
-        crepToken.mint(submitter, 10_000e6);
+        hrepToken.mint(submitter, 10_000e6);
 
         vm.stopPrank();
     }
@@ -125,8 +125,9 @@ contract SelectiveRevelationTest is VotingTestBase {
         artifacts.targetRound = _tlockCommitTargetRound();
         artifacts.drandChainHash = _tlockDrandChainHash();
         artifacts.ciphertext = _testCiphertext(isUp, salt, contentId, artifacts.targetRound, artifacts.drandChainHash);
-        artifacts.commitHash =
-            _commitHash(isUp, salt, contentId, artifacts.targetRound, artifacts.drandChainHash, artifacts.ciphertext);
+        artifacts.commitHash = _commitHash(
+            isUp, salt, voter, contentId, artifacts.targetRound, artifacts.drandChainHash, artifacts.ciphertext
+        );
         artifacts.commitKey = keccak256(abi.encodePacked(voter, artifacts.commitHash));
     }
 
@@ -137,9 +138,12 @@ contract SelectiveRevelationTest is VotingTestBase {
         salt = keccak256(abi.encodePacked(voter, block.timestamp));
         CommitArtifacts memory artifacts = _buildCommitArtifacts(voter, contentId, isUp, salt);
         vm.startPrank(voter);
-        crepToken.approve(address(engine), stake);
+        hrepToken.approve(address(engine), stake);
+        uint256 cachedRoundContext1 =
+            _roundContext(engine.previewCommitRoundId(contentId), _defaultRatingReferenceBps());
         engine.commitVote(
             contentId,
+            cachedRoundContext1,
             artifacts.targetRound,
             artifacts.drandChainHash,
             artifacts.commitHash,
@@ -157,7 +161,7 @@ contract SelectiveRevelationTest is VotingTestBase {
 
     function _submitContent() internal returns (uint256 contentId) {
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        hrepToken.approve(address(registry), 10e6);
         _submitContentWithReservation(registry, "https://example.com/selective", "test", "test", "test", 0);
         vm.stopPrank();
         contentId = 1;
@@ -185,7 +189,7 @@ contract SelectiveRevelationTest is VotingTestBase {
         RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
 
         // Warp past epoch end
-        vm.warp(r.startTime + EPOCH + 1);
+        _warpPastTlockRevealTime(uint256(r.startTime) + EPOCH);
 
         // Attacker selectively reveals only 3 votes: 2 UP + 1 DOWN
         _reveal(contentId, roundId, commitKeys[0], true, salts[0]);
@@ -212,7 +216,7 @@ contract SelectiveRevelationTest is VotingTestBase {
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
 
-        vm.warp(r.startTime + EPOCH + 1);
+        _warpPastTlockRevealTime(uint256(r.startTime) + EPOCH);
 
         // Reveal ALL 10 votes
         for (uint256 i = 0; i < 10; i++) {
@@ -245,7 +249,7 @@ contract SelectiveRevelationTest is VotingTestBase {
         RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
 
         // Warp to epoch 2 (past epoch-1 end, within epoch-2)
-        vm.warp(r.startTime + EPOCH + 1);
+        _warpPastTlockRevealTime(uint256(r.startTime) + EPOCH);
 
         // 2 more voters in epoch 2 (current epoch — not yet revealable)
         _commit(voters[3], contentId, false, STAKE);
@@ -267,9 +271,8 @@ contract SelectiveRevelationTest is VotingTestBase {
     // GRACE PERIOD EXPIRY
     // =========================================================================
 
-    /// @notice Unrevealed past-epoch votes exist but grace period has expired.
-    ///         Settlement should succeed (unrevealed votes handled post-settlement).
-    function test_GracePeriodExpiry_SettlementSucceeds() public {
+    /// @notice Unrevealed past-epoch votes block settlement until reveal grace, then settle if reveal quorum exists.
+    function test_FinalGraceExpiry_AllowsSettlementAndCleanupWhenRevealQuorumExists() public {
         uint256 contentId = _submitContent();
 
         bytes32[4] memory commitKeys;
@@ -281,21 +284,28 @@ contract SelectiveRevelationTest is VotingTestBase {
         }
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
-        RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
+        uint256 revealGraceDeadline = engine.lastCommitRevealableAfter(contentId, roundId) + GRACE_PERIOD;
 
-        // Warp past epoch end + full grace period
-        vm.warp(r.startTime + EPOCH + GRACE_PERIOD + 1);
+        // Warp past the tlock-backed revealable timestamp + full grace period.
+        vm.warp(revealGraceDeadline + 1);
 
         // Only reveal 3 of 4 votes (enough for minVoters)
         _reveal(contentId, roundId, commitKeys[0], true, salts[0]);
         _reveal(contentId, roundId, commitKeys[1], true, salts[1]);
         _reveal(contentId, roundId, commitKeys[2], false, salts[2]);
 
-        // Settlement succeeds — grace period expired, unrevealed vote doesn't block
         engine.settleRound(contentId, roundId);
 
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Settled));
+        assertEq(engine.roundUnrevealedCleanupRemaining(contentId, roundId), 1);
+
+        vm.expectRevert(RoundRewardDistributor.UnrevealedCleanupPending.selector);
+        vm.prank(voters[0]);
+        rewardDistributor.claimReward(contentId, roundId);
+
+        engine.processUnrevealedVotes(contentId, roundId, 0, 0);
+        assertEq(engine.roundUnrevealedCleanupRemaining(contentId, roundId), 0);
     }
 
     /// @notice Within grace period, unrevealed votes still block settlement.
@@ -345,7 +355,7 @@ contract SelectiveRevelationTest is VotingTestBase {
         assertEq(r.voteCount, 3);
         assertEq(r.revealedCount, 0);
 
-        vm.warp(epochEnd + 1);
+        _warpPastTlockRevealTime(epochEnd);
 
         _reveal(contentId, roundId, ck1, true, s1);
         assertEq(RoundEngineReadHelpers.round(engine, contentId, roundId).revealedCount, 1);
@@ -401,14 +411,13 @@ contract SelectiveRevelationTest is VotingTestBase {
         }
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
-        RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertEq(engine.roundRevealGracePeriodSnapshot(contentId, roundId), GRACE_PERIOD);
 
         ProtocolConfig cfg = ProtocolConfig(address(engine.protocolConfig()));
         vm.prank(owner);
         cfg.setRevealGracePeriod(2 hours);
 
-        vm.warp(r.startTime + EPOCH + GRACE_PERIOD + 1);
+        vm.warp(engine.lastCommitRevealableAfter(contentId, roundId) + GRACE_PERIOD + 1);
 
         _reveal(contentId, roundId, commitKeys[0], true, salts[0]);
         _reveal(contentId, roundId, commitKeys[1], true, salts[1]);
@@ -418,6 +427,7 @@ contract SelectiveRevelationTest is VotingTestBase {
 
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Settled));
+        assertEq(engine.roundUnrevealedCleanupRemaining(contentId, roundId), 1);
     }
 
     function test_RevealGracePeriodSnapshot_NewRoundUsesUpdatedValue() public {
@@ -436,10 +446,10 @@ contract SelectiveRevelationTest is VotingTestBase {
         }
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
-        RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertEq(engine.roundRevealGracePeriodSnapshot(contentId, roundId), 2 hours);
 
-        vm.warp(r.startTime + EPOCH + GRACE_PERIOD + 1);
+        uint256 lastRevealableAfter = engine.lastCommitRevealableAfter(contentId, roundId);
+        vm.warp(lastRevealableAfter + GRACE_PERIOD + 1);
 
         _reveal(contentId, roundId, commitKeys[0], true, salts[0]);
         _reveal(contentId, roundId, commitKeys[1], true, salts[1]);
@@ -448,11 +458,12 @@ contract SelectiveRevelationTest is VotingTestBase {
         vm.expectRevert(RoundVotingEngine.UnrevealedPastEpochVotes.selector);
         engine.settleRound(contentId, roundId);
 
-        vm.warp(r.startTime + EPOCH + 2 hours + 1);
+        vm.warp(lastRevealableAfter + 2 hours + 1);
         engine.settleRound(contentId, roundId);
 
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Settled));
+        assertEq(engine.roundUnrevealedCleanupRemaining(contentId, roundId), 1);
     }
 
     // =========================================================================
@@ -473,7 +484,7 @@ contract SelectiveRevelationTest is VotingTestBase {
         RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
 
         // Warp to epoch 2
-        vm.warp(r.startTime + EPOCH + 1);
+        _warpPastTlockRevealTime(uint256(r.startTime) + EPOCH);
 
         // 1 voter in epoch 2
         _commit(voters[3], contentId, false, STAKE);
@@ -484,7 +495,7 @@ contract SelectiveRevelationTest is VotingTestBase {
         _reveal(contentId, roundId, ck3, false, s3);
 
         // Warp past epoch-2 end but within epoch-2 grace period
-        vm.warp(r.startTime + 2 * EPOCH + 1);
+        _warpPastTlockRevealTime(uint256(r.startTime) + 2 * EPOCH);
 
         // Settlement blocked — epoch-2 has unrevealed vote within grace period
         vm.expectRevert(RoundVotingEngine.UnrevealedPastEpochVotes.selector);

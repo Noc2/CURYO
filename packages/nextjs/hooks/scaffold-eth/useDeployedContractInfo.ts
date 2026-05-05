@@ -16,8 +16,8 @@ type DeployedContractData<TContractName extends ContractName> = {
 };
 
 /**
- * Gets the matching contract info for the provided contract name from the contracts present in deployedContracts.ts
- * and externalContracts.ts corresponding to targetNetworks configured in scaffold.config.ts
+ * Gets the matching contract info for the provided contract name from the generated deployedContracts.ts
+ * corresponding to targetNetworks configured in scaffold.config.ts
  */
 export function useDeployedContractInfo<TContractName extends ContractName>(
   config: UseDeployedContractConfig<TContractName>,

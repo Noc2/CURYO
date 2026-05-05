@@ -1,7 +1,6 @@
 import { ponder } from "ponder:registry";
 import {
   rewardClaim,
-  submitterRewardClaim,
   profile,
   globalStats,
 } from "ponder:schema";
@@ -9,10 +8,12 @@ import {
 ponder.on(
   "RoundRewardDistributor:RewardClaimed",
   async ({ event, context }) => {
-    const { contentId, roundId, voter, stakeReturned, reward } =
+    const { contentId, roundId, voter, stakePayer, stakeReturned, reward } =
       event.args;
 
-    // Total payout = stake returned + reward earned
+    // Funds split: `stakeReturned` was sent to `stakePayer`; `reward` was sent to `voter`.
+    // When stakePayer == voter (no delegation, or delegate unchanged) both flows hit the same
+    // address but each component is still attributed to the correct slot.
     const totalPayout = stakeReturned + reward;
 
     await context.db
@@ -24,20 +25,37 @@ ponder.on(
         epochId: null,
         source: "round",
         voter,
+        stakePayer,
         stakeReturned,
-        crepReward: reward,
+        hrepReward: reward,
         claimedAt: event.block.timestamp,
       })
       .onConflictDoNothing();
 
-    // Update profile aggregate (skip if profile not yet indexed)
-    const existingProfile = await context.db.find(profile, { address: voter });
-    if (existingProfile) {
-      await context.db
-        .update(profile, { address: voter })
-        .set((row) => ({
-          totalRewardsClaimed: row.totalRewardsClaimed + totalPayout,
-        }));
+    // Credit the reward portion to `voter` (current SBT holder).
+    if (reward > 0n) {
+      const voterProfile = await context.db.find(profile, { address: voter });
+      if (voterProfile) {
+        await context.db
+          .update(profile, { address: voter })
+          .set((row) => ({
+            totalRewardsClaimed: row.totalRewardsClaimed + reward,
+          }));
+      }
+    }
+
+    // Credit the stake-refund portion to `stakePayer` (commit.voter — the EOA that
+    // funded the stake, typically a delegate). When stakePayer == voter we still issue
+    // a separate update so each component is attributed to its own row.
+    if (stakeReturned > 0n) {
+      const payerProfile = await context.db.find(profile, { address: stakePayer });
+      if (payerProfile) {
+        await context.db
+          .update(profile, { address: stakePayer })
+          .set((row) => ({
+            totalRewardsClaimed: row.totalRewardsClaimed + stakeReturned,
+          }));
+      }
     }
 
     // Update global stats
@@ -55,27 +73,6 @@ ponder.on(
       .onConflictDoUpdate((row) => ({
         totalRewardsClaimed: row.totalRewardsClaimed + totalPayout,
       }));
-  },
-);
-
-ponder.on(
-  "RoundRewardDistributor:SubmitterRewardClaimed",
-  async ({ event, context }) => {
-    const { contentId, roundId, submitter, crepAmount } = event.args;
-
-    await context.db
-      .insert(submitterRewardClaim)
-      .values({
-        id: `${contentId}-${roundId}`,
-        contentId,
-        roundId,
-        epochId: null,
-        source: "round",
-        submitter,
-        crepAmount,
-        claimedAt: event.block.timestamp,
-      })
-      .onConflictDoNothing();
   },
 );
 
@@ -115,7 +112,7 @@ ponder.on(
         source: "participation",
         voter,
         stakeReturned: 0n,
-        crepReward: amount,
+        hrepReward: amount,
         claimedAt: event.block.timestamp,
       })
       .onConflictDoNothing();

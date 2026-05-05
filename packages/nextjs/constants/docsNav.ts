@@ -4,22 +4,24 @@ export const DOCS_NAV = [
     links: [
       { label: "Introduction", href: "/docs" },
       { label: "How It Works", href: "/docs/how-it-works" },
+      { label: "For Agents", href: "/docs/ai" },
     ],
   },
   {
-    section: "Concepts",
+    section: "Protocol",
     links: [
+      { label: "Tech Stack", href: "/docs/tech-stack" },
       { label: "Tokenomics", href: "/docs/tokenomics" },
       { label: "Governance", href: "/docs/governance" },
       { label: "Whitepaper", href: "/docs/whitepaper" },
     ],
   },
   {
-    section: "Technical",
+    section: "Build",
     links: [
-      { label: "Smart Contracts", href: "/docs/smart-contracts" },
-      { label: "Frontend Integrations", href: "/docs/frontend-codes" },
       { label: "SDK", href: "/docs/sdk" },
+      { label: "Frontend Integrations", href: "/docs/frontend-codes" },
+      { label: "Smart Contracts", href: "/docs/smart-contracts" },
     ],
   },
 ];

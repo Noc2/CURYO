@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAddress } from "viem";
 import { normalizeAvatarAccentHex } from "~~/lib/avatar/avatarAccent";
-import { renderOrbitalAvatarSvg } from "~~/lib/avatar/orbitalAvatar";
 import { getReputationAvatarPayload } from "~~/lib/avatar/server";
+import { renderSignalDiscAvatarSvg } from "~~/lib/avatar/signalDiscAvatar";
 import { getPrimaryServerTargetNetwork, getServerTargetNetworkById } from "~~/lib/env/server";
 import { checkRateLimit } from "~~/utils/rateLimit";
 
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
   const payload = await getReputationAvatarPayload(address, { chainId: parsedChainId! });
   const size = parseRequestedSize(request.nextUrl.searchParams.get("size"));
   const previewAccentHex = normalizeAvatarAccentHex(request.nextUrl.searchParams.get("accent"));
-  const svg = renderOrbitalAvatarSvg(
+  const svg = renderSignalDiscAvatarSvg(
     {
       ...payload,
       avatarAccentHex: previewAccentHex ?? payload.avatarAccentHex,

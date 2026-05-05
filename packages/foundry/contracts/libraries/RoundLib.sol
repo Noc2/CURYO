@@ -27,7 +27,7 @@ library RoundLib {
         uint32 epochDuration; // Duration of each voting epoch (default: 20 minutes)
         uint32 maxDuration; // Max time before round expires (default: 7 days)
         uint16 minVoters; // Minimum revealed votes to trigger settlement (default: 3)
-        uint16 maxVoters; // Gas safety cap (default: 1000)
+        uint16 maxVoters; // Gas safety cap (default: 200)
     }
 
     struct Round {
@@ -47,6 +47,20 @@ library RoundLib {
         uint64 weightedDownPool; // Epoch-weighted effective stake for DOWN side
     }
 
+    /// @dev `revealableAfter` is dual-purpose to save a storage slot:
+    ///      - while `revealed == false`: epoch-end timestamp (gates the earliest reveal call)
+    ///      - while `revealed == true`:  reveal timestamp (used by bounty/cleanup deadline checks)
+    ///      Every reader MUST gate its interpretation on `revealed`. See:
+    ///        - RoundCleanupLib.processUnrevealedVotes (epoch-end semantics, guarded by !revealed)
+    ///        - QuestionRewardPoolEscrow._timelyRevealedCommitFrontend (reveal-time, guarded by revealed)
+    ///        - QuestionRewardPoolEscrowQualificationLib (reveal-time, guarded by revealed)
+    ///      DEPLOY POLICY: this dual semantics is in-place-upgrade unsafe. Existing-revealed
+    ///      commits store reveal timestamps; a future implementation that interpreted the
+    ///      field as epoch-end semantics on those records would silently corrupt cleanup and
+    ///      bounty timing. RoundVotingEngine MUST be deployed behind a fresh proxy whenever
+    ///      `Commit` storage layout or this field's semantics change — the deploy script
+    ///      already follows this invariant; do not switch to in-place UUPS upgrades for the
+    ///      voting engine without first introducing a `commitVersion` discriminant.
     struct Commit {
         address voter;
         uint64 stakeAmount;
@@ -54,7 +68,7 @@ library RoundLib {
         uint64 targetRound; // drand round targeted by the ciphertext
         bytes32 drandChainHash; // drand chain hash bound into the commitment
         address frontend; // Frontend operator address (for fee distribution)
-        uint48 revealableAfter; // Epoch end timestamp — reveals allowed after this time
+        uint48 revealableAfter; // Dual-purpose; see struct NatSpec above. Always check `revealed` first.
         bool revealed;
         bool isUp; // Set after reveal
         uint8 epochIndex; // 0 = epoch 1 (blind, 100% weight), 1 = epoch 2+ (saw results, 25% weight)

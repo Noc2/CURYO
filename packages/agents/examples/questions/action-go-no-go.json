@@ -1,0 +1,26 @@
+{
+  "clientRequestId": "action-go-no-go-demo",
+  "chainId": 42220,
+  "templateId": "agent_action_go_no_go",
+  "maxPaymentAmount": "1000000",
+  "bounty": {
+    "asset": "USDC",
+    "amount": "1000000",
+    "requiredVoters": "3",
+    "requiredSettledRounds": "1"
+  },
+  "question": {
+    "templateId": "agent_action_go_no_go",
+    "templateInputs": {
+      "action": "send_outreach",
+      "blastRadius": "medium",
+      "blockCondition": "Stop if the message feels misleading, spammy, or too pushy.",
+      "fallbackAction": "Ask a human operator to revise the draft."
+    },
+    "title": "Should this agent send this message?",
+    "description": "Review the linked draft. Vote up only if the message is clear, honest, and reasonable to send as written.",
+    "contextUrl": "https://example.com/outreach-draft",
+    "categoryId": "1",
+    "tags": ["agent", "go-no-go", "outreach"]
+  }
+}

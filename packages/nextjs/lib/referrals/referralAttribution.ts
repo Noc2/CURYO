@@ -2,7 +2,6 @@ import { isAddress } from "viem";
 
 const REFERRAL_QUERY_PARAM = "ref";
 export const REFERRAL_ATTRIBUTION_STORAGE_KEY = "curyo_referral_attribution";
-export const LEGACY_REFERRER_STORAGE_KEY = "curyo_referrer";
 export const REFERRAL_ATTRIBUTION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 type ReferralAttributionSource = "url" | "manual";
@@ -151,16 +150,6 @@ function readAttributionFromStorage(storage: ReferralStorage | null, now: number
   return parsed;
 }
 
-function readLegacyReferrer(storage: ReferralStorage | null, now: number): ReferralAttribution | null {
-  const referrer = normalizeReferralAddress(safeGetItem(storage, LEGACY_REFERRER_STORAGE_KEY));
-  if (!referrer) {
-    safeRemoveItem(storage, LEGACY_REFERRER_STORAGE_KEY);
-    return null;
-  }
-
-  return createReferralAttribution(referrer, { now, source: "url" });
-}
-
 function getLatestAttribution(...attributions: Array<ReferralAttribution | null>): ReferralAttribution | null {
   return attributions.reduce<ReferralAttribution | null>((latest, attribution) => {
     if (!attribution) {
@@ -179,12 +168,7 @@ export function readStoredReferralAttribution(options: ReferralStorageOptions = 
   const now = options.now ?? Date.now();
   const { local, session } = getStoragePair(options);
 
-  return getLatestAttribution(
-    readAttributionFromStorage(local, now),
-    readAttributionFromStorage(session, now),
-    readLegacyReferrer(session, now),
-    readLegacyReferrer(local, now),
-  );
+  return getLatestAttribution(readAttributionFromStorage(local, now), readAttributionFromStorage(session, now));
 }
 
 export function getStoredReferralAddress(options: ReferralStorageOptions = {}): string | null {
@@ -199,17 +183,12 @@ function writeReferralAttribution(
   const serialized = JSON.stringify(attribution);
 
   const wrotePrimary = safeSetItem(local, REFERRAL_ATTRIBUTION_STORAGE_KEY, serialized);
-  if (wrotePrimary) {
-    safeRemoveItem(local, LEGACY_REFERRER_STORAGE_KEY);
-  }
 
   if (!wrotePrimary) {
     safeSetItem(session, REFERRAL_ATTRIBUTION_STORAGE_KEY, serialized);
   } else {
     safeSetItem(session, REFERRAL_ATTRIBUTION_STORAGE_KEY, serialized);
   }
-
-  safeRemoveItem(session, LEGACY_REFERRER_STORAGE_KEY);
 
   return attribution;
 }
@@ -246,7 +225,6 @@ export function clearStoredReferralAttribution(options: ReferralStorageOptions =
 
   for (const storage of [local, session]) {
     safeRemoveItem(storage, REFERRAL_ATTRIBUTION_STORAGE_KEY);
-    safeRemoveItem(storage, LEGACY_REFERRER_STORAGE_KEY);
   }
 }
 

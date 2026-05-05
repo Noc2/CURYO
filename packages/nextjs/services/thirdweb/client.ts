@@ -13,7 +13,7 @@ const THIRDWEB_CONNECT_CHAIN_IDS = new Set([31337, 42220, 11142220]);
 const THIRDWEB_EXECUTION_CHAIN_IDS = new Set([42220, 11142220]);
 const THIRDWEB_ACTIVE_CHAIN_KEY = "thirdweb:active-chain";
 const THIRDWEB_SPONSORSHIP_MODE_KEY = "thirdweb:sponsorship-mode";
-const CURYO_THIRDWEB_ICON = "/favicon.svg";
+const CURYO_THIRDWEB_ICON = "/favicon.png";
 const CURYO_THIRDWEB_WORDMARK = "/curyo-thirdweb-lockup.svg";
 
 type ThirdwebWalletExecutionMode =

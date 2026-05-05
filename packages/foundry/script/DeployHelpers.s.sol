@@ -48,7 +48,7 @@ contract ScaffoldETHDeploy is Script {
         }
         _;
         _stopBroadcast();
-        exportDeployments();
+        exportDeployments(true);
     }
 
     function _startBroadcast() internal returns (address) {
@@ -72,18 +72,23 @@ contract ScaffoldETHDeploy is Script {
     }
 
     function exportDeployments() internal {
+        exportDeployments(false);
+    }
+
+    function exportDeployments(bool complete) internal {
         // fetch already existing contracts
         root = vm.projectRoot();
         path = string.concat(root, "/deployments/");
         string memory chainIdStr = vm.toString(block.chainid);
         path = string.concat(path, string.concat(chainIdStr, ".json"));
 
+        string memory jsonKey = "deployments";
         string memory jsonWrite;
 
         uint256 len = deployments.length;
 
         for (uint256 i = 0; i < len; i++) {
-            vm.serializeString(jsonWrite, vm.toString(deployments[i].addr), deployments[i].name);
+            jsonWrite = vm.serializeString(jsonKey, vm.toString(deployments[i].addr), deployments[i].name);
         }
 
         string memory chainName = canonicalChainName(block.chainid);
@@ -95,7 +100,9 @@ contract ScaffoldETHDeploy is Script {
                 chainName = findChainName();
             }
         }
-        jsonWrite = vm.serializeString(jsonWrite, "networkName", chainName);
+        jsonWrite = vm.serializeString(jsonKey, "networkName", chainName);
+        jsonWrite = vm.serializeString(jsonKey, "deploymentComplete", complete ? "true" : "false");
+        jsonWrite = vm.serializeUint(jsonKey, "deploymentBlockNumber", block.number);
         vm.writeJson(jsonWrite, path);
     }
 

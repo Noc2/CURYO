@@ -217,6 +217,6 @@ export const TooltipAnchor = ({ text, position = "top", className = "", children
  */
 export const InfoTooltip = ({ text, position = "top", className = "" }: InfoTooltipProps) => (
   <HoverTooltip text={text} position={position} className={className} ariaLabel={text}>
-    <InformationCircleIcon className="h-4 w-4 text-base-content/40 hover:text-base-content/60" aria-hidden="true" />
+    <InformationCircleIcon className="h-4 w-4 text-base-content/60 hover:text-base-content/60" aria-hidden="true" />
   </HoverTooltip>
 );

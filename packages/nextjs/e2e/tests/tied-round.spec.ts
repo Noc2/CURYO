@@ -3,6 +3,7 @@ import {
   getActiveRoundId,
   setTestConfig,
   settleRoundDirect,
+  submitContentDirect,
   waitForPonderIndexed,
   waitForPonderSync,
 } from "../helpers/admin-helpers";
@@ -10,11 +11,10 @@ import { ANVIL_ACCOUNTS, DEPLOYER } from "../helpers/anvil-accounts";
 import { newE2EContext } from "../helpers/browser-context";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
 import { waitForSettlementIndexed } from "../helpers/keeper";
-import { PONDER_URL } from "../helpers/ponder-url";
-import { gotoWithRetry } from "../helpers/wait-helpers";
-import { setupWallet } from "../helpers/wallet-session";
 import { getContentById, getContentList } from "../helpers/ponder-api";
+import { PONDER_URL } from "../helpers/ponder-url";
 import { voteOnSpecificContent } from "../helpers/vote-helpers";
+import { setupWallet } from "../helpers/wallet-session";
 import { expect, test } from "@playwright/test";
 
 /**
@@ -23,19 +23,20 @@ import { expect, test } from "@playwright/test";
  * the content rating does NOT change, and rewards are handled correctly.
  *
  * Strategy:
- * 1. Submit fresh content via the UI to get a clean round with 0 votes
- * 2. 4 accounts vote on the SAME content via UI: 2 UP + 2 DOWN, all 1 cREP
+ * 1. Ask a fresh question directly to get a clean round with 0 votes
+ * 2. 4 accounts vote on the SAME content via UI: 2 UP + 2 DOWN, all 1 HREP
  *    (UI voting uses commitVote correctly via hooks)
  * 3. Fast-forward past epoch → keeper reveals via keeper API → fast-forward → settle
  * 4. Verify round.state === 3 (Tied) and rating unchanged
  *
  * Account allocation:
- * - Account #2 — submits new content
- * - Accounts #3, #4 — vote UP (1 cREP each)
- * - Accounts #5, #6 — vote DOWN (1 cREP each)
+ * - Account #10 — submits new content
+ * - Accounts #3, #4 — vote UP (1 HREP each)
+ * - Accounts #5, #6 — vote DOWN (1 HREP each)
  *
  * NOTE: Uses accounts that may already have cooldowns from settlement-lifecycle
- * and reward-claim tests. The test submits fresh content to avoid cooldown issues.
+ * and reward-claim tests. The test asks a fresh question directly to avoid
+ * submission UI timing while still exercising UI voting.
  */
 test.describe("Tied round lifecycle", () => {
   test.describe.configure({ mode: "serial" });
@@ -50,64 +51,22 @@ test.describe("Tied round lifecycle", () => {
 
   let newContentId: string | null = null;
 
-  test("submit fresh content for tie test", async ({ browser }) => {
+  test("ask a fresh question for tie test", async () => {
     test.setTimeout(120_000);
 
-    const context = await newE2EContext(browser);
-    const page = await context.newPage();
-    await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey);
-
-    await gotoWithRetry(page, "/submit", { ensureWalletConnected: true });
-    await expect(page.getByRole("heading", { name: "Submit Content" })).toBeVisible({ timeout: 15_000 });
-
-    // Select YouTube platform — handle "No platforms available" if categories not loaded
-    const platformBtn = page.getByText("Select a platform...");
-    const noPlatforms = page.getByText("No platforms available");
-    await expect(platformBtn.or(noPlatforms)).toBeVisible({ timeout: 10_000 });
-
-    const hasPlatforms = await platformBtn.isVisible().catch(() => false);
-    if (!hasPlatforms) {
-      await context.close();
-      test.skip(true, "Categories not loaded — cannot submit content for tie test");
-      return;
-    }
-
-    await platformBtn.click();
-    await page.getByText("YouTube").first().click();
-
-    // Enter a unique URL
+    const submitter = ANVIL_ACCOUNTS.account10;
     const uniqueId = Date.now();
-    const urlInput = page.locator("input[type='url']").first();
-    await expect(urlInput).toBeVisible({ timeout: 5_000 });
-    await urlInput.fill(`https://www.youtube.com/watch?v=tie_test_${uniqueId}`);
-
-    // Enter title and description
-    const titleInput = page.getByPlaceholder("Add a short title for this content");
-    await expect(titleInput).toBeVisible({ timeout: 3_000 });
-    await titleInput.fill(`Tie Test Title ${uniqueId}`);
-
-    const descInput = page.locator("textarea").first();
-    await expect(descInput).toBeVisible({ timeout: 3_000 });
-    await descInput.fill(`Tie Test ${uniqueId}`);
-
-    // Select a subcategory
-    const subcatNames = ["Education", "Entertainment", "Music", "Technology", "Science", "Gaming"];
-    for (const name of subcatNames) {
-      const btn = page.locator("form button", { hasText: new RegExp(`^${name}$`) });
-      if (await btn.isVisible().catch(() => false)) {
-        await btn.click();
-        break;
-      }
-    }
-
-    // Submit
-    const submitBtn = page.getByRole("button", { name: /^Submit Content/i });
-    await expect(submitBtn).toBeEnabled({ timeout: 5_000 });
-    await submitBtn.click();
-
-    await expect(page.getByRole("heading", { name: /Content Submitted/i })).toBeVisible({ timeout: 30_000 });
-
-    await context.close();
+    const url = `https://www.youtube.com/watch?v=tie_test_${uniqueId}`;
+    const submitted = await submitContentDirect(
+      url,
+      `Tie Test Title ${uniqueId}`,
+      `Tie Test ${uniqueId}`,
+      "test",
+      1,
+      submitter.address,
+      CONTRACT_ADDRESSES.ContentRegistry,
+    );
+    expect(submitted, "Content submission tx failed").toBe(true);
 
     // Ensure Ponder has caught up to the chain tip before polling for specific content
     await waitForPonderSync(60_000);

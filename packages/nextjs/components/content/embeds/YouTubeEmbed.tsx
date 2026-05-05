@@ -14,7 +14,7 @@ export function YouTubeEmbed({ info, isActive = true }: YouTubeEmbedProps) {
   if (!info.id) return null;
 
   return (
-    <div className="w-full overflow-hidden rounded-xl">
+    <div className="w-full overflow-hidden rounded-lg">
       <LiteYouTubeEmbed
         key={`${info.id}-${isActive ? "active" : "inactive"}`}
         id={info.id}

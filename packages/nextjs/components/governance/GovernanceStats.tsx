@@ -6,9 +6,9 @@ import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHead
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useGovernanceStats } from "~~/hooks/useGovernance";
 
-function formatCRep(amount: bigint | undefined) {
+function formatHrep(amount: bigint | undefined) {
   if (amount === undefined) return "—";
-  return `${(Number(amount) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 2 })} cREP`;
+  return `${(Number(amount) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 2 })} HREP`;
 }
 
 function formatBlocks(blocks: bigint | undefined) {
@@ -92,7 +92,7 @@ export const GovernanceStats = () => {
               <p className="text-base font-medium">Proposal Threshold</p>
               <InfoTooltip text="Voting power required to create a proposal." />
             </div>
-            <p className="text-base text-base-content/75">{formatCRep(proposalThreshold)}</p>
+            <p className="text-base text-base-content/75">{formatHrep(proposalThreshold)}</p>
           </div>
         </div>
 
@@ -103,10 +103,10 @@ export const GovernanceStats = () => {
               <p className="text-base font-medium">Current Quorum</p>
               <InfoTooltip text="Live quorum at the current block using the governor's dynamic circulating-supply calculation." />
             </div>
-            <p className="text-base text-base-content/75">{formatCRep(currentQuorum)}</p>
+            <p className="text-base text-base-content/75">{formatHrep(currentQuorum)}</p>
             <p className="text-base text-base-content/65">
               {quorumNumerator ? `${quorumNumerator.toString()}% of circulating supply` : "—"} with floor{" "}
-              {formatCRep(minimumQuorum)}
+              {formatHrep(minimumQuorum)}
             </p>
           </div>
         </div>

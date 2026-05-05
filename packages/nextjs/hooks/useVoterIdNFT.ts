@@ -21,6 +21,18 @@ export function isInitialQueryPending({
   return isLoading || isFetching;
 }
 
+export function shouldReadVoterIdTokenId({
+  address,
+  hasVoterId,
+  hasVoterIdFetched,
+}: {
+  address?: string;
+  hasVoterId: boolean | undefined;
+  hasVoterIdFetched: boolean;
+}) {
+  return Boolean(address && hasVoterIdFetched && hasVoterId === true);
+}
+
 const VOTER_ID_CACHE_KEY = "curyo:voterIdNFT";
 
 interface VoterIdCache {
@@ -28,28 +40,49 @@ interface VoterIdCache {
   tokenId: string; // bigint serialized
 }
 
-function readVoterIdCache(address: string): VoterIdCache | null {
+export function buildVoterIdCacheKey(contractAddress: string, address: string) {
+  return `${VOTER_ID_CACHE_KEY}:${contractAddress.toLowerCase()}:${address.toLowerCase()}`;
+}
+
+function readVoterIdCache(contractAddress: string | undefined, address: string): VoterIdCache | null {
+  if (!contractAddress) return null;
   if (typeof window === "undefined") return null;
   try {
-    const raw = localStorage.getItem(`${VOTER_ID_CACHE_KEY}:${address.toLowerCase()}`);
+    const raw = localStorage.getItem(buildVoterIdCacheKey(contractAddress, address));
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (typeof parsed.hasVoterId !== "boolean" || typeof parsed.tokenId !== "string") return null;
+    try {
+      BigInt(parsed.tokenId);
+    } catch {
+      return null;
+    }
     return parsed;
   } catch {
     return null;
   }
 }
 
-function writeVoterIdCache(address: string, hasVoterId: boolean, tokenId: bigint) {
+function writeVoterIdCache(contractAddress: string | undefined, address: string, hasVoterId: boolean, tokenId: bigint) {
+  if (!contractAddress) return;
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(
-      `${VOTER_ID_CACHE_KEY}:${address.toLowerCase()}`,
+      buildVoterIdCacheKey(contractAddress, address),
       JSON.stringify({ hasVoterId, tokenId: tokenId.toString() }),
     );
   } catch {
     // localStorage full or unavailable — ignore
+  }
+}
+
+function clearVoterIdCache(contractAddress: string | undefined, address: string | undefined) {
+  if (!contractAddress || !address) return;
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(buildVoterIdCacheKey(contractAddress, address));
+  } catch {
+    // localStorage unavailable — ignore
   }
 }
 
@@ -58,11 +91,12 @@ function writeVoterIdCache(address: string, hasVoterId: boolean, tokenId: bigint
  * Seeds initial state from localStorage to avoid loading flash on navigation.
  */
 export function useVoterIdNFT(address?: string) {
-  const cached = address ? readVoterIdCache(address) : null;
-
   const { data: voterIdContract, isLoading: voterIdContractLoading } = useDeployedContractInfo({
     contractName: "VoterIdNFT" as any,
   });
+  const voterIdContractAddress = voterIdContract?.address;
+  const cached = address ? readVoterIdCache(voterIdContractAddress, address) : null;
+
   const {
     data: hasVoterId,
     isLoading: hasVoterIdLoading,
@@ -76,12 +110,15 @@ export function useVoterIdNFT(address?: string) {
     args: [address],
     query: {
       enabled: !!address,
-      initialData: cached?.hasVoterId,
+      placeholderData: cached?.hasVoterId,
     },
   } as any);
 
-  // Use cached hasVoterId to enable tokenId query immediately (avoids sequential waterfall)
-  const hasVoterIdResolved = hasVoterId ?? cached?.hasVoterId ?? false;
+  const shouldReadTokenId = shouldReadVoterIdTokenId({
+    address,
+    hasVoterId: hasVoterIdError ? undefined : (hasVoterId as boolean | undefined),
+    hasVoterIdFetched,
+  });
 
   const {
     data: tokenId,
@@ -95,26 +132,46 @@ export function useVoterIdNFT(address?: string) {
     functionName: "getTokenId",
     args: [address],
     query: {
-      enabled: !!address && hasVoterIdResolved === true,
-      initialData: cached?.hasVoterId && cached.tokenId ? BigInt(cached.tokenId) : undefined,
+      enabled: shouldReadTokenId,
+      placeholderData: cached?.hasVoterId && cached.tokenId ? BigInt(cached.tokenId) : undefined,
     },
   } as any);
 
   // Persist to localStorage when fresh data arrives
   useEffect(() => {
-    if (address && hasVoterId !== undefined) {
-      writeVoterIdCache(address, hasVoterId as boolean, (tokenId as bigint) ?? 0n);
+    if (address && voterIdContractAddress && hasVoterIdFetched && hasVoterId !== undefined && !hasVoterIdError) {
+      const hasFreshVoterId = hasVoterId as boolean;
+      if (!hasFreshVoterId) {
+        writeVoterIdCache(voterIdContractAddress, address, false, 0n);
+      } else if (typeof tokenId === "bigint" && !tokenIdError) {
+        writeVoterIdCache(voterIdContractAddress, address, true, tokenId);
+      }
     }
-  }, [address, hasVoterId, tokenId]);
+  }, [address, hasVoterId, hasVoterIdError, hasVoterIdFetched, tokenId, tokenIdError, voterIdContractAddress]);
+
+  useEffect(() => {
+    if (hasVoterIdError || tokenIdError) {
+      clearVoterIdCache(voterIdContractAddress, address);
+    }
+  }, [address, hasVoterIdError, tokenIdError, voterIdContractAddress]);
 
   const refetch = useCallback(async () => {
-    const [hasVoterIdResult] = await Promise.all([refetchHasVoterId(), refetchTokenId()]);
+    const hasVoterIdResult = await refetchHasVoterId();
+    if (hasVoterIdResult.data === true) {
+      try {
+        await refetchTokenId();
+      } catch {
+        // A Voter ID status refresh should not surface optional token-id reads.
+      }
+    }
     return { hasVoterId: hasVoterIdResult.data as boolean | undefined };
   }, [refetchHasVoterId, refetchTokenId]);
 
   const hasAddress = Boolean(address);
   const contractUnavailable = hasAddress && !voterIdContractLoading && !voterIdContract;
-  const resolvedHasVoterId = (hasVoterId as boolean | undefined) ?? cached?.hasVoterId ?? false;
+  const resolvedHasVoterId = hasVoterIdError
+    ? false
+    : ((hasVoterId as boolean | undefined) ?? cached?.hasVoterId ?? false);
   const voterIdCheckPending =
     hasAddress &&
     !contractUnavailable &&
@@ -127,7 +184,7 @@ export function useVoterIdNFT(address?: string) {
     });
   const tokenIdCheckPending =
     hasAddress &&
-    resolvedHasVoterId &&
+    shouldReadTokenId &&
     !contractUnavailable &&
     !cached?.tokenId && // skip pending state when we have cached data
     isInitialQueryPending({
@@ -137,10 +194,15 @@ export function useVoterIdNFT(address?: string) {
       isError: tokenIdError,
     });
   const isResolved = !hasAddress || contractUnavailable || (!voterIdCheckPending && !tokenIdCheckPending);
+  const resolvedTokenId = resolvedHasVoterId
+    ? tokenIdError
+      ? 0n
+      : (tokenId ?? (cached?.tokenId ? BigInt(cached.tokenId) : 0n))
+    : 0n;
 
   return {
     hasVoterId: resolvedHasVoterId,
-    tokenId: tokenId ?? (cached?.tokenId ? BigInt(cached.tokenId) : 0n),
+    tokenId: resolvedTokenId,
     isLoading: !isResolved,
     isResolved,
     refetch,
@@ -182,7 +244,7 @@ export function useVoterIdStake(contentId?: bigint, epochId?: bigint, tokenId?: 
     refetchRemaining();
   };
 
-  // Default to full capacity (100 cREP) when query is disabled (no active round yet)
+  // Default to full capacity (100 HREP) when query is disabled (no active round yet)
   const MAX_STAKE = 100_000_000n; // 100e6 — matches VoterIdNFT.MAX_STAKE_PER_VOTER
   return {
     stakedAmount: stakedAmount ?? 0n,

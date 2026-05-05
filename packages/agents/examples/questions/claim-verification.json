@@ -1,0 +1,25 @@
+{
+  "clientRequestId": "claim-verification-demo",
+  "chainId": 42220,
+  "templateId": "claim_verification",
+  "maxPaymentAmount": "1000000",
+  "bounty": {
+    "asset": "USDC",
+    "amount": "1000000",
+    "requiredVoters": "3",
+    "requiredSettledRounds": "1"
+  },
+  "question": {
+    "templateId": "claim_verification",
+    "templateInputs": {
+      "claim": "The venue is open on Sundays.",
+      "evidenceStandard": "Public page or listing directly supports the claim.",
+      "intendedUse": "Agent will recommend a Sunday visit."
+    },
+    "title": "Does the evidence support this claim?",
+    "description": "Inspect the linked evidence. Vote up only if it materially supports the claim the agent plans to use.",
+    "contextUrl": "https://example.com/venue-hours-evidence",
+    "categoryId": "1",
+    "tags": ["agent", "claim-check", "evidence"]
+  }
+}

@@ -8,7 +8,7 @@ import { ActionType, useTermsAcceptance } from "~~/contexts/TermsAcceptanceConte
 const ACTION_TEXT: Record<NonNullable<ActionType>, { title: string; intro: string }> = {
   faucet: {
     title: "Before You Claim Tokens",
-    intro: "To claim cREP tokens from the faucet, please review and accept:",
+    intro: "To claim HREP tokens from the faucet, please review and accept:",
   },
   vote: {
     title: "Before You Vote",
@@ -16,7 +16,7 @@ const ACTION_TEXT: Record<NonNullable<ActionType>, { title: string; intro: strin
   },
   submit: {
     title: "Before You Submit",
-    intro: "To submit content to cREP, please review and accept:",
+    intro: "To submit a question on Curyo, please review and accept:",
   },
   claim: {
     title: "Before You Claim Rewards",
@@ -24,7 +24,7 @@ const ACTION_TEXT: Record<NonNullable<ActionType>, { title: string; intro: strin
   },
   buy: {
     title: "Before You Participate",
-    intro: "To participate in the cREP token distribution, please review and accept:",
+    intro: "To participate in the HREP token distribution, please review and accept:",
   },
 };
 

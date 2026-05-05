@@ -1,0 +1,26 @@
+{
+  "clientRequestId": "llm-answer-quality-demo",
+  "chainId": 42220,
+  "templateId": "llm_answer_quality",
+  "maxPaymentAmount": "1000000",
+  "bounty": {
+    "asset": "USDC",
+    "amount": "1000000",
+    "requiredVoters": "3",
+    "requiredSettledRounds": "1"
+  },
+  "question": {
+    "templateId": "llm_answer_quality",
+    "templateInputs": {
+      "audience": "customer support user",
+      "outputId": "refund-answer-v3",
+      "promptSummary": "Customer asks why a refund has not arrived.",
+      "rubric": "Correct, complete, concise, and safe to send."
+    },
+    "title": "Is this support answer good enough to send?",
+    "description": "Review the linked prompt and answer. Vote up only if the answer is correct, complete, useful, and appropriate for the customer.",
+    "contextUrl": "https://example.com/support-answer-review",
+    "categoryId": "6",
+    "tags": ["agent", "llm-eval", "answer-quality"]
+  }
+}
