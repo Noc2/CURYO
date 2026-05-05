@@ -435,7 +435,7 @@ export const ContentRegistryAbi = [
     "name": "getSubmitterIdentity",
     "inputs": [
       {
-        "name": "contentId",
+        "name": "",
         "type": "uint256",
         "internalType": "uint256"
       }

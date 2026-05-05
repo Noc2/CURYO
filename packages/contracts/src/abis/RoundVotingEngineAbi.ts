@@ -505,7 +505,7 @@ export const RoundVotingEngineAbi = [
     "name": "hasCommits",
     "inputs": [
       {
-        "name": "contentId",
+        "name": "",
         "type": "uint256",
         "internalType": "uint256"
       }

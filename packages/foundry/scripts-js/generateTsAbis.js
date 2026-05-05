@@ -170,6 +170,8 @@ function processAllDeployments(broadcastPath) {
   const allDeployments = new Map();
   const allDeploymentsByAddress = new Map();
   const latestBroadcastBlockNumbers = {};
+  const latestBroadcastDeploymentAddresses = {};
+  const latestBroadcastTimestamps = {};
 
   scriptFolders.forEach((scriptFolder) => {
     const scriptPath = join(broadcastPath, scriptFolder);
@@ -192,6 +194,15 @@ function processAllDeployments(broadcastPath) {
         const timestamp = parseInt(
           deployment.deploymentFile.match(/run-(\d+)/)?.[1] || "0"
         );
+        if (timestamp > (latestBroadcastTimestamps[chainId] || 0)) {
+          latestBroadcastTimestamps[chainId] = timestamp;
+          latestBroadcastDeploymentAddresses[chainId] = new Set();
+        }
+        if (timestamp === latestBroadcastTimestamps[chainId]) {
+          latestBroadcastDeploymentAddresses[chainId].add(
+            deployment.address.toLowerCase()
+          );
+        }
         const key = `${chainId}-${deployment.contractName}`;
         const addressKey = `${chainId}-${deployment.address.toLowerCase()}`;
 
@@ -263,6 +274,7 @@ function processAllDeployments(broadcastPath) {
     deployers,
     deploymentsByAddress: allDeploymentsByAddress,
     latestBroadcastBlockNumbers,
+    latestBroadcastDeploymentAddresses,
   };
 }
 
@@ -295,6 +307,22 @@ function deploymentExportContractNames(chainDeployments) {
       .filter(([address]) => address.startsWith("0x"))
       .map(([, contractName]) => contractName)
   );
+}
+
+function deploymentExportRequiredAddresses(chainDeployments) {
+  if (typeof chainDeployments !== "object" || chainDeployments === null) {
+    return [];
+  }
+
+  const requiredContractNames = new Set(
+    REQUIRED_NON_LOCAL_DEPLOYMENT_EXPORT_CONTRACTS
+  );
+  return Object.entries(chainDeployments)
+    .filter(
+      ([address, contractName]) =>
+        address.startsWith("0x") && requiredContractNames.has(contractName)
+    )
+    .map(([address]) => address.toLowerCase());
 }
 
 function isCompleteDeploymentExport(chainDeployments) {
@@ -335,7 +363,8 @@ function isNonLocalDeploymentChain(chainId) {
 function assertCompleteNonLocalDeploymentExport(
   chainDeployments,
   latestBroadcastBlockNumber,
-  targetLabel
+  targetLabel,
+  latestBroadcastDeploymentAddresses = new Set()
 ) {
   if (!isCompleteDeploymentExport(chainDeployments)) {
     throw new Error(
@@ -362,6 +391,18 @@ function assertCompleteNonLocalDeploymentExport(
     );
   }
   if (exportBlockNumber < latestBroadcastBlockNumber) {
+    const requiredExportAddresses =
+      deploymentExportRequiredAddresses(chainDeployments);
+    const allRequiredAddressesWereBroadcast = requiredExportAddresses.every(
+      (address) => latestBroadcastDeploymentAddresses.has(address)
+    );
+    // On slow live-network broadcasts, the script-side block.number written by
+    // vm.writeJson can lag the receipt blocks. Treat matching required
+    // addresses from the latest broadcast as the freshness signal.
+    if (allRequiredAddressesWereBroadcast) {
+      return;
+    }
+
     throw new Error(
       `Deployment export for ${targetLabel} is older than the latest broadcast deployment. Refusing to publish stale or partial target-chain artifacts.`
     );
@@ -372,7 +413,8 @@ export function assertFreshTargetDeployment(
   allGeneratedContracts,
   existingContracts,
   deployments = {},
-  latestBroadcastBlockNumbers = {}
+  latestBroadcastBlockNumbers = {},
+  latestBroadcastDeploymentAddresses = {}
 ) {
   const deployTarget = process.env.DEPLOY_TARGET_NETWORK;
   if (!deployTarget) {
@@ -393,7 +435,8 @@ export function assertFreshTargetDeployment(
       assertCompleteNonLocalDeploymentExport(
         deployments[chainId],
         latestBroadcastBlockNumbers[chainId] || 0,
-        `chainId ${chainId}`
+        `chainId ${chainId}`,
+        latestBroadcastDeploymentAddresses[chainId] || new Set()
       );
     }
     return;
@@ -407,7 +450,8 @@ export function assertFreshTargetDeployment(
     assertCompleteNonLocalDeploymentExport(
       deployments[chainId],
       latestBroadcastBlockNumbers[chainId] || 0,
-      `DEPLOY_TARGET_NETWORK='${deployTarget}' (chainId ${targetChainId})`
+      `DEPLOY_TARGET_NETWORK='${deployTarget}' (chainId ${targetChainId})`,
+      latestBroadcastDeploymentAddresses[chainId] || new Set()
     );
     return;
   }
@@ -467,6 +511,7 @@ function main() {
     deployers,
     deploymentsByAddress,
     latestBroadcastBlockNumbers,
+    latestBroadcastDeploymentAddresses,
   } = processAllDeployments(current_path_to_broadcast);
 
   // Handle upgradeable proxies: the deployments JSON maps proxy addresses to
@@ -526,7 +571,8 @@ function main() {
     allGeneratedContracts,
     existingContracts,
     deployments,
-    latestBroadcastBlockNumbers
+    latestBroadcastBlockNumbers,
+    latestBroadcastDeploymentAddresses
   );
   const generatedContractsForPublish =
     filterGeneratedContractsForDeployTarget(allGeneratedContracts);

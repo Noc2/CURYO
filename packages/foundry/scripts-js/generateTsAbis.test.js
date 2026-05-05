@@ -91,6 +91,26 @@ describe("assertFreshTargetDeployment", () => {
     );
   });
 
+  test("accepts older complete export when required addresses match latest broadcast", () => {
+    process.env.DEPLOY_TARGET_NETWORK = "celo";
+
+    assert.doesNotThrow(() =>
+      assertFreshTargetDeployment(
+        {},
+        {},
+        { 42220: REQUIRED_CELO_EXPORT },
+        { 42220: 201 },
+        {
+          42220: new Set(
+            Object.entries(REQUIRED_CELO_EXPORT)
+              .filter(([address]) => address.startsWith("0x"))
+              .map(([address]) => address.toLowerCase())
+          ),
+        }
+      )
+    );
+  });
+
   test("accepts complete non-local deployment exports at the latest broadcast block", () => {
     process.env.DEPLOY_TARGET_NETWORK = "celo";
 

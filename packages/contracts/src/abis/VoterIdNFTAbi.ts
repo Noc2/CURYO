@@ -1054,6 +1054,25 @@ export const VoterIdNFTAbi = [
   },
   {
     "type": "event",
+    "name": "PendingDelegateRemoved",
+    "inputs": [
+      {
+        "name": "holder",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "previousPendingDelegate",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "StakeRecorded",
     "inputs": [
       {
