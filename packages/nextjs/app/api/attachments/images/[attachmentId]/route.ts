@@ -11,8 +11,8 @@ function parseImageParam(value: string) {
   return match?.[1] ?? null;
 }
 
-export async function GET(request: NextRequest, { params }: { params: Promise<{ image: string }> }) {
-  const { image } = await params;
+export async function GET(request: NextRequest, { params }: { params: Promise<{ attachmentId: string }> }) {
+  const { attachmentId: image } = await params;
   const attachmentId = parseImageParam(image);
   if (!attachmentId) {
     return new NextResponse("Not found", { status: 404 });
