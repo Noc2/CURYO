@@ -1353,6 +1353,70 @@ export function ContentSubmissionSection() {
         throw new Error("Wallet not connected");
       }
       const publicClient = getPublicClient(wagmiConfig, { chainId: targetNetwork.id as any });
+      const getFreshPendingNonce = async (minimumNonce?: number): Promise<number | undefined> => {
+        if (!publicClient) return minimumNonce;
+
+        let latestNonce: number | undefined;
+        for (let attempt = 0; attempt < 5; attempt += 1) {
+          try {
+            latestNonce = await publicClient.getTransactionCount({
+              address: submitterAddress,
+              blockTag: "pending",
+            });
+            if (minimumNonce === undefined || latestNonce >= minimumNonce) {
+              return latestNonce;
+            }
+          } catch {
+            return minimumNonce;
+          }
+
+          await new Promise(resolve => setTimeout(resolve, 350));
+        }
+
+        return minimumNonce === undefined || latestNonce === undefined
+          ? latestNonce
+          : Math.max(latestNonce, minimumNonce);
+      };
+      const getSubmittedTransactionNonce = async (hash: `0x${string}` | null | undefined) => {
+        if (!hash || !publicClient) return undefined;
+
+        try {
+          const transaction = await publicClient.getTransaction({ hash });
+          return transaction.nonce;
+        } catch {
+          return undefined;
+        }
+      };
+      const prepareDirectWalletWrite = async <TWrite extends Record<string, unknown>>(
+        write: TWrite,
+        options: { minimumNonce?: number } = {},
+      ) => {
+        if (localE2ETestWalletClient || !publicClient) {
+          return write;
+        }
+
+        const preparedWrite: Record<string, unknown> = {
+          ...write,
+          account: submitterAddress,
+        };
+
+        try {
+          const estimatedGas = await publicClient.estimateContractGas({
+            ...write,
+            account: submitterAddress,
+          } as any);
+          preparedWrite.gas = (estimatedGas * 120n) / 100n;
+        } catch {
+          // Let the wallet estimate gas if the direct RPC simulation cannot.
+        }
+
+        const nonce = await getFreshPendingNonce(options.minimumNonce);
+        if (nonce !== undefined) {
+          preparedWrite.nonce = nonce;
+        }
+
+        return preparedWrite as TWrite;
+      };
       const latestBlockTimestamp = await publicClient
         ?.getBlock({ blockTag: "latest" })
         .then(block => block.timestamp)
@@ -1509,7 +1573,7 @@ export function ContentSubmissionSection() {
               suppressStatusToast: true,
             },
           );
-          return;
+          return null;
         }
 
         const reserveTxHash = await writeRegistry(
@@ -1527,10 +1591,13 @@ export function ContentSubmissionSection() {
         if (reserveTxHash) {
           await waitForTransactionReceipt(wagmiConfig, { hash: reserveTxHash });
         }
+
+        return reserveTxHash ?? null;
       };
 
-      await reserveSubmission(revealCommitment);
+      const reserveTxHash = await reserveSubmission(revealCommitment);
       reservedRevealCommitment = revealCommitment;
+      const reserveNonce = await getSubmittedTransactionNonce(reserveTxHash);
 
       // ContentRegistry enforces a minimum reservation age before reveal.
       // Give the next block timestamp enough room to advance before the reveal submit.
@@ -1584,11 +1651,17 @@ export function ContentSubmissionSection() {
         } as const;
         const approveTxHash = localE2ETestWalletClient
           ? await localE2ETestWalletClient.writeContract(approveWrite as any)
-          : await writeContract(wagmiConfig, approveWrite);
+          : await writeContract(
+              wagmiConfig,
+              await prepareDirectWalletWrite(approveWrite, {
+                minimumNonce: reserveNonce === undefined ? undefined : reserveNonce + 1,
+              }),
+            );
 
         if (approveTxHash) {
           await waitForTransactionReceipt(wagmiConfig, { hash: approveTxHash });
         }
+        const approveNonce = await getSubmittedTransactionNonce(approveTxHash);
 
         const submitWrite = isBundleSubmission
           ? ({
@@ -1617,7 +1690,12 @@ export function ContentSubmissionSection() {
             } as const);
         const submitTxHash = localE2ETestWalletClient
           ? await localE2ETestWalletClient.writeContract(submitWrite as any)
-          : await writeContract(wagmiConfig, submitWrite as any);
+          : await writeContract(
+              wagmiConfig,
+              (await prepareDirectWalletWrite(submitWrite, {
+                minimumNonce: approveNonce === undefined ? undefined : approveNonce + 1,
+              })) as any,
+            );
 
         if (submitTxHash) {
           const submitReceipt = await waitForTransactionReceipt(wagmiConfig, { hash: submitTxHash });
