@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useAccount } from "wagmi";
 import { CuryoConnectButton } from "~~/components/scaffold-eth";
+import { NotificationSettingsPanel } from "~~/components/settings/NotificationSettingsPanel";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
 import { SETTINGS_FRONTEND_HASH, SETTINGS_ROUTE } from "~~/constants/routes";
 
@@ -36,10 +37,6 @@ const FrontendRegistration = dynamic(
 );
 const DelegationSection = dynamic(
   () => import("~~/components/profile/DelegationSection").then(mod => mod.DelegationSection),
-  { loading: SettingsSectionLoading },
-);
-const NotificationSettingsPanel = dynamic(
-  () => import("~~/components/settings/NotificationSettingsPanel").then(mod => mod.NotificationSettingsPanel),
   { loading: SettingsSectionLoading },
 );
 const WalletSettingsPanel = dynamic(
