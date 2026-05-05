@@ -1790,6 +1790,33 @@ export function ContentSubmissionSection() {
     "Each settlement round set requires every bundled question to settle once. Paid completers can claim a reward for each completed set they fully answered.";
   const roundSettingsTooltipText =
     "Governance sets the allowed range. Urgent bounties can use shorter rounds; broader questions can wait for more voters.";
+  const blindPhaseTooltipText = [
+    "How long votes stay hidden before the round enters its open phase.",
+    `Current min: ${roundBlindMinuteBounds.min.toLocaleString()} minutes.`,
+    `Current max: ${roundBlindMinuteBounds.max.toLocaleString()} minutes.`,
+  ].join(" ");
+  const maxDurationTooltipText = [
+    "How long the round can stay open before it expires without settlement.",
+    `Current min: ${roundMaxDurationHourBounds.min.toLocaleString()} hours.`,
+    `Current max: ${roundMaxDurationHourBounds.max.toLocaleString()} hours for the selected blind phase.`,
+  ].join(" ");
+  const settlementVotersTooltipText = [
+    "How many revealed voters are required before a round can settle and count for payout.",
+    `Current min: ${roundConfigBounds.minSettlementVoters.toLocaleString()}.`,
+    `Current max: ${roundConfigBounds.maxSettlementVoters.toLocaleString()}.`,
+  ].join(" ");
+  const voterCapTooltipText =
+    questionCount > 1
+      ? [
+          "The maximum number of voters who can join each bundled question round.",
+          `Current min: ${roundMaxVoterBounds.min.toLocaleString()}.`,
+          `Current max: ${roundMaxVoterBounds.max.toLocaleString()} for question bundles.`,
+        ].join(" ")
+      : [
+          "The maximum number of voters who can join the question round.",
+          `Current min: ${roundMaxVoterBounds.min.toLocaleString()}.`,
+          `Current max: ${roundMaxVoterBounds.max.toLocaleString()}.`,
+        ].join(" ");
   const bountyExpiryTooltipText =
     "Bounty and paid feedback are active only inside this window. The question remains visible after the bounty closes.";
   const bountyEstimateTooltipText =
@@ -1933,9 +1960,15 @@ export function ContentSubmissionSection() {
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="form-control">
-            <span className="label-text">Blind phase (minutes)</span>
+          <div className="form-control">
+            <div className="flex items-center gap-1.5">
+              <label htmlFor="round-blind-minutes" className="label-text">
+                Blind phase (minutes)
+              </label>
+              <InfoTooltip text={blindPhaseTooltipText} />
+            </div>
             <input
+              id="round-blind-minutes"
               type="number"
               min={roundBlindMinuteBounds.min}
               max={roundBlindMinuteBounds.max}
@@ -1969,11 +2002,17 @@ export function ContentSubmissionSection() {
                 bountyStepAttempted && roundConfigValidationError ? "input-error" : ""
               }`}
             />
-          </label>
+          </div>
 
-          <label className="form-control">
-            <span className="label-text">Max duration (hours)</span>
+          <div className="form-control">
+            <div className="flex items-center gap-1.5">
+              <label htmlFor="round-max-duration-hours" className="label-text">
+                Max duration (hours)
+              </label>
+              <InfoTooltip text={maxDurationTooltipText} />
+            </div>
             <input
+              id="round-max-duration-hours"
               type="number"
               min={roundMaxDurationHourBounds.min}
               max={roundMaxDurationHourBounds.max}
@@ -1992,11 +2031,17 @@ export function ContentSubmissionSection() {
                 bountyStepAttempted && roundConfigValidationError ? "input-error" : ""
               }`}
             />
-          </label>
+          </div>
 
-          <label className="form-control">
-            <span className="label-text">Settlement voters</span>
+          <div className="form-control">
+            <div className="flex items-center gap-1.5">
+              <label htmlFor="round-settlement-voters" className="label-text">
+                Settlement voters
+              </label>
+              <InfoTooltip text={settlementVotersTooltipText} />
+            </div>
             <input
+              id="round-settlement-voters"
               type="number"
               min={roundConfigBounds.minSettlementVoters}
               max={roundConfigBounds.maxSettlementVoters}
@@ -2019,11 +2064,17 @@ export function ContentSubmissionSection() {
                 bountyStepAttempted && roundConfigValidationError ? "input-error" : ""
               }`}
             />
-          </label>
+          </div>
 
-          <label className="form-control">
-            <span className="label-text">Voter cap</span>
+          <div className="form-control">
+            <div className="flex items-center gap-1.5">
+              <label htmlFor="round-voter-cap" className="label-text">
+                Voter cap
+              </label>
+              <InfoTooltip text={voterCapTooltipText} />
+            </div>
             <input
+              id="round-voter-cap"
               type="number"
               min={roundMaxVoterBounds.min}
               max={roundMaxVoterBounds.max}
@@ -2053,7 +2104,7 @@ export function ContentSubmissionSection() {
                 bountyStepAttempted && roundConfigValidationError ? "input-error" : ""
               }`}
             />
-          </label>
+          </div>
         </div>
 
         {bountyStepAttempted && roundConfigValidationError ? (
