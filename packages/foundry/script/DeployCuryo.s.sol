@@ -360,7 +360,6 @@ contract DeployCuryo is ScaffoldETHDeploy {
 
             MigrationBootstrapConfig memory migrationConfig = _loadMigrationBootstrapConfig();
             if (migrationConfig.users.length > 0) {
-                _ensureMigrationSourceFaucetPaused(migrationConfig);
                 uint256 migrationBatchCount =
                     _bootstrapMigratedClaimsInBatches(humanFaucet, migrationConfig, _migrationBootstrapBatchSize());
                 console.log("Bootstrapped migrated HumanFaucet claims:", migrationConfig.users.length);
@@ -690,22 +689,6 @@ contract DeployCuryo is ScaffoldETHDeploy {
         _require(batchSize <= MAX_MIGRATION_BOOTSTRAP_BATCH_SIZE, "Migration batch size too large");
     }
 
-    /// @notice Ensure the source HumanFaucet is paused before bootstrapping migrated claims.
-    /// @dev Auto-pauses the source faucet when the deployer is still its owner so a fresh deploy run
-    ///      pauses-and-migrates atomically. Reverts with the same `Migration source faucet not paused`
-    ///      message when the deployer cannot pause (e.g. ownership has already been handed off).
-    function _ensureMigrationSourceFaucetPaused(MigrationBootstrapConfig memory migrationConfig) internal {
-        if (migrationConfig.users.length == 0) return;
-        if (block.chainid == 31337 && migrationConfig.sourceHumanFaucet == address(0)) return;
-
-        HumanFaucet sourceHumanFaucet = HumanFaucet(migrationConfig.sourceHumanFaucet);
-        if (sourceHumanFaucet.paused()) return;
-
-        _require(sourceHumanFaucet.owner() == deployer, "Migration source faucet not paused");
-        sourceHumanFaucet.pause();
-        _require(sourceHumanFaucet.paused(), "Migration source faucet not paused");
-    }
-
     function _bootstrapMigratedClaimsInBatches(
         HumanFaucet humanFaucet,
         MigrationBootstrapConfig memory migrationConfig,
@@ -825,8 +808,6 @@ contract DeployCuryo is ScaffoldETHDeploy {
 
         _require(migrationConfig.sourceHumanFaucet != address(0), "Migration source faucet required");
         HumanFaucet sourceHumanFaucet = HumanFaucet(migrationConfig.sourceHumanFaucet);
-        // Pause invariant is enforced at broadcast time by _ensureMigrationSourceFaucetPaused so the
-        // deployer can auto-pause when it still owns the source faucet, without a separate operational tx.
         VoterIdNFT sourceVoterIdNFT = VoterIdNFT(address(sourceHumanFaucet.voterIdNFT()));
         _require(address(sourceVoterIdNFT) != address(0), "Migration source voterIdNFT required");
         _require(sourceHumanFaucet.totalClaimants() == claimCount, "Migration source claimant count");

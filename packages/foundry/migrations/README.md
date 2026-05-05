@@ -48,6 +48,10 @@ Production deploys also verify the manifest against `sourceHumanFaucet` before b
 - every holder must be claimed on the source faucet
 - every holder's `claimNullifier` and every `nullifierUsed` entry must match the manifest
 
+The deploy script does not pause the source faucet or require it to already be paused. Treat the
+manifest as the final migration snapshot: if new claims are possible on the source faucet after the
+snapshot, regenerate the manifest before redeploying.
+
 If token IDs must remain `1..9`, keep the rows ordered by the old token ID and run the bootstrap
 before anyone can claim on the new deployment.
 
