@@ -4,7 +4,7 @@ export function CuryoAnimation() {
   return (
     <div className="mx-auto flex h-[280px] w-full items-center justify-center sm:h-[390px] lg:h-[500px] xl:h-[560px]">
       <Image
-        src="/launch/curyo-human-loop-orange-orbits-neutral-ai.png"
+        src="/launch/curyo-human-loop-orange-orbits-neutral-ai.webp"
         alt="Line illustration of a person working at a desktop computer beside an abstract AI loop mark"
         width={1672}
         height={941}
