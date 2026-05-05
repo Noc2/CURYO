@@ -1,3 +1,8 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { copyTextToClipboard } from "~~/utils/copyToClipboard";
+
 function AgentIcon({ name }: { name: string }) {
   const iconClass = "h-5 w-5 shrink-0";
 
@@ -76,7 +81,39 @@ const AGENTS: { name: string; highlighted?: boolean }[] = [
   { name: "Lovable" },
 ];
 
+const CURYO_AGENT_PROMPT =
+  "Can you research Curyo.xyz and explain how I can use it with AI agents to get verified human feedback? Start with https://www.curyo.xyz/llms.txt, https://www.curyo.xyz/docs/ai.md, and https://www.curyo.xyz/docs/ai/user-testing. Please summarize the main use cases, public MCP/API setup, pricing or wallet requirements, and one concrete workflow I can try.";
+
 export function SupportedAgentsSection() {
+  const [copiedAgentName, setCopiedAgentName] = useState<string | null>(null);
+  const resetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (resetTimeoutRef.current !== null) {
+        clearTimeout(resetTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleCopyPrompt = async (agentName: string) => {
+    const copied = await copyTextToClipboard(CURYO_AGENT_PROMPT);
+    if (!copied) {
+      console.error("Failed to copy Curyo agent prompt.");
+      return;
+    }
+
+    setCopiedAgentName(agentName);
+    if (resetTimeoutRef.current !== null) {
+      clearTimeout(resetTimeoutRef.current);
+    }
+
+    resetTimeoutRef.current = setTimeout(() => {
+      setCopiedAgentName(null);
+      resetTimeoutRef.current = null;
+    }, 1600);
+  };
+
   return (
     <section className="relative z-10 mt-2 w-full sm:mt-3 lg:mt-4">
       <div className="mb-4 text-center sm:mb-5">
@@ -87,12 +124,19 @@ export function SupportedAgentsSection() {
 
       <div className="mx-auto flex max-w-full flex-nowrap items-center justify-start gap-2 overflow-x-auto px-4 pb-1 sm:justify-center sm:gap-2.5 sm:px-0 lg:gap-3">
         {AGENTS.map(agent => {
-          const isHighlighted = agent.highlighted;
+          const isHighlighted = agent.highlighted || copiedAgentName === agent.name;
           return (
-            <div
+            <button
               key={agent.name}
+              type="button"
+              onClick={() => handleCopyPrompt(agent.name)}
+              title={`Copy a Curyo prompt for ${agent.name}`}
+              aria-label={`Copy a Curyo prompt for ${agent.name}`}
               className={`
-                flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2.5 sm:px-3.5 lg:px-4
+                flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2.5 transition
+                hover:-translate-y-0.5 hover:border-primary/30 hover:text-primary
+                focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary
+                sm:px-3.5 lg:px-4
                 ${
                   isHighlighted
                     ? "border-primary/30 bg-primary/10 text-primary"
@@ -102,10 +146,13 @@ export function SupportedAgentsSection() {
             >
               <AgentIcon name={agent.name} />
               <span className="whitespace-nowrap text-sm font-semibold sm:text-base">{agent.name}</span>
-            </div>
+            </button>
           );
         })}
       </div>
+      <span aria-live="polite" className="sr-only">
+        {copiedAgentName ? `Copied Curyo prompt for ${copiedAgentName}` : ""}
+      </span>
     </section>
   );
 }
