@@ -1458,9 +1458,8 @@ contract QuestionRewardPoolEscrow is
         // Use the narrow commitCore getter -- this helper is called inside claim/bundle
         // iteration loops, and materializing the full 2 KB ciphertext on every read
         // blows out memory expansion at bounds-limit maxVoters.
-        (address voter, uint64 stakeAmount, address commitFrontend, uint48 commitRevealedAt, bool commitRevealed,,) =
+        (address voter,, address commitFrontend, uint48 commitRevealedAt, bool commitRevealed,,) =
             votingEngine.commitCore(contentId, roundId, commitKey);
-        stakeAmount;
         return (
             voter != address(0) && commitRevealed && (closesAt == 0 || commitRevealedAt <= closesAt), commitFrontend
         );
