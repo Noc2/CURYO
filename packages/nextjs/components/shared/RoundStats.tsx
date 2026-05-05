@@ -95,8 +95,11 @@ export function RoundStats({ categoryId, snapshot }: RoundStatsProps) {
 
   const totalStakeFormatted = Number(round.totalStake) / 1e6;
   const voteCount = Number(round.voteCount);
-  const votersNeeded = Math.max(0, snapshot.minVoters - voteCount);
-  const settlementHint = phase === "voting" && votersNeeded > 0 ? `Only ${votersNeeded} more to settle` : null;
+  const revealedVotesNeeded = snapshot.votersNeeded;
+  const settlementHint =
+    phase === "voting" && revealedVotesNeeded > 0
+      ? `${revealedVotesNeeded} more revealed vote${revealedVotesNeeded === 1 ? "" : "s"} to settle`
+      : null;
 
   return (
     <div className="flex flex-col gap-1.5 text-base text-base-content/60">

@@ -69,14 +69,9 @@ export function formatHrepAmount(amountMicro: bigint | number, maximumFractionDi
 export function describeOpenRoundActivity(
   snapshot: Pick<RoundSnapshot, "minVoters" | "revealedCount" | "totalStake" | "voteCount">,
 ) {
-  const votersNeeded = Math.max(0, snapshot.minVoters - snapshot.voteCount);
-  if (votersNeeded > 0) {
-    return `${formatHrepAmount(snapshot.totalStake, 0)} HREP active · ${votersNeeded} more vote${votersNeeded === 1 ? "" : "s"} to settle.`;
-  }
-
   const revealsNeeded = Math.max(0, snapshot.minVoters - snapshot.revealedCount);
   if (revealsNeeded > 0) {
-    return `${formatHrepAmount(snapshot.totalStake, 0)} HREP active · Waiting for ${revealsNeeded} more reveal${revealsNeeded === 1 ? "" : "s"}.`;
+    return `${formatHrepAmount(snapshot.totalStake, 0)} HREP active · ${revealsNeeded} more revealed vote${revealsNeeded === 1 ? "" : "s"} to settle.`;
   }
 
   return `${formatHrepAmount(snapshot.totalStake, 0)} HREP active · Settlement threshold is in reach.`;
@@ -110,7 +105,6 @@ export function getRoundProgressMessaging(
     };
   }
 
-  const votersNeeded = Math.max(0, snapshot.minVoters - snapshot.voteCount);
   const revealsNeeded = Math.max(0, snapshot.minVoters - snapshot.revealedCount);
 
   if (snapshot.readyToSettle || snapshot.thresholdReachedAt > 0) {
@@ -124,25 +118,14 @@ export function getRoundProgressMessaging(
     };
   }
 
-  if (votersNeeded > 0) {
-    return {
-      badgeLabel: "Open",
-      badgeTone: "warning",
-      detailLabel: `Only ${votersNeeded} more vote${votersNeeded === 1 ? "" : "s"} to settle`,
-      detailTone: votersNeeded === 1 ? "success" : "warning",
-      tooltip:
-        "Open votes can use the revealed market signal. This round still needs more voters before settlement can begin.",
-    };
-  }
-
   if (revealsNeeded > 0) {
     return {
       badgeLabel: "Open",
       badgeTone: "warning",
-      detailLabel: null,
-      detailTone: "warning",
+      detailLabel: `${revealsNeeded} more revealed vote${revealsNeeded === 1 ? "" : "s"} to settle`,
+      detailTone: revealsNeeded === 1 ? "success" : "warning",
       tooltip:
-        "Open votes can use the revealed market signal. Settlement starts once the reveal threshold and past-epoch checks clear.",
+        "Open votes can use the revealed market signal. Settlement starts once enough votes are revealed and past-epoch checks clear.",
     };
   }
 

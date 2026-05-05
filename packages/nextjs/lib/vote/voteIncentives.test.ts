@@ -48,10 +48,10 @@ test("getRoundProgressMessaging reframes open rounds around settlement momentum"
   });
 
   assert.equal(message?.badgeLabel, "Open");
-  assert.equal(message?.detailLabel, "Only 1 more vote to settle");
+  assert.equal(message?.detailLabel, "2 more revealed votes to settle");
 });
 
-test("describeOpenRoundActivity uses committed votes before the settle quorum is met", () => {
+test("describeOpenRoundActivity uses revealed votes for settlement progress", () => {
   assert.equal(
     describeOpenRoundActivity({
       totalStake: 30_000_000n,
@@ -59,11 +59,11 @@ test("describeOpenRoundActivity uses committed votes before the settle quorum is
       revealedCount: 0,
       minVoters: 3,
     }),
-    "30 HREP active · 1 more vote to settle.",
+    "30 HREP active · 3 more revealed votes to settle.",
   );
 });
 
-test("describeOpenRoundActivity switches to reveal progress after commit quorum is reached", () => {
+test("describeOpenRoundActivity keeps using reveal progress after commit quorum is reached", () => {
   assert.equal(
     describeOpenRoundActivity({
       totalStake: 30_000_000n,
@@ -71,7 +71,7 @@ test("describeOpenRoundActivity switches to reveal progress after commit quorum 
       revealedCount: 1,
       minVoters: 3,
     }),
-    "30 HREP active · Waiting for 2 more reveals.",
+    "30 HREP active · 2 more revealed votes to settle.",
   );
 });
 
