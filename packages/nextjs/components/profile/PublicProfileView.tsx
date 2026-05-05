@@ -1115,23 +1115,17 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
             <div className="mt-6 rounded-2xl bg-base-content/[0.04] px-5 py-4">
               <div className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/90">Audience context</div>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-base-content/55">{PROFILE_SELF_REPORT_NOTICE}</p>
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <dl className="mt-4 grid gap-x-8 divide-y divide-base-content/10 md:grid-cols-2 md:divide-y-0">
                 {currentSelfReportGroups.map(group => (
-                  <div key={group.label} className="rounded-2xl bg-base-content/[0.04] px-4 py-3">
-                    <div className="text-sm font-medium text-base-content/50">{group.label}</div>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {group.values.map(value => (
-                        <span
-                          key={value}
-                          className="rounded-full bg-base-content/[0.07] px-3 py-1 text-sm text-base-content/75"
-                        >
-                          {value}
-                        </span>
-                      ))}
-                    </div>
+                  <div
+                    key={group.label}
+                    className="flex flex-col gap-1 py-3 md:border-t md:border-base-content/10 md:first:border-t-0 md:[&:nth-child(2)]:border-t-0"
+                  >
+                    <dt className="text-sm font-medium text-base-content/50">{group.label}</dt>
+                    <dd className="text-base text-base-content/75">{group.values.join(", ")}</dd>
                   </div>
                 ))}
-              </div>
+              </dl>
             </div>
           ) : ownProfile ? (
             <div className="mt-6 rounded-2xl border border-dashed border-base-content/15 px-5 py-4">
