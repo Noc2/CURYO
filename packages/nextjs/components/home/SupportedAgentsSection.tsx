@@ -73,20 +73,72 @@ function AgentIcon({ name }: { name: string }) {
   }
 }
 
-const AGENTS: { name: string; highlighted?: boolean }[] = [
-  { name: "Claude Code" },
-  { name: "GitHub Copilot" },
-  { name: "Cursor" },
-  { name: "OpenAI Codex" },
-  { name: "Gemini CLI" },
-  { name: "Lovable" },
-];
-
 const CURYO_AGENT_PROMPT =
   "Can you research Curyo.xyz and explain how I can use it with AI agents to get verified human feedback? Start with https://www.curyo.xyz/llms.txt, https://www.curyo.xyz/docs/ai.md, and https://www.curyo.xyz/docs/ai/user-testing. Please summarize the main use cases, public MCP/API setup, pricing or wallet requirements, and one concrete workflow I can try.";
 
+const LOVABLE_AGENT_PROMPT =
+  "Build a concise interactive page that explains how Curyo.xyz helps AI agents get verified human feedback. Use https://www.curyo.xyz/llms.txt, https://www.curyo.xyz/docs/ai.md, and https://www.curyo.xyz/docs/ai/user-testing as source links. Include sections for use cases, public MCP/API setup, pricing or wallet requirements, and one concrete workflow.";
+
+type AgentLaunchAction = "open-prompt" | "copy-and-open";
+
+type AgentLaunch = {
+  name: string;
+  href: string;
+  action: AgentLaunchAction;
+  ariaLabel: string;
+  successMessage: string;
+};
+
+const encodedCuryoAgentPrompt = encodeURIComponent(CURYO_AGENT_PROMPT);
+const encodedLovableAgentPrompt = encodeURIComponent(LOVABLE_AGENT_PROMPT);
+
+const AGENTS: AgentLaunch[] = [
+  {
+    name: "Claude Code",
+    href: `claude-cli://open?q=${encodedCuryoAgentPrompt}`,
+    action: "open-prompt",
+    ariaLabel: "Open Claude Code with a Curyo prompt",
+    successMessage: "Opening Claude Code with the Curyo prompt.",
+  },
+  {
+    name: "GitHub Copilot",
+    href: "https://github.com/copilot",
+    action: "copy-and-open",
+    ariaLabel: "Copy a Curyo prompt and open GitHub Copilot",
+    successMessage: "Copied prompt for GitHub Copilot. Paste it into the chat window.",
+  },
+  {
+    name: "Cursor",
+    href: "https://cursor.com",
+    action: "copy-and-open",
+    ariaLabel: "Copy a Curyo prompt and open Cursor",
+    successMessage: "Copied prompt for Cursor. Paste it into the chat window.",
+  },
+  {
+    name: "OpenAI Codex",
+    href: "https://chatgpt.com/codex",
+    action: "copy-and-open",
+    ariaLabel: "Copy a Curyo prompt and open OpenAI Codex",
+    successMessage: "Copied prompt for OpenAI Codex. Paste it into the chat window.",
+  },
+  {
+    name: "Gemini CLI",
+    href: "https://google-gemini.github.io/gemini-cli/docs/cli/",
+    action: "copy-and-open",
+    ariaLabel: "Copy a Curyo prompt and open Gemini CLI docs",
+    successMessage: "Copied prompt for Gemini CLI.",
+  },
+  {
+    name: "Lovable",
+    href: `https://lovable.dev/?autosubmit=true#prompt=${encodedLovableAgentPrompt}`,
+    action: "open-prompt",
+    ariaLabel: "Open Lovable with a Curyo build prompt",
+    successMessage: "Opening Lovable with a Curyo build prompt.",
+  },
+];
+
 export function SupportedAgentsSection() {
-  const [copiedAgentName, setCopiedAgentName] = useState<string | null>(null);
+  const [activeAgentName, setActiveAgentName] = useState<string | null>(null);
   const resetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -97,30 +149,43 @@ export function SupportedAgentsSection() {
     };
   }, []);
 
-  const handleCopyPrompt = async (agentName: string) => {
-    const copied = await copyTextToClipboard(CURYO_AGENT_PROMPT);
-    if (!copied) {
-      console.error("Failed to copy Curyo agent prompt.");
-      notification.error("Could not copy the prompt. Please try again.", {
-        id: "curyo-agent-prompt-copy",
-      });
-      return;
-    }
-
-    setCopiedAgentName(agentName);
-    notification.success(`Copied prompt for ${agentName}. Share it with your AI agent.`, {
-      duration: 2400,
-      id: "curyo-agent-prompt-copy",
-    });
+  const markAgentActive = (agentName: string) => {
+    setActiveAgentName(agentName);
 
     if (resetTimeoutRef.current !== null) {
       clearTimeout(resetTimeoutRef.current);
     }
 
     resetTimeoutRef.current = setTimeout(() => {
-      setCopiedAgentName(null);
+      setActiveAgentName(null);
       resetTimeoutRef.current = null;
     }, 1600);
+  };
+
+  const handleAgentLaunch = async (agent: AgentLaunch) => {
+    markAgentActive(agent.name);
+
+    if (agent.action === "open-prompt") {
+      notification.success(agent.successMessage, {
+        duration: 2400,
+        id: "curyo-agent-prompt-launch",
+      });
+      return;
+    }
+
+    const copied = await copyTextToClipboard(CURYO_AGENT_PROMPT);
+    if (!copied) {
+      console.error("Failed to copy Curyo agent prompt.");
+      notification.error(`Opening ${agent.name}, but could not copy the prompt.`, {
+        id: "curyo-agent-prompt-launch",
+      });
+      return;
+    }
+
+    notification.success(agent.successMessage, {
+      duration: 2400,
+      id: "curyo-agent-prompt-launch",
+    });
   };
 
   return (
@@ -133,13 +198,16 @@ export function SupportedAgentsSection() {
 
       <div className="mx-auto flex max-w-full flex-nowrap items-center justify-start gap-2 overflow-x-auto px-4 pb-1 sm:justify-center sm:gap-2.5 sm:px-0 lg:gap-3">
         {AGENTS.map(agent => {
-          const isHighlighted = agent.highlighted || copiedAgentName === agent.name;
+          const isHighlighted = activeAgentName === agent.name;
+          const opensInNewTab = agent.href.startsWith("http");
           return (
-            <button
+            <a
               key={agent.name}
-              type="button"
-              onClick={() => handleCopyPrompt(agent.name)}
-              aria-label={`Copy a Curyo prompt for ${agent.name}`}
+              href={agent.href}
+              target={opensInNewTab ? "_blank" : undefined}
+              rel={opensInNewTab ? "noreferrer" : undefined}
+              onClick={() => void handleAgentLaunch(agent)}
+              aria-label={agent.ariaLabel}
               className={`
                 flex shrink-0 cursor-pointer items-center gap-2 rounded-xl border px-3 py-2.5 transition-colors
                 hover:border-primary/30 hover:bg-primary/10 hover:text-primary
@@ -154,12 +222,12 @@ export function SupportedAgentsSection() {
             >
               <AgentIcon name={agent.name} />
               <span className="whitespace-nowrap text-sm font-semibold sm:text-base">{agent.name}</span>
-            </button>
+            </a>
           );
         })}
       </div>
       <span aria-live="polite" className="sr-only">
-        {copiedAgentName ? `Copied Curyo prompt for ${copiedAgentName}` : ""}
+        {activeAgentName ? `Opened Curyo prompt for ${activeAgentName}` : ""}
       </span>
     </section>
   );
