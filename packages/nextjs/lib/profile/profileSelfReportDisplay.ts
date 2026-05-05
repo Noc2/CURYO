@@ -326,8 +326,7 @@ function supportedRegionCodes() {
   return regions.filter(code => /^[A-Z]{2}$/.test(code) && !REGION_CODES_TO_EXCLUDE.has(code));
 }
 
-const regionNames =
-  typeof Intl.DisplayNames === "function" ? new Intl.DisplayNames(undefined, { type: "region" }) : null;
+const regionNames = typeof Intl.DisplayNames === "function" ? new Intl.DisplayNames("en", { type: "region" }) : null;
 
 export function formatProfileCountryCode(code: string) {
   return regionNames?.of(code) ?? code;
