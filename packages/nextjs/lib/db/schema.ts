@@ -312,6 +312,56 @@ export const x402QuestionSubmissions = pgTable(
 export type X402QuestionSubmission = typeof x402QuestionSubmissions.$inferSelect;
 export type NewX402QuestionSubmission = typeof x402QuestionSubmissions.$inferInsert;
 
+export const questionImageAttachments = pgTable(
+  "question_image_attachments",
+  {
+    id: text("id").primaryKey(),
+    uploaderKind: text("uploader_kind").notNull(),
+    ownerWalletAddress: text("owner_wallet_address"),
+    agentId: text("agent_id"),
+    clientRequestId: text("client_request_id"),
+    operationKey: text("operation_key"),
+    contentId: text("content_id"),
+    originalBlobPathname: text("original_blob_pathname"),
+    originalBlobUrl: text("original_blob_url"),
+    normalizedBlobPathname: text("normalized_blob_pathname"),
+    normalizedBlobUrl: text("normalized_blob_url"),
+    originalFilename: text("original_filename").notNull(),
+    mimeType: text("mime_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull().default(0),
+    width: integer("width"),
+    height: integer("height"),
+    sha256: text("sha256"),
+    status: text("status").notNull(),
+    moderationStatus: text("moderation_status").notNull().default("pending"),
+    moderationProvider: text("moderation_provider"),
+    moderationResult: text("moderation_result"),
+    error: text("error"),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).notNull(),
+    approvedAt: timestamp("approved_at", { mode: "date", withTimezone: true }),
+    publishedAt: timestamp("published_at", { mode: "date", withTimezone: true }),
+    deletedAt: timestamp("deleted_at", { mode: "date", withTimezone: true }),
+  },
+  table => ({
+    ownerStatusCreatedIdx: index("question_image_attachments_owner_status_created_idx").on(
+      table.ownerWalletAddress,
+      table.status,
+      table.createdAt,
+    ),
+    agentStatusCreatedIdx: index("question_image_attachments_agent_status_created_idx").on(
+      table.agentId,
+      table.status,
+      table.createdAt,
+    ),
+    operationIdx: index("question_image_attachments_operation_idx").on(table.operationKey),
+    contentIdx: index("question_image_attachments_content_idx").on(table.contentId),
+  }),
+);
+
+export type QuestionImageAttachment = typeof questionImageAttachments.$inferSelect;
+export type NewQuestionImageAttachment = typeof questionImageAttachments.$inferInsert;
+
 export const agentSigningIntents = pgTable(
   "agent_signing_intents",
   {
