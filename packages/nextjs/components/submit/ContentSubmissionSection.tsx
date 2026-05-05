@@ -960,19 +960,6 @@ export function ContentSubmissionSection() {
   const estimatedVoterCapClaimDenominator = estimatedVoterCap * selectedRequiredSettledRounds;
   const estimatedVoterCapGrossReward = divideRewardAmount(estimatedBountyAmount, estimatedVoterCapClaimDenominator);
   const estimatedVoterCapReward = applyEstimatedFrontendFee(estimatedVoterCapGrossReward, frontendFeeBps);
-  const oneTokenPerMinimumVoterBounty = selectedRequiredVoters * selectedRequiredSettledRounds * 1_000_000n;
-  const bountyRecommendation = rewardAmountError
-    ? "Increase the bounty until the estimate is valid before submitting."
-    : rewardRequiredVotersValidationError
-      ? "Lower minimum voters or raise the voter cap so the bounty can qualify."
-      : estimatedMinimumVoterReward < 1_000_000n
-        ? `For a stronger signal, consider ${formatSubmissionRewardAmount(
-            oneTokenPerMinimumVoterBounty,
-            rewardAsset,
-          )} or more so the minimum cohort earns about 1 ${rewardAsset === "hrep" ? "HREP" : "USDC"} each.`
-        : parsedRoundMaxVoters > Math.max(parsedRewardRequiredVoters, 1) * 3
-          ? "A wide voter cap can dilute the per-voter payout if participation is high; use it when broader input matters more than payout density."
-          : "These settings give a clear payout target for a small qualifying round.";
   const rewardTokenAddress = rewardAsset === "hrep" ? hrepAddress : getDefaultUsdcAddress(targetNetwork.id);
   const { refetch: refetchNextContentId } = useScaffoldReadContract({
     contractName: "ContentRegistry",
@@ -1962,14 +1949,6 @@ export function ContentSubmissionSection() {
         </span>
       </div>
 
-      <div className="rounded-lg border border-primary/20 bg-primary/10 px-3 py-2">
-        <p className="text-sm font-medium text-base-content">Mandatory spam protection</p>
-        <p className="mt-1 text-sm text-base-content/70">
-          Every question needs a funded bounty before submission. This raises the cost of low-quality asks and rewards
-          eligible voters for useful judgment.
-        </p>
-      </div>
-
       <div className="grid grid-cols-2 gap-2">
         <button
           type="button"
@@ -2378,8 +2357,8 @@ export function ContentSubmissionSection() {
       </div>
 
       <div className="rounded-lg bg-primary/10 p-4">
-        <p className="mb-2 text-base font-medium text-primary">Recommendation</p>
-        <p className="text-base text-base-content/70">{bountyRecommendation}</p>
+        <p className="mb-2 text-base font-medium text-primary">Mandatory spam protection</p>
+        <p className="text-base text-base-content/70">This raises the cost of low-quality asks</p>
       </div>
     </div>
   );
