@@ -33,17 +33,31 @@ library RoundSettlementSideEffectsLib {
         uint64 upPool,
         uint64 downPool
     ) external {
-        RatingLib.RatingState memory previousState = registry.getRatingState(contentId);
-        RatingLib.SlashConfig memory slashConfig = registry.getSlashConfigForContent(contentId);
-        (RatingLib.RatingState memory nextState,,) = RatingMath.applySettlement(
-            referenceRatingBps,
-            upPool,
-            downPool,
-            previousState,
-            ratingConfig,
-            slashConfig,
-            uint48(block.timestamp)
-        );
+        // The two rating-state precondition reads share the SettlementSideEffectFailed/RatingStateUpdate
+        // stage with the eventual update call: any failure along this chain means "the rating state was
+        // not updated for this round," and downstream observers handle all three the same way.
+        // getSlashConfigForContent in particular may transitively call protocolConfig.slashConfig(),
+        // so guard it (and the symmetric getRatingState read) so a misbehaving config contract
+        // cannot brick settleRound.
+        RatingLib.RatingState memory previousState;
+        RatingLib.SlashConfig memory slashConfig;
+        bool ratingUpdatePossible;
+        try registry.getRatingState(contentId) returns (RatingLib.RatingState memory s) {
+            previousState = s;
+            try registry.getSlashConfigForContent(contentId) returns (RatingLib.SlashConfig memory c) {
+                slashConfig = c;
+                ratingUpdatePossible = true;
+            } catch {
+                emit SettlementSideEffectFailed(
+                    contentId, roundId, address(registry), SideEffectFailureStage.RatingStateUpdate
+                );
+            }
+        } catch {
+            emit SettlementSideEffectFailed(
+                contentId, roundId, address(registry), SideEffectFailureStage.RatingStateUpdate
+            );
+        }
+
         address participationPoolAddress = address(participationPool);
         uint256 participationRateBps = 0;
         bool hasParticipationRate = false;
@@ -59,11 +73,22 @@ library RoundSettlementSideEffectsLib {
             }
         }
 
-        try registry.updateRatingState(contentId, roundId, referenceRatingBps, nextState) { }
-        catch {
-            emit SettlementSideEffectFailed(
-                contentId, roundId, address(registry), SideEffectFailureStage.RatingStateUpdate
+        if (ratingUpdatePossible) {
+            (RatingLib.RatingState memory nextState,,) = RatingMath.applySettlement(
+                referenceRatingBps,
+                upPool,
+                downPool,
+                previousState,
+                ratingConfig,
+                slashConfig,
+                uint48(block.timestamp)
             );
+            try registry.updateRatingState(contentId, roundId, referenceRatingBps, nextState) { }
+            catch {
+                emit SettlementSideEffectFailed(
+                    contentId, roundId, address(registry), SideEffectFailureStage.RatingStateUpdate
+                );
+            }
         }
 
         try registry.recordMeaningfulActivity(contentId) { }
