@@ -10,6 +10,7 @@ import { ChevronDownIcon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/reac
 import { ContentEmbed } from "~~/components/content/ContentEmbed";
 import { GasBalanceWarning } from "~~/components/shared/GasBalanceWarning";
 import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
+import { ImageAttachmentUploader } from "~~/components/submit/ImageAttachmentUploader";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { serializeTags } from "~~/constants/categories";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
@@ -98,10 +99,10 @@ type MediaMode = "images" | "video";
 
 const MEDIA_URL_CONFIG = {
   contextPlaceholder: "Paste the source or context link voters should judge",
-  imagePlaceholder: "Paste a direct image URL, e.g. https://example.com/image.jpg",
+  imagePlaceholder: "Paste a direct image URL or upload one below",
   videoPlaceholder: "Paste a YouTube URL, e.g. https://youtube.com/watch?v=...",
   imageHint:
-    "Optional. Add up to four direct image URLs. Landscape images fit the voting content area best; aim for 16:9 and at least 1280x720 px. Tall or square images may show extra padding.",
+    "Optional. Add up to four direct image URLs or upload JPG, PNG, and WEBP files for Curyo-hosted, moderated image context. Landscape images fit the voting content area best; aim for 16:9 and at least 1280x720 px.",
   videoHint: "Optional. Add one YouTube link as a preview; standard landscape videos fit the content area best.",
 };
 
@@ -253,6 +254,20 @@ function formatFrontendFeePercent(frontendFeeBps: number): string {
   return fractional === 0 ? `${whole}%` : `${whole}.${String(fractional).padStart(2, "0").replace(/0+$/, "")}%`;
 }
 
+function formatBountyExpiryDate(windowSeconds: number | null, referenceTimeMs: number | null): string {
+  if (windowSeconds === null) {
+    return "Choose a window";
+  }
+  if (referenceTimeMs === null) {
+    return "Calculating...";
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(referenceTimeMs + windowSeconds * 1000));
+}
+
 function isReservationExistsError(error: unknown): boolean {
   const message =
     (error as { shortMessage?: string; message?: string } | undefined)?.shortMessage ??
@@ -321,6 +336,7 @@ export function ContentSubmissionSection() {
   const [customBountyWindowUnit, setCustomBountyWindowUnit] = useState<BountyWindowUnit>(
     DEFAULT_CUSTOM_BOUNTY_WINDOW_UNIT,
   );
+  const [bountyExpiryReferenceTimeMs, setBountyExpiryReferenceTimeMs] = useState<number | null>(null);
   const [roundBlindMinutes, setRoundBlindMinutes] = useState(
     String(Number(DEFAULT_QUESTION_ROUND_CONFIG.epochDuration / 60n)),
   );
@@ -347,6 +363,10 @@ export function ContentSubmissionSection() {
   const categoryDropdownRef = useRef<HTMLDivElement>(null);
 
   const { categories, isLoading: categoriesLoading } = useCategoryRegistry();
+
+  useEffect(() => {
+    setBountyExpiryReferenceTimeMs(Date.now());
+  }, [bountyWindowPreset, customBountyWindowAmount, customBountyWindowUnit]);
 
   useEffect(() => {
     if (!selectedCategory) return;
@@ -488,19 +508,14 @@ export function ContentSubmissionSection() {
       return `URL must be ${MAX_SUBMISSION_URL_LENGTH} characters or fewer.`;
     }
 
-    const sanitizedUrl = sanitizeExternalUrl(trimmedValue);
-    if (!sanitizedUrl) {
-      return "Please enter a valid HTTPS URL";
-    }
-
-    const urlCheck = containsBlockedUrl(sanitizedUrl);
-    if (urlCheck.blocked) {
-      return "This URL contains prohibited content and cannot be used";
-    }
-
     const normalizedUrl = normalizeSubmissionMediaUrl(trimmedValue);
     if (!normalizedUrl) {
       return "Please enter a valid HTTPS URL";
+    }
+
+    const urlCheck = containsBlockedUrl(normalizedUrl);
+    if (urlCheck.blocked) {
+      return "This URL contains prohibited content and cannot be used";
     }
 
     if (expectedType === "images" && !isDirectImageUrl(normalizedUrl)) {
@@ -540,6 +555,21 @@ export function ContentSubmissionSection() {
       return next;
     });
     setImageUrlErrors(prev => [...prev, null]);
+  };
+
+  const handleUploadedImageUrl = (uploadedImageUrl: string) => {
+    const emptyIndex = imageUrls.findIndex(url => !url.trim());
+    const next =
+      emptyIndex >= 0
+        ? imageUrls.map((url, index) => (index === emptyIndex ? uploadedImageUrl : url))
+        : imageUrls.length < MAX_SUBMISSION_IMAGE_URLS
+          ? [...imageUrls, uploadedImageUrl]
+          : imageUrls;
+
+    setMediaMode("images");
+    setImageUrls(next);
+    patchActiveQuestionDraft({ mediaMode: "images", imageUrls: next });
+    setImageUrlErrors(next.map((_, index) => imageUrlErrors[index] ?? null));
   };
 
   const handleRemoveImageUrl = (index: number) => {
@@ -922,6 +952,7 @@ export function ContentSubmissionSection() {
     customBountyWindowAmount,
     customBountyWindowUnit,
   );
+  const estimatedBountyExpiresAtLabel = formatBountyExpiryDate(bountyWindowSeconds, bountyExpiryReferenceTimeMs);
   const parsedCustomBountyWindowAmount = parseBountyWindowAmount(customBountyWindowAmount);
   const customBountyWindowAmountMax =
     customBountyWindowUnit === "hours"
@@ -2375,6 +2406,14 @@ export function ContentSubmissionSection() {
             {formatSubmissionRewardAmount(estimatedVoterCapReward, rewardAsset)}
           </p>
         </div>
+
+        <div className="rounded-lg bg-base-100/70 p-3">
+          <p className="flex items-center gap-1.5 text-sm font-medium uppercase text-base-content/60">
+            Bounty expires
+            <InfoTooltip text="Estimated from the selected bounty window and current time. The final timestamp is set when you submit." />
+          </p>
+          <p className="mt-1 text-lg font-semibold text-base-content">{estimatedBountyExpiresAtLabel}</p>
+        </div>
       </div>
 
       <div className="rounded-lg bg-primary/10 p-4">
@@ -2608,6 +2647,11 @@ export function ContentSubmissionSection() {
                       >
                         Add image
                       </button>
+                      <ImageAttachmentUploader
+                        address={connectedAddress}
+                        disabled={imageUrls.filter(url => url.trim()).length >= MAX_SUBMISSION_IMAGE_URLS}
+                        onUploaded={handleUploadedImageUrl}
+                      />
                     </div>
                   ) : (
                     <div>

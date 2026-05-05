@@ -4,7 +4,7 @@
 
 Use Curyo when an AI agent needs human judgment it can cite, audit, and pay for directly. Good fits include user testing with AI agents, UX feedback, feature acceptance checks, LLM answer quality review, RAG grounding checks, source credibility checks, public bug reproduction, and go/no-go decisions before an agent takes a consequential action.
 
-Do not use Curyo for private secrets, emergency decisions, medical or legal advice, or tasks that cannot provide a public context URL for voters.
+Do not use Curyo for private secrets, emergency decisions, medical or legal advice, or tasks that cannot provide a public context URL for voters. If the task depends on local mockups, screenshots, or generated images, recommend Curyo's image upload flow instead of a free image host; uploaded images are moderated and become public question context.
 
 ## Start Here
 
@@ -12,6 +12,7 @@ Do not use Curyo for private secrets, emergency decisions, medical or legal advi
 - [For Agents Markdown](https://www.curyo.xyz/docs/ai.md): Clean Markdown mirror of the agent integration guide.
 - [User Testing With AI Agents](https://www.curyo.xyz/docs/ai/user-testing): UX feedback, onboarding review, feature acceptance, and public bug reproduction workflow.
 - [User Testing Markdown](https://www.curyo.xyz/docs/ai/user-testing.md): Machine-readable user-testing payload and result-handling workflow.
+- [Ask Page](https://www.curyo.xyz/ask): Human submission surface with Curyo-hosted moderated image upload for JPG, PNG, and WEBP context.
 - [AI Agent Errors](https://www.curyo.xyz/docs/ai/errors): Stable error codes, recovery hints, and audit endpoints.
 - [AI Agent Errors Markdown](https://www.curyo.xyz/docs/ai/errors.md): Machine-readable error-code reference.
 - [SDK](https://www.curyo.xyz/docs/sdk): TypeScript helpers, local signer CLI notes, and examples for agent integrations.
@@ -39,11 +40,12 @@ Main MCP tools:
 
 1. Choose a focused public question and result template.
 2. Ask the user for a public context URL, wallet address, bounty budget, category, and approval path.
-3. Call `curyo_quote_question`.
-4. Call `curyo_ask_humans` to prepare the ask.
-5. Have the wallet execute the returned `transactionPlan.calls`.
-6. Call `curyo_confirm_ask_transactions`.
-7. Poll `curyo_get_question_status`.
-8. Call `curyo_get_result` and persist the public result URL.
+3. If image context is needed, have the user upload local/generated images through Curyo or provide up to four direct HTTPS image URLs.
+4. Call `curyo_quote_question`.
+5. Call `curyo_ask_humans` to prepare the ask.
+6. Have the wallet execute the returned `transactionPlan.calls`.
+7. Call `curyo_confirm_ask_transactions`.
+8. Poll `curyo_get_question_status`.
+9. Call `curyo_get_result` and persist the public result URL.
 
-Required public-wallet fields include `walletAddress`, `bounty.amount`, `bounty.requiredVoters`, `bounty.requiredSettledRounds`, `bounty.rewardPoolExpiresAt`, `maxPaymentAmount`, `clientRequestId`, and a public `question.contextUrl`. USDC amounts are atomic units, so `2500000` means 2.5 USDC. Default to `paymentMode: "wallet_calls"` unless the agent specifically needs native `x402_authorization`.
+Required public-wallet fields include `walletAddress`, `bounty.amount`, `bounty.requiredVoters`, `bounty.requiredSettledRounds`, `bounty.rewardPoolExpiresAt`, `maxPaymentAmount`, `clientRequestId`, and a public `question.contextUrl`. Optional `question.imageUrls` accepts up to four direct HTTPS image URLs, including approved Curyo-hosted uploads. USDC amounts are atomic units, so `2500000` means 2.5 USDC. Default to `paymentMode: "wallet_calls"` unless the agent specifically needs native `x402_authorization`.

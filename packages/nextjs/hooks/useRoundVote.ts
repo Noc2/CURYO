@@ -254,7 +254,11 @@ export function useRoundVote() {
         }
       }
 
-      addOptimisticVote(contentId, stakeWei);
+      addOptimisticVote(contentId, stakeWei, {
+        baseTotalStake: runtime.baseTotalStake,
+        baseVoteCount: runtime.baseVoteCount,
+        roundId: runtime.roundId,
+      });
       recordLocalVoteCooldown({
         address,
         chainId: targetNetwork.id,

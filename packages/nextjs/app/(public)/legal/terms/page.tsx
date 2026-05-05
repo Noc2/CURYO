@@ -260,9 +260,14 @@ const TermsPage: NextPage = () => {
           The Curyo Protocol smart contracts may be open source under their respective licenses.
         </p>
         <p>
-          User-provided content remains the property of the original creators. By asking questions with content URLs,
-          you represent that you have the right to share such content and that doing so does not violate any third-party
-          rights.
+          User-provided content remains the property of the original creators. By asking questions with content URLs or
+          uploaded image context, you represent that you have the right to share such content and that doing so does not
+          violate any third-party rights.
+        </p>
+        <p>
+          Uploaded image context is intended only for material you are allowed to make public. The Interface may
+          validate, transform, moderate, reject, store, cache, display, or remove uploaded media to operate the Service,
+          protect users, comply with law, and enforce these Terms.
         </p>
 
         <h2>11. Third-Party Content</h2>
@@ -324,7 +329,7 @@ const TermsPage: NextPage = () => {
           <li>Your violation of these Terms</li>
           <li>Your violation of any applicable law or regulation</li>
           <li>Your violation of any third-party rights</li>
-          <li>Any content you submit through the Service</li>
+          <li>Any content, links, images, or other media you submit through the Service</li>
           <li>Any false representations regarding your eligibility</li>
         </ul>
 

@@ -14,3 +14,7 @@
 - For CI or E2E changes, check both the app behavior and the test infrastructure itself. Route warmup, local-vs-production server behavior, helper retries, and service startup assumptions are common failure points here.
 - Flag responsive UI regressions on laptop layouts and dense voting surfaces, especially if changes affect card height, scrolling, queue visibility, or text readability.
 - Call out when a change should include or update tests, particularly Foundry tests, Next.js node tests, and Playwright coverage for critical user flows.
+
+## Tooling Notes
+
+- `yarn dead-code` is routed through the local Yarn plugin in `.yarn/plugins/@curyo/plugin-dead-code.cjs` so fresh worktrees can rebuild `node_modules/.yarn-state.yml` before Knip runs.

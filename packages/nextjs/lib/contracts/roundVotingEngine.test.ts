@@ -4,6 +4,7 @@ import {
   buildStakeAmountWei,
   deriveRoundSnapshot,
   deriveVoteDeadlines,
+  isOptimisticRoundDeltaReflected,
   mergeRoundDataWithFallback,
   parseRound,
   resolveFrontendCode,
@@ -66,6 +67,33 @@ test("deriveRoundSnapshot marks rounds ready once the revealed threshold is met"
   assert.equal(snapshot.votersNeeded, 0);
   assert.equal(snapshot.readyToSettle, true);
   assert.equal(snapshot.thresholdReachedAt, 1250);
+});
+
+test("isOptimisticRoundDeltaReflected detects when live round data includes an optimistic vote", () => {
+  const optimisticDelta = {
+    baseTotalStake: 100_000_000n,
+    baseVoteCount: 1n,
+    roundId: 7n,
+    stake: 100_000_000n,
+    voteCount: 1,
+  };
+
+  assert.equal(
+    isOptimisticRoundDeltaReflected({
+      optimisticDelta,
+      round: makeRound({ totalStake: 100_000_000n, voteCount: 1n }),
+      roundId: 7n,
+    }),
+    false,
+  );
+  assert.equal(
+    isOptimisticRoundDeltaReflected({
+      optimisticDelta,
+      round: makeRound({ totalStake: 200_000_000n, voteCount: 2n }),
+      roundId: 7n,
+    }),
+    true,
+  );
 });
 
 test("parseRound prefers tuple values when named round fields are incomplete", () => {

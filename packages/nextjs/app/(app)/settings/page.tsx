@@ -4,10 +4,8 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useAccount } from "wagmi";
-import { DelegationSection } from "~~/components/profile/DelegationSection";
 import { CuryoConnectButton } from "~~/components/scaffold-eth";
 import { NotificationSettingsPanel } from "~~/components/settings/NotificationSettingsPanel";
-import { WalletSettingsPanel } from "~~/components/settings/WalletSettingsPanel";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
 import { SETTINGS_FRONTEND_HASH, SETTINGS_ROUTE } from "~~/constants/routes";
 
@@ -35,6 +33,14 @@ function SettingsSectionLoading() {
 
 const FrontendRegistration = dynamic(
   () => import("~~/components/governance/FrontendRegistration").then(mod => mod.FrontendRegistration),
+  { loading: SettingsSectionLoading },
+);
+const DelegationSection = dynamic(
+  () => import("~~/components/profile/DelegationSection").then(mod => mod.DelegationSection),
+  { loading: SettingsSectionLoading },
+);
+const WalletSettingsPanel = dynamic(
+  () => import("~~/components/settings/WalletSettingsPanel").then(mod => mod.WalletSettingsPanel),
   { loading: SettingsSectionLoading },
 );
 

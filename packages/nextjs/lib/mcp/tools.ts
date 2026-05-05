@@ -26,6 +26,7 @@ import {
   templateListOutputSchema,
 } from "~~/lib/agent/schemas";
 import { listAgentResultTemplates } from "~~/lib/agent/templates";
+import { attachImagesToOperation } from "~~/lib/attachments/imageAttachments";
 import { buildContentFeedbackRoundContext, listContentFeedback } from "~~/lib/feedback/contentFeedback";
 import { MCP_SCOPES, type McpAgentAuth, type McpScope } from "~~/lib/mcp/auth";
 import {
@@ -473,6 +474,10 @@ function buildManagedMcpClientRequestId(agent: McpAgentAuth, clientRequestId: st
   return `mcp:${sha256(`${agent.id}:${clientRequestId}`).slice(0, 48)}`;
 }
 
+function getQuestionImageUrls(payload: X402QuestionPayload) {
+  return payload.questions.flatMap(question => question.imageUrls);
+}
+
 function assertManagedQuestionCategoriesAllowed(agent: McpAgentAuth, payload: X402QuestionPayload) {
   if (!agent.allowedCategoryIds) return;
 
@@ -809,6 +814,18 @@ export async function callPublicCuryoMcpTool(params: { arguments: unknown; name:
               walletAddress,
             });
       const body = normalizeMcpQuestionBody(result.body) as JsonObject;
+      const warnings: string[] = [];
+      try {
+        await attachImagesToOperation({
+          imageUrls: getQuestionImageUrls(payload),
+          operationKey: quote.operation.operationKey,
+          clientRequestId: payload.clientRequestId,
+          ownerWalletAddress: walletAddress,
+        });
+      } catch (error) {
+        console.error("[mcp-public] image attachment association failed", error);
+        warnings.push("image_attachment_association_failed");
+      }
 
       return {
         ...body,
@@ -825,7 +842,7 @@ export async function callPublicCuryoMcpTool(params: { arguments: unknown; name:
         statusTool: "curyo_get_question_status",
         walletPolicyRequired: false,
         webhook: null,
-        warnings: [],
+        warnings,
       };
     }
 
@@ -1011,6 +1028,18 @@ export async function callCuryoMcpTool(params: {
 
       const body = result.body as JsonObject;
       const warnings: string[] = [];
+      try {
+        await attachImagesToOperation({
+          imageUrls: getQuestionImageUrls(payload),
+          operationKey: quote.operation.operationKey,
+          clientRequestId: payload.clientRequestId,
+          agentId: params.agent.id,
+          ownerWalletAddress: walletAddress,
+        });
+      } catch (error) {
+        console.error("[mcp] image attachment association failed", error);
+        warnings.push("image_attachment_association_failed");
+      }
       await enqueueCallbackEvent("question.submitting", body);
 
       let managedBudget: Awaited<ReturnType<typeof getMcpAgentBudgetSummary>> | null = null;

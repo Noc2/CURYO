@@ -1,16 +1,17 @@
 "use client";
 
 import { createContext, useCallback, useContext, useRef, useState } from "react";
+import type { OptimisticRoundDelta } from "~~/lib/contracts/roundVotingEngine";
 
-type OptimisticVote = {
-  voteCount: number;
-  stake: bigint;
+type OptimisticVote = OptimisticRoundDelta & {
   timestamp: number;
 };
+type OptimisticVoteMetadata = Pick<OptimisticRoundDelta, "baseTotalStake" | "baseVoteCount" | "roundId">;
 
 type OptimisticVoteContextType = {
   getOptimisticDelta: (contentId: bigint) => OptimisticVote | undefined;
-  addOptimisticVote: (contentId: bigint, stakeAmount: bigint) => void;
+  addOptimisticVote: (contentId: bigint, stakeAmount: bigint, metadata?: OptimisticVoteMetadata) => void;
+  clearOptimisticVote: (contentId: bigint) => void;
 };
 
 const OptimisticVoteContext = createContext<OptimisticVoteContextType | null>(null);
@@ -19,12 +20,30 @@ export function OptimisticVoteProvider({ children }: { children: React.ReactNode
   const [optimisticVotes, setOptimisticVotes] = useState<Map<string, OptimisticVote>>(new Map());
   const timeoutRefs = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
-  const addOptimisticVote = useCallback((contentId: bigint, stakeAmount: bigint) => {
+  const clearOptimisticVote = useCallback((contentId: bigint) => {
+    const key = contentId.toString();
+    const existingTimeout = timeoutRefs.current.get(key);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+      timeoutRefs.current.delete(key);
+    }
+    setOptimisticVotes(prev => {
+      if (!prev.has(key)) return prev;
+      const newMap = new Map(prev);
+      newMap.delete(key);
+      return newMap;
+    });
+  }, []);
+
+  const addOptimisticVote = useCallback((contentId: bigint, stakeAmount: bigint, metadata?: OptimisticVoteMetadata) => {
     const key = contentId.toString();
     setOptimisticVotes(prev => {
       const newMap = new Map(prev);
       const existing = newMap.get(key);
       newMap.set(key, {
+        baseTotalStake: existing?.baseTotalStake ?? metadata?.baseTotalStake,
+        baseVoteCount: existing?.baseVoteCount ?? metadata?.baseVoteCount,
+        roundId: existing?.roundId ?? metadata?.roundId,
         voteCount: (existing?.voteCount ?? 0) + 1,
         stake: (existing?.stake ?? 0n) + stakeAmount,
         timestamp: Date.now(),
@@ -56,7 +75,7 @@ export function OptimisticVoteProvider({ children }: { children: React.ReactNode
   );
 
   return (
-    <OptimisticVoteContext.Provider value={{ getOptimisticDelta, addOptimisticVote }}>
+    <OptimisticVoteContext.Provider value={{ getOptimisticDelta, addOptimisticVote, clearOptimisticVote }}>
       {children}
     </OptimisticVoteContext.Provider>
   );

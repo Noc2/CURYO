@@ -92,6 +92,9 @@ Key environment variables (see `.env.example` for the full list):
 | `CURYO_E2E_PRODUCTION_BUILD`                      | Server-side opt-in for local production-style E2E builds                                                                                 |
 | `NEXT_PUBLIC_CURYO_E2E_PRODUCTION_BUILD`          | Browser-side opt-in for local production-style E2E builds                                                                                |
 | `CURYO_AGENT_CALLBACK_DELIVERY_SECRET`            | Shared secret required to trigger the internal callback delivery worker at `/api/agent-callbacks/deliver`                               |
+| `BLOB_READ_WRITE_TOKEN`                           | Vercel Blob read-write token used for private image uploads and moderated Curyo-hosted image delivery                                   |
+| `OPENAI_API_KEY`                                  | OpenAI API key used for automated uploaded-image moderation in production                                                               |
+| `CURYO_IMAGE_MODERATION_MODE`                     | Optional development override; set to `disabled` only for local testing of the image pipeline                                           |
 
 Notes:
 
@@ -100,6 +103,7 @@ Notes:
 - The Wallet settings tab uses thirdweb's BuyWidget to add native CELO for Celo gas. Configure the thirdweb client ID's allowed domains for the production and preview origins that will render `/settings#wallet`.
 - `/api/mcp/public` exposes tokenless quote, ask, confirm, status, result, template, and category tools for agents that already control a funded wallet. `/api/mcp` remains the managed endpoint for bearer-token policies, balances, signed callbacks, and audit surfaces.
 - Agent clients should follow the AI docs flow: list templates, quote with `walletAddress`, ask with a stable client request ID, execute and confirm wallet calls, wait for a status read or signed managed callback, then fetch the structured result. Operator token lifecycle, scopes, budgets, category allowlists, callback recovery, and audit history belong in `/settings?tab=agents` for managed agents; static `CURYO_MCP_AGENTS` remains supported for server-configured policies.
+- The Ask page can host JPG, PNG, and WEBP image context through private Vercel Blob uploads. Uploaded images are validated, metadata-stripped into WEBP, moderated with OpenAI, and served through `/api/attachments/images/{attachmentId}.webp` only after approval. Agents should recommend this route when users have local mockups, screenshots, or generated images instead of asking them to find a third-party image host.
 - Private artifacts, embargoed asks, restricted voter-only context, and delayed result disclosure are deferred. Current agent flows should assume public context URLs, public submitted questions, and public settled result pages.
 - No core contract address env vars are needed for supported chains. The frontend reads core deployment metadata from `@curyo/contracts` and fails fast if `NEXT_PUBLIC_TARGET_NETWORKS` includes a chain without those definitions; rollout contracts such as question reward pools can use their documented env fallbacks until generated metadata catches up.
 - In production, the intended setup is one Railway Postgres service with separate logical databases for Ponder and Next.js.

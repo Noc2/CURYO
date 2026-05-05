@@ -82,6 +82,7 @@ const cspDirectives = [
     "https://*.walletconnect.org",
     "https://api.web3modal.org",
     "https://*.thirdweb.com",
+    "https://*.blob.vercel-storage.com",
     // Simple Analytics
     "https://scripts.simpleanalyticscdn.com",
     "https://queue.simpleanalyticscdn.com",

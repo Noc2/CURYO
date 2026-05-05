@@ -28,9 +28,12 @@ export interface OpenRoundFallbackData {
   maxVoters?: number;
 }
 
-interface OptimisticRoundDelta {
+export interface OptimisticRoundDelta {
   voteCount: number;
   stake: bigint;
+  roundId?: bigint;
+  baseVoteCount?: bigint;
+  baseTotalStake?: bigint;
 }
 
 interface RoundTiming {
@@ -396,4 +399,26 @@ export function deriveRoundSnapshot(params: {
       thresholdReachedAt,
     },
   };
+}
+
+export function isOptimisticRoundDeltaReflected(params: {
+  roundId: bigint;
+  round?: RoundData;
+  optimisticDelta?: OptimisticRoundDelta;
+}): boolean {
+  const { optimisticDelta, round, roundId } = params;
+  if (!optimisticDelta || !round) {
+    return false;
+  }
+  if (optimisticDelta.roundId !== undefined && optimisticDelta.roundId !== roundId) {
+    return true;
+  }
+  if (optimisticDelta.baseVoteCount === undefined || optimisticDelta.baseTotalStake === undefined) {
+    return false;
+  }
+
+  return (
+    round.voteCount >= optimisticDelta.baseVoteCount + BigInt(optimisticDelta.voteCount) &&
+    round.totalStake >= optimisticDelta.baseTotalStake + optimisticDelta.stake
+  );
 }

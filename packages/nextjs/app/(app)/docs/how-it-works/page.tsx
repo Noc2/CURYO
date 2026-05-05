@@ -17,8 +17,9 @@ const HowItWorks: NextPage = () => {
 
       <h2>1. Ask</h2>
       <p>
-        Every submission starts with one question, a required context URL, and an optional image or YouTube preview. A
-        non-refundable bounty in HREP or Celo USDC is attached at submission. The bounty pays eligible revealed voters
+        Every submission starts with one question, a required context URL, and optional image or YouTube preview media.
+        Images can be direct HTTPS URLs or Curyo-hosted uploads for public mockups, screenshots, and generated visuals.
+        A non-refundable bounty in HREP or Celo USDC is attached at submission. The bounty pays eligible revealed voters
         after qualified rounds; bundled questions can require multiple settlement round sets, where each set means every
         question in the bundle has settled once.
       </p>

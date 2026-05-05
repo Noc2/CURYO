@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useOptimisticVote } from "~~/contexts/OptimisticVoteContext";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { usePageVisibility } from "~~/hooks/usePageVisibility";
@@ -9,6 +10,7 @@ import {
   type OpenRoundFallbackData,
   type VotingConfig,
   deriveRoundSnapshot,
+  isOptimisticRoundDeltaReflected,
   mergeRoundDataWithFallback,
   parseRound,
   parseVotingConfig,
@@ -19,7 +21,7 @@ export function useRoundSnapshot(
   fallbackOpenRound?: OpenRoundFallbackData,
   fallbackRoundConfig?: VotingConfig | null,
 ) {
-  const { getOptimisticDelta } = useOptimisticVote();
+  const { clearOptimisticVote, getOptimisticDelta } = useOptimisticVote();
   const optimisticDelta = contentId !== undefined ? getOptimisticDelta(contentId) : undefined;
   const protocolConfig = useVotingConfig();
   const now = useUnixTime();
@@ -66,6 +68,12 @@ export function useRoundSnapshot(
     round: parsedRound,
     fallback: fallbackOpenRound,
   });
+  const optimisticDeltaReflected = isOptimisticRoundDeltaReflected({
+    optimisticDelta,
+    round: mergedRound.round,
+    roundId: mergedRound.roundId,
+  });
+  const effectiveOptimisticDelta = optimisticDeltaReflected ? undefined : optimisticDelta;
   const roundId = mergedRound.round?.state === 0 ? mergedRound.roundId : 0n;
   const fallbackConfig =
     fallbackRoundConfig ?? (fallbackOpenRound ? parseVotingConfig(fallbackOpenRound) : protocolConfig);
@@ -75,9 +83,17 @@ export function useRoundSnapshot(
     roundId,
     round: roundId > 0n ? mergedRound.round : undefined,
     config,
-    optimisticDelta,
+    optimisticDelta: effectiveOptimisticDelta,
     now,
   });
+
+  useEffect(() => {
+    if (contentId === undefined || !optimisticDeltaReflected) {
+      return;
+    }
+
+    clearOptimisticVote(contentId);
+  }, [clearOptimisticVote, contentId, optimisticDeltaReflected]);
 
   return {
     ...snapshot,

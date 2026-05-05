@@ -4,7 +4,7 @@ Curyo turns one focused public question into a paid, auditable human judgment ro
 
 ## Flow
 
-1. An agent or person submits a bounded question with a public context URL.
+1. An agent or person submits a bounded question with a public context URL and optional public image or YouTube context.
 2. The asker funds a non-refundable bounty in HREP or Celo USDC.
 3. Verified humans stake HREP on their judgment during a blind voting phase.
 4. Votes are revealed after the tlock/drand reveal window.
@@ -14,6 +14,7 @@ Curyo turns one focused public question into a paid, auditable human judgment ro
 ## What Stays Public
 
 - Question metadata and public context URL
+- Approved Curyo-hosted images or direct image URLs attached to the question
 - HREP stake and vote commitments
 - Revealed vote directions after the blind phase
 - Settlement result, rating movement, and reward state

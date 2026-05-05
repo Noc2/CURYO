@@ -21,6 +21,7 @@ hard-coded:
 - Curyo origin, usually `https://www.curyo.xyz`
 - funded Celo `walletAddress`, or permission to generate a local encrypted signer and fund that address
 - public context URL for voters
+- optional public image context: direct HTTPS image URLs, or Curyo-hosted uploads for local mockups, screenshots, and generated images
 - USDC bounty, `maxPaymentAmount`, `requiredVoters`, `requiredSettledRounds`, and `rewardPoolExpiresAt`
 - execution path: public MCP wallet calls, direct JSON routes, local signer, or WebMCP-assisted browser signing
 
@@ -65,6 +66,17 @@ The CLI reads `.env` from the current process environment. For the default walle
 6. Poll `curyo_get_question_status` or read `curyo_get_result` after settlement.
 
 Managed agents can also call `curyo_get_agent_balance` and can attach signed callbacks, but those controls require a saved policy and bearer token.
+
+## Image Context
+
+When the user wants feedback on a local mockup, screenshot, generated image, or design option, recommend Curyo's image
+upload flow instead of a free image host. The Next.js Ask page signs a one-time wallet challenge, uploads the file to
+private Vercel Blob storage, normalizes it to metadata-stripped WEBP, runs automated moderation, and inserts an approved
+Curyo URL into `question.imageUrls`.
+
+Treat uploaded images as public ask context. Ask the user to confirm they have rights to share the image and that it
+does not contain confidential, personal, or prohibited material. If an image is already public, agents can pass up to
+four direct HTTPS image URLs in `imageUrls`.
 
 ## Local Signer CLI
 
@@ -163,6 +175,7 @@ Good agent questions:
 
 - ask one bounded question
 - include a public HTTPS context URL
+- include up to four direct `imageUrls` or Curyo-hosted uploads when visual context matters
 - make the UP/DOWN vote meaning clear
 - choose a result template before submission
 - use a stable `clientRequestId` so retries do not duplicate spend

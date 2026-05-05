@@ -3,7 +3,6 @@
 import React, { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion } from "framer-motion";
 import { Address } from "viem";
 import { useAccount } from "wagmi";
 import {
@@ -43,24 +42,16 @@ type HeaderNavLinkProps = {
   compact?: boolean;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
-  indicatorLayoutId?: string;
   isActive: boolean;
   label: string;
 };
 
-const navIndicatorClassName = "absolute right-2 top-2 bottom-2 w-1 rounded-full bg-[#F26426]";
+const navIndicatorClassName =
+  "absolute right-2 top-2 bottom-2 w-1 rounded-full bg-[#F26426] animate-header-nav-indicator-in";
 const headerChromeSurfaceClassName = "bg-[#000]";
 const headerChromeBorderClassName = "border-[color:var(--curyo-shell-border-strong)]";
 
-const HeaderNavLink = ({
-  className,
-  compact = false,
-  href,
-  icon: Icon,
-  indicatorLayoutId,
-  isActive,
-  label,
-}: HeaderNavLinkProps) => {
+const HeaderNavLink = ({ className, compact = false, href, icon: Icon, isActive, label }: HeaderNavLinkProps) => {
   const navTone = isActive ? "text-base-content" : "text-base-content/75 group-hover:text-base-content";
 
   return (
@@ -75,17 +66,7 @@ const HeaderNavLink = ({
     >
       <Icon className={`relative z-10 h-6 w-6 shrink-0 transition-colors duration-200 ${navTone}`} />
       <span className={`relative z-10 text-base font-medium transition-colors duration-200 ${navTone}`}>{label}</span>
-      {isActive ? (
-        indicatorLayoutId ? (
-          <motion.span
-            layoutId={indicatorLayoutId}
-            transition={{ type: "spring", stiffness: 420, damping: 34, mass: 0.55 }}
-            className={navIndicatorClassName}
-          />
-        ) : (
-          <span className={navIndicatorClassName} />
-        )
-      ) : null}
+      {isActive ? <span className={navIndicatorClassName} /> : null}
     </Link>
   );
 };
@@ -94,7 +75,6 @@ const HeaderMenuLinks = ({ variant = "mobile" }: { variant?: "mobile" | "desktop
   const pathname = usePathname() ?? "";
   const isDocsPage = pathname.startsWith("/docs");
   const compact = variant === "mobile";
-  const indicatorLayoutId = variant === "desktop" ? "header-sidebar-active-indicator" : undefined;
 
   return (
     <>
@@ -106,15 +86,7 @@ const HeaderMenuLinks = ({ variant = "mobile" }: { variant?: "mobile" | "desktop
         if (isDocs && isDocsPage) {
           return (
             <li key={href} className="w-full">
-              <HeaderNavLink
-                className="mb-2"
-                compact={compact}
-                href={href}
-                icon={Icon}
-                indicatorLayoutId={indicatorLayoutId}
-                isActive
-                label="Docs"
-              />
+              <HeaderNavLink className="mb-2" compact={compact} href={href} icon={Icon} isActive label="Docs" />
               {/* Docs submenu - single column, explicitly block layout */}
               <div className="flex flex-col space-y-4 w-full">
                 {DOCS_NAV.map(group => {
@@ -162,14 +134,7 @@ const HeaderMenuLinks = ({ variant = "mobile" }: { variant?: "mobile" | "desktop
         // Regular menu items
         return (
           <li key={href} className="w-full">
-            <HeaderNavLink
-              href={href}
-              icon={Icon}
-              compact={compact}
-              indicatorLayoutId={indicatorLayoutId}
-              isActive={isActive}
-              label={label}
-            />
+            <HeaderNavLink href={href} icon={Icon} compact={compact} isActive={isActive} label={label} />
           </li>
         );
       })}

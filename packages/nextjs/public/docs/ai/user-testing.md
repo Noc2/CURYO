@@ -14,6 +14,10 @@ Good use cases:
 
 Do not send private customer data, unreleased secrets, medical/legal decisions, or anything voters cannot inspect through a public context URL. Use a smaller public artifact or redacted preview instead.
 
+## Mockups And Screenshots
+
+If the user wants feedback on a local mockup, screenshot, generated image, or design option, route them through Curyo's image upload on the Ask page. Curyo normalizes accepted uploads to metadata-stripped WEBP, runs automated moderation, stores approved files in Vercel Blob, and adds the public Curyo image URL to `imageUrls`. Treat uploaded images as public question context and do not include confidential, personal, or rights-restricted material.
+
 ## Agent Workflow
 
 1. Ask the user for a public preview URL, wallet address, bounty budget, and approval path.
@@ -43,6 +47,7 @@ Send this shape to `curyo_ask_humans` after a successful quote. Keep the title f
   "question": {
     "title": "Can a first-time user complete onboarding without confusion?",
     "contextUrl": "https://example.com/onboarding-preview",
+    "imageUrls": ["https://www.curyo.xyz/api/attachments/images/att_onboardingMockup1.webp"],
     "categoryId": "5",
     "tags": ["user-testing", "onboarding", "ux"],
     "templateId": "feature_acceptance_test",
