@@ -52,6 +52,8 @@ export async function resolveRoundVoteRuntime(params: {
   ]);
 
   let roundStartTimeSeconds: number | null = null;
+  let baseTotalStake = 0n;
+  let baseVoteCount = 0n;
   let epochDuration = params.fallbackEpochDuration;
   if (roundId > 0n) {
     const [round, roundConfig] = await Promise.all([
@@ -73,6 +75,8 @@ export async function resolveRoundVoteRuntime(params: {
     const parsedRound = parseRound(round);
 
     if (parsedRound?.state === 0 && parsedRound.startTime > 0n) {
+      baseTotalStake = parsedRound.totalStake;
+      baseVoteCount = parsedRound.voteCount;
       epochDuration = parseVotingConfig(roundConfig).epochDuration;
       roundStartTimeSeconds = Number(parsedRound.startTime);
     }
@@ -86,6 +90,8 @@ export async function resolveRoundVoteRuntime(params: {
 
   return {
     epochDuration,
+    baseTotalStake,
+    baseVoteCount,
     now: () => runtimeNowMs,
     roundId,
     roundReferenceRatingBps: roundReferenceRatingBps as number,
