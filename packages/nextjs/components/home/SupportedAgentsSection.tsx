@@ -130,11 +130,10 @@ export function SupportedAgentsSection() {
               key={agent.name}
               type="button"
               onClick={() => handleCopyPrompt(agent.name)}
-              title={`Copy a Curyo prompt for ${agent.name}`}
               aria-label={`Copy a Curyo prompt for ${agent.name}`}
               className={`
-                flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2.5 transition
-                hover:-translate-y-0.5 hover:border-primary/30 hover:text-primary
+                flex shrink-0 cursor-pointer items-center gap-2 rounded-xl border px-3 py-2.5 transition-colors
+                hover:border-primary/30 hover:bg-primary/10 hover:text-primary
                 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary
                 sm:px-3.5 lg:px-4
                 ${
