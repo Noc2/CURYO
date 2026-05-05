@@ -1,4 +1,5 @@
 import {
+  CONTENT_STATUS,
   type ContentItem,
   filterModeratedContentItems,
   filterRpcFeed,
@@ -26,6 +27,7 @@ function buildItem(
     tags,
     submitter: "0x0000000000000000000000000000000000000001",
     contentHash: `hash-${id.toString()}`,
+    status: CONTENT_STATUS.Active,
     isOwnContent: false,
     categoryId: 1n,
     rating: 50,
@@ -151,6 +153,23 @@ test("mapContentItem marks linked submitter addresses as own content", () => {
   );
 
   assert.equal(item.isOwnContent, true);
+});
+
+test("mapContentItem preserves inactive Ponder content status", () => {
+  const dormantItem = mapContentItem({
+    id: "4",
+    url: "https://example.com/dormant",
+    title: "Dormant question",
+    description: "No longer accepting votes.",
+    tags: "",
+    submitter: "0x00000000000000000000000000000000000000aa",
+    contentHash: "hash-4",
+    categoryId: "1",
+    rating: 50,
+    status: CONTENT_STATUS.Dormant,
+  });
+
+  assert.equal(dormantItem.status, CONTENT_STATUS.Dormant);
 });
 
 test("mapContentItem supports text-only questions and Ponder bounty summaries", () => {

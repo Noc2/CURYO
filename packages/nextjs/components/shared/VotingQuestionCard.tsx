@@ -30,6 +30,7 @@ interface VotingQuestionCardProps {
   error?: string | null;
   cooldownSecondsRemaining?: number;
   isVoteEligibilityPending?: boolean;
+  isContentActive?: boolean;
   isOwnContent?: boolean;
   openRound?: ContentOpenRoundSummary | null;
   roundConfig?: VotingConfig | null;
@@ -358,6 +359,7 @@ export function VotingQuestionCard({
   error,
   cooldownSecondsRemaining = 0,
   isVoteEligibilityPending = false,
+  isContentActive = true,
   isOwnContent,
   openRound,
   roundConfig,
@@ -379,7 +381,8 @@ export function VotingQuestionCard({
   const cooldownLabel = formatVoteCooldownRemaining(cooldownSecondsRemaining);
   const displayError =
     cooldownActive && error?.includes("You already voted on this content within the last") ? null : error;
-  const voteActionDisabled = isCommitting || isVoteEligibilityPending;
+  const contentInactive = !isContentActive;
+  const voteActionDisabled = isCommitting || isVoteEligibilityPending || contentInactive;
   const [isDetailsOpen, setIsDetailsOpen] = useState(isSignalVariant);
   const [isAttentionActive, setIsAttentionActive] = useState(false);
   const [showFundQuestionModal, setShowFundQuestionModal] = useState(false);
@@ -400,7 +403,19 @@ export function VotingQuestionCard({
     (myCommitHash as unknown as string) !== "0x0000000000000000000000000000000000000000000000000000000000000000";
   const usesDockStatusText = isDockVariant;
 
-  const centerStatusContent = address ? (
+  const centerStatusContent = contentInactive ? (
+    <HoverTooltip text="This content is no longer active for voting." position="bottom">
+      {usesDockStatusText ? (
+        <span className={`${DOCK_STATUS_TEXT_CLASS_NAME} text-[0.95rem] leading-tight text-base-content/68`}>
+          Inactive
+        </span>
+      ) : (
+        <span className={STATUS_PILL_CLASS_NAME}>
+          <span className="text-base text-base-content/65">Inactive</span>
+        </span>
+      )}
+    </HoverTooltip>
+  ) : address ? (
     hasMyVote ? (
       <HoverTooltip
         text="You voted, and your direction stays hidden until the blind phase ends. After that, eligible votes are normally revealed automatically, and you can self-reveal if needed."

@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { parseTags } from "~~/constants/categories";
 import {
+  CONTENT_STATUS,
   type ContentItem,
   type UseContentFeedOptions,
   filterModeratedContentItems,
@@ -42,6 +43,8 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
   const searchQuery = options.searchQuery?.trim();
   const shortSearchQueryBlocked = isContentSearchQueryTooShort(searchQuery);
   const sortBy = options.sortBy ?? "newest";
+  const status = options.status ?? CONTENT_STATUS.Active;
+  const statusParam = status === "all" ? "all" : String(status);
   const submitter = options.submitter?.trim();
   const submitters = options.submitters;
   const normalizedOwnSubmitterAddresses = useMemo(() => {
@@ -115,6 +118,7 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
           tags: parseTags(args.tags || ""),
           submitter: eventSubmitter,
           contentHash: args.contentHash || "",
+          status: CONTENT_STATUS.Active,
           isOwnContent: ownSubmitterAddressSet.has(eventSubmitter.toLowerCase()),
           categoryId: args.categoryId ?? 0n,
           rating: 50,
@@ -136,18 +140,18 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
       .filter((item): item is ContentItem => item !== null);
   }, [events, ownSubmitterAddressSet]);
 
-  const filteredRpcFeed = useMemo(
-    () =>
-      filterModeratedContentItems(
-        filterRpcFeed(rpcFeed, {
-          categoryId,
-          contentIds,
-          submitters: normalizedSubmitterFilters,
-          searchQuery,
-        }),
-      ),
-    [categoryId, contentIds, normalizedSubmitterFilters, rpcFeed, searchQuery],
-  );
+  const filteredRpcFeed = useMemo(() => {
+    const items = filterModeratedContentItems(
+      filterRpcFeed(rpcFeed, {
+        categoryId,
+        contentIds,
+        submitters: normalizedSubmitterFilters,
+        searchQuery,
+      }),
+    );
+
+    return status === "all" ? items : items.filter(item => item.status === status);
+  }, [categoryId, contentIds, normalizedSubmitterFilters, rpcFeed, searchQuery, status]);
   const sortedRpcFeed = useMemo(
     () => sortRpcFeed(filteredRpcFeed, sortBy, searchQuery),
     [filteredRpcFeed, searchQuery, sortBy],
@@ -170,6 +174,7 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
       submittersKey || "all",
       searchQuery ?? "",
       contentIdsParam ?? "",
+      statusParam,
     ],
     ponderFn: async () => {
       if (shortSearchQueryBlocked) {
@@ -185,7 +190,7 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
         contentIds: contentIdsParam,
         search: searchQuery || undefined,
         sortBy,
-        status: "all",
+        status: statusParam,
         submitter: normalizedSubmitterFilters.length === 1 ? normalizedSubmitterFilters[0] : undefined,
         submitters: normalizedSubmitterFilters.length > 1 ? normalizedSubmitterFilters.join(",") : undefined,
       };

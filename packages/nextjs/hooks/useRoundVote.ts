@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { HumanReputationAbi, encodeVoteTransferPayload } from "@curyo/contracts";
+import { ContentRegistryAbi } from "@curyo/contracts/abis";
 import { buildCommitVoteParams } from "@curyo/sdk/vote";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
@@ -72,6 +73,9 @@ export function useRoundVote() {
   const { data: votingEngineInfo, isLoading: isVotingEngineLoading } = useDeployedContractInfo({
     contractName: "RoundVotingEngine",
   } as any);
+  const { data: contentRegistryInfo, isLoading: isContentRegistryLoading } = useDeployedContractInfo({
+    contractName: "ContentRegistry",
+  } as any);
   const { data: hrepInfo, isLoading: isHrepLoading } = useDeployedContractInfo({ contractName: "HumanReputation" });
   const publicClient = usePublicClient();
   const clearError = useCallback(() => setError(null), []);
@@ -103,12 +107,12 @@ export function useRoundVote() {
       return false;
     }
 
-    if (isVotingEngineLoading || isHrepLoading) {
+    if (isVotingEngineLoading || isContentRegistryLoading || isHrepLoading) {
       setError("Preparing vote. Try again in a moment.");
       return false;
     }
 
-    if (!votingEngineInfo?.address || !hrepInfo?.address) {
+    if (!votingEngineInfo?.address || !contentRegistryInfo?.address || !hrepInfo?.address) {
       setError("Voting is unavailable right now.");
       return false;
     }
@@ -135,6 +139,27 @@ export function useRoundVote() {
     setError(null);
 
     try {
+      if (publicClient) {
+        try {
+          const isContentActive = await publicClient.readContract({
+            address: contentRegistryInfo.address as `0x${string}`,
+            abi: ContentRegistryAbi,
+            functionName: "isContentActive",
+            args: [contentId],
+          });
+
+          if (!isContentActive) {
+            setError(normalizeRoundVoteError("ContentNotActive"));
+            return false;
+          }
+        } catch (activeCheckError) {
+          console.warn("[round-vote] failed to check content activity before commit.", {
+            contentId: contentId.toString(),
+            error: activeCheckError,
+          });
+        }
+      }
+
       let runtime;
       if (publicClient) {
         try {

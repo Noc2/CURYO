@@ -1,6 +1,7 @@
 import { VOTE_COOLDOWN_SECONDS } from "~~/lib/vote/cooldown";
 
 export const SELF_VOTE_ERROR_SELECTOR = "0x2f4015a5";
+export const CONTENT_NOT_ACTIVE_ERROR_SELECTOR = "0x74e73b6d";
 
 export function normalizeRoundVoteError(message: string) {
   const normalizedMessage = message.toLowerCase();
@@ -20,7 +21,7 @@ export function normalizeRoundVoteError(message: string) {
   if (message.includes("SelfVote") || normalizedMessage.includes(SELF_VOTE_ERROR_SELECTOR)) {
     return "You cannot vote on your own content.";
   }
-  if (message.includes("ContentNotActive")) {
+  if (message.includes("ContentNotActive") || normalizedMessage.includes(CONTENT_NOT_ACTIVE_ERROR_SELECTOR)) {
     return "This content is no longer active for voting.";
   }
   if (message.includes("TargetRoundOutOfWindow") || message.includes("0xe56a7aca")) {
