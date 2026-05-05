@@ -508,19 +508,14 @@ export function ContentSubmissionSection() {
       return `URL must be ${MAX_SUBMISSION_URL_LENGTH} characters or fewer.`;
     }
 
-    const sanitizedUrl = sanitizeExternalUrl(trimmedValue);
-    if (!sanitizedUrl) {
-      return "Please enter a valid HTTPS URL";
-    }
-
-    const urlCheck = containsBlockedUrl(sanitizedUrl);
-    if (urlCheck.blocked) {
-      return "This URL contains prohibited content and cannot be used";
-    }
-
     const normalizedUrl = normalizeSubmissionMediaUrl(trimmedValue);
     if (!normalizedUrl) {
       return "Please enter a valid HTTPS URL";
+    }
+
+    const urlCheck = containsBlockedUrl(normalizedUrl);
+    if (urlCheck.blocked) {
+      return "This URL contains prohibited content and cannot be used";
     }
 
     if (expectedType === "images" && !isDirectImageUrl(normalizedUrl)) {

@@ -195,12 +195,13 @@ async function moderateImage(buffer: Buffer): Promise<ModerationDecision> {
   }
 
   const categories = result?.results?.[0]?.categories ?? {};
+  const flagged = Boolean(result?.results?.[0]?.flagged);
   const shouldBlock = Object.entries(categories).some(
     ([category, flagged]) => flagged && BLOCKED_MODERATION_CATEGORIES.has(category),
   );
   return {
     provider: "openai",
-    status: shouldBlock ? "blocked" : "approved",
+    status: flagged || shouldBlock ? "blocked" : "approved",
     result,
   };
 }
