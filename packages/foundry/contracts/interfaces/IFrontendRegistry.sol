@@ -33,10 +33,12 @@ interface IFrontendRegistry {
     function canReceiveHistoricalFees(address frontend) external view returns (bool);
 
     /// @notice Whether a frontend can claim fees for a round that settled at `roundSettledAt`.
-    /// @dev Combines `canReceiveHistoricalFees` with a registration-window check:
-    ///      `frontends[frontend].registeredAt <= roundSettledAt`. A frontend that
-    ///      deregistered and re-registered after a round settled cannot claim that round's
-    ///      historical fees — those should route to Protocol disposition.
+    /// @dev Combines `canReceiveHistoricalFees` with a strict registration-window check:
+    ///      `frontends[frontend].registeredAt < roundSettledAt`. A frontend that
+    ///      deregistered and re-registered at or after a round settled cannot claim that
+    ///      round's historical fees — those should route to Protocol disposition. The strict
+    ///      `<` (rather than `<=`) is intentional: same-block re-registration must not
+    ///      revive fees from the round settling in that same block.
     function canClaimFeesForRound(address frontend, uint48 roundSettledAt) external view returns (bool);
 
     /// @notice Get frontend info
