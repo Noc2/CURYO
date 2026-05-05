@@ -58,7 +58,7 @@ function formatDeadlineDistance(deadline: bigint) {
   if (seconds < 24 * 60 * 60) return `${Math.ceil(seconds / (60 * 60))}h`;
   if (seconds < 7 * 24 * 60 * 60) return `${Math.ceil(seconds / (24 * 60 * 60))}d`;
 
-  return new Intl.DateTimeFormat(undefined, { day: "numeric", month: "short" }).format(
+  return new Intl.DateTimeFormat(undefined, { day: "numeric", month: "short", year: "numeric" }).format(
     new Date(Number(deadline) * 1000),
   );
 }
@@ -91,7 +91,7 @@ function getRewardDeadlineChips(item: ContentItem) {
   if (hasActiveBounty) {
     if (activeBountyClosesAt) {
       chips.push({
-        label: `Bounty expires in ${formatDeadlineDistance(activeBountyClosesAt)}`,
+        label: `Expires in ${formatDeadlineDistance(activeBountyClosesAt)}`,
         tone: "active",
         tooltip: BOUNTY_DEADLINE_TOOLTIP_TEXT,
       });
