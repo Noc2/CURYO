@@ -15,7 +15,7 @@
     "chain": "yarn foundry:chain",
     "compile": "yarn foundry:compile",
     "deploy": "yarn workspace @curyo/foundry deploy",
-    "dead-code": "knip --no-progress --no-exit-code",
+    "dead-code:scan": "knip --no-progress --no-exit-code",
     "dev:db": "node scripts/dev-db.mjs up",
     "dev:db:down": "node scripts/dev-db.mjs down",
     "dev:db:logs": "node scripts/dev-db.mjs logs",

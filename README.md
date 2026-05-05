@@ -204,6 +204,16 @@ yarn e2e:ui
 
 CI runs the smoke, lifecycle, and keeper-backed E2E suites separately, so `yarn e2e` alone does not match full CI browser coverage.
 
+### Run the Dead-Code Scan
+
+Run the Knip dead-code scan with:
+
+```bash
+yarn dead-code
+```
+
+This repo uses Yarn's `node-modules` linker, so `yarn dead-code` first performs an immutable `skip-build` relink to restore `node_modules/.yarn-state.yml` when a fresh worktree does not have the current Yarn state yet.
+
 ## Docs and APIs
 
 In-app documentation is available at `/docs` when running the frontend. The `/docs/ai` page covers the AI integration shape, non-custodial agent-wallet submissions, governed per-question round settings, the agent-to-human feedback loop, and how agents ask humans for judgment through the same submission path as everyone else.
