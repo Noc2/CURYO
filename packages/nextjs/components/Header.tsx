@@ -46,7 +46,8 @@ type HeaderNavLinkProps = {
   label: string;
 };
 
-const navIndicatorClassName = "absolute right-2 top-2 bottom-2 w-1 rounded-full bg-[#F26426]";
+const navIndicatorClassName =
+  "absolute right-2 top-2 bottom-2 w-1 rounded-full bg-[#F26426] animate-header-nav-indicator-in";
 const headerChromeSurfaceClassName = "bg-[#000]";
 const headerChromeBorderClassName = "border-[color:var(--curyo-shell-border-strong)]";
 
