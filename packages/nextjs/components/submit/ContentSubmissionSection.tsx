@@ -1784,7 +1784,7 @@ export function ContentSubmissionSection() {
   );
 
   const bountyTooltipText =
-    "Required and non-refundable. Paid from your wallet into escrow when the question is submitted. Set the terms that eligible voters must satisfy before payout.";
+    "Required for spam protection and non-refundable. Paid from your wallet into escrow when the question is submitted. Set the terms that eligible voters must satisfy before payout.";
   const requiredVotersTooltipText = `At least ${MIN_REWARD_POOL_REQUIRED_VOTERS} completers are required. Each paid completer must answer every question in the bundle.`;
   const requiredRoundsTooltipText =
     "Each settlement round set requires every bundled question to settle once. Paid completers can claim a reward for each completed set they fully answered.";
@@ -1844,6 +1844,14 @@ export function ContentSubmissionSection() {
         <span className="shrink-0 text-sm font-semibold text-base-content/60">
           Min {formatSubmissionRewardAmount(minimumBountyAmount, rewardAsset)}
         </span>
+      </div>
+
+      <div className="rounded-lg border border-primary/20 bg-primary/10 px-3 py-2">
+        <p className="text-sm font-medium text-base-content">Mandatory spam protection</p>
+        <p className="mt-1 text-sm text-base-content/70">
+          Every question needs a funded bounty before submission. This raises the cost of low-quality asks and rewards
+          eligible voters for useful judgment.
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
