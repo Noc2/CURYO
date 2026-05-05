@@ -538,7 +538,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             uint256 contentId = _storeSubmittedContent(
                 submissionKeys[i],
                 pending.submitter,
-                true,
                 contentHash,
                 resolvedCategoryIds[i],
                 validatedRoundConfig,
@@ -644,7 +643,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             submissionKey,
             submitter,
             msg.sender,
-            true,
             metadata,
             imageUrls,
             videoUrl,
@@ -668,12 +666,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     function cancelContent(uint256 contentId) external nonReentrant whenNotPaused {
         require(bonusPool != address(0), "Bonus pool not set");
         Content storage c = contents[contentId];
-        address resolvedSender = msg.sender;
-        if (address(voterIdNFT) != address(0)) {
-            address h = voterIdNFT.resolveHolder(msg.sender);
-            if (h != address(0)) resolvedSender = h;
-        }
-        require(getSubmitterIdentity[contentId] == resolvedSender, "Not submitter");
+        require(_isSubmitterIdentity(contentId, msg.sender), "Not submitter");
         require(c.status == ContentStatus.Active, "Not active");
         require(contentRoundTrackingEngine[contentId] == address(0), "Content has votes");
         if (votingEngine != address(0)) {
@@ -739,7 +732,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             submissionKey,
             pending.submitter,
             msg.sender,
-            true,
             metadata,
             imageUrls,
             videoUrl,
@@ -865,7 +857,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     function _storeSubmittedContent(
         bytes32 submissionKey,
         address submitter,
-        bool requireSubmitterVoterId,
         bytes32 contentHash,
         uint256 resolvedCategoryId,
         RoundLib.RoundConfig memory roundConfig,
@@ -873,8 +864,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     ) internal returns (uint256 contentId) {
         contentId = nextContentId++;
         contentSubmissionKey[contentId] = submissionKey;
-        (address submitterIdentity, uint256 submitterNullifier) =
-            _snapshotSubmitterIdentity(submitter, requireSubmitterVoterId);
+        (address submitterIdentity, uint256 submitterNullifier) = _snapshotSubmitterIdentity(submitter);
         getSubmitterIdentity[contentId] = submitterIdentity;
         contentSubmitterNullifier[contentId] = submitterNullifier;
         contentRoundConfig[contentId] = roundConfig;
@@ -915,7 +905,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         bytes32 submissionKey,
         address submitter,
         address funder,
-        bool requireSubmitterVoterId,
         SubmissionMetadata memory metadata,
         string[] memory imageUrls,
         string memory videoUrl,
@@ -929,7 +918,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         contentId = _storeSubmittedContent(
             submissionKey,
             submitter,
-            requireSubmitterVoterId,
             contentHash,
             resolvedCategoryId,
             roundConfig,
@@ -1009,7 +997,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         bytes32 submissionKey = contentSubmissionKey[contentId];
         require(submissionKey != bytes32(0), "Dormant key released");
         require(submissionKeyUsed[submissionKey], "Dormant key released");
-        require(getSubmitterIdentity[contentId] == _resolveSubmitterIdentity(msg.sender), "Not original submitter");
+        require(_isSubmitterIdentity(contentId, msg.sender), "Not original submitter");
         require(block.timestamp <= dormantKeyReleasableAt[contentId], "Revival window elapsed");
 
         // M-1/M-2 fix: send revival stake to treasury instead of leaving it unaccounted
@@ -1329,28 +1317,20 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         return resolved;
     }
 
-    function _snapshotSubmitterIdentity(address submitter, bool requireVoterId)
+    function _isSubmitterIdentity(uint256 contentId, address account) private view returns (bool) {
+        uint256 voterId = voterIdNFT.getTokenId(account);
+        return voterId != 0 && voterIdNFT.getNullifier(voterId) == contentSubmitterNullifier[contentId];
+    }
+
+    function _snapshotSubmitterIdentity(address submitter)
         internal
         view
         returns (address submitterIdentity, uint256 submitterNullifier)
     {
         if (submitter == address(0)) return (address(0), 0);
-        if (requireVoterId) {
-            submitterIdentity = _resolveSubmitterIdentity(submitter);
-        } else if (address(voterIdNFT) != address(0)) {
-            submitterIdentity = voterIdNFT.resolveHolder(submitter);
-            if (submitterIdentity == address(0)) {
-                submitterIdentity = submitter;
-            }
-        } else {
-            submitterIdentity = submitter;
-        }
-
-        if (address(voterIdNFT) == address(0) || submitterIdentity == address(0)) {
-            return (submitterIdentity, 0);
-        }
+        submitterIdentity = _resolveSubmitterIdentity(submitter);
         uint256 voterId = voterIdNFT.getTokenId(submitterIdentity);
-        submitterNullifier = voterId == 0 ? 0 : voterIdNFT.getNullifier(voterId);
+        submitterNullifier = voterIdNFT.getNullifier(voterId);
     }
 
     function _hasOpenRound(uint256 contentId) internal view returns (bool) {

@@ -1912,6 +1912,30 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         registry.cancelContent(contentId);
     }
 
+    function test_CancelContent_AllowsRemintedSubmitterNullifier() public {
+        vm.startPrank(submitter);
+        hrepToken.approve(address(registry), 10e6);
+        uint256 contentId =
+            _submitContentWithReservation(registry, "https://example.com/reminted-cancel", "goal", "goal", "tags", 0);
+        vm.stopPrank();
+
+        address remintedSubmitter = address(0xBEEF);
+        uint256 nullifier = mockVoterIdNFT.getNullifier(mockVoterIdNFT.getTokenId(submitter));
+        mockVoterIdNFT.revokeVoterId(submitter);
+        mockVoterIdNFT.resetNullifier(nullifier);
+        mockVoterIdNFT.mint(remintedSubmitter, nullifier);
+
+        vm.prank(submitter);
+        vm.expectRevert("Not submitter");
+        registry.cancelContent(contentId);
+
+        vm.prank(remintedSubmitter);
+        registry.cancelContent(contentId);
+
+        (,,,,, ContentRegistry.ContentStatus status,,,,) = registry.contents(contentId);
+        assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Cancelled));
+    }
+
     function test_CancelContent_NotActive_Reverts() public {
         vm.startPrank(submitter);
         hrepToken.approve(address(registry), 10e6);
@@ -2516,6 +2540,35 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             _defaultQuestionSpec()
         );
         vm.stopPrank();
+    }
+
+    function test_ReviveContent_AllowsRemintedSubmitterNullifier() public {
+        string memory url = "https://example.com/reminted-revive";
+
+        vm.startPrank(submitter);
+        hrepToken.approve(address(registry), 10e6);
+        uint256 contentId = _submitContentWithReservation(registry, url, "goal", "goal", "tags", 0);
+        vm.stopPrank();
+
+        vm.warp(T0 + 31 days);
+        registry.markDormant(contentId);
+
+        address remintedSubmitter = address(0xCAFE);
+        uint256 nullifier = mockVoterIdNFT.getNullifier(mockVoterIdNFT.getTokenId(submitter));
+        mockVoterIdNFT.revokeVoterId(submitter);
+        mockVoterIdNFT.resetNullifier(nullifier);
+        mockVoterIdNFT.mint(remintedSubmitter, nullifier);
+        vm.prank(owner);
+        hrepToken.mint(remintedSubmitter, 10_000e6);
+
+        vm.startPrank(remintedSubmitter);
+        hrepToken.approve(address(registry), 5e6);
+        registry.reviveContent(contentId);
+        vm.stopPrank();
+
+        (,,,,, ContentRegistry.ContentStatus status,, address reviver,,) = registry.contents(contentId);
+        assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Active));
+        assertEq(reviver, remintedSubmitter);
     }
 
     function test_ReviveContent_RevertsWhenUrlWasResubmitted() public {

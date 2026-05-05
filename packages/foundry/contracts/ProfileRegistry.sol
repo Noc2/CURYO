@@ -31,9 +31,11 @@ contract ProfileRegistry is IProfileRegistry, Initializable, AccessControlUpgrad
     mapping(bytes32 => address) private _nameToAddress; // lowercase name hash => owner
     address[] private _registeredAddresses;
     IVoterIdNFT public voterIdNFT; // Voter ID NFT for sybil resistance
+    mapping(address => uint256) private _profileNullifiers;
+    mapping(uint256 => address) private _profileOwnerByNullifier;
 
     /// @dev Reserved storage gap for future upgrades
-    uint256[49] private __gap;
+    uint256[47] private __gap;
 
     // --- Events ---
     event ProfileCreated(address indexed user, string name, string selfReport);
@@ -102,7 +104,9 @@ contract ProfileRegistry is IProfileRegistry, Initializable, AccessControlUpgrad
 
     /// @inheritdoc IProfileRegistry
     function setProfile(string calldata name, string calldata selfReport) external override {
-        _requireEligibleVoterIdHolder(msg.sender);
+        uint256 voterId = _requireEligibleVoterIdHolder(msg.sender);
+        uint256 nullifier = voterIdNFT.getNullifier(voterId);
+        _migrateProfileForNullifier(msg.sender, nullifier);
 
         require(bytes(name).length >= MIN_NAME_LENGTH, "Name too short");
         require(bytes(name).length <= MAX_NAME_LENGTH, "Name too long");
@@ -141,6 +145,8 @@ contract ProfileRegistry is IProfileRegistry, Initializable, AccessControlUpgrad
 
         // Register name ownership
         _nameToAddress[nameHash] = msg.sender;
+        _profileNullifiers[msg.sender] = nullifier;
+        _profileOwnerByNullifier[nullifier] = msg.sender;
     }
 
     /// @inheritdoc IProfileRegistry
@@ -227,10 +233,44 @@ contract ProfileRegistry is IProfileRegistry, Initializable, AccessControlUpgrad
 
     // --- Internal Functions ---
 
-    function _requireEligibleVoterIdHolder(address user) internal view {
+    function _requireEligibleVoterIdHolder(address user) internal view returns (uint256 tokenId) {
         require(address(voterIdNFT) != address(0), "VoterIdNFT not set");
         require(voterIdNFT.hasVoterId(user), "Voter ID required");
         require(voterIdNFT.resolveHolder(user) == user, "Profile owner must hold Voter ID");
+        tokenId = voterIdNFT.getTokenId(user);
+    }
+
+    function _migrateProfileForNullifier(address user, uint256 nullifier) internal {
+        address previousOwner = _profileOwnerByNullifier[nullifier];
+        if (previousOwner == address(0) || previousOwner == user) return;
+
+        StoredProfile storage previous = _profiles[previousOwner];
+        string memory previousName = previous.name;
+        bytes32 previousNameHash = bytes(previousName).length == 0 ? bytes32(0) : _normalizeAndHash(previousName);
+        bool canMoveProfile = previous.createdAt != 0 && _profiles[user].createdAt == 0;
+
+        if (canMoveProfile) {
+            StoredProfile storage migrated = _profiles[user];
+            migrated.name = previousName;
+            migrated.selfReport = previous.selfReport;
+            migrated.createdAt = previous.createdAt;
+            migrated.updatedAt = previous.updatedAt;
+            uint32 accent = _avatarAccents[previousOwner];
+            if (accent != 0) {
+                _avatarAccents[user] = accent;
+                delete _avatarAccents[previousOwner];
+            }
+            _registeredAddresses.push(user);
+            if (previousNameHash != bytes32(0)) {
+                _nameToAddress[previousNameHash] = user;
+            }
+        } else if (previousNameHash != bytes32(0) && _nameToAddress[previousNameHash] == previousOwner) {
+            delete _nameToAddress[previousNameHash];
+        }
+
+        delete _profiles[previousOwner];
+        delete _profileNullifiers[previousOwner];
+        _profileOwnerByNullifier[nullifier] = user;
     }
 
     /// @notice Validate name format (alphanumeric and underscore only)
