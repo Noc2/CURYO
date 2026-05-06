@@ -5,7 +5,8 @@ import dynamic from "next/dynamic";
 import type { SelfApp } from "@selfxyz/qrcode";
 import type { Hex } from "viem";
 import { useAccount, useSignTypedData } from "wagmi";
-import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
+import { useDeployedContractInfo, useScaffoldReadContract, useTargetNetwork } from "~~/hooks/scaffold-eth";
+import { useCuryoSwitchNetwork } from "~~/hooks/useCuryoSwitchNetwork";
 import { FAUCET_MINIMUM_AGE } from "~~/lib/governance/faucetEligibility";
 import {
   FAUCET_CLAIM_AUTHORIZATION_TYPES,
@@ -37,11 +38,26 @@ interface SelfVerifyButtonProps {
 export function SelfVerifyButton({ referrer, onStart, onSuccess }: SelfVerifyButtonProps) {
   const { address, chain } = useAccount();
   const { signTypedDataAsync, isPending: isSigningAuthorization } = useSignTypedData();
-  const { data: contractInfo } = useDeployedContractInfo({ contractName: "HumanFaucet" });
+  const { targetNetwork } = useTargetNetwork();
+  const { switchToChain, switchingChainId } = useCuryoSwitchNetwork();
+  const requiredChainId = isSelfVerificationSupportedChain(targetNetwork.id) ? targetNetwork.id : undefined;
+  const { data: contractInfo } = useDeployedContractInfo({
+    contractName: "HumanFaucet",
+    chainId: requiredChainId,
+  });
+  const { data: recipientAuthorizationNonce } = useScaffoldReadContract({
+    contractName: "HumanFaucet",
+    functionName: "recipientAuthorizationNonces",
+    args: [address],
+    chainId: requiredChainId,
+    query: { enabled: !!address && !!requiredChainId },
+  });
   const [selfApp, setSelfApp] = useState<SelfApp | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [claimAuthorizationUserData, setClaimAuthorizationUserData] = useState<Hex | null>(null);
+  const authorizationNonce = typeof recipientAuthorizationNonce === "bigint" ? recipientAuthorizationNonce : null;
+  const isOnRequiredChain = !!requiredChainId && chain?.id === requiredChainId;
 
   useEffect(() => {
     setIsMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
@@ -49,10 +65,10 @@ export function SelfVerifyButton({ referrer, onStart, onSuccess }: SelfVerifyBut
 
   useEffect(() => {
     setClaimAuthorizationUserData(null);
-  }, [address, chain?.id, contractInfo?.address, referrer]);
+  }, [address, authorizationNonce, contractInfo?.address, referrer, requiredChainId]);
 
   useEffect(() => {
-    if (!address || !contractInfo?.address || !chain?.id) {
+    if (!address || !contractInfo?.address || !requiredChainId || !isOnRequiredChain) {
       setSelfApp(null);
       return;
     }
@@ -64,29 +80,46 @@ export function SelfVerifyButton({ referrer, onStart, onSuccess }: SelfVerifyBut
     const nextSelfApp = buildSelfVerificationApp({
       address,
       contractAddress: contractInfo.address,
-      chainId: chain.id,
+      chainId: requiredChainId,
       deeplinkCallback: isMobile ? window.location.href : undefined,
       referrer,
       claimAuthorizationUserData,
     });
 
     setSelfApp(nextSelfApp);
-  }, [address, contractInfo?.address, chain?.id, claimAuthorizationUserData, isMobile, referrer]);
+  }, [
+    address,
+    contractInfo?.address,
+    requiredChainId,
+    isOnRequiredChain,
+    claimAuthorizationUserData,
+    isMobile,
+    referrer,
+  ]);
 
   const authorizeClaim = useCallback(async () => {
-    if (!address || !contractInfo?.address || !chain?.id) {
+    if (!address || !contractInfo?.address || !requiredChainId) {
       return;
     }
 
     try {
       setErrorMessage(null);
+      if (chain?.id !== requiredChainId) {
+        await switchToChain(requiredChainId);
+      }
+
+      if (authorizationNonce === null) {
+        setErrorMessage("Claim status is still loading. Please try again in a moment.");
+        return;
+      }
+
       const normalizedReferrer = normalizeFaucetClaimReferrer(referrer);
       const deadline = BigInt(Math.floor(Date.now() / 1000) + 60 * 60);
       const signature = await signTypedDataAsync({
         domain: {
           name: "Curyo Human Faucet",
           version: "1",
-          chainId: chain.id,
+          chainId: requiredChainId,
           verifyingContract: contractInfo.address,
         },
         types: FAUCET_CLAIM_AUTHORIZATION_TYPES,
@@ -94,7 +127,7 @@ export function SelfVerifyButton({ referrer, onStart, onSuccess }: SelfVerifyBut
         message: {
           recipient: address,
           referrer: normalizedReferrer,
-          nonce: 0n,
+          nonce: authorizationNonce,
           deadline,
         },
       });
@@ -107,37 +140,62 @@ export function SelfVerifyButton({ referrer, onStart, onSuccess }: SelfVerifyBut
       );
     } catch (error) {
       console.error("Failed to authorize faucet claim:", error);
-      setErrorMessage("Claim authorization was cancelled or rejected.");
+      setErrorMessage(`Switch to ${targetNetwork.name}, then authorize the claim again.`);
     }
-  }, [address, chain?.id, contractInfo?.address, referrer, signTypedDataAsync]);
-
-  if (!isSelfVerificationSupportedChain(chain?.id)) {
-    return (
-      <div className="bg-error/10 border border-error/20 rounded-xl p-4 text-center">
-        <p className="text-error font-medium">Unsupported network</p>
-        <p className="text-base-content/60 text-base mt-1">
-          Please switch to Celo or Celo Sepolia to verify your identity.
-        </p>
-      </div>
-    );
-  }
-
-  const websocketUrl = getSelfVerificationWebsocketUrl(chain.id);
-  if (!websocketUrl) {
-    return null;
-  }
+  }, [
+    address,
+    authorizationNonce,
+    chain?.id,
+    contractInfo?.address,
+    referrer,
+    requiredChainId,
+    signTypedDataAsync,
+    switchToChain,
+    targetNetwork.name,
+  ]);
 
   if (!address) {
     return <div className="text-center text-base-content/60 py-4">Sign in to verify your identity.</div>;
   }
 
+  if (!requiredChainId) {
+    return (
+      <div className="bg-error/10 border border-error/20 rounded-xl p-4 text-center">
+        <p className="text-error font-medium">Unsupported network</p>
+        <p className="text-base-content/60 text-base mt-1">
+          Please switch the app to Celo or Celo Sepolia to verify your identity.
+        </p>
+      </div>
+    );
+  }
+
+  const websocketUrl = getSelfVerificationWebsocketUrl(requiredChainId);
+  if (!websocketUrl) {
+    return null;
+  }
+
   if (!selfApp) {
+    const isSwitchingRequiredChain = switchingChainId === requiredChainId;
+    const authorizeDisabled =
+      isSigningAuthorization ||
+      isSwitchingRequiredChain ||
+      !contractInfo?.address ||
+      (isOnRequiredChain && authorizationNonce === null);
+    const buttonLabel = isOnRequiredChain ? "Authorize claim" : `Switch to ${targetNetwork.name}`;
+
     return (
       <div className="flex flex-col items-center gap-3 p-8 text-center">
-        <button className="btn btn-curyo btn-lg" onClick={authorizeClaim} disabled={isSigningAuthorization}>
-          {isSigningAuthorization ? <span className="loading loading-spinner loading-sm" /> : null}
-          Authorize claim
+        <button className="btn btn-curyo btn-lg" onClick={authorizeClaim} disabled={authorizeDisabled}>
+          {isSigningAuthorization || isSwitchingRequiredChain ? (
+            <span className="loading loading-spinner loading-sm" />
+          ) : null}
+          {buttonLabel}
         </button>
+        {!isOnRequiredChain && (
+          <p className="max-w-[300px] text-base text-base-content/60">
+            Your wallet needs to be on {targetNetwork.name} before signing the claim authorization.
+          </p>
+        )}
         {errorMessage && (
           <div className="bg-error/10 border border-error/20 rounded-xl p-3 text-center max-w-[300px]">
             <p className="text-error text-base">{errorMessage}</p>
