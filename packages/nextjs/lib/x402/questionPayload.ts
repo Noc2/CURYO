@@ -27,7 +27,7 @@ export const X402_USDC_DECIMALS = 6;
 const X402_DEFAULT_SUBMISSION_BOUNTY_USDC = 1_000_000n;
 const X402_MIN_REWARD_POOL_REQUIRED_VOTERS = 3n;
 const X402_MIN_REWARD_POOL_SETTLED_ROUNDS = 1n;
-export const X402_MAX_QUESTION_BUNDLE_COUNT = 10;
+const X402_MAX_QUESTION_BUNDLE_COUNT = 10;
 
 const DIRECT_IMAGE_URL_PATTERN = /^https:\/\/.+\.(?:avif|gif|jpe?g|png|webp)(?:[?#].*)?$/i;
 const CLIENT_REQUEST_ID_PATTERN = /^[A-Za-z0-9._:-]{4,160}$/;

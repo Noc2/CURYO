@@ -283,7 +283,7 @@ function parseStoredSubmissionReservation(value: unknown): StoredSubmissionReser
   } as StoredSubmissionReservation;
 }
 
-export function getStoredSubmissionReservation(storageKey: string): StoredSubmissionReservation | null {
+function getStoredSubmissionReservation(storageKey: string): StoredSubmissionReservation | null {
   try {
     return parseStoredSubmissionReservation(readStoredSubmissionReservationValue(storageKey));
   } catch {
@@ -291,12 +291,12 @@ export function getStoredSubmissionReservation(storageKey: string): StoredSubmis
   }
 }
 
-export function setStoredSubmissionReservation(storageKey: string, reservation: StoredSubmissionReservation) {
+function setStoredSubmissionReservation(storageKey: string, reservation: StoredSubmissionReservation) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(storageKey, JSON.stringify(reservation));
 }
 
-export function clearStoredSubmissionReservation(storageKey: string) {
+function clearStoredSubmissionReservation(storageKey: string) {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(storageKey);
 }

@@ -9,7 +9,7 @@ import {
   ROLE_OPTIONS,
 } from "@curyo/node-utils/profileSelfReport";
 
-export const PROFILE_LANGUAGE_LABELS: Record<LanguageCode, string> = {
+const PROFILE_LANGUAGE_LABELS: Record<LanguageCode, string> = {
   ar: "Arabic",
   de: "German",
   en: "English",
@@ -28,7 +28,7 @@ export const PROFILE_LANGUAGE_LABELS: Record<LanguageCode, string> = {
   zh: "Chinese",
 };
 
-export const PROFILE_ROLE_LABELS: Record<ProfileRole, string> = {
+const PROFILE_ROLE_LABELS: Record<ProfileRole, string> = {
   creator: "Creator",
   educator: "Educator",
   engineer: "Engineer",
@@ -44,7 +44,7 @@ export const PROFILE_ROLE_LABELS: Record<ProfileRole, string> = {
   student: "Student",
 };
 
-export const PROFILE_EXPERTISE_LABELS: Record<ExpertiseArea, string> = {
+const PROFILE_EXPERTISE_LABELS: Record<ExpertiseArea, string> = {
   ai: "AI",
   "consumer-products": "Consumer products",
   crypto: "Crypto",
