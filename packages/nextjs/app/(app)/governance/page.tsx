@@ -12,6 +12,7 @@ import {
   captureReferralAttributionFromSearchParams,
   getStoredReferralAddress,
 } from "~~/lib/referrals/referralAttribution";
+import { replaceUrlPreservingHistoryState } from "~~/lib/ui/browserHistory";
 
 type GovernanceTab = "profile" | "leaderboard" | "governance" | "faucet";
 
@@ -82,7 +83,7 @@ function GovernancePageInner() {
   const selectTab = useCallback((tab: GovernanceTab) => {
     setActiveTab(tab);
     const hash = getGovernanceHash(tab);
-    history.replaceState(null, "", hash || window.location.pathname + window.location.search);
+    replaceUrlPreservingHistoryState(hash || window.location.pathname + window.location.search);
   }, []);
 
   useEffect(() => {
@@ -96,7 +97,7 @@ function GovernancePageInner() {
         const nextHash = getGovernanceHash(nextTab);
         const currentHash = rawHash ? `#${rawHash}` : "";
         if (currentHash !== nextHash) {
-          history.replaceState(null, "", `${window.location.pathname}${window.location.search}${nextHash}`);
+          replaceUrlPreservingHistoryState(`${window.location.pathname}${window.location.search}${nextHash}`);
         }
       }
     };

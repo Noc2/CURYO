@@ -44,6 +44,7 @@ import { useWatchedContent } from "~~/hooks/useWatchedContent";
 import { mergeVoteHistoryItems } from "~~/hooks/voteHistory/shared";
 import { FOLLOWED_CURATOR_TOAST_ID } from "~~/lib/notifications/followedActivity";
 import { extractQuestionReferenceIds } from "~~/lib/questionReferences";
+import { replaceUrlPreservingHistoryState } from "~~/lib/ui/browserHistory";
 import { orderBundleMembersInFeed } from "~~/lib/vote/bundleFeedOrder";
 import { formatVoteCooldownRemaining, getVoteCooldownRemainingSeconds } from "~~/lib/vote/cooldown";
 import {
@@ -1146,7 +1147,7 @@ const HomeInner = () => {
 
   const replaceVoteLocation = useCallback((update: { contentId?: bigint | null; categoryHash?: string | null }) => {
     const nextUrl = buildVoteLocation(window.location.href, update);
-    history.replaceState(null, "", nextUrl);
+    replaceUrlPreservingHistoryState(nextUrl);
 
     if (update.contentId !== undefined) {
       const nextContentPinKey = update.contentId === null ? null : buildVoteContentPinKeyFromUrl(nextUrl);
