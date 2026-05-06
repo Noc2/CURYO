@@ -326,10 +326,7 @@ export async function upsertAgentPolicy(
   return policy;
 }
 
-async function getAgentPolicy(
-  ownerWalletAddress: `0x${string}`,
-  policyId: string,
-): Promise<AgentPolicyRecord | null> {
+async function getAgentPolicy(ownerWalletAddress: `0x${string}`, policyId: string): Promise<AgentPolicyRecord | null> {
   await ensureAgentWalletPolicyTables();
   const result = await dbClient.execute({
     sql: `
