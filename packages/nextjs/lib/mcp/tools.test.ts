@@ -221,8 +221,8 @@ test("curyo_ask_humans can return a native x402 authorization request", async ()
 
 test("quote and ask flows pass submission identity into image preflight", async () => {
   const preflightCalls: Array<{
-    agentId?: string;
-    ownerWalletAddress?: string;
+    agentId?: string | null;
+    ownerWalletAddress?: string | null;
   }> = [];
 
   __setMcpToolTestOverridesForTests({
@@ -304,7 +304,7 @@ test("quote and ask flows pass submission identity into image preflight", async 
 
   assert.equal(preflightCalls.length, 3);
   const managedCalls = preflightCalls.filter(call => call.agentId === AGENT.id);
-  const publicCalls = preflightCalls.filter(call => call.agentId === undefined);
+  const publicCalls = preflightCalls.filter(call => call.agentId == null);
 
   assert.equal(managedCalls.length, 2);
   assert.equal(publicCalls.length, 1);
