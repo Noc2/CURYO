@@ -62,3 +62,35 @@ test("validates approved Curyo-hosted image ownership before submission", async 
     "imageUrls Curyo-hosted uploads must belong to the submitting wallet or agent.",
   );
 });
+
+test("allows approved Curyo-hosted images owned by the submitting agent", async () => {
+  const now = new Date();
+  await db.insert(questionImageAttachments).values({
+    id: "att_agentownedupload",
+    agentId: "agent-123",
+    uploaderKind: "agent",
+    ownerWalletAddress: null,
+    originalFilename: "mockup.png",
+    mimeType: "image/webp",
+    sizeBytes: 1024,
+    status: "approved",
+    moderationStatus: "approved",
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  assert.equal(
+    await getImageAttachmentSubmissionValidationError({
+      agentId: "agent-123",
+      imageUrls: ["https://www.curyo.xyz/api/attachments/images/att_agentownedupload.webp"],
+    }),
+    null,
+  );
+  assert.equal(
+    await getImageAttachmentSubmissionValidationError({
+      agentId: "agent-456",
+      imageUrls: ["https://www.curyo.xyz/api/attachments/images/att_agentownedupload.webp"],
+    }),
+    "imageUrls Curyo-hosted uploads must belong to the submitting wallet or agent.",
+  );
+});

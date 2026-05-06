@@ -1,5 +1,5 @@
 import type { McpAgentAuth } from "./auth";
-import { __setMcpToolTestOverridesForTests, callCuryoMcpTool } from "./tools";
+import { __setMcpToolTestOverridesForTests, callCuryoMcpTool, callPublicCuryoMcpTool } from "./tools";
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, mock, test } from "node:test";
 import { __setDatabaseResourcesForTests } from "~~/lib/db";
@@ -217,6 +217,99 @@ test("curyo_ask_humans can return a native x402 authorization request", async ()
   assert.equal(body.wallet.fundingMode, "x402_authorization");
   assert.equal(body.x402AuthorizationRequest.authorization.nonce, `0x${"4".repeat(64)}`);
   assert.equal(prepared.length, 1);
+});
+
+test("quote and ask flows pass submission identity into image preflight", async () => {
+  const preflightCalls: Array<{
+    agentId?: string | null;
+    ownerWalletAddress?: string | null;
+  }> = [];
+
+  __setMcpToolTestOverridesForTests({
+    ...quoteOverrides(),
+    preflightX402QuestionSubmission: async params => {
+      preflightCalls.push(params);
+      return {
+        operation: {
+          canonicalPayload: {} as never,
+          operationKey: OPERATION_KEY,
+          payloadHash: "payload-hash",
+        },
+        paymentAmount: 1_000_000n,
+        resolvedCategoryIds: [5n],
+        submissionKeys: [`0x${"2".repeat(64)}` as const],
+      };
+    },
+    prepareAgentWalletQuestionSubmissionRequest: async params => ({
+      body: {
+        clientRequestId: "mcp:hashed",
+        operationKey: OPERATION_KEY,
+        payment: {
+          amount: "1000000",
+          asset: "USDC",
+          bountyAmount: "1000000",
+          decimals: 6,
+          spender: "0x0000000000000000000000000000000000000002",
+          tokenAddress: "0x0000000000000000000000000000000000000001",
+        },
+        status: "awaiting_wallet_signature",
+        transactionPlan: {
+          calls: [{ id: "approve-usdc", to: "0x0000000000000000000000000000000000000001" }],
+          requiresOrderedExecution: true,
+        },
+        wallet: { address: params.walletAddress, fundingMode: "agent_wallet" },
+      },
+      status: 202,
+    }),
+    preparePermissionlessWalletQuestionSubmissionRequest: async () => ({
+      body: {
+        clientRequestId: "public:mcp:hashed",
+        operationKey: OPERATION_KEY,
+        payment: {
+          amount: "1000000",
+          asset: "USDC",
+          bountyAmount: "1000000",
+          decimals: 6,
+          spender: "0x0000000000000000000000000000000000000002",
+          tokenAddress: "0x0000000000000000000000000000000000000001",
+        },
+        status: "awaiting_wallet_signature",
+        transactionPlan: {
+          calls: [{ id: "approve-usdc", to: "0x0000000000000000000000000000000000000001" }],
+          requiresOrderedExecution: true,
+        },
+        wallet: { address: AGENT.walletAddress, fundingMode: "agent_wallet" },
+      },
+      status: 202,
+    }),
+  });
+
+  await callCuryoMcpTool({
+    agent: AGENT,
+    arguments: askArguments(),
+    name: "curyo_quote_question",
+  });
+  await callCuryoMcpTool({
+    agent: AGENT,
+    arguments: askArguments(),
+    name: "curyo_ask_humans",
+  });
+  await callPublicCuryoMcpTool({
+    arguments: {
+      ...askArguments(),
+      walletAddress: AGENT.walletAddress,
+    },
+    name: "curyo_ask_humans",
+  });
+
+  assert.equal(preflightCalls.length, 3);
+  const managedCalls = preflightCalls.filter(call => call.agentId === AGENT.id);
+  const publicCalls = preflightCalls.filter(call => call.agentId == null);
+
+  assert.equal(managedCalls.length, 2);
+  assert.equal(publicCalls.length, 1);
+  assert.ok(managedCalls.every(call => call.ownerWalletAddress === AGENT.walletAddress));
+  assert.equal(publicCalls[0]?.ownerWalletAddress, AGENT.walletAddress);
 });
 
 test("curyo_ask_humans rejects bundle members outside the agent category allowlist", async () => {
