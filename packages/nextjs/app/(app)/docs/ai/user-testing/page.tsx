@@ -1,9 +1,9 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 
-const mcpPayloadExample = `{
+const websiteFeedbackPayloadExample = `{
   "chainId": 42220,
-  "clientRequestId": "user-test-onboarding-2026-05-05-001",
+  "clientRequestId": "ai-website-feedback-2026-05-06-001",
   "walletAddress": "0x1111111111111111111111111111111111111111",
   "paymentMode": "wallet_calls",
   "bounty": {
@@ -15,17 +15,17 @@ const mcpPayloadExample = `{
   },
   "maxPaymentAmount": "2500000",
   "question": {
-    "title": "Can a first-time user complete onboarding without confusion?",
-    "contextUrl": "https://example.com/onboarding-preview",
-    "imageUrls": ["https://www.curyo.xyz/api/attachments/images/att_onboardingMockup1.webp"],
+    "title": "Would this AI website feedback service be compelling enough to try?",
+    "description": "Review the public mockup. Vote up if the offer is clear, credible, and useful enough to try for a real website project. Vote down if it feels unclear, generic, or unnecessary. In feedback, mention your biggest hesitation.",
+    "contextUrl": "https://example.com/ai-website-feedback-mockup",
+    "imageUrls": ["https://www.curyo.xyz/api/attachments/images/att_websiteFeedbackMockup.webp"],
     "categoryId": "5",
-    "tags": ["user-testing", "onboarding", "ux"],
-    "templateId": "feature_acceptance_test",
+    "tags": ["agent", "website-generation", "market-interest"],
+    "templateId": "generic_rating",
     "templateInputs": {
-      "acceptanceCriteria": "Vote up only if the onboarding flow can be completed without manual recovery.",
-      "expectedBehavior": "A first-time user understands the next step at each screen and reaches the completion state.",
-      "releaseStage": "preview",
-      "testSteps": "Open the preview, start onboarding, complete each required step, and report the first blocker or confusing moment."
+      "audience": "people considering a new or redesigned website",
+      "goal": "validate whether AI-generated website directions plus verified human feedback is a compelling service",
+      "successSignal": "Voters would consider trying it and can name why it would help."
     }
   }
 }`;
@@ -34,13 +34,19 @@ const useCases = [
   "Check whether a landing page explains the product clearly.",
   "Ask humans to follow an onboarding flow and report blockers.",
   "Validate whether a feature works with caveats before an agent recommends shipping.",
-  "Have people compare several generated UI, copy, or product variants.",
   "Collect public bug reproduction or feature acceptance signals.",
+] as const;
+
+const agentRules = [
+  "Ask one bounded Curyo question unless the template is a ranked bundle.",
+  "Define exactly what an up vote and a down vote mean.",
+  "Put follow-up prompts in the feedback guidance, not in separate survey fields.",
+  "Use one question per option with ranked_option_member or pairwise_output_preference when comparing variants.",
 ] as const;
 
 const agentSteps = [
   "Ask the user for a public preview URL, wallet address, bounty budget, and approval path.",
-  "Pick a narrow question and a result template such as feature_acceptance_test or go_no_go.",
+  "Pick one narrow question and a result template such as generic_rating, feature_acceptance_test, or go_no_go.",
   "Call curyo_quote_question to price the ask before spending.",
   "Call curyo_ask_humans to prepare the ask, then have the wallet execute the returned transactionPlan.calls.",
   "Confirm transaction hashes, poll status, then read curyo_get_result.",
@@ -60,6 +66,11 @@ export default function AgentUserTestingPage() {
         Curyo lets an AI agent turn uncertain UX, onboarding, or feature-quality questions into paid public feedback
         from verified humans.
       </p>
+      <p>
+        The safest default is one Curyo-native rating question with public context and clear up/down vote semantics.
+        Curyo is not a multiple-choice survey builder; agents should avoid answer-option lists unless they are creating
+        a supported ranked bundle.
+      </p>
 
       <h2>When To Use This</h2>
       <p>
@@ -73,10 +84,18 @@ export default function AgentUserTestingPage() {
         ))}
       </ul>
 
+      <h2>Agent Rules</h2>
+      <ul>
+        {agentRules.map(item => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
+
       <h2>When Not To Use This</h2>
       <p>
         Do not send private customer data, unreleased secrets, medical/legal decisions, or anything voters cannot
-        inspect through a public context URL. Use a smaller public artifact or redacted preview instead.
+        inspect through a public context URL. Do not ask a multiple-choice survey, price-range poll, or several
+        follow-up questions in one Curyo ask. Use a smaller public artifact or redacted preview instead.
       </p>
 
       <h2>Mockups And Screenshots</h2>
@@ -95,14 +114,14 @@ export default function AgentUserTestingPage() {
         ))}
       </ol>
 
-      <h2>Minimal MCP Payload</h2>
+      <h2>Website Feedback Payload</h2>
       <p>
         Send this shape to <code>curyo_ask_humans</code> after a successful quote. Keep the title focused on one user
-        action or acceptance criterion. Amounts are atomic USDC units, so <code>2500000</code> means 2.5 USDC. Replace
-        the wallet and set <code>rewardPoolExpiresAt</code> to a future Unix timestamp for the review window.
+        judgment. Amounts are atomic USDC units, so <code>2500000</code> means 2.5 USDC. Replace the wallet, context
+        URL, optional image URL, and <code>rewardPoolExpiresAt</code>.
       </p>
       <pre className="bg-base-200 p-4 rounded-lg overflow-x-auto">
-        <code>{mcpPayloadExample}</code>
+        <code>{websiteFeedbackPayloadExample}</code>
       </pre>
 
       <h2>Result Handling</h2>

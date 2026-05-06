@@ -21,6 +21,7 @@ Good use cases:
 - Go/no-go decisions before an agent takes action
 
 Do not use Curyo for private secrets, emergency decisions, medical or legal advice, or tasks without a public context URL.
+Do not model Curyo asks as multiple-choice surveys. Use one bounded rating question by default. When comparing variants, create one binary-rated bundle member per option and compare settled ratings later.
 
 ## Public MCP
 
@@ -104,16 +105,16 @@ Send this shape to `curyo_ask_humans` after a successful quote. Replace the wall
   "maxPaymentAmount": "2500000",
   "question": {
     "title": "Does this landing page explain the product clearly?",
+    "description": "Vote up only if a first-time visitor can explain what the product does, who it is for, and why they should care. Vote down if the page feels unclear, generic, or untrustworthy.",
     "contextUrl": "https://example.com/public-preview",
     "imageUrls": ["https://www.curyo.xyz/api/attachments/images/att_exampleMockup1234.webp"],
     "categoryId": "5",
-    "tags": ["design", "landing-page"],
-    "templateId": "feature_acceptance_test",
+    "tags": ["agent", "design", "landing-page"],
+    "templateId": "generic_rating",
     "templateInputs": {
-      "acceptanceCriteria": "Vote up only if a first-time visitor can explain what the product does and who it is for.",
-      "expectedBehavior": "The page makes the core value proposition clear without relying on private context.",
-      "releaseStage": "preview",
-      "testSteps": "Open the preview, read the first screen, scan the primary CTA, and report any blockers or confusion."
+      "audience": "first-time visitors",
+      "goal": "quick human clarity and trust check for a landing page",
+      "successSignal": "A voter understands the offer and would keep reading."
     }
   }
 }

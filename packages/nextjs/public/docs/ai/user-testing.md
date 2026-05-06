@@ -4,15 +4,23 @@ Curyo lets an AI agent turn uncertain UX, onboarding, or feature-quality questio
 
 Use this when an agent has a public preview, prototype, answer, or candidate output and needs human judgment it can cite later. The result is not a private survey. It is a public Curyo result package with HREP-staked voting, confidence, limitations, and a public URL.
 
+The safest default is one Curyo-native rating question with public context and clear up/down vote semantics. Curyo is not a multiple-choice survey builder; agents should avoid answer-option lists unless they are creating a supported ranked bundle.
+
 Good use cases:
 
 - Check whether a landing page explains the product clearly.
 - Ask humans to follow an onboarding flow and report blockers.
 - Validate whether a feature works with caveats before an agent recommends shipping.
-- Compare several generated UI, copy, or product variants.
 - Collect public bug reproduction or feature acceptance signals.
 
-Do not send private customer data, unreleased secrets, medical/legal decisions, or anything voters cannot inspect through a public context URL. Use a smaller public artifact or redacted preview instead.
+## Agent Rules
+
+- Ask one bounded Curyo question unless the template is a ranked bundle.
+- Define exactly what an up vote and a down vote mean.
+- Put follow-up prompts in the feedback guidance, not in separate survey fields.
+- Use one question per option with `ranked_option_member` or `pairwise_output_preference` when comparing variants.
+
+Do not send private customer data, unreleased secrets, medical/legal decisions, or anything voters cannot inspect through a public context URL. Do not ask a multiple-choice survey, price-range poll, or several follow-up questions in one Curyo ask. Use a smaller public artifact or redacted preview instead.
 
 ## Mockups And Screenshots
 
@@ -26,14 +34,14 @@ If the user wants feedback on a local mockup, screenshot, generated image, or de
 4. Call `curyo_ask_humans` to prepare the ask, then have the wallet execute the returned `transactionPlan.calls`.
 5. Confirm transaction hashes, poll status, then read `curyo_get_result`.
 
-## Minimal MCP Payload
+## Website Feedback Payload
 
-Send this shape to `curyo_ask_humans` after a successful quote. Keep the title focused on one user action or acceptance criterion. Amounts are atomic USDC units, so `2500000` means 2.5 USDC. Replace the wallet and set `rewardPoolExpiresAt` to a future Unix timestamp for the review window.
+Send this shape to `curyo_ask_humans` after a successful quote. Keep the title focused on one user judgment. Amounts are atomic USDC units, so `2500000` means 2.5 USDC. Replace the wallet, context URL, optional image URL, and `rewardPoolExpiresAt`.
 
 ```json
 {
   "chainId": 42220,
-  "clientRequestId": "user-test-onboarding-2026-05-05-001",
+  "clientRequestId": "ai-website-feedback-2026-05-06-001",
   "walletAddress": "0x1111111111111111111111111111111111111111",
   "paymentMode": "wallet_calls",
   "bounty": {
@@ -45,17 +53,17 @@ Send this shape to `curyo_ask_humans` after a successful quote. Keep the title f
   },
   "maxPaymentAmount": "2500000",
   "question": {
-    "title": "Can a first-time user complete onboarding without confusion?",
-    "contextUrl": "https://example.com/onboarding-preview",
-    "imageUrls": ["https://www.curyo.xyz/api/attachments/images/att_onboardingMockup1.webp"],
+    "title": "Would this AI website feedback service be compelling enough to try?",
+    "description": "Review the public mockup. Vote up if the offer is clear, credible, and useful enough to try for a real website project. Vote down if it feels unclear, generic, or unnecessary. In feedback, mention your biggest hesitation.",
+    "contextUrl": "https://example.com/ai-website-feedback-mockup",
+    "imageUrls": ["https://www.curyo.xyz/api/attachments/images/att_websiteFeedbackMockup.webp"],
     "categoryId": "5",
-    "tags": ["user-testing", "onboarding", "ux"],
-    "templateId": "feature_acceptance_test",
+    "tags": ["agent", "website-generation", "market-interest"],
+    "templateId": "generic_rating",
     "templateInputs": {
-      "acceptanceCriteria": "Vote up only if the onboarding flow can be completed without manual recovery.",
-      "expectedBehavior": "A first-time user understands the next step at each screen and reaches the completion state.",
-      "releaseStage": "preview",
-      "testSteps": "Open the preview, start onboarding, complete each required step, and report the first blocker or confusing moment."
+      "audience": "people considering a new or redesigned website",
+      "goal": "validate whether AI-generated website directions plus verified human feedback is a compelling service",
+      "successSignal": "Voters would consider trying it and can name why it would help."
     }
   }
 }
