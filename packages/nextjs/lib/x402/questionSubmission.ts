@@ -615,10 +615,6 @@ function getRpcUrl(config: X402QuestionSubmissionConfig["targetNetwork"]): strin
   return config.rpcUrls.default.http[0] ?? null;
 }
 
-function getX402QuestionFallbackChainId(): number | undefined {
-  return getPrimaryServerTargetNetwork()?.id;
-}
-
 export function resolveX402QuestionConfig(chainId: number): X402QuestionSubmissionConfig {
   const targetNetwork = getServerTargetNetworkById(chainId);
   if (!targetNetwork) {
