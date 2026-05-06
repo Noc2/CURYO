@@ -132,7 +132,7 @@ function LandingOrbitDivider({ variant }: { variant: LandingOrbitDividerVariant 
       >
         <path
           d="M66 122C214 22 372 18 540 76C704 132 842 124 1056 30"
-          stroke="#F26426"
+          stroke="#CC490F"
           strokeWidth="4.5"
           strokeLinecap="round"
         />
@@ -150,7 +150,7 @@ function LandingOrbitDivider({ variant }: { variant: LandingOrbitDividerVariant 
           strokeLinecap="round"
           opacity="0.86"
         />
-        <circle cx="292" cy="93" r="13" fill="#F26426" />
+        <circle cx="292" cy="93" r="13" fill="#CC490F" />
         <circle cx="784" cy="60" r="10" fill="#FF8A3D" />
         <circle cx="1034" cy="40" r="14" fill="#E3A234" />
       </svg>

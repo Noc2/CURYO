@@ -91,7 +91,7 @@ export const ScaffoldEthAppWithProviders = ({ children }: { children: React.Reac
           <Suspense fallback={null}>
             <ReferralAttributionCapture />
           </Suspense>
-          <ProgressBar height="3px" color="#F26426" />
+          <ProgressBar height="3px" color="#CC490F" />
           <NavigationProgressDiagnostics />
           <TermsAcceptanceProvider>
             <OptimisticVoteProvider>

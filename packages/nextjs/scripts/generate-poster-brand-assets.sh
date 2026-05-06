@@ -50,7 +50,7 @@ magick -size 512x512 xc:none \
   -stroke none \
   -draw "circle 412.3,104.6 430.5,104.6" \
   -draw "circle 412.3,407.4 430.5,407.4" \
-  -fill "#F26426" \
+  -fill "#CC490F" \
   -stroke none \
   -draw "circle 276,256 400,256" \
   "$PUBLIC_DIR/favicon.png"

@@ -5,8 +5,8 @@
         <stop stop-color="#FFF8F2"/>
         <stop offset="0.18" stop-color="#F8E1D0"/>
         <stop offset="0.34" stop-color="#F7B070"/>
-        <stop offset="0.56" stop-color="#F26426"/>
-        <stop offset="0.78" stop-color="#F26426"/>
+        <stop offset="0.56" stop-color="#CC490F"/>
+        <stop offset="0.78" stop-color="#CC490F"/>
         <stop offset="1" stop-color="#6A345F"/>
       </radialGradient>
       <radialGradient id="thirdweb-lockup-orb-rim" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(438 516) rotate(30) scale(240 540)">
@@ -29,8 +29,8 @@
       </radialGradient>
       <radialGradient id="thirdweb-lockup-blue-pocket" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(620 760) rotate(8) scale(320 180)">
         <stop stop-color="#8C4A53" stop-opacity="0.36"/>
-        <stop offset="0.58" stop-color="#F26426" stop-opacity="0.22"/>
-        <stop offset="1" stop-color="#F26426" stop-opacity="0"/>
+        <stop offset="0.58" stop-color="#CC490F" stop-opacity="0.22"/>
+        <stop offset="1" stop-color="#CC490F" stop-opacity="0"/>
       </radialGradient>
       <linearGradient id="thirdweb-lockup-fold-sheen" x1="290" y1="820" x2="1036" y2="650" gradientUnits="userSpaceOnUse">
         <stop stop-color="#FFF7F0" stop-opacity="0"/>
@@ -40,7 +40,7 @@
         <stop offset="1" stop-color="#FFD7B2" stop-opacity="0"/>
       </linearGradient>
       <linearGradient id="thirdweb-lockup-flare-gradient" x1="860" y1="260" x2="1050" y2="736" gradientUnits="userSpaceOnUse">
-        <stop stop-color="#F26426"/>
+        <stop stop-color="#CC490F"/>
         <stop offset="0.24" stop-color="#FF8A5D"/>
         <stop offset="0.56" stop-color="#FFC37A"/>
         <stop offset="0.82" stop-color="#FFE1A7"/>

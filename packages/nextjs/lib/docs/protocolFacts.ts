@@ -125,19 +125,19 @@ export const rewardSplitChartSlices = [
     label: "Voter pool (content-specific)",
     value: effectiveRawSharePercent(REWARD_SPLIT_BPS.voter),
     displayValue: protocolDocFacts.voterPoolShortLabel,
-    color: "#F26426",
+    color: "#CC490F",
   },
   {
     label: "Consensus subsidy reserve",
     value: effectiveRawSharePercent(REWARD_SPLIT_BPS.consensus),
     displayValue: protocolDocFacts.consensusShortLabel,
-    color: "#BF3F18",
+    color: "#A83A0F",
   },
   {
     label: "Frontend operators",
     value: effectiveRawSharePercent(PLATFORM_REWARD_SPLIT_BPS.frontend),
     displayValue: protocolDocFacts.frontendShortLabel,
-    color: "rgba(242, 100, 38, 0.6)",
+    color: "rgba(204, 73, 15, 0.6)",
   },
   {
     label: "Treasury",

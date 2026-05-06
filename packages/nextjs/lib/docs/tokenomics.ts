@@ -28,7 +28,7 @@ const tokenDistributionEntries: readonly TokenDistributionEntry[] = [
     label: "Bootstrap Pool",
     amount: 12_000_000,
     purpose: protocolCopy.participationPoolPurpose,
-    color: "#F26426",
+    color: "#CC490F",
   },
   {
     label: "Treasury",
@@ -41,7 +41,7 @@ const tokenDistributionEntries: readonly TokenDistributionEntry[] = [
     label: "Consensus Subsidy Reserve",
     amount: 4_000_000,
     purpose: "Pre-funded reserve for unanimous agreement rewards, replenished by 5% of each round's losing stakes",
-    color: "#BF3F18",
+    color: "#A83A0F",
   },
 ] as const;
 

@@ -20,8 +20,8 @@ import {
 } from "@react-pdf/renderer";
 
 // ── Brand colors ──
-const EMBER = "#F26426";
-const EMBER_DEEP = "#BF3F18";
+const EMBER = "#CC490F";
+const EMBER_DEEP = "#A83A0F";
 const STEEL = "#7E8996";
 const DARK = "#090A0C";
 const GRAY = STEEL;

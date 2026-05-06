@@ -72,7 +72,7 @@ interface PublicProfileViewProps {
 }
 
 const NAME_REGEX = /^[a-zA-Z0-9_]{3,20}$/;
-const DEFAULT_AVATAR_ACCENT_HEX = "#d56a3e";
+const DEFAULT_AVATAR_ACCENT_HEX = "#cc490f";
 
 function truncateAddress(address: string) {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
