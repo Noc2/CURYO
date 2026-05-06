@@ -23,6 +23,11 @@ type FollowsSessionRoute = typeof import("./follows/profiles/session/route");
 type NotificationPreferencesSessionRoute = typeof import("./notifications/preferences/session/route");
 type NotificationEmailSessionRoute = typeof import("./notifications/email/session/route");
 type FreeTransactionSessionRoute = typeof import("./transactions/free/session/route");
+type FeedbackChallengeRoute = typeof import("./feedback/challenge/route");
+type FeedbackRoute = typeof import("./feedback/route");
+type FeedbackReadRoute = typeof import("./feedback/read/route");
+type FeedbackSessionRoute = typeof import("./feedback/session/route");
+type FeedbackCountsRoute = typeof import("./feedback/counts/route");
 
 let rateLimit: RateLimitModule;
 let freeTransactions: FreeTransactionsModule;
@@ -31,6 +36,11 @@ let followsSessionRoute: FollowsSessionRoute;
 let notificationPreferencesSessionRoute: NotificationPreferencesSessionRoute;
 let notificationEmailSessionRoute: NotificationEmailSessionRoute;
 let freeTransactionSessionRoute: FreeTransactionSessionRoute;
+let feedbackChallengeRoute: FeedbackChallengeRoute;
+let feedbackRoute: FeedbackRoute;
+let feedbackReadRoute: FeedbackReadRoute;
+let feedbackSessionRoute: FeedbackSessionRoute;
+let feedbackCountsRoute: FeedbackCountsRoute;
 
 function makeRequest(pathname: string) {
   return new NextRequest(`https://curyo.xyz${pathname}`, {
@@ -48,6 +58,11 @@ before(async () => {
   notificationPreferencesSessionRoute = await import("./notifications/preferences/session/route");
   notificationEmailSessionRoute = await import("./notifications/email/session/route");
   freeTransactionSessionRoute = await import("./transactions/free/session/route");
+  feedbackChallengeRoute = await import("./feedback/challenge/route");
+  feedbackRoute = await import("./feedback/route");
+  feedbackReadRoute = await import("./feedback/read/route");
+  feedbackSessionRoute = await import("./feedback/session/route");
+  feedbackCountsRoute = await import("./feedback/counts/route");
 });
 
 beforeEach(() => {
@@ -155,4 +170,62 @@ test("free transaction session route keeps serving its fallback when the rate li
   assert.equal(body.remaining, 0);
   assert.equal(body.walletAddress, "0x63cada40E8AcF7A1d47229af5Be35b78b16035fa");
   assert.equal(body.voterIdTokenId, null);
+});
+
+test("feedback challenge route continues past rate limit store outages", async () => {
+  const response = await feedbackChallengeRoute.POST(
+    new NextRequest("https://curyo.xyz/api/feedback/challenge", {
+      method: "POST",
+      headers: new Headers({
+        "content-type": "application/json",
+        "x-forwarded-for": TEST_IP,
+      }),
+      body: JSON.stringify({}),
+    }),
+  );
+
+  assert.equal(response.status, 400);
+});
+
+test("feedback submit route continues past rate limit store outages", async () => {
+  const response = await feedbackRoute.POST(
+    new NextRequest("https://curyo.xyz/api/feedback", {
+      method: "POST",
+      headers: new Headers({
+        "content-type": "application/json",
+        "x-forwarded-for": TEST_IP,
+      }),
+      body: JSON.stringify({ address: TEST_ADDRESS }),
+    }),
+  );
+
+  assert.equal(response.status, 400);
+});
+
+test("feedback read route continues past rate limit store outages", async () => {
+  const response = await feedbackReadRoute.POST(
+    new NextRequest("https://curyo.xyz/api/feedback/read", {
+      method: "POST",
+      headers: new Headers({
+        "content-type": "application/json",
+        "x-forwarded-for": TEST_IP,
+      }),
+      body: JSON.stringify({ address: TEST_ADDRESS }),
+    }),
+  );
+
+  assert.equal(response.status, 400);
+});
+
+test("feedback session route continues past rate limit store outages", async () => {
+  const response = await feedbackSessionRoute.GET(makeRequest("/api/feedback/session?address=invalid"));
+
+  assert.equal(response.status, 400);
+});
+
+test("feedback counts route continues past rate limit store outages", async () => {
+  const response = await feedbackCountsRoute.GET(makeRequest("/api/feedback/counts"));
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { counts: {} });
 });

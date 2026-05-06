@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
       challengeId?: string;
     };
     const limited = await checkRateLimit(request, RATE_LIMIT, {
+      allowOnStoreUnavailable: true,
       extraKeyParts: [typeof body.address === "string" ? body.address : undefined],
     });
     if (limited) return limited;

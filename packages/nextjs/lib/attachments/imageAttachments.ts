@@ -6,10 +6,10 @@ import sharp from "sharp";
 import { db } from "~~/lib/db";
 import { type QuestionImageAttachment, questionImageAttachments } from "~~/lib/db/schema";
 
-export const IMAGE_ATTACHMENT_ROUTE_PREFIX = "/api/attachments/images";
-export const IMAGE_ATTACHMENT_PUBLIC_EXTENSION = "webp";
+const IMAGE_ATTACHMENT_ROUTE_PREFIX = "/api/attachments/images";
+const IMAGE_ATTACHMENT_PUBLIC_EXTENSION = "webp";
 
-export type ImageAttachmentStatus = "uploading" | "processing" | "approved" | "blocked" | "failed" | "deleted";
+type ImageAttachmentStatus = "uploading" | "processing" | "approved" | "blocked" | "failed" | "deleted";
 
 type UploaderIdentity =
   | {
@@ -283,12 +283,35 @@ export async function processCompletedImageUpload(params: {
   }
 }
 
-export async function markAttachmentDeleted(id: string) {
-  const deletedAt = nowDate();
-  await db
-    .update(questionImageAttachments)
-    .set({ status: "deleted", deletedAt, updatedAt: deletedAt })
-    .where(eq(questionImageAttachments.id, id));
+export async function getImageAttachmentSubmissionValidationError(params: {
+  agentId?: string | null;
+  imageUrls: readonly string[];
+  ownerWalletAddress?: string | null;
+}): Promise<string | null> {
+  const attachmentIds = [
+    ...new Set(params.imageUrls.map(parseAttachmentIdFromImageUrl).filter((id): id is string => Boolean(id))),
+  ];
+  if (attachmentIds.length === 0) return null;
+
+  const ownerWalletAddress = params.ownerWalletAddress?.trim().toLowerCase() || null;
+  const agentId = params.agentId?.trim() || null;
+
+  for (const attachmentId of attachmentIds) {
+    const attachment = await getImageAttachment(attachmentId);
+    if (!attachment || attachment.status !== "approved") {
+      return "imageUrls must reference approved Curyo-hosted uploads.";
+    }
+
+    const ownedByAgent = agentId !== null && attachment.agentId === agentId;
+    const ownedByWallet =
+      ownerWalletAddress !== null && attachment.ownerWalletAddress?.trim().toLowerCase() === ownerWalletAddress;
+
+    if (!ownedByAgent && !ownedByWallet) {
+      return "imageUrls Curyo-hosted uploads must belong to the submitting wallet or agent.";
+    }
+  }
+
+  return null;
 }
 
 export async function attachImagesToOperation(params: {

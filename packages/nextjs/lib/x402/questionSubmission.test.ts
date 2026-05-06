@@ -4,7 +4,7 @@ import { after, before, beforeEach, test } from "node:test";
 import { type Address, type Hex, type TransactionReceipt, encodeAbiParameters, encodeEventTopics } from "viem";
 import { __setDatabaseResourcesForTests, dbClient } from "~~/lib/db";
 import { createMemoryDatabaseResources } from "~~/lib/db/testMemory";
-import type { X402QuestionPayload } from "~~/lib/x402/questionPayload";
+import { X402QuestionInputError, type X402QuestionPayload } from "~~/lib/x402/questionPayload";
 import {
   __setX402QuestionSubmissionTestOverridesForTests,
   buildPermissionlessWalletClientRequestId,
@@ -57,6 +57,59 @@ function buildPayload(clientRequestId: string): X402QuestionPayload {
       minVoters: 3n,
     },
   };
+}
+
+function buildPayloadWithImageUrl(clientRequestId: string, imageUrl: string): X402QuestionPayload {
+  const payload = buildPayload(clientRequestId);
+  const [question] = payload.questions;
+  assert.ok(question);
+  return {
+    ...payload,
+    questions: [{ ...question, imageUrls: [imageUrl] }],
+  };
+}
+
+async function insertQuestionImageAttachment(params: {
+  agentId?: string | null;
+  id: string;
+  ownerWalletAddress?: string | null;
+  status: string;
+}) {
+  const now = new Date();
+  await dbClient.execute({
+    sql: `
+      INSERT INTO question_image_attachments (
+        id,
+        uploader_kind,
+        owner_wallet_address,
+        agent_id,
+        original_filename,
+        mime_type,
+        size_bytes,
+        sha256,
+        status,
+        moderation_status,
+        created_at,
+        updated_at,
+        approved_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `,
+    args: [
+      params.id,
+      params.agentId ? "agent" : "wallet",
+      params.ownerWalletAddress ?? null,
+      params.agentId ?? null,
+      "mockup.webp",
+      "image/webp",
+      128,
+      "a".repeat(64),
+      params.status,
+      params.status === "approved" ? "approved" : "pending",
+      now,
+      now,
+      params.status === "approved" ? now : null,
+    ],
+  });
 }
 
 const TEST_CONFIG = {
@@ -245,6 +298,7 @@ before(() => {
 
 beforeEach(async () => {
   setDefaultTestOverrides();
+  await dbClient.execute("DELETE FROM question_image_attachments");
   await dbClient.execute("DELETE FROM x402_question_submissions");
 });
 
@@ -448,6 +502,56 @@ test("preparePermissionlessWalletQuestionSubmissionRequest namespaces idempotenc
   assert.equal(record?.status, "awaiting_wallet_signature");
   assert.equal(x402QuestionSubmissionRecordBody(record).clientRequestId, payload.clientRequestId);
   assert.match(record?.paymentReceipt ?? "", /permissionless-wallet-plan/);
+});
+
+test("preparePermissionlessWalletQuestionSubmissionRequest rejects unapproved Curyo-hosted image uploads", async () => {
+  const attachmentId = "att_pendingUpload0001";
+  const walletAddress = "0x00000000000000000000000000000000000000aa" as const;
+  const payload = buildPayloadWithImageUrl(
+    "pending-image-upload",
+    `https://www.curyo.xyz/api/attachments/images/${attachmentId}.webp`,
+  );
+  await insertQuestionImageAttachment({
+    id: attachmentId,
+    ownerWalletAddress: walletAddress,
+    status: "processing",
+  });
+
+  await assert.rejects(
+    () =>
+      preparePermissionlessWalletQuestionSubmissionRequest({
+        payload,
+        walletAddress,
+      }),
+    (error: unknown) =>
+      error instanceof X402QuestionInputError &&
+      error.message === "imageUrls must reference approved Curyo-hosted uploads.",
+  );
+});
+
+test("preparePermissionlessWalletQuestionSubmissionRequest rejects Curyo-hosted image uploads from another wallet", async () => {
+  const attachmentId = "att_foreignUpload001";
+  const walletAddress = "0x00000000000000000000000000000000000000aa" as const;
+  const payload = buildPayloadWithImageUrl(
+    "foreign-image-upload",
+    `https://www.curyo.xyz/api/attachments/images/${attachmentId}.webp`,
+  );
+  await insertQuestionImageAttachment({
+    id: attachmentId,
+    ownerWalletAddress: "0x00000000000000000000000000000000000000bb",
+    status: "approved",
+  });
+
+  await assert.rejects(
+    () =>
+      preparePermissionlessWalletQuestionSubmissionRequest({
+        payload,
+        walletAddress,
+      }),
+    (error: unknown) =>
+      error instanceof X402QuestionInputError &&
+      error.message === "imageUrls Curyo-hosted uploads must belong to the submitting wallet or agent.",
+  );
 });
 
 test("prepareNativeX402QuestionSubmissionRequest returns an authorization request before signature", async () => {

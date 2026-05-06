@@ -48,7 +48,12 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.error("Failed to read free transaction summary:", error);
-    return NextResponse.json({ error: "Failed to read free transaction summary" }, { status: 500 });
+    console.error("Failed to read free transaction summary; falling back to self-funded mode:", error);
+    return NextResponse.json(
+      buildUnavailableFreeTransactionSummary({
+        address,
+        chainId: parsedChainId!,
+      }),
+    );
   }
 }

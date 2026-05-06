@@ -32,6 +32,7 @@ export async function POST(request: NextRequest) {
       intent?: "read";
     };
     const limited = await checkRateLimit(request, RATE_LIMIT, {
+      allowOnStoreUnavailable: true,
       extraKeyParts: [typeof body.address === "string" ? body.address : undefined, body.intent ?? "create"],
     });
     if (limited) return limited;

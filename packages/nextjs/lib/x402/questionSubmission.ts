@@ -16,6 +16,7 @@ import {
   keccak256,
   parseSignature,
 } from "viem";
+import { getImageAttachmentSubmissionValidationError } from "~~/lib/attachments/imageAttachments";
 import { dbClient } from "~~/lib/db";
 import {
   getPrimaryServerTargetNetwork,
@@ -28,6 +29,7 @@ import {
   buildQuestionSubmissionRevealCommitment,
 } from "~~/lib/questionSubmissionCommitment";
 import {
+  X402QuestionInputError,
   type X402QuestionOperation,
   type X402QuestionPayload,
   X402_CELO_USDC_BY_CHAIN_ID,
@@ -47,6 +49,11 @@ type WalletSubmissionReceiptMode =
   | "native-x402-authorization"
   | "permissionless-wallet-plan"
   | "permissionless-x402-authorization";
+
+type ImageAttachmentSubmissionIdentity = {
+  agentId?: string | null;
+  ownerWalletAddress?: string | null;
+};
 
 type StoredWalletSubmissionPlanReceipt = {
   expectedContentHashes?: Hex[];
@@ -209,6 +216,24 @@ function buildQuestionContentHash(question: X402QuestionPayload["questions"][num
       ],
     ),
   );
+}
+
+function getQuestionImageUrls(payload: X402QuestionPayload): string[] {
+  return payload.questions.flatMap(question => question.imageUrls);
+}
+
+async function assertApprovedImageAttachmentsForSubmission(
+  payload: X402QuestionPayload,
+  identity: ImageAttachmentSubmissionIdentity,
+) {
+  const error = await getImageAttachmentSubmissionValidationError({
+    agentId: identity.agentId,
+    imageUrls: getQuestionImageUrls(payload),
+    ownerWalletAddress: identity.ownerWalletAddress,
+  });
+  if (error) {
+    throw new X402QuestionInputError(error);
+  }
 }
 
 function buildExpectedQuestionContentHashes(payload: X402QuestionPayload): Hex[] {
@@ -705,9 +730,11 @@ async function assertBountyMeetsProtocolMinimum(params: {
 
 async function preflightX402QuestionSubmissionWithClient(params: {
   config: X402QuestionSubmissionConfig;
+  imageAttachmentIdentity?: ImageAttachmentSubmissionIdentity;
   payload: X402QuestionPayload;
   publicClient: X402PublicClient;
 }): Promise<{ resolvedCategoryIds: bigint[]; submissionKeys: Hex[] }> {
+  await assertApprovedImageAttachmentsForSubmission(params.payload, params.imageAttachmentIdentity ?? {});
   await assertBountyMeetsProtocolMinimum(params);
 
   const resolvedCategoryIds: bigint[] = [];
@@ -754,7 +781,9 @@ async function preflightX402QuestionSubmissionWithClient(params: {
 }
 
 export async function preflightX402QuestionSubmission(params: {
+  agentId?: string | null;
   config: X402QuestionSubmissionConfig;
+  ownerWalletAddress?: string | null;
   payload: X402QuestionPayload;
 }): Promise<{
   operation: X402QuestionOperation;
@@ -766,6 +795,10 @@ export async function preflightX402QuestionSubmission(params: {
   const publicClient = createPublicQuestionClient(params.config);
   const preflight = await preflightX402QuestionSubmissionWithClient({
     config: params.config,
+    imageAttachmentIdentity: {
+      agentId: params.agentId,
+      ownerWalletAddress: params.ownerWalletAddress,
+    },
     payload: params.payload,
     publicClient,
   });
@@ -900,6 +933,7 @@ function buildQuestionSubmissionCallContext(params: {
 }
 
 export async function buildAgentWalletQuestionSubmissionPlan(params: {
+  agentId?: string | null;
   config: X402QuestionSubmissionConfig;
   payload: X402QuestionPayload;
   walletAddress: Address;
@@ -908,6 +942,10 @@ export async function buildAgentWalletQuestionSubmissionPlan(params: {
   const operation = buildX402QuestionOperation(params.payload);
   const preflight = await preflightX402QuestionSubmissionWithClient({
     config: params.config,
+    imageAttachmentIdentity: {
+      agentId: params.agentId,
+      ownerWalletAddress: params.walletAddress,
+    },
     payload: params.payload,
     publicClient,
   });
@@ -1094,6 +1132,7 @@ function buildNativeX402TypedData(params: {
 }
 
 export async function buildNativeX402QuestionSubmissionPlan(params: {
+  agentId?: string | null;
   config: X402QuestionSubmissionConfig;
   payload: X402QuestionPayload;
   paymentAuthorization?: NativeX402PaymentAuthorizationInput | null;
@@ -1110,6 +1149,10 @@ export async function buildNativeX402QuestionSubmissionPlan(params: {
   const operation = buildX402QuestionOperation(params.payload);
   const preflight = await preflightX402QuestionSubmissionWithClient({
     config: params.config,
+    imageAttachmentIdentity: {
+      agentId: params.agentId,
+      ownerWalletAddress: params.walletAddress,
+    },
     payload: params.payload,
     publicClient,
   });
@@ -1863,7 +1906,13 @@ async function prepareWalletQuestionSubmissionRequest(params: {
     };
   }
 
+  await assertApprovedImageAttachmentsForSubmission(params.payload, {
+    agentId: params.agentId,
+    ownerWalletAddress: params.walletAddress,
+  });
+
   const plan = await dependencies.buildAgentWalletQuestionSubmissionPlan({
+    agentId: params.agentId,
     config,
     payload: params.payload,
     walletAddress: params.walletAddress,
@@ -1946,8 +1995,14 @@ async function prepareNativeQuestionSubmissionRequest(params: {
     };
   }
 
+  await assertApprovedImageAttachmentsForSubmission(params.payload, {
+    agentId: params.agentId,
+    ownerWalletAddress: params.walletAddress,
+  });
+
   const storedAuthorization = readStoredNativeX402Authorization(existingRecord);
   const plan = await dependencies.buildNativeX402QuestionSubmissionPlan({
+    agentId: params.agentId,
     config,
     payload: params.payload,
     paymentAuthorization: params.paymentAuthorization ?? storedAuthorization,

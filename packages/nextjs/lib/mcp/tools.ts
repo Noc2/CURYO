@@ -613,7 +613,12 @@ async function quoteQuestion(args: JsonObject, agent: McpAgentAuth) {
   assertManagedQuestionCategoriesAllowed(agent, payload);
   const managedPayload = toManagedMcpPayload(agent, payload);
   const config = dependencies.resolveX402QuestionConfig(managedPayload.chainId);
-  const quote = await dependencies.preflightX402QuestionSubmission({ config, payload: managedPayload });
+  const quote = await dependencies.preflightX402QuestionSubmission({
+    agentId: agent.id,
+    config,
+    ownerWalletAddress: agent.walletAddress,
+    payload: managedPayload,
+  });
   return {
     ...formatQuoteResult(quote, payload, config),
     clientRequestId: payload.clientRequestId,
@@ -626,7 +631,11 @@ async function quotePublicQuestion(args: JsonObject) {
   const walletAddress = parsePublicWalletAddress(args);
   const permissionlessPayload = toPermissionlessWalletPayload(payload, walletAddress);
   const config = dependencies.resolveX402QuestionConfig(permissionlessPayload.chainId);
-  const quote = await dependencies.preflightX402QuestionSubmission({ config, payload: permissionlessPayload });
+  const quote = await dependencies.preflightX402QuestionSubmission({
+    config,
+    ownerWalletAddress: walletAddress,
+    payload: permissionlessPayload,
+  });
   return {
     ...formatQuoteResult(quote, payload, config, { walletPolicyRequired: false }),
     clientRequestId: payload.clientRequestId,
@@ -793,7 +802,11 @@ export async function callPublicCuryoMcpTool(params: { arguments: unknown; name:
       const walletAddress = parsePublicWalletAddress(args);
       const permissionlessPayload = toPermissionlessWalletPayload(payload, walletAddress);
       const config = dependencies.resolveX402QuestionConfig(permissionlessPayload.chainId);
-      const quote = await dependencies.preflightX402QuestionSubmission({ config, payload: permissionlessPayload });
+      const quote = await dependencies.preflightX402QuestionSubmission({
+        config,
+        ownerWalletAddress: walletAddress,
+        payload: permissionlessPayload,
+      });
       const maxPaymentAmount = parseMaxPaymentAmount(args.maxPaymentAmount);
       if (quote.paymentAmount > maxPaymentAmount) {
         throw new McpToolError("Quoted payment exceeds maxPaymentAmount.");
@@ -932,7 +945,12 @@ export async function callCuryoMcpTool(params: {
       const walletAddress = parseAgentWalletAddress(args, params.agent);
       const managedPayload = toManagedMcpPayload(params.agent, payload);
       const config = dependencies.resolveX402QuestionConfig(managedPayload.chainId);
-      const quote = await dependencies.preflightX402QuestionSubmission({ config, payload: managedPayload });
+      const quote = await dependencies.preflightX402QuestionSubmission({
+        agentId: params.agent.id,
+        config,
+        ownerWalletAddress: walletAddress,
+        payload: managedPayload,
+      });
       const fastLane = buildAgentFastLaneGuidance({
         bounty: payload.bounty,
         questionCount: payload.questions.length,
