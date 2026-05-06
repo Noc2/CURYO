@@ -386,7 +386,7 @@ async function encryptPrivateKey(privateKey: Hex, password: string, address: Add
   };
 }
 
-export async function decryptLocalKeystore(path: string, password: string): Promise<Hex> {
+async function decryptLocalKeystore(path: string, password: string): Promise<Hex> {
   const raw = await readFile(path, "utf8");
   const keystore = JSON.parse(raw) as KeystoreV3;
   if (keystore.version !== KEYSTORE_VERSION) {
@@ -554,7 +554,7 @@ function summarizeReceipt(receipt: TransactionReceipt): LocalTransactionReceiptS
   };
 }
 
-export async function executeTransactionPlan(params: {
+async function executeTransactionPlan(params: {
   account: PrivateKeyAccount;
   calls: CuryoAgentWalletTransactionCall[];
   config: LocalSignerConfig;

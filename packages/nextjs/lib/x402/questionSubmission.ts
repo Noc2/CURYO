@@ -615,7 +615,7 @@ function getRpcUrl(config: X402QuestionSubmissionConfig["targetNetwork"]): strin
   return config.rpcUrls.default.http[0] ?? null;
 }
 
-export function getX402QuestionFallbackChainId(): number | undefined {
+function getX402QuestionFallbackChainId(): number | undefined {
   return getPrimaryServerTargetNetwork()?.id;
 }
 
@@ -932,7 +932,7 @@ function buildQuestionSubmissionCallContext(params: {
   };
 }
 
-export async function buildAgentWalletQuestionSubmissionPlan(params: {
+async function buildAgentWalletQuestionSubmissionPlan(params: {
   agentId?: string | null;
   config: X402QuestionSubmissionConfig;
   payload: X402QuestionPayload;
@@ -1131,7 +1131,7 @@ function buildNativeX402TypedData(params: {
   };
 }
 
-export async function buildNativeX402QuestionSubmissionPlan(params: {
+async function buildNativeX402QuestionSubmissionPlan(params: {
   agentId?: string | null;
   config: X402QuestionSubmissionConfig;
   payload: X402QuestionPayload;
@@ -1516,7 +1516,7 @@ function matchConfirmedSubmissionPlan(params: {
   };
 }
 
-export function x402QuestionSubmissionStatusBody(params: {
+function x402QuestionSubmissionStatusBody(params: {
   config: X402QuestionSubmissionConfig;
   operation: X402QuestionOperation;
   payload: X402QuestionPayload;

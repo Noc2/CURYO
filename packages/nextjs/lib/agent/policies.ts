@@ -184,11 +184,11 @@ function rowToPolicy(row: Record<string, unknown>): AgentPolicyRecord {
   };
 }
 
-export function createAgentPolicyTimestamp(nowMs = Date.now()): Date {
+function createAgentPolicyTimestamp(nowMs = Date.now()): Date {
   return new Date(Math.floor(nowMs / 1000) * 1000);
 }
 
-export async function ensureAgentWalletPolicyTables() {
+async function ensureAgentWalletPolicyTables() {
   // Schema is managed via Drizzle migrations.
 }
 
@@ -326,7 +326,7 @@ export async function upsertAgentPolicy(
   return policy;
 }
 
-export async function getAgentPolicy(
+async function getAgentPolicy(
   ownerWalletAddress: `0x${string}`,
   policyId: string,
 ): Promise<AgentPolicyRecord | null> {
