@@ -14,7 +14,7 @@ const THIRDWEB_EXECUTION_CHAIN_IDS = new Set([42220, 11142220]);
 const THIRDWEB_ACTIVE_CHAIN_KEY = "thirdweb:active-chain";
 const THIRDWEB_SPONSORSHIP_MODE_KEY = "thirdweb:sponsorship-mode";
 const CURYO_THIRDWEB_ICON = "/favicon.png";
-const CURYO_THIRDWEB_WORDMARK = "/curyo-thirdweb-lockup.svg";
+const CURYO_THIRDWEB_WALLET_IMAGE = "/launch/curyo-human-loop-orange-orbits-neutral-ai.png";
 
 type ThirdwebWalletExecutionMode =
   | {
@@ -168,9 +168,9 @@ export function createThirdwebInAppWallet(chainId: number, options?: CreateThird
     executionMode: getThirdwebWalletExecutionMode(chainId, options),
     metadata: {
       image: {
-        alt: "Curyo",
-        height: 100,
-        src: CURYO_THIRDWEB_WORDMARK,
+        alt: "Curyo human-loop network illustration",
+        height: 180,
+        src: CURYO_THIRDWEB_WALLET_IMAGE,
         width: 320,
       },
       name: "Curyo Wallet",

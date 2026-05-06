@@ -57,6 +57,20 @@ test("createThirdwebInAppWallet can hide wallet auth to avoid duplicate compact 
   assert.deepEqual(config.auth?.options, ["google", "apple", "email", "passkey"]);
 });
 
+test("createThirdwebInAppWallet uses the landing image for wallet branding", () => {
+  const wallet = createThirdwebInAppWallet(42220);
+  const config = wallet.getConfig() as {
+    metadata?: { image?: { alt?: string; height?: number; src?: string; width?: number } };
+  };
+
+  assert.deepEqual(config.metadata?.image, {
+    alt: "Curyo human-loop network illustration",
+    height: 180,
+    src: "/launch/curyo-human-loop-orange-orbits-neutral-ai.png",
+    width: 320,
+  });
+});
+
 test("getThirdwebWallets keeps wallet auth inside in-app wallet when no branded injected wallet exists", () => {
   const wallets = getThirdwebWallets(42220, {
     ethereum: {
