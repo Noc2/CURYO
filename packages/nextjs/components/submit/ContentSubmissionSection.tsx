@@ -1857,7 +1857,7 @@ export function ContentSubmissionSection() {
           title={`Go to question ${index + 1}`}
           className={`cursor-pointer rounded-md border px-2 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/80 ${
             submissionStep === "question" && activeQuestionIndex === index
-              ? "border-primary/40 bg-primary/10 text-primary hover:bg-primary/15"
+              ? "border-primary bg-primary text-primary-content hover:bg-primary/90"
               : "step-control-inactive"
           }`}
         >
@@ -1873,7 +1873,7 @@ export function ContentSubmissionSection() {
         title="Go to bounty details"
         className={`cursor-pointer rounded-md border px-2 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/80 ${
           submissionStep === "bounty"
-            ? "border-primary/40 bg-primary/10 text-primary hover:bg-primary/15"
+            ? "border-primary bg-primary text-primary-content hover:bg-primary/90"
             : "step-control-inactive"
         }`}
       >

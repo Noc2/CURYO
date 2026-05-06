@@ -11,6 +11,7 @@ import { hardhat } from "viem/chains";
 import { WagmiProvider } from "wagmi";
 import { Footer } from "~~/components/Footer";
 import { Header } from "~~/components/Header";
+import { NavigationProgressDiagnostics } from "~~/components/NavigationProgressDiagnostics";
 import { RouteScopedNotifiers } from "~~/components/RouteScopedNotifiers";
 import { ReferralAttributionCapture } from "~~/components/referrals/ReferralAttributionCapture";
 import { FaucetModal, FaucetTrigger } from "~~/components/scaffold-eth";
@@ -90,7 +91,10 @@ export const ScaffoldEthAppWithProviders = ({ children }: { children: React.Reac
           <Suspense fallback={null}>
             <ReferralAttributionCapture />
           </Suspense>
-          <ProgressBar height="3px" color="#F26426" />
+          <ProgressBar height="3px" color="#CC490F" />
+          <Suspense fallback={null}>
+            <NavigationProgressDiagnostics />
+          </Suspense>
           <TermsAcceptanceProvider>
             <OptimisticVoteProvider>
               <ScaffoldEthApp>{children}</ScaffoldEthApp>

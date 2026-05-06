@@ -1,6 +1,6 @@
 import { isSafeUrl } from "~~/utils/urlSafety";
 
-export function normalizeAgentCallbackUrl(input: string, label = "Callback URL") {
+function normalizeAgentCallbackUrl(input: string, label = "Callback URL") {
   const rawUrl = input.trim();
   if (!rawUrl) {
     throw new Error(`${label} is required.`);

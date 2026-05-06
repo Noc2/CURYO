@@ -47,7 +47,7 @@ type HeaderNavLinkProps = {
 };
 
 const navIndicatorClassName =
-  "absolute right-2 top-2 bottom-2 w-1 rounded-full bg-[#F26426] animate-header-nav-indicator-in";
+  "absolute right-2 top-2 bottom-2 w-1 rounded-full bg-[#CC490F] animate-header-nav-indicator-in";
 const headerChromeSurfaceClassName = "bg-[#000]";
 const headerChromeBorderClassName = "border-[color:var(--curyo-shell-border-strong)]";
 
@@ -114,7 +114,7 @@ const HeaderMenuLinks = ({ variant = "mobile" }: { variant?: "mobile" | "desktop
                               prefetch={false}
                               className={`block w-full px-3 py-1.5 text-base rounded-lg transition-colors ${
                                 isLinkActive
-                                  ? "bg-primary/10 text-primary font-medium"
+                                  ? "bg-primary text-primary-content font-medium"
                                   : "text-base-content/75 hover:bg-base-content/[0.04] hover:text-base-content"
                               }`}
                             >

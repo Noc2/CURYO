@@ -260,27 +260,27 @@
     <text class="row-title" x="36" y="48">A. Logo arc</text>
     <text class="body" x="36" y="78">Alternative brand-forward direction.</text>
 
-    <g transform="translate(220 36)" color="#F26426">
+    <g transform="translate(220 36)" color="#CC490F">
       <use href="#avatar-a-0" width="124" height="124" />
       <text class="label" x="62" y="166">0%</text>
       <text class="tiny" x="62" y="188">no line</text>
     </g>
-    <g transform="translate(390 36)" color="#F26426">
+    <g transform="translate(390 36)" color="#CC490F">
       <use href="#avatar-a-25" width="124" height="124" />
       <text class="label" x="62" y="166">25%</text>
       <text class="tiny" x="62" y="188">quarter</text>
     </g>
-    <g transform="translate(560 36)" color="#F26426">
+    <g transform="translate(560 36)" color="#CC490F">
       <use href="#avatar-a-50" width="124" height="124" />
       <text class="label" x="62" y="166">50%</text>
       <text class="tiny" x="62" y="188">half</text>
     </g>
-    <g transform="translate(730 36)" color="#F26426">
+    <g transform="translate(730 36)" color="#CC490F">
       <use href="#avatar-a-75" width="124" height="124" />
       <text class="label" x="62" y="166">75%</text>
       <text class="tiny" x="62" y="188">logo-like C</text>
     </g>
-    <g transform="translate(900 36)" color="#F26426">
+    <g transform="translate(900 36)" color="#CC490F">
       <use href="#avatar-a-100" width="124" height="124" />
       <text class="label" x="62" y="166">100%</text>
       <text class="tiny" x="62" y="188">closed ring</text>
@@ -357,7 +357,7 @@
     <text class="row-title" x="0" y="30">Color variants at 72%</text>
     <text class="body" x="0" y="60">Only the center changes; the accuracy line stays white.</text>
 
-    <g transform="translate(520 0)" color="#F26426">
+    <g transform="translate(520 0)" color="#CC490F">
       <use href="#avatar-a-72" width="88" height="88" />
       <circle class="swatch" cx="110" cy="44" r="13" />
       <text class="tiny" x="44" y="116">orange</text>

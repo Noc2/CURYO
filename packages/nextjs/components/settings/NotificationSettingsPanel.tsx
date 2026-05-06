@@ -5,6 +5,7 @@ import { BellAlertIcon, EnvelopeIcon } from "@heroicons/react/24/outline";
 import { useCuryoConnectModal } from "~~/hooks/useCuryoConnectModal";
 import { useEmailNotificationSettings } from "~~/hooks/useEmailNotificationSettings";
 import { type NotificationPreferences, useNotificationPreferences } from "~~/hooks/useNotificationPreferences";
+import { HUMAN_SIGN_IN_LABEL } from "~~/lib/home/humanSignInRoute";
 import { type EmailNotificationSettingsPayload } from "~~/lib/notifications/emailShared";
 import { notification } from "~~/utils/scaffold-eth";
 
@@ -77,7 +78,7 @@ export function NotificationSettingsPanel({
   address?: string;
   onStatusChange?: () => void;
 }) {
-  const { openConnectModal } = useCuryoConnectModal();
+  const { openConnectModal, isConnecting, thirdwebEnabled } = useCuryoConnectModal();
   const { preferences, isSaving, isLoading, updatePreference } = useNotificationPreferences(address, {
     autoRead: true,
   });
@@ -251,12 +252,14 @@ export function NotificationSettingsPanel({
           </div>
           <button
             type="button"
+            className="btn btn-primary px-6"
+            disabled={!thirdwebEnabled || isConnecting}
+            aria-busy={isConnecting || undefined}
             onClick={() => {
               void openConnectModal();
             }}
-            className="btn btn-submit px-6"
           >
-            Sign In
+            {HUMAN_SIGN_IN_LABEL}
           </button>
         </div>
       </div>

@@ -17,6 +17,10 @@ type AddEthereumChainParameter = {
   rpcUrls: readonly string[];
 };
 
+export type EthereumRequestProvider = {
+  request: (args: any) => Promise<unknown>;
+};
+
 function unique(values: Array<string | undefined>) {
   return values.filter(
     (value, index, allValues): value is string => Boolean(value) && allValues.indexOf(value) === index,
@@ -37,6 +41,69 @@ export function buildAddEthereumChainParameter(chain: Chain): AddEthereumChainPa
     nativeCurrency: chain.nativeCurrency,
     rpcUrls: chain.rpcUrls.default.http,
   };
+}
+
+function readErrorFields(
+  error: unknown,
+): { code?: unknown; message?: unknown; shortMessage?: unknown; details?: unknown } | null {
+  if (!error || typeof error !== "object") {
+    return null;
+  }
+
+  const candidate = error as { code?: unknown; details?: unknown; message?: unknown; shortMessage?: unknown };
+  return {
+    code: candidate.code,
+    details: candidate.details,
+    message: candidate.message,
+    shortMessage: candidate.shortMessage,
+  };
+}
+
+export function isUnknownWalletChainError(error: unknown, visited = new Set<unknown>()): boolean {
+  if (visited.has(error)) {
+    return false;
+  }
+  visited.add(error);
+
+  const fields = readErrorFields(error);
+  if (!fields) {
+    return false;
+  }
+
+  if (fields.code === 4902 || fields.code === "4902") {
+    return true;
+  }
+
+  const textFields = [fields.message, fields.shortMessage, fields.details].filter(
+    (textField): textField is string => typeof textField === "string",
+  );
+  if (
+    textFields.some(
+      textField => textField.includes("Unrecognized chain ID") || textField.includes("wallet_addEthereumChain"),
+    )
+  ) {
+    return true;
+  }
+
+  const nestedErrors = [
+    (error as { cause?: unknown }).cause,
+    (error as { data?: { originalError?: unknown } }).data?.originalError,
+    (error as { error?: unknown }).error,
+  ];
+
+  return nestedErrors.some(nestedError => nestedError !== error && isUnknownWalletChainError(nestedError, visited));
+}
+
+export async function addAndSwitchEthereumChain(provider: EthereumRequestProvider, chain: Chain) {
+  await provider.request({
+    method: "wallet_addEthereumChain",
+    params: [buildAddEthereumChainParameter(chain)],
+  });
+
+  await provider.request({
+    method: "wallet_switchEthereumChain",
+    params: [{ chainId: numberToHex(chain.id) }],
+  });
 }
 
 export function useWalletRpcRecovery() {
@@ -62,17 +129,7 @@ export function useWalletRpcRecovery() {
     const toastId = notification.loading(`Refreshing ${walletName} RPC...`);
 
     try {
-      await provider.request({
-        method: "wallet_addEthereumChain",
-        params: [buildAddEthereumChainParameter(targetChain)],
-      });
-
-      await provider
-        .request({
-          method: "wallet_switchEthereumChain",
-          params: [{ chainId: numberToHex(targetChain.id) }],
-        })
-        .catch(() => undefined);
+      await addAndSwitchEthereumChain(provider, targetChain);
 
       notification.remove(toastId);
       notification.success("RPC refreshed. Retry.");

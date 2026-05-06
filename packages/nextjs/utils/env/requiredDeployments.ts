@@ -1,6 +1,6 @@
 export type DeploymentDefinitions = Record<number, Record<string, unknown> | undefined>;
 
-export const REQUIRED_TARGET_CONTRACTS = [
+const REQUIRED_TARGET_CONTRACTS = [
   "HumanReputation",
   "FrontendRegistry",
   "ProfileRegistry",

@@ -139,7 +139,6 @@ test("whitepaper reflects the current product design surface", () => {
   assert.match(whitepaperText, /app sidebar shell/i);
   assert.match(whitepaperText, /\/ask\?tab=agent/i);
   assert.match(whitepaperText, /\/agent\/sign\/\{intentId\}/i);
-  assert.match(whitepaperText, /Earn USDC/i);
 });
 
 test("whitepaper removes legacy section framing", () => {

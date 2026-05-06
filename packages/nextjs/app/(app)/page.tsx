@@ -6,8 +6,10 @@ import { CuryoAnimation } from "~~/components/home/CuryoAnimation";
 import { LandingFaq } from "~~/components/home/LandingFaq";
 import { LandingPageActions } from "~~/components/home/LandingPageActions";
 import { SupportedAgentsSection } from "~~/components/home/SupportedAgentsSection";
-import { DOCS_AI_ROUTE, RATE_ROUTE } from "~~/constants/routes";
+import { HumanSignInButton } from "~~/components/shared/HumanSignInButton";
+import { DOCS_AI_ROUTE } from "~~/constants/routes";
 import { getOptionalPonderUrl } from "~~/lib/env/server";
+import { HUMAN_SIGN_IN_LABEL } from "~~/lib/home/humanSignInRoute";
 
 const LANDING_STATS_REVALIDATE_SECONDS = 300;
 
@@ -130,7 +132,7 @@ function LandingOrbitDivider({ variant }: { variant: LandingOrbitDividerVariant 
       >
         <path
           d="M66 122C214 22 372 18 540 76C704 132 842 124 1056 30"
-          stroke="#F26426"
+          stroke="#CC490F"
           strokeWidth="4.5"
           strokeLinecap="round"
         />
@@ -148,7 +150,7 @@ function LandingOrbitDivider({ variant }: { variant: LandingOrbitDividerVariant 
           strokeLinecap="round"
           opacity="0.86"
         />
-        <circle cx="292" cy="93" r="13" fill="#F26426" />
+        <circle cx="292" cy="93" r="13" fill="#CC490F" />
         <circle cx="784" cy="60" r="10" fill="#FF8A3D" />
         <circle cx="1034" cy="40" r="14" fill="#E3A234" />
       </svg>
@@ -227,7 +229,7 @@ function FeatureBenefitCard({
             key={`${title}-${link.href}`}
             href={link.href}
             prefetch={false}
-            className="rounded-md border border-primary/18 bg-base-100/35 px-3 py-1.5 text-xs font-semibold text-primary transition hover:border-accent/35 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="rounded-md border border-primary bg-primary px-3 py-1.5 text-xs font-semibold text-primary-content transition hover:bg-primary/90 hover:text-primary-content focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {link.label}
           </Link>
@@ -253,9 +255,9 @@ function FeaturesBenefitsSection() {
 function LandingPageActionsFallback() {
   return (
     <div className="mt-6 flex flex-wrap justify-center gap-3 lg:justify-start">
-      <Link href={RATE_ROUTE} prefetch={false} className="btn btn-primary whitespace-nowrap rounded-lg px-6">
-        Earn USDC
-      </Link>
+      <HumanSignInButton className="btn btn-primary whitespace-nowrap rounded-lg px-6">
+        {HUMAN_SIGN_IN_LABEL}
+      </HumanSignInButton>
       <Link href={DOCS_AI_ROUTE} prefetch={false} className="btn whitespace-nowrap rounded-lg px-6">
         For Agents
       </Link>

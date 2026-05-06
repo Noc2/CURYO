@@ -15,12 +15,12 @@
 @plugin "daisyui/theme" {
   name: "dark";
 
-  --color-primary: #f26426;
-  --color-primary-content: #000000;
+  --color-primary: #cc490f;
+  --color-primary-content: #ffffff;
   --color-secondary: #8b858e;
   --color-secondary-content: #f8f2ed;
-  --color-accent: #ff8a4a;
-  --color-accent-content: #000000;
+  --color-accent: #a83a0f;
+  --color-accent-content: #ffffff;
   --color-neutral: #1d181e;
   --color-neutral-content: #f5f0eb;
   --color-base-100: #000000;
@@ -28,12 +28,12 @@
   --color-base-300: #0d0a0f;
   --color-base-content: #f5f0eb;
   --color-info: #8b858e;
-  --color-success: #f26426;
-  --color-success-content: #000000;
+  --color-success: #cc490f;
+  --color-success-content: #ffffff;
   --color-warning: #ffc071;
   --color-warning-content: #000000;
-  --color-error: #ff8a4a;
-  --color-error-content: #000000;
+  --color-error: #a83a0f;
+  --color-error-content: #ffffff;
 
   --radius-selector: 0.5rem;
   --radius-field: 0.5rem;
@@ -76,12 +76,12 @@
 
 :root {
   background: #000000;
-  --curyo-ember: #f26426;
-  --curyo-ember-hover: #ff7a3d;
-  --curyo-ember-deep: #bf3f18;
-  --curyo-action-orange: #f26426;
-  --curyo-action-orange-hover: #f26426;
-  --curyo-action-content: #000000;
+  --curyo-ember: #cc490f;
+  --curyo-ember-hover: #c2410c;
+  --curyo-ember-deep: #a83a0f;
+  --curyo-action-orange: #cc490f;
+  --curyo-action-orange-hover: #c2410c;
+  --curyo-action-content: #ffffff;
   --curyo-warm-white: #f5f0eb;
   --curyo-steel: #8b858e;
   --curyo-surface: #000000;
@@ -93,9 +93,9 @@
   --curyo-control-idle-hover: rgb(245 240 235 / 0.23);
   --curyo-control-idle-muted: rgb(245 240 235 / 0.11);
   --curyo-control-idle-muted-hover: rgb(245 240 235 / 0.17);
-  --curyo-ember-rgb: 242 100 38;
-  --curyo-ember-hover-rgb: 255 122 61;
-  --curyo-ember-deep-rgb: 191 63 24;
+  --curyo-ember-rgb: 204 73 15;
+  --curyo-ember-hover-rgb: 194 65 12;
+  --curyo-ember-deep-rgb: 168 58 15;
   --curyo-warm-white-rgb: 245 240 235;
   --curyo-steel-rgb: 139 133 142;
   --curyo-surface-rgb: 0 0 0;
@@ -578,6 +578,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--curyo-action-content);
 }
 
 @keyframes vote-btn-attention {

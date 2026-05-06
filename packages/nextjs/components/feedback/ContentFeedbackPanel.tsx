@@ -8,6 +8,7 @@ import { TooltipAnchor } from "~~/components/ui/InfoTooltip";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import { useContentFeedback } from "~~/hooks/useContentFeedback";
+import { getContentFeedbackSubmitTooltip } from "~~/lib/feedback/contentFeedbackSubmitState";
 import {
   CONTENT_FEEDBACK_BODY_MAX_LENGTH,
   CONTENT_FEEDBACK_TYPES,
@@ -40,7 +41,10 @@ function formatFeedbackDate(value: string) {
 }
 
 function FeedbackItem({ item }: { item: ContentFeedbackItem }) {
-  const visibilityLabel = item.isPublic ? "Unlocked" : "Only you";
+  const visibilityLabel = item.isPublic ? "Public" : "Private until settlement";
+  const visibilityTooltip = item.isPublic
+    ? "This feedback is visible to everyone because the round has settled."
+    : "Only you can see this feedback while voting is active. It becomes public after settlement.";
 
   return (
     <li className="rounded-lg border border-base-content/10 bg-base-content/[0.035] p-3">
@@ -51,9 +55,15 @@ function FeedbackItem({ item }: { item: ContentFeedbackItem }) {
             {shortenAddress(item.authorAddress)} · {formatFeedbackDate(item.createdAt)}
           </p>
         </div>
-        <span className="shrink-0 rounded-full bg-base-content/[0.07] px-2 py-1 text-[0.66rem] font-semibold leading-none text-base-content/58">
-          {visibilityLabel}
-        </span>
+        <TooltipAnchor text={visibilityTooltip} position="top" className="shrink-0 rounded-full">
+          <span
+            tabIndex={0}
+            className="rounded-full bg-base-content/[0.07] px-2 py-1 text-[0.66rem] font-semibold leading-none text-base-content/58"
+            aria-label={`${visibilityLabel}: ${visibilityTooltip}`}
+          >
+            {visibilityLabel}
+          </span>
+        </TooltipAnchor>
       </div>
       <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed text-base-content/78">{item.body}</p>
       {item.sourceUrl ? (
@@ -96,12 +106,13 @@ export function ContentFeedbackPanel({ item, variant = "rail", onRequestConnect 
     myCommitHash != null &&
     (myCommitHash as unknown as string) !== "0x0000000000000000000000000000000000000000000000000000000000000000";
   const canSubmitDraft = Boolean(item && bodyLength >= 4 && bodyLength <= CONTENT_FEEDBACK_BODY_MAX_LENGTH);
-  const submitDisabled = !canSubmitDraft || isSubmitting || !hasCurrentRoundVote;
-  const submitTooltip = !hasCurrentRoundVote
-    ? "You need to vote first."
-    : !canSubmitDraft
-      ? "Write at least 4 characters."
-      : "Add feedback";
+  const isOwnContent = Boolean(item?.isOwnContent);
+  const submitDisabled = !canSubmitDraft || isSubmitting || !hasCurrentRoundVote || isOwnContent;
+  const submitTooltip = getContentFeedbackSubmitTooltip({
+    canSubmitDraft,
+    hasCurrentRoundVote,
+    isOwnContent,
+  });
   const submitButtonToneClassName = hasCurrentRoundVote ? "vote-feedback" : "vote-light";
   const ownHiddenCopy =
     feedback.ownHiddenCount > 0
@@ -121,7 +132,7 @@ export function ContentFeedbackPanel({ item, variant = "rail", onRequestConnect 
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!canSubmitDraft || !hasCurrentRoundVote) return;
+    if (!canSubmitDraft || !hasCurrentRoundVote || isOwnContent) return;
 
     if (!address) {
       notification.info("Sign in to add feedback.");

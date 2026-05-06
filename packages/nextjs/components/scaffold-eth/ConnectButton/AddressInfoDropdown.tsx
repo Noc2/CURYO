@@ -169,7 +169,7 @@ function MenuItems({
       </li>
       <li>
         <button
-          className={`${menuItemClass} text-error hover:text-error`}
+          className={`${menuItemClass} text-[#ff9f80] hover:text-[#ffc2ad]`}
           type="button"
           onClick={() => void disconnect()}
         >

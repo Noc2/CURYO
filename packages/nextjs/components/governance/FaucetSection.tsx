@@ -13,7 +13,7 @@ import {
   ShieldCheckIcon,
   UserGroupIcon,
 } from "@heroicons/react/24/outline";
-import { SelfVerifyButton } from "~~/components/governance/SelfVerifyButton";
+import { type SelfVerificationAttempt, SelfVerifyButton } from "~~/components/governance/SelfVerifyButton";
 import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { RATE_ROUTE } from "~~/constants/routes";
@@ -23,6 +23,10 @@ import { FREE_TRANSACTION_ALLOWANCE_QUERY_KEY } from "~~/hooks/useFreeTransactio
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import { FAUCET_EXCLUDED_COUNTRY_NAMES, FAUCET_MINIMUM_AGE } from "~~/lib/governance/faucetEligibility";
 import { shouldRefreshAfterFaucetClaim } from "~~/lib/governance/faucetQueryInvalidation";
+import {
+  type SelfVerificationTelemetryEvent,
+  sendSelfVerificationTelemetry,
+} from "~~/lib/governance/selfVerificationTelemetry";
 import {
   clearStoredReferralAttribution,
   normalizeReferralAddress,
@@ -179,6 +183,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
   const pollStart = useRef<number>(0);
   const completionHandled = useRef(false);
   const statusToastId = useRef<string | null>(null);
+  const selfVerificationAttemptId = useRef<string | null>(null);
   const normalizedIncomingReferrer = normalizeReferralAddress(referrer);
   const referralInputState = getFaucetReferralInputState({ connectedAddress: address, inputValue: referralInput });
   const effectiveReferrer = referralInputState.canCheckReferrer ? referralInputState.normalizedReferrer : null;
@@ -238,6 +243,20 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
     [clearStatusToast],
   );
 
+  const logSelfVerificationTelemetry = useCallback(
+    (event: SelfVerificationTelemetryEvent, extra: Record<string, unknown> = {}) => {
+      sendSelfVerificationTelemetry({
+        attemptId: selfVerificationAttemptId.current,
+        contractAddress: faucetContractInfo?.address ?? null,
+        event,
+        walletAddress: address ?? null,
+        walletChainId: chain?.id ?? null,
+        ...extra,
+      });
+    },
+    [address, chain?.id, faucetContractInfo?.address],
+  );
+
   const finishVerification = useCallback(
     async (claimStatus: Exclude<FaucetClaimStatus, "unclaimed">) => {
       if (completionHandled.current) {
@@ -250,6 +269,9 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
       setVerificationPending(false);
       setVerificationConfirmed(false);
       clearStatusToast();
+      logSelfVerificationTelemetry("self_claim_detected", {
+        faucetClaimStatus: claimStatus,
+      });
 
       if (address) {
         try {
@@ -285,7 +307,16 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
         },
       );
     },
-    [address, clearStatusToast, queryClient, refetchHrepBalance, refetchVoterId, router, stopPolling],
+    [
+      address,
+      clearStatusToast,
+      logSelfVerificationTelemetry,
+      queryClient,
+      refetchHrepBalance,
+      refetchVoterId,
+      router,
+      stopPolling,
+    ],
   );
 
   const startPolling = useCallback(() => {
@@ -293,6 +324,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
     setVerificationPending(true);
     pollStart.current = activeSession?.startedAt ?? Date.now();
     stopPolling();
+    logSelfVerificationTelemetry("self_claim_poll_started");
 
     const pollClaimStatus = async () => {
       if (hasVoterId) {
@@ -313,6 +345,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
         setVerificationPending(false);
         setVerificationConfirmed(false);
         clearStatusToast();
+        logSelfVerificationTelemetry("self_claim_poll_timeout");
         return true;
       }
 
@@ -328,7 +361,16 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
         void pollClaimStatus();
       }, POLL_INTERVAL_MS);
     });
-  }, [address, clearStatusToast, finishVerification, hasVoterId, refetchClaimed, refetchVoterId, stopPolling]);
+  }, [
+    address,
+    clearStatusToast,
+    finishVerification,
+    hasVoterId,
+    logSelfVerificationTelemetry,
+    refetchClaimed,
+    refetchVoterId,
+    stopPolling,
+  ]);
 
   // Clean up polling on unmount
   useEffect(
@@ -444,21 +486,31 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
     setReferralInput(normalizedIncomingReferrer ?? "");
   }, [hasEditedReferralInput, normalizedIncomingReferrer]);
 
-  const handleVerificationStarted = useCallback(() => {
-    completionHandled.current = false;
-    setVerificationConfirmed(false);
-    notification.info("Finish verification in Self. If it does not open, tap Open Self again.", {
-      duration: 5000,
-    });
-    startPolling();
-  }, [startPolling]);
+  const handleVerificationStarted = useCallback(
+    (attempt?: SelfVerificationAttempt) => {
+      if (attempt) {
+        selfVerificationAttemptId.current = attempt.attemptId;
+      }
+      completionHandled.current = false;
+      setVerificationConfirmed(false);
+      notification.info("Finish verification in Self. If it does not open, tap Open Self again.", {
+        duration: 5000,
+      });
+      startPolling();
+    },
+    [startPolling],
+  );
 
-  const handleVerificationSuccess = useCallback(() => {
-    completionHandled.current = false;
-    setVerificationConfirmed(true);
-    showStatusToast("Verification received. Finalizing your HREP faucet claim...");
-    startPolling();
-  }, [showStatusToast, startPolling]);
+  const handleVerificationSuccess = useCallback(
+    (attempt: SelfVerificationAttempt) => {
+      selfVerificationAttemptId.current = attempt.attemptId;
+      completionHandled.current = false;
+      setVerificationConfirmed(true);
+      showStatusToast("Verification received. Finalizing your HREP faucet claim...");
+      startPolling();
+    },
+    [showStatusToast, startPolling],
+  );
 
   const handleReferralInputChange = useCallback((value: string) => {
     setHasEditedReferralInput(true);
@@ -599,7 +651,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
       {/* Header */}
       <div className="flex items-center gap-2">
         <GiftIcon className="w-6 h-6 text-primary" />
-        <h2 className={surfaceSectionHeadingClassName}>Human Reputation (HREP) Faucet</h2>
+        <h2 className={surfaceSectionHeadingClassName}>Verify That You Are Human and Claim HREP</h2>
         <InfoTooltip
           text={`Claim free HREP after proving you are ${FAUCET_MINIMUM_AGE}+, human, and sanctions eligible with Self.xyz.`}
         />
@@ -710,7 +762,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn btn-primary btn-sm"
-                onClick={handleVerificationStarted}
+                onClick={() => handleVerificationStarted()}
               >
                 Open Self again
               </a>

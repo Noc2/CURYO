@@ -8,7 +8,7 @@ export const RATE_ROUTE = "/rate";
 
 export const GOVERNANCE_ROUTE = "/governance";
 
-export const DOCS_ROUTE = "/docs";
+const DOCS_ROUTE = "/docs";
 export const DOCS_AI_ROUTE = `${DOCS_ROUTE}/ai`;
 
 export const SETTINGS_ROUTE = "/settings";

@@ -10,6 +10,7 @@ import { resolveWalletExecutionChainId } from "~~/hooks/useWalletExecutionCapabi
 import {
   createThirdwebInAppWallet,
   getThirdwebWalletSponsorshipMode,
+  isThirdwebInAppWalletId,
   setStoredThirdwebSponsorshipMode,
   supportsThirdwebExecutionCapabilities,
   thirdwebClient,
@@ -252,7 +253,7 @@ export function useFreeTransactionAllowance() {
       !resolvedChainId ||
       !desiredSponsorshipMode ||
       !activeWallet ||
-      activeWallet.id !== "inApp"
+      !isThirdwebInAppWalletId(activeWallet.id)
     ) {
       return;
     }

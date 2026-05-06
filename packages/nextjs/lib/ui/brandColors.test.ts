@@ -4,8 +4,10 @@ import { dirname, join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-const MUG_ORANGE = "#f26426";
-const SECONDARY_ORANGE = "#bf3f18";
+const ACTION_ORANGE = "#cc490f";
+const ACTION_ORANGE_HOVER = "#c2410c";
+const SECONDARY_ORANGE = "#a83a0f";
+const ACTION_CONTENT = "#ffffff";
 
 const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "..", "styles", "globals.css"), "utf8");
 
@@ -18,16 +20,23 @@ function readCssVar(name: string) {
   return match[1].trim().toLowerCase();
 }
 
-test("primary action orange stays aligned with the mug orange", () => {
-  assert.equal(readCssVar("--color-primary"), MUG_ORANGE);
-  assert.equal(readCssVar("--color-success"), MUG_ORANGE);
-  assert.equal(readCssVar("--curyo-ember"), MUG_ORANGE);
-  assert.equal(readCssVar("--curyo-action-orange"), MUG_ORANGE);
-  assert.equal(readCssVar("--curyo-action-orange-hover"), MUG_ORANGE);
-  assert.equal(readCssVar("--curyo-ember-rgb"), "242 100 38");
+test("primary action orange stays aligned with the accessible orange", () => {
+  assert.equal(readCssVar("--color-primary"), ACTION_ORANGE);
+  assert.equal(readCssVar("--color-primary-content"), ACTION_CONTENT);
+  assert.equal(readCssVar("--color-success"), ACTION_ORANGE);
+  assert.equal(readCssVar("--color-success-content"), ACTION_CONTENT);
+  assert.equal(readCssVar("--curyo-ember"), ACTION_ORANGE);
+  assert.equal(readCssVar("--curyo-action-orange"), ACTION_ORANGE);
+  assert.equal(readCssVar("--curyo-action-orange-hover"), ACTION_ORANGE_HOVER);
+  assert.equal(readCssVar("--curyo-action-content"), ACTION_CONTENT);
+  assert.equal(readCssVar("--curyo-ember-rgb"), "204 73 15");
 });
 
 test("secondary orange remains available for down-state accents", () => {
+  assert.equal(readCssVar("--color-accent"), SECONDARY_ORANGE);
+  assert.equal(readCssVar("--color-accent-content"), ACTION_CONTENT);
+  assert.equal(readCssVar("--color-error"), SECONDARY_ORANGE);
+  assert.equal(readCssVar("--color-error-content"), ACTION_CONTENT);
   assert.equal(readCssVar("--curyo-ember-deep"), SECONDARY_ORANGE);
-  assert.equal(readCssVar("--curyo-ember-deep-rgb"), "191 63 24");
+  assert.equal(readCssVar("--curyo-ember-deep-rgb"), "168 58 15");
 });

@@ -1004,7 +1004,7 @@ export function AgentSubmissionPanel() {
                 title={`Go to ${step.label}`}
                 className={`cursor-pointer rounded-md border px-2 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/80 ${
                   activeSetupStep === step.id
-                    ? "border-primary/40 bg-primary/10 text-primary hover:bg-primary/15"
+                    ? "border-primary bg-primary text-primary-content hover:bg-primary/90"
                     : "step-control-inactive"
                 }`}
               >

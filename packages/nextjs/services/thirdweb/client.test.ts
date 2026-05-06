@@ -4,6 +4,7 @@ import {
   createThirdwebInAppWallet,
   getThirdwebWalletIds,
   getThirdwebWallets,
+  isThirdwebInAppWalletId,
   shouldIncludeThirdwebWalletAuthOption,
 } from "~~/services/thirdweb/client";
 
@@ -23,6 +24,13 @@ test("getThirdwebWalletIds only exposes branded external wallets when matching i
     }),
     ["inApp", "io.metamask", "com.coinbase.wallet"],
   );
+});
+
+test("isThirdwebInAppWalletId accepts thirdweb and wagmi in-app ids", () => {
+  assert.equal(isThirdwebInAppWalletId("inApp"), true);
+  assert.equal(isThirdwebInAppWalletId("in-app-wallet"), true);
+  assert.equal(isThirdwebInAppWalletId("io.metamask"), false);
+  assert.equal(isThirdwebInAppWalletId(undefined), false);
 });
 
 test("getThirdwebWalletIds keeps the modal on the in-app wallet when no branded injected providers are present", () => {
@@ -47,6 +55,20 @@ test("createThirdwebInAppWallet can hide wallet auth to avoid duplicate compact 
   const config = wallet.getConfig() as { auth?: { options?: string[] } };
 
   assert.deepEqual(config.auth?.options, ["google", "apple", "email", "passkey"]);
+});
+
+test("createThirdwebInAppWallet uses the landing image for wallet branding", () => {
+  const wallet = createThirdwebInAppWallet(42220);
+  const config = wallet.getConfig() as {
+    metadata?: { image?: { alt?: string; height?: number; src?: string; width?: number } };
+  };
+
+  assert.deepEqual(config.metadata?.image, {
+    alt: "Curyo human-loop network illustration",
+    height: 180,
+    src: "/launch/curyo-human-loop-orange-orbits-neutral-ai.png",
+    width: 320,
+  });
 });
 
 test("getThirdwebWallets keeps wallet auth inside in-app wallet when no branded injected wallet exists", () => {

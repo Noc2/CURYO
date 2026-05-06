@@ -4,7 +4,7 @@ import { useCallback } from "react";
 import type { Wallet } from "thirdweb/wallets";
 import { ConnectorAlreadyConnectedError, useAccount, useConnect } from "wagmi";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
-import { thirdwebClient } from "~~/services/thirdweb/client";
+import { isThirdwebInAppWalletId, thirdwebClient } from "~~/services/thirdweb/client";
 import {
   TARGETED_INJECTED_THIRDWEB_WALLET_IDS,
   hasTargetedInjectedProvider,
@@ -17,7 +17,7 @@ function isTargetedInjectedThirdwebWallet(wallet: Pick<Wallet, "id">) {
 }
 
 export function getWagmiConnectorIdForThirdwebWallet(wallet: Wallet, options?: { window?: unknown }): string | null {
-  if (wallet.id === "inApp") {
+  if (isThirdwebInAppWalletId(wallet.id)) {
     return "in-app-wallet";
   }
 
@@ -52,7 +52,7 @@ export function getThirdwebWagmiSyncOptions(
   wallet: Pick<Wallet, "id">,
   options: { source: "autoConnect" | "manualConnect" },
 ): { reconnect: true } | undefined {
-  if (wallet.id === "inApp" && options.source === "autoConnect") {
+  if (isThirdwebInAppWalletId(wallet.id) && options.source === "autoConnect") {
     return { reconnect: true };
   }
 

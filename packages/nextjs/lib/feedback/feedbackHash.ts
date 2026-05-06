@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { encodeAbiParameters, getAddress, isHex, keccak256, stringToHex } from "viem";
 import type { ContentFeedbackType } from "~~/lib/feedback/types";
 
-export const CONTENT_FEEDBACK_HASH_DOMAIN = "curyo.content-feedback.v1";
+const CONTENT_FEEDBACK_HASH_DOMAIN = "curyo.content-feedback.v1";
 
 export interface ContentFeedbackHashInput {
   chainId: number;

@@ -12,11 +12,11 @@ interface CuryoEmailTemplateParams {
 
 const EMAIL_BG = "#090a0c";
 const EMAIL_TEXT = "#f5f0eb";
-const EMAIL_PRIMARY = "#d56a3e";
-const EMAIL_PRIMARY_HALO = "rgba(213,106,62,0.14)";
+const EMAIL_PRIMARY = "#cc490f";
+const EMAIL_PRIMARY_HALO = "rgba(204,73,15,0.14)";
 const EMAIL_SURFACE_TOP = "#1c181e";
 const EMAIL_SURFACE_BOTTOM = "#151217";
-const EMAIL_SURFACE_GLOW = "rgba(224,122,78,0.18)";
+const EMAIL_SURFACE_GLOW = "rgba(204,73,15,0.18)";
 const EMAIL_MUTED_TEXT = "rgba(245,240,235,0.86)";
 const EMAIL_MUTED_LABEL = "rgba(245,240,235,0.64)";
 const EMAIL_FOOTER = "rgba(139,133,142,0.92)";
@@ -97,7 +97,7 @@ export function buildCuryoEmailHtml(params: CuryoEmailTemplateParams) {
                         style="
                           border-radius:999px;
                           background:${EMAIL_PRIMARY};
-                          box-shadow:0 14px 30px rgba(213,106,62,0.18);
+                          box-shadow:0 14px 30px rgba(204,73,15,0.18);
                         "
                       >
                         <a

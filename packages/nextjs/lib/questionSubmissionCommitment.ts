@@ -159,7 +159,7 @@ export function buildQuestionSubmissionRevealCommitment(params: QuestionSubmissi
   );
 }
 
-export function buildQuestionBundleHash(questions: readonly QuestionBundleSubmissionItem[]): Hex {
+function buildQuestionBundleHash(questions: readonly QuestionBundleSubmissionItem[]): Hex {
   const questionHashes = questions.map((question, index) =>
     keccak256(
       encodeAbiParameters(
@@ -198,7 +198,7 @@ export function buildQuestionBundleHash(questions: readonly QuestionBundleSubmis
   );
 }
 
-export function buildQuestionBundleRevealCommitment(params: QuestionBundleRevealCommitmentParams): Hex {
+function buildQuestionBundleRevealCommitment(params: QuestionBundleRevealCommitmentParams): Hex {
   return keccak256(
     encodeAbiParameters(
       [

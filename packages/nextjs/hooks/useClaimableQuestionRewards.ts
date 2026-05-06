@@ -17,7 +17,7 @@ export function getClaimableQuestionRewardsQueryKey(addresses?: readonly string[
   return ["claimableQuestionRewards", addresses?.join(",") ?? null, chainId ?? null] as const;
 }
 
-export function getClaimableQuestionBundleRewardsQueryKey(addresses?: readonly string[], chainId?: number) {
+function getClaimableQuestionBundleRewardsQueryKey(addresses?: readonly string[], chainId?: number) {
   return ["claimableQuestionBundleRewards", addresses?.join(",") ?? null, chainId ?? null] as const;
 }
 

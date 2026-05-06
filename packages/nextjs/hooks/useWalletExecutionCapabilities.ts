@@ -4,7 +4,11 @@ import { useMemo } from "react";
 import { useActiveAccount, useActiveWallet, useActiveWalletChain, useCapabilities } from "thirdweb/react";
 import type { GetCapabilitiesResult } from "thirdweb/wallets/eip5792";
 import { useAccount } from "wagmi";
-import { getThirdwebWalletSponsorshipMode, supportsThirdwebExecutionCapabilities } from "~~/services/thirdweb/client";
+import {
+  getThirdwebWalletSponsorshipMode,
+  isThirdwebInAppWalletId,
+  supportsThirdwebExecutionCapabilities,
+} from "~~/services/thirdweb/client";
 
 export type WalletExecutionMode = "sponsored_7702" | "self_funded_7702" | "fee_currency" | "direct_celo";
 
@@ -84,7 +88,7 @@ export function shouldQueryWalletCapabilities(params: {
   supportedChain: boolean;
   walletId: string | undefined;
 }) {
-  return params.walletId === "inApp" && typeof params.chainId === "number" && params.supportedChain;
+  return isThirdwebInAppWalletId(params.walletId) && typeof params.chainId === "number" && params.supportedChain;
 }
 
 export function useWalletExecutionCapabilities() {
@@ -111,7 +115,7 @@ export function useWalletExecutionCapabilities() {
   return useMemo(() => {
     const activeCapabilities = resolveWalletCapabilitiesForChain(capabilities, chainId);
     const hasSendCalls = Boolean(thirdwebAccount?.sendCalls ?? wallet?.getAccount()?.sendCalls);
-    const isThirdwebInApp = wallet?.id === "inApp";
+    const isThirdwebInApp = isThirdwebInAppWalletId(wallet?.id);
     const thirdwebSponsorshipMode = isThirdwebInApp ? getThirdwebWalletSponsorshipMode(wallet) : null;
     const supportsPaymasterService = walletCapabilitiesSupportPaymasterService(activeCapabilities);
 
