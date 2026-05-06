@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
   const contentIdParam = request.nextUrl.searchParams.get("contentId");
   const address = request.nextUrl.searchParams.get("address");
   const limited = await checkRateLimit(request, READ_RATE_LIMIT, {
+    allowOnStoreUnavailable: true,
     extraKeyParts: [typeof address === "string" ? address : undefined, contentIdParam ?? undefined],
   });
   if (limited) return limited;
@@ -88,6 +89,7 @@ export async function POST(request: NextRequest) {
       challengeId?: string;
     };
     const limited = await checkRateLimit(request, WRITE_RATE_LIMIT, {
+      allowOnStoreUnavailable: true,
       extraKeyParts: [typeof body.address === "string" ? body.address : undefined],
     });
     if (limited) return limited;

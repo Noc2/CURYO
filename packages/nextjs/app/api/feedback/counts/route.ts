@@ -11,6 +11,7 @@ const RATE_LIMIT = { limit: 60, windowMs: 60_000 };
 export async function GET(request: NextRequest) {
   const contentIdsParam = request.nextUrl.searchParams.get("contentIds");
   const limited = await checkRateLimit(request, RATE_LIMIT, {
+    allowOnStoreUnavailable: true,
     extraKeyParts: [contentIdsParam ?? undefined],
   });
   if (limited) return limited;
