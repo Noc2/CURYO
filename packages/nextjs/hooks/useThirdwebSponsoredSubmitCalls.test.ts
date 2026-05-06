@@ -159,6 +159,21 @@ test("allows self-funded fallback when sponsored free transactions are exhausted
   );
 });
 
+test("allows self-funded fallback for wagmi in-app wallet ids when sponsored free transactions are exhausted", () => {
+  assert.equal(
+    shouldAttemptSelfFundedThirdwebFallback({
+      activeWalletId: "in-app-wallet",
+      chainId: 42220,
+      error: new Error(
+        'Error executing 7702 transaction: {"reason":"Free transactions used up. Add CELO to continue."}',
+      ),
+      executionMode: "sponsored_7702",
+      hasReservedFreeTransaction: false,
+    }),
+    true,
+  );
+});
+
 test("awaits self-funded reconnect after free transactions are exhausted for thirdweb in-app wallets", () => {
   assert.equal(
     shouldAwaitSelfFundedSubmitCalls({

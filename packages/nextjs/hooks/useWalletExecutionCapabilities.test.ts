@@ -70,6 +70,15 @@ test("shouldQueryWalletCapabilities only enables capability probing for in-app w
     shouldQueryWalletCapabilities({
       chainId: 42220,
       supportedChain: true,
+      walletId: "in-app-wallet",
+    }),
+    true,
+  );
+
+  assert.equal(
+    shouldQueryWalletCapabilities({
+      chainId: 42220,
+      supportedChain: true,
       walletId: "io.metamask",
     }),
     false,

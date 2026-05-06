@@ -22,6 +22,7 @@ import { buildFreeTransactionOperationKey } from "~~/lib/thirdweb/freeTransactio
 import { isFreeTransactionExhaustedError } from "~~/lib/transactionErrors";
 import {
   createThirdwebInAppWallet,
+  isThirdwebInAppWalletId,
   supportsThirdwebExecutionCapabilities,
   thirdwebClient,
 } from "~~/services/thirdweb/client";
@@ -82,7 +83,7 @@ export function shouldAttemptSelfFundedThirdwebFallback(params: {
   hasReservedFreeTransaction: boolean;
 }) {
   return (
-    params.activeWalletId === "inApp" &&
+    isThirdwebInAppWalletId(params.activeWalletId) &&
     params.executionMode === "sponsored_7702" &&
     typeof params.chainId === "number" &&
     !params.hasReservedFreeTransaction &&

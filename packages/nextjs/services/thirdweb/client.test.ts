@@ -4,6 +4,7 @@ import {
   createThirdwebInAppWallet,
   getThirdwebWalletIds,
   getThirdwebWallets,
+  isThirdwebInAppWalletId,
   shouldIncludeThirdwebWalletAuthOption,
 } from "~~/services/thirdweb/client";
 
@@ -23,6 +24,13 @@ test("getThirdwebWalletIds only exposes branded external wallets when matching i
     }),
     ["inApp", "io.metamask", "com.coinbase.wallet"],
   );
+});
+
+test("isThirdwebInAppWalletId accepts thirdweb and wagmi in-app ids", () => {
+  assert.equal(isThirdwebInAppWalletId("inApp"), true);
+  assert.equal(isThirdwebInAppWalletId("in-app-wallet"), true);
+  assert.equal(isThirdwebInAppWalletId("io.metamask"), false);
+  assert.equal(isThirdwebInAppWalletId(undefined), false);
 });
 
 test("getThirdwebWalletIds keeps the modal on the in-app wallet when no branded injected providers are present", () => {

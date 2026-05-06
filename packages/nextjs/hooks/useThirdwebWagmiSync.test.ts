@@ -13,6 +13,12 @@ test("getWagmiConnectorIdForThirdwebWallet keeps in-app wallets on the in-app co
     } as any),
     "in-app-wallet",
   );
+  assert.equal(
+    getWagmiConnectorIdForThirdwebWallet({
+      id: "in-app-wallet",
+    } as any),
+    "in-app-wallet",
+  );
 });
 
 test("getWagmiConnectorIdForThirdwebWallet keeps dedicated connector ids for matching injected wallets", () => {
@@ -141,6 +147,12 @@ test("shouldSkipThirdwebWagmiSync returns false when the requested chain differs
 test("getThirdwebWagmiSyncOptions treats supported auto-connect wallets as wagmi reconnects", () => {
   assert.deepEqual(
     getThirdwebWagmiSyncOptions({ id: "inApp" } as any, {
+      source: "autoConnect",
+    }),
+    { reconnect: true },
+  );
+  assert.deepEqual(
+    getThirdwebWagmiSyncOptions({ id: "in-app-wallet" } as any, {
       source: "autoConnect",
     }),
     { reconnect: true },

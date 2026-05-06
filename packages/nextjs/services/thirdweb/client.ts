@@ -32,6 +32,10 @@ type CreateThirdwebInAppWalletOptions = {
   sponsorshipMode?: ThirdwebSponsorshipMode | null;
 };
 
+export function isThirdwebInAppWalletId(walletId: string | null | undefined): boolean {
+  return walletId === "inApp" || walletId === "in-app-wallet";
+}
+
 export function isThirdwebWalletChain(chainId: number | null | undefined): boolean {
   return typeof chainId === "number" && THIRDWEB_CONNECT_CHAIN_IDS.has(chainId);
 }
@@ -144,7 +148,7 @@ export function getThirdwebWalletExecutionMode(
 }
 
 export function getThirdwebWalletSponsorshipMode(wallet: Wallet | null | undefined): ThirdwebSponsorshipMode | null {
-  if (!wallet || wallet.id !== "inApp") {
+  if (!wallet || !isThirdwebInAppWalletId(wallet.id)) {
     return null;
   }
 
