@@ -8,6 +8,7 @@ import { TooltipAnchor } from "~~/components/ui/InfoTooltip";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import { useContentFeedback } from "~~/hooks/useContentFeedback";
+import { getContentFeedbackSubmitTooltip } from "~~/lib/feedback/contentFeedbackSubmitState";
 import {
   CONTENT_FEEDBACK_BODY_MAX_LENGTH,
   CONTENT_FEEDBACK_TYPES,
@@ -96,12 +97,13 @@ export function ContentFeedbackPanel({ item, variant = "rail", onRequestConnect 
     myCommitHash != null &&
     (myCommitHash as unknown as string) !== "0x0000000000000000000000000000000000000000000000000000000000000000";
   const canSubmitDraft = Boolean(item && bodyLength >= 4 && bodyLength <= CONTENT_FEEDBACK_BODY_MAX_LENGTH);
-  const submitDisabled = !canSubmitDraft || isSubmitting || !hasCurrentRoundVote;
-  const submitTooltip = !hasCurrentRoundVote
-    ? "You need to vote first."
-    : !canSubmitDraft
-      ? "Write at least 4 characters."
-      : "Add feedback";
+  const isOwnContent = Boolean(item?.isOwnContent);
+  const submitDisabled = !canSubmitDraft || isSubmitting || !hasCurrentRoundVote || isOwnContent;
+  const submitTooltip = getContentFeedbackSubmitTooltip({
+    canSubmitDraft,
+    hasCurrentRoundVote,
+    isOwnContent,
+  });
   const submitButtonToneClassName = hasCurrentRoundVote ? "vote-feedback" : "vote-light";
   const ownHiddenCopy =
     feedback.ownHiddenCount > 0
@@ -121,7 +123,7 @@ export function ContentFeedbackPanel({ item, variant = "rail", onRequestConnect 
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!canSubmitDraft || !hasCurrentRoundVote) return;
+    if (!canSubmitDraft || !hasCurrentRoundVote || isOwnContent) return;
 
     if (!address) {
       notification.info("Sign in to add feedback.");
