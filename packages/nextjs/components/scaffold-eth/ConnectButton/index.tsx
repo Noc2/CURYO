@@ -27,7 +27,7 @@ export const CuryoConnectButton = ({
   if (!address || !resolvedChain) {
     return (
       <HumanSignInButton
-        className="btn btn-sm btn-primary border-none !text-black"
+        className="btn btn-sm btn-primary border-none"
         data-testid="auth-connect-button"
         disabled={syncingThirdwebAccount}
         style={{ fontSize: "16px" }}

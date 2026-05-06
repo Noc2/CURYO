@@ -255,7 +255,7 @@ function FeaturesBenefitsSection() {
 function LandingPageActionsFallback() {
   return (
     <div className="mt-6 flex flex-wrap justify-center gap-3 lg:justify-start">
-      <HumanSignInButton className="btn btn-primary whitespace-nowrap rounded-lg px-6 !text-black">
+      <HumanSignInButton className="btn btn-primary whitespace-nowrap rounded-lg px-6">
         {HUMAN_SIGN_IN_LABEL}
       </HumanSignInButton>
       <Link href={DOCS_AI_ROUTE} prefetch={false} className="btn whitespace-nowrap rounded-lg px-6">

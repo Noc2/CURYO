@@ -77,10 +77,7 @@ export function VotingGuide() {
         {/* Footer */}
         <div className="px-5 pb-4">
           {!address ? (
-            <HumanSignInButton
-              className="btn btn-sm btn-primary w-full border-none !text-black"
-              style={{ fontSize: "16px" }}
-            >
+            <HumanSignInButton className="btn btn-sm btn-primary w-full border-none" style={{ fontSize: "16px" }}>
               {HUMAN_SIGN_IN_LABEL}
             </HumanSignInButton>
           ) : !hasVoterId ? (

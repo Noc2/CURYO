@@ -251,7 +251,7 @@ export function NotificationSettingsPanel({
               Sign in to choose which in-app, browser, and email alerts you want to receive.
             </p>
           </div>
-          <HumanSignInButton className="btn btn-primary px-6 !text-black">{HUMAN_SIGN_IN_LABEL}</HumanSignInButton>
+          <HumanSignInButton className="btn btn-primary px-6">{HUMAN_SIGN_IN_LABEL}</HumanSignInButton>
         </div>
       </div>
     );

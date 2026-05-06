@@ -8,7 +8,7 @@ import { HUMAN_SIGN_IN_LABEL } from "~~/lib/home/humanSignInRoute";
 export function LandingPageActions() {
   return (
     <div className="mt-6 flex flex-wrap justify-center gap-3 lg:justify-start">
-      <HumanSignInButton className={`btn btn-primary !text-black ${styles.cta} ${styles.primary}`}>
+      <HumanSignInButton className={`btn btn-primary ${styles.cta} ${styles.primary}`}>
         <span>{HUMAN_SIGN_IN_LABEL}</span>
         <span className={styles.arrow} aria-hidden="true">
           <ChevronRightIcon className="h-5 w-5 text-current" />

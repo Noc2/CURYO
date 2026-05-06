@@ -578,6 +578,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--curyo-action-content);
 }
 
 @keyframes vote-btn-attention {

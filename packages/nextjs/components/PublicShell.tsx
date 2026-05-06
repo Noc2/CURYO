@@ -41,9 +41,7 @@ function PublicHeader() {
           ))}
         </nav>
 
-        <HumanSignInButton className="btn btn-sm btn-primary border-none !text-black">
-          {HUMAN_SIGN_IN_LABEL}
-        </HumanSignInButton>
+        <HumanSignInButton className="btn btn-sm btn-primary border-none">{HUMAN_SIGN_IN_LABEL}</HumanSignInButton>
       </div>
     </header>
   );
