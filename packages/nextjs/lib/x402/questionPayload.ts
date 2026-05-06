@@ -167,7 +167,9 @@ function normalizeImageUrls(value: unknown): string[] {
   const imageUrls = value.map((entry, index) => {
     const normalized = normalizeHttpsUrl(readString(entry, `imageUrls[${index}]`), `imageUrls[${index}]`);
     if (!DIRECT_IMAGE_URL_PATTERN.test(normalized)) {
-      throw new X402QuestionInputError("imageUrls must point to direct image files.");
+      throw new X402QuestionInputError(
+        "imageUrls must point to direct HTTPS image files or approved Curyo-hosted uploads.",
+      );
     }
     return normalized;
   });
