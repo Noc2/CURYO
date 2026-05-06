@@ -229,7 +229,7 @@ function FeatureBenefitCard({
             key={`${title}-${link.href}`}
             href={link.href}
             prefetch={false}
-            className="rounded-md border border-primary/18 bg-base-100/35 px-3 py-1.5 text-xs font-semibold text-primary transition hover:border-accent/35 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="rounded-md border border-primary bg-primary px-3 py-1.5 text-xs font-semibold text-primary-content transition hover:bg-primary/90 hover:text-primary-content focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {link.label}
           </Link>

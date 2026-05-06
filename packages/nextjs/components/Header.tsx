@@ -114,7 +114,7 @@ const HeaderMenuLinks = ({ variant = "mobile" }: { variant?: "mobile" | "desktop
                               prefetch={false}
                               className={`block w-full px-3 py-1.5 text-base rounded-lg transition-colors ${
                                 isLinkActive
-                                  ? "bg-primary/10 text-primary font-medium"
+                                  ? "bg-primary text-primary-content font-medium"
                                   : "text-base-content/75 hover:bg-base-content/[0.04] hover:text-base-content"
                               }`}
                             >
