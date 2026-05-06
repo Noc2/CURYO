@@ -41,7 +41,10 @@ function formatFeedbackDate(value: string) {
 }
 
 function FeedbackItem({ item }: { item: ContentFeedbackItem }) {
-  const visibilityLabel = item.isPublic ? "Unlocked" : "Only you";
+  const visibilityLabel = item.isPublic ? "Public" : "Private until settlement";
+  const visibilityTooltip = item.isPublic
+    ? "This feedback is visible to everyone because the round has settled."
+    : "Only you can see this feedback while voting is active. It becomes public after settlement.";
 
   return (
     <li className="rounded-lg border border-base-content/10 bg-base-content/[0.035] p-3">
@@ -52,9 +55,15 @@ function FeedbackItem({ item }: { item: ContentFeedbackItem }) {
             {shortenAddress(item.authorAddress)} · {formatFeedbackDate(item.createdAt)}
           </p>
         </div>
-        <span className="shrink-0 rounded-full bg-base-content/[0.07] px-2 py-1 text-[0.66rem] font-semibold leading-none text-base-content/58">
-          {visibilityLabel}
-        </span>
+        <TooltipAnchor text={visibilityTooltip} position="top" className="shrink-0 rounded-full">
+          <span
+            tabIndex={0}
+            className="rounded-full bg-base-content/[0.07] px-2 py-1 text-[0.66rem] font-semibold leading-none text-base-content/58"
+            aria-label={`${visibilityLabel}: ${visibilityTooltip}`}
+          >
+            {visibilityLabel}
+          </span>
+        </TooltipAnchor>
       </div>
       <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed text-base-content/78">{item.body}</p>
       {item.sourceUrl ? (
