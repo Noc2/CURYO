@@ -605,6 +605,49 @@ export const voterId = onchainTable(
 );
 
 // ============================================================
+// HUMAN FAUCET CLAIMS
+// ============================================================
+
+export const humanFaucetClaim = onchainTable(
+  "human_faucet_claim",
+  (t) => ({
+    id: t.text().primaryKey(), // `${txHash}-${logIndex}`
+    user: t.hex().notNull(),
+    nullifier: t.bigint().notNull(),
+    amount: t.bigint().notNull(),
+    blockNumber: t.bigint().notNull(),
+    claimedAt: t.bigint().notNull(),
+    transactionHash: t.hex().notNull(),
+    logIndex: t.integer().notNull(),
+  }),
+  (table) => ({
+    claimedAtIdx: index().on(table.claimedAt),
+    nullifierIdx: index().on(table.nullifier),
+    userIdx: index().on(table.user),
+  }),
+);
+
+export const humanFaucetReferralReward = onchainTable(
+  "human_faucet_referral_reward",
+  (t) => ({
+    id: t.text().primaryKey(), // `${txHash}-${logIndex}`
+    referrer: t.hex().notNull(),
+    claimant: t.hex().notNull(),
+    referrerReward: t.bigint().notNull(),
+    claimantBonus: t.bigint().notNull(),
+    blockNumber: t.bigint().notNull(),
+    paidAt: t.bigint().notNull(),
+    transactionHash: t.hex().notNull(),
+    logIndex: t.integer().notNull(),
+  }),
+  (table) => ({
+    claimantIdx: index().on(table.claimant),
+    paidAtIdx: index().on(table.paidAt),
+    referrerIdx: index().on(table.referrer),
+  }),
+);
+
+// ============================================================
 // TOKEN HOLDERS (HREP)
 // ============================================================
 

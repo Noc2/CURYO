@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import type { SelfApp } from "@selfxyz/qrcode";
 import type { Hex } from "viem";
@@ -18,6 +18,12 @@ import {
   normalizeFaucetClaimReferrer,
 } from "~~/lib/governance/selfVerificationApp";
 import { resolveSelfVerificationErrorMessage } from "~~/lib/governance/selfVerificationError";
+import {
+  SELF_QRCODE_SDK_VERSION,
+  type SelfVerificationTelemetryEvent,
+  extractSelfVerificationErrorTelemetry,
+  sendSelfVerificationTelemetry,
+} from "~~/lib/governance/selfVerificationTelemetry";
 
 // Dynamically import SelfQRcodeWrapper to avoid SSR issues (it uses WebSocket + browser APIs)
 const SelfQRcodeWrapper = dynamic(() => import("@selfxyz/qrcode").then(mod => mod.SelfQRcodeWrapper), {
@@ -29,14 +35,26 @@ const SelfQRcodeWrapper = dynamic(() => import("@selfxyz/qrcode").then(mod => mo
   ),
 });
 
+export type SelfVerificationAttempt = {
+  attemptId: string;
+};
+
 interface SelfVerifyButtonProps {
   referrer?: string | null;
-  onStart?: () => void;
-  onSuccess: () => void;
+  onStart?: (attempt: SelfVerificationAttempt) => void;
+  onSuccess: (attempt: SelfVerificationAttempt) => void;
+}
+
+function createSelfVerificationAttemptId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 }
 
 export function SelfVerifyButton({ referrer, onStart, onSuccess }: SelfVerifyButtonProps) {
-  const { address, chain } = useAccount();
+  const { address, chain, connector } = useAccount();
   const { signTypedDataAsync, isPending: isSigningAuthorization } = useSignTypedData();
   const { targetNetwork } = useTargetNetwork();
   const { switchToChain, switchingChainId } = useCuryoSwitchNetwork();
@@ -58,10 +76,61 @@ export function SelfVerifyButton({ referrer, onStart, onSuccess }: SelfVerifyBut
   const [claimAuthorizationUserData, setClaimAuthorizationUserData] = useState<Hex | null>(null);
   const authorizationNonce = typeof recipientAuthorizationNonce === "bigint" ? recipientAuthorizationNonce : null;
   const isOnRequiredChain = !!requiredChainId && chain?.id === requiredChainId;
+  const attemptId = useRef<string | null>(null);
+  const attemptStartedAt = useRef<number | null>(null);
+  const flowLoadedKey = useRef<string | null>(null);
 
   useEffect(() => {
     setIsMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
   }, []);
+
+  const startTelemetryAttempt = useCallback(() => {
+    const nextAttemptId = createSelfVerificationAttemptId();
+    attemptId.current = nextAttemptId;
+    attemptStartedAt.current = Date.now();
+    return nextAttemptId;
+  }, []);
+
+  const getTelemetryAttempt = useCallback((): SelfVerificationAttempt => {
+    if (!attemptId.current) {
+      startTelemetryAttempt();
+    }
+
+    return {
+      attemptId: attemptId.current!,
+    };
+  }, [startTelemetryAttempt]);
+
+  const logSelfVerificationTelemetry = useCallback(
+    (event: SelfVerificationTelemetryEvent, extra: Record<string, unknown> = {}) => {
+      sendSelfVerificationTelemetry({
+        attemptId: attemptId.current,
+        contractAddress: contractInfo?.address ?? null,
+        elapsedMs: attemptStartedAt.current ? Date.now() - attemptStartedAt.current : null,
+        endpointType: requiredChainId === 42220 ? "celo" : requiredChainId === 11142220 ? "staging_celo" : null,
+        event,
+        isMobile,
+        requiredChainId: requiredChainId ?? null,
+        sdkVersion: SELF_QRCODE_SDK_VERSION,
+        walletAddress: address ?? null,
+        walletChainId: chain?.id ?? null,
+        walletId: connector?.id ?? null,
+        walletName: connector?.name ?? null,
+        ...extra,
+      });
+    },
+    [address, chain?.id, connector?.id, connector?.name, contractInfo?.address, isMobile, requiredChainId],
+  );
+
+  useEffect(() => {
+    const nextFlowLoadedKey = `${address ?? "anonymous"}:${requiredChainId ?? "unsupported"}:${contractInfo?.address ?? "missing"}`;
+    if (flowLoadedKey.current === nextFlowLoadedKey) {
+      return;
+    }
+
+    flowLoadedKey.current = nextFlowLoadedKey;
+    logSelfVerificationTelemetry("self_flow_loaded");
+  }, [address, contractInfo?.address, logSelfVerificationTelemetry, requiredChainId]);
 
   useEffect(() => {
     setClaimAuthorizationUserData(null);
@@ -87,6 +156,7 @@ export function SelfVerifyButton({ referrer, onStart, onSuccess }: SelfVerifyBut
     });
 
     setSelfApp(nextSelfApp);
+    logSelfVerificationTelemetry("self_qr_created");
   }, [
     address,
     contractInfo?.address,
@@ -94,6 +164,7 @@ export function SelfVerifyButton({ referrer, onStart, onSuccess }: SelfVerifyBut
     isOnRequiredChain,
     claimAuthorizationUserData,
     isMobile,
+    logSelfVerificationTelemetry,
     referrer,
   ]);
 
@@ -103,12 +174,20 @@ export function SelfVerifyButton({ referrer, onStart, onSuccess }: SelfVerifyBut
     }
 
     try {
+      startTelemetryAttempt();
+      logSelfVerificationTelemetry("claim_authorization_started");
       setErrorMessage(null);
       if (chain?.id !== requiredChainId) {
+        logSelfVerificationTelemetry("wrong_chain_detected");
+        logSelfVerificationTelemetry("wallet_switch_started");
         await switchToChain(requiredChainId);
+        logSelfVerificationTelemetry("wallet_chain_ready");
       }
 
       if (authorizationNonce === null) {
+        logSelfVerificationTelemetry("claim_authorization_failed", {
+          errorReason: "claim_nonce_loading",
+        });
         setErrorMessage("Claim status is still loading. Please try again in a moment.");
         return;
       }
@@ -138,8 +217,10 @@ export function SelfVerifyButton({ referrer, onStart, onSuccess }: SelfVerifyBut
           signature,
         }),
       );
+      logSelfVerificationTelemetry("claim_authorization_signed");
     } catch (error) {
       console.error("Failed to authorize faucet claim:", error);
+      logSelfVerificationTelemetry("claim_authorization_failed", extractSelfVerificationErrorTelemetry(error));
       setErrorMessage(`Switch to ${targetNetwork.name}, then authorize the claim again.`);
     }
   }, [
@@ -150,6 +231,8 @@ export function SelfVerifyButton({ referrer, onStart, onSuccess }: SelfVerifyBut
     referrer,
     requiredChainId,
     signTypedDataAsync,
+    startTelemetryAttempt,
+    logSelfVerificationTelemetry,
     switchToChain,
     targetNetwork.name,
   ]);
@@ -213,7 +296,7 @@ export function SelfVerifyButton({ referrer, onStart, onSuccess }: SelfVerifyBut
           target="_blank"
           rel="noopener noreferrer"
           className="btn btn-curyo btn-lg inline-flex"
-          onClick={() => onStart?.()}
+          onClick={() => onStart?.(getTelemetryAttempt())}
         >
           Open Self App
         </a>
@@ -229,9 +312,16 @@ export function SelfVerifyButton({ referrer, onStart, onSuccess }: SelfVerifyBut
       <SelfQRcodeWrapper
         selfApp={selfApp}
         websocketUrl={websocketUrl}
-        onSuccess={onSuccess}
+        onSuccess={() => {
+          const attempt = getTelemetryAttempt();
+          logSelfVerificationTelemetry("self_verification_succeeded", {
+            attemptId: attempt.attemptId,
+          });
+          onSuccess(attempt);
+        }}
         onError={(error: any) => {
           console.error("Self.xyz verification error:", error);
+          logSelfVerificationTelemetry("self_verification_failed", extractSelfVerificationErrorTelemetry(error));
           setErrorMessage(resolveSelfVerificationErrorMessage(error));
         }}
         size={250}
