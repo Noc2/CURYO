@@ -6,8 +6,10 @@ import { CuryoAnimation } from "~~/components/home/CuryoAnimation";
 import { LandingFaq } from "~~/components/home/LandingFaq";
 import { LandingPageActions } from "~~/components/home/LandingPageActions";
 import { SupportedAgentsSection } from "~~/components/home/SupportedAgentsSection";
-import { DOCS_AI_ROUTE, RATE_ROUTE } from "~~/constants/routes";
+import { HumanSignInButton } from "~~/components/shared/HumanSignInButton";
+import { DOCS_AI_ROUTE } from "~~/constants/routes";
 import { getOptionalPonderUrl } from "~~/lib/env/server";
+import { HUMAN_SIGN_IN_LABEL } from "~~/lib/home/humanSignInRoute";
 
 const LANDING_STATS_REVALIDATE_SECONDS = 300;
 
@@ -253,9 +255,9 @@ function FeaturesBenefitsSection() {
 function LandingPageActionsFallback() {
   return (
     <div className="mt-6 flex flex-wrap justify-center gap-3 lg:justify-start">
-      <Link href={RATE_ROUTE} prefetch={false} className="btn btn-primary whitespace-nowrap rounded-lg px-6">
-        Earn USDC
-      </Link>
+      <HumanSignInButton className="btn btn-primary whitespace-nowrap rounded-lg px-6 !text-black">
+        {HUMAN_SIGN_IN_LABEL}
+      </HumanSignInButton>
       <Link href={DOCS_AI_ROUTE} prefetch={false} className="btn whitespace-nowrap rounded-lg px-6">
         For Agents
       </Link>

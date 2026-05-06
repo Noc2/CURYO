@@ -6,8 +6,8 @@ import { WrongNetworkDropdown } from "./WrongNetworkDropdown";
 import { useActiveAccount, useActiveWalletChain } from "thirdweb/react";
 import { Address } from "viem";
 import { useAccount } from "wagmi";
+import { HumanSignInButton } from "~~/components/shared/HumanSignInButton";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
-import { useCuryoConnectModal } from "~~/hooks/useCuryoConnectModal";
 
 export const CuryoConnectButton = ({
   inlineMenu = false,
@@ -20,34 +20,20 @@ export const CuryoConnectButton = ({
   const { address, chain } = useAccount();
   const activeThirdwebAccount = useActiveAccount();
   const activeThirdwebChain = useActiveWalletChain();
-  const { openConnectModal, isConnecting, thirdwebEnabled } = useCuryoConnectModal();
   const resolvedChain = chain ?? activeThirdwebChain;
 
   const syncingThirdwebAccount = Boolean(activeThirdwebAccount && (!address || !resolvedChain));
 
   if (!address || !resolvedChain) {
     return (
-      <button
-        className="btn btn-sm btn-curyo border-none"
+      <HumanSignInButton
+        className="btn btn-sm btn-primary border-none !text-black"
         data-testid="auth-connect-button"
-        disabled={!thirdwebEnabled || isConnecting || syncingThirdwebAccount}
-        onClick={() => {
-          void openConnectModal();
-        }}
-        type="button"
+        disabled={syncingThirdwebAccount}
         style={{ fontSize: "16px" }}
       >
-        <span className="sm:hidden">
-          {!thirdwebEnabled ? "Unavailable" : isConnecting || syncingThirdwebAccount ? "..." : "Sign In"}
-        </span>
-        <span className="hidden sm:inline">
-          {!thirdwebEnabled
-            ? "Sign In Unavailable"
-            : isConnecting || syncingThirdwebAccount
-              ? "Signing In..."
-              : "Sign In"}
-        </span>
-      </button>
+        Sign In as Human
+      </HumanSignInButton>
     );
   }
 

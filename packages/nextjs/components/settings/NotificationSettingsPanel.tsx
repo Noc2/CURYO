@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BellAlertIcon, EnvelopeIcon } from "@heroicons/react/24/outline";
+import { HumanSignInButton } from "~~/components/shared/HumanSignInButton";
 import { useCuryoConnectModal } from "~~/hooks/useCuryoConnectModal";
 import { useEmailNotificationSettings } from "~~/hooks/useEmailNotificationSettings";
 import { type NotificationPreferences, useNotificationPreferences } from "~~/hooks/useNotificationPreferences";
+import { HUMAN_SIGN_IN_LABEL } from "~~/lib/home/humanSignInRoute";
 import { type EmailNotificationSettingsPayload } from "~~/lib/notifications/emailShared";
 import { notification } from "~~/utils/scaffold-eth";
 
@@ -249,15 +251,7 @@ export function NotificationSettingsPanel({
               Sign in to choose which in-app, browser, and email alerts you want to receive.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              void openConnectModal();
-            }}
-            className="btn btn-submit px-6"
-          >
-            Sign In
-          </button>
+          <HumanSignInButton className="btn btn-primary px-6 !text-black">{HUMAN_SIGN_IN_LABEL}</HumanSignInButton>
         </div>
       </div>
     );

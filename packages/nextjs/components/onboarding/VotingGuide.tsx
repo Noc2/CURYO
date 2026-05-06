@@ -5,13 +5,14 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAccount } from "wagmi";
 import { XMarkIcon } from "@heroicons/react/24/outline";
-import { useCuryoConnectModal } from "~~/hooks/useCuryoConnectModal";
+import { HumanSignInButton } from "~~/components/shared/HumanSignInButton";
 import { useOnboarding } from "~~/hooks/useOnboarding";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
+import { HUMAN_SIGN_IN_FAUCET_ROUTE, HUMAN_SIGN_IN_LABEL } from "~~/lib/home/humanSignInRoute";
 
 const STEPS = [
   {
-    label: "Sign in",
+    label: HUMAN_SIGN_IN_LABEL,
     desc: "get your Voter ID to vote, stake, and earn rewards",
   },
   { label: "Vote", desc: "place your prediction while direction stays hidden" },
@@ -29,7 +30,6 @@ const STEPS = [
  */
 export function VotingGuide() {
   const { shouldShowGuide, dismissGuide } = useOnboarding();
-  const { openConnectModal } = useCuryoConnectModal();
   const { address } = useAccount();
   const { hasVoterId } = useVoterIdNFT(address);
   const [mounted, setMounted] = useState(false);
@@ -77,18 +77,14 @@ export function VotingGuide() {
         {/* Footer */}
         <div className="px-5 pb-4">
           {!address ? (
-            <button
-              type="button"
-              onClick={() => {
-                void openConnectModal();
-              }}
-              className="btn btn-sm btn-curyo border-none w-full"
+            <HumanSignInButton
+              className="btn btn-sm btn-primary w-full border-none !text-black"
               style={{ fontSize: "16px" }}
             >
-              Sign In
-            </button>
+              {HUMAN_SIGN_IN_LABEL}
+            </HumanSignInButton>
           ) : !hasVoterId ? (
-            <Link href="/governance" className="btn btn-primary btn-sm w-full">
+            <Link href={HUMAN_SIGN_IN_FAUCET_ROUTE} className="btn btn-primary btn-sm w-full">
               Get Voter ID
             </Link>
           ) : (

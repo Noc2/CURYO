@@ -3,7 +3,9 @@ import Link from "next/link";
 import { CuryoLogo } from "~~/components/CuryoLogo";
 import { FooterLinks } from "~~/components/FooterLinks";
 import { ReferralAttributionCapture } from "~~/components/referrals/ReferralAttributionCapture";
+import { HumanSignInButton } from "~~/components/shared/HumanSignInButton";
 import { ASK_ROUTE, GOVERNANCE_ROUTE, RATE_ROUTE } from "~~/constants/routes";
+import { HUMAN_SIGN_IN_LABEL } from "~~/lib/home/humanSignInRoute";
 
 const publicNavLinks = [
   { href: RATE_ROUTE, label: "Discover", heavy: true },
@@ -39,9 +41,9 @@ function PublicHeader() {
           ))}
         </nav>
 
-        <Link href={RATE_ROUTE} prefetch={false} className="btn btn-sm btn-curyo border-none">
-          Sign In
-        </Link>
+        <HumanSignInButton className="btn btn-sm btn-primary border-none !text-black">
+          {HUMAN_SIGN_IN_LABEL}
+        </HumanSignInButton>
       </div>
     </header>
   );
