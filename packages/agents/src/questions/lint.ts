@@ -7,6 +7,9 @@ const FEATURE_ACCEPTANCE_TEMPLATE_ID = "feature_acceptance_test";
 const FEATURE_ACCEPTANCE_REQUIRED_INPUTS = ["expectedBehavior", "testSteps", "acceptanceCriteria"] as const;
 const AGENT_TRACE_REVIEW_TEMPLATE_ID = "agent_trace_review";
 const AGENT_TRACE_REVIEW_REQUIRED_INPUTS = ["traceId", "taskGoal", "reviewFocus"] as const;
+const SURVEY_STYLE_PATTERN =
+  /\b(multiple[-\s]?choice|answer options?|choose one|choose from|select one|select from|price range|pricing range)\b/i;
+const HIDDEN_CHOICE_TITLE_PATTERN = /\bwhich\s+(option|variant|candidate|direction|price|pricing|range)\b/i;
 
 function isObject(value: unknown): value is JsonObject {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -77,6 +80,22 @@ export function lintAgentQuestion(
   }
   if (/\b(and|or)\b/i.test(title) && title.length > 70) {
     pushFinding(findings, "warning", `${path}.title`, "Long titles with conjunctions often hide multiple decisions.");
+  }
+  if (SURVEY_STYLE_PATTERN.test(`${title}\n${description}`)) {
+    pushFinding(
+      findings,
+      "warning",
+      `${path}.description`,
+      "Curyo asks should not be multiple-choice surveys. Ask one bounded rating question, or use one ranked bundle member per option.",
+    );
+  }
+  if (templateId && !RANK_BY_RATING_TEMPLATE_IDS.has(templateId) && HIDDEN_CHOICE_TITLE_PATTERN.test(title)) {
+    pushFinding(
+      findings,
+      "warning",
+      `${path}.title`,
+      "Choice questions should use one binary-rated ranked bundle member per option, then compare final ratings later.",
+    );
   }
 
   if (description.length > 280) {
