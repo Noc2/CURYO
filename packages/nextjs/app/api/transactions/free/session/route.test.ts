@@ -3,6 +3,7 @@ import { buildUnavailableFreeTransactionSummary, isFreeTransactionStoreUnavailab
 import assert from "node:assert/strict";
 import { after, test } from "node:test";
 import type { QueryResult, QueryResultRow } from "pg";
+import { __setFreeTransactionTestOverridesForTests } from "~~/lib/thirdweb/freeTransactions";
 import { __setRateLimitStoreForTests } from "~~/utils/rateLimit";
 
 const env = process.env as Record<string, string | undefined>;
@@ -23,6 +24,7 @@ function queryResult<Row extends QueryResultRow>(rows: Row[]): QueryResult<Row> 
 
 after(() => {
   __setRateLimitStoreForTests(null);
+  __setFreeTransactionTestOverridesForTests(null);
   if (originalNodeEnv === undefined) {
     delete env.NODE_ENV;
   } else {
@@ -105,4 +107,42 @@ test("free transaction session route rejects unsupported numeric chain ids", asy
 
   assert.equal(response.status, 400);
   assert.equal(body.error, "Unsupported chain");
+});
+
+test("free transaction session route falls back to self-funded mode when summary lookup fails", async () => {
+  env.NEXT_PUBLIC_TARGET_NETWORKS = "42220";
+  __setRateLimitStoreForTests({
+    execute: async input => {
+      const sql = typeof input === "string" ? input : input.sql;
+      if (sql.includes("api_rate_limit_maintenance")) {
+        return queryResult([]);
+      }
+
+      if (sql.includes("api_rate_limits")) {
+        return queryResult([{ request_count: 1 }]);
+      }
+
+      return queryResult([]);
+    },
+  });
+  __setFreeTransactionTestOverridesForTests({
+    resolveVoterIdTokenId: async () => {
+      throw new Error("rpc unavailable");
+    },
+  });
+
+  const route = await import("./route");
+  const response = await route.GET(
+    new NextRequest(
+      "https://curyo.xyz/api/transactions/free/session?address=0x63cada40E8AcF7A1d47229af5Be35b78b16035fa&chainId=42220",
+    ),
+  );
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.chainId, 42220);
+  assert.equal(body.verified, false);
+  assert.equal(body.remaining, 0);
+  assert.equal(body.walletAddress, "0x63cada40E8AcF7A1d47229af5Be35b78b16035fa");
+  assert.equal(body.voterIdTokenId, null);
 });
