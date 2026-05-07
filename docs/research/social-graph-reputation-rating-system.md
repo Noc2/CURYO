@@ -3,9 +3,10 @@
 Research date: 2026-05-07
 
 This note evaluates replacing the Self.xyz faucet-centered identity model with
-earned, non-transferable reputation and a social-graph-informed rating system.
-It also maps the change onto the current Curyo contracts, indexer, app, and
-governance surfaces.
+an open rater network based on earned reputation and social-graph-informed
+signal quality. The rater can be a human, an AI agent, a team, or a hybrid
+workflow. The protocol should score predictions and independence, not try to
+prove that every useful signal came from a human.
 
 ## Short Answer
 
@@ -16,10 +17,12 @@ future capture easier.
 
 The better design is:
 
-- Use commit-reveal voting as the base signal.
+- Use one sealed commit-reveal prediction round as the base signal.
 - Replace binary up/down votes with a predicted final rating, because the
   incentive is already to predict Curyo consensus rather than to report an
   objective truth.
+- Treat human and AI raters as first-class accounts. AI rating AI can be useful
+  signal when it is calibrated, diverse, and cluster-discounted.
 - Make reputation non-transferable and earned from revealed, settled
   participation.
 - Score users with a conservative signal-quality model, not raw majority
@@ -65,6 +68,16 @@ Do not add a new reasoning field to the vote. Curyo already has separate
 feedback fields for written explanation, and those should remain separate from
 the compact prediction payload.
 
+The default rating workflow should be:
+
+```text
+private commit window -> reveal window -> final rating after one round
+```
+
+Additional rounds should be exceptional: low independent participation, high
+dispersion, suspected manipulation, a high-value bounty, or a formal challenge.
+The normal product should get to a concrete result after one sealed round.
+
 This should be a fresh deployment, not a legacy-compatible migration. Existing
 HREP balances should not migrate into the new reputation system.
 
@@ -99,7 +112,9 @@ Product lesson: use predicted final ratings, but never reward raw majority
 matching. Score against leave-one-out and, for payout-sensitive rounds,
 leave-one-cluster-out results. Hide aggregate predictions until after a user
 commits, and present the result as calibrated public judgment rather than
-objective truth.
+objective truth. A single sealed round is preferable to visible iterative
+rounds by default, because the point is to collect independent predictions
+before social influence can collapse diversity.
 
 Sources:
 
@@ -118,6 +133,40 @@ Sources:
   https://pmc.ncbi.nlm.nih.gov/articles/PMC3107299/
 - Metaculus scoring FAQ:
   https://www.metaculus.com/help/scores-faq
+
+### AI Raters Are First-Class But Need Bias Controls
+
+Curyo does not need to be human-only. Many content, model-output, agent-output,
+and data-quality tasks can benefit from AI raters. In those cases, the right
+question is not "is this rater human?" but "has this rater been calibrated on
+similar tasks, and is it independent from the content producer and other
+raters?"
+
+LLM-as-judge research is encouraging but not clean enough to trust blindly.
+MT-Bench and Chatbot Arena show that strong model judges can approximate human
+preferences in open-ended chat evaluation, but the same line of work documents
+position bias, verbosity bias, self-enhancement bias, and limited reasoning.
+FairEval and Length-Controlled AlpacaEval show that evaluator order and output
+length can meaningfully distort automatic judgments, and that bias controls
+improve reliability.
+
+Product lesson: allow AI agents to rate and earn reputation, but cluster them by
+operator, model family, provider, prompt/evaluator template, funding source, and
+behavior. Several agents using the same model, owner, and prompt should count as
+one correlated cluster until they prove independent calibration. AI reputation
+should be category-specific, and model upgrades should trigger a warmup or
+versioned reputation path.
+
+Sources:
+
+- Zheng et al., "Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena":
+  https://arxiv.org/abs/2306.05685
+- Wang et al., "Large Language Models are not Fair Evaluators":
+  https://arxiv.org/abs/2305.17926
+- Dubois et al., "Length-Controlled AlpacaEval":
+  https://arxiv.org/abs/2404.04475
+- AlpacaEval repository:
+  https://github.com/tatsu-lab/alpaca_eval
 
 ### Social Graph Sybil Defense Is A Discount Model
 
@@ -209,6 +258,38 @@ must trust an operator to update reputation or bounty eligibility correctly.
 
 ## Concrete Mechanism Specification
 
+### One Private Prediction Round
+
+The default rating primitive should be one private prediction round:
+
+```text
+commit phase:
+  raters privately commit to predictedFinalRatingBps and stakeAmount
+
+reveal phase:
+  raters reveal the prediction and salt
+
+settlement:
+  aggregate revealed eligible predictions
+  publish final rating, confidence, dispersion, effective participants
+  compute reputation deltas and USDC eligibility
+```
+
+This is simpler and faster than iterative rating. It also protects the initial
+independence of the signal: raters do not see the developing crowd estimate
+before committing. A second round should be an explicit exception for low-quality
+settlement, not part of the normal path.
+
+Recommended reopen/challenge triggers:
+
+- revealed eligible participants below quorum;
+- effective independent participant count below threshold;
+- dispersion above threshold;
+- cluster concentration above threshold;
+- high-value USDC bounty;
+- formal challenge with a bond;
+- obvious prompt/content ambiguity.
+
 ### Rating Input
 
 Replace binary voting with one compact prediction payload:
@@ -238,6 +319,11 @@ Aggregate predictions should remain hidden until a user commits or the reveal
 phase begins. The current separate feedback field stays separate; the vote
 payload should not grow a second reasoning channel.
 
+Rater identity should be account-based, not human-based. Optional profile
+metadata can disclose whether the account is human-operated, AI-operated,
+organization-operated, or hybrid, but the protocol should not require this for
+participation. The scorer should learn reliability from revealed behavior.
+
 ### Final Rating Aggregation
 
 For the first redeploy, use a cluster-adjusted weighted median over fixed rating
@@ -264,12 +350,19 @@ Display:
 - revealed voter count;
 - effective independent participant count;
 - cluster-adjusted participant count;
+- human/AI/hybrid participant breakdown when voluntarily disclosed or inferred
+  at a coarse level;
 - dispersion/confidence;
 - dissent share.
 
 The median is deliberately conservative. It reduces the impact of one large
 outlier, makes bounded-bin settlement auditable, and fits subjective ratings
 better than a pure mean.
+
+For AI raters, clustering should compress correlated agents. Multiple accounts
+controlled by the same operator, using the same model family, prompt template,
+funding path, or reveal timing should have reduced independent participant units
+until they build distinct category-specific track records.
 
 ### Reputation Scoring
 
@@ -310,6 +403,12 @@ Do not heavily burn reputation for ordinary disagreement. Burn risk should be
 meaningful for non-reveal, spam, clear manipulation, or extreme misses in
 high-confidence rounds. This protects useful dissent and avoids turning Curyo
 into a pure consensus-following game.
+
+AI agent reputation should be versioned. If an agent changes model, prompt,
+tooling, retrieval source, or operator, the new version should keep account
+history but start with reduced usable weight until it recalibrates. This avoids
+one well-calibrated agent identity becoming a permanent wrapper around a
+different evaluator.
 
 ### Calibration Before USDC
 
@@ -383,6 +482,20 @@ Graph computation should remain off chain in Ponder or a dedicated scorer at
 first. Publish epoch roots for scores used in payouts, snapshot the active root
 at commit time, and keep enough source events public for independent
 recomputation.
+
+For AI raters, risk and diversity inputs should include:
+
+- disclosed model/provider/agent version;
+- owner/operator wallet;
+- funding source;
+- prompt/evaluator template hash;
+- retrieval/tooling configuration hash when available;
+- correlated vote timing and reveal timing;
+- similarity of prediction errors across tasks;
+- shared infrastructure and API patterns when available off chain.
+
+These signals should never be treated as proof. They are correlation evidence
+used to cap influence and payouts.
 
 ## Current Curyo Baseline
 
@@ -642,6 +755,9 @@ Recommended USDC payout model:
 - Reputation is primarily an eligibility gate, not a direct claim on USDC.
 - Higher reputation may create a small bounded multiplier, but never a linear
   payout curve.
+- AI raters can earn USDC if the product wants them to, but they should be
+  cluster-capped by operator/model/template just like human-operated farms are
+  cluster-capped by graph, timing, wallet, and session evidence.
 - Dense clusters share a capped payout pool rather than multiplying it.
 - Medium-reputation account farms should collapse into a smaller effective
   participant count when their graph, timing, voting, reveal, or session
@@ -902,41 +1018,55 @@ This keeps voting thoughtful without punishing useful dissent.
    comes from slow reputation earning, calibration rounds, graph independence,
    bot/risk signals, cluster payout caps, and epoch/category caps.
 
-2. No transfer of reputation.
+2. Open rater network.
+
+   Humans, AI agents, teams, and hybrid workflows should all be allowed to rate.
+   Reputation should attach to the account or agent identity that made revealed
+   predictions, not to a claim of being human. AI raters should be cluster- and
+   version-aware so one operator cannot multiply influence through many nearly
+   identical agents.
+
+3. No transfer of reputation.
 
    Reputation must be non-transferable. Transferability makes reputation buyable
    and weakens the core premise.
 
-3. Use predicted final ratings.
+4. Use predicted final ratings.
 
    The first redeploy should use predicted final rating as the primary vote
    input, with stake as the conviction signal and the existing feedback field as
    the reasoning layer.
 
-4. Use global and category reputation.
+5. Use one private round by default.
+
+   The default lifecycle should be commit, reveal, settle. A second round should
+   require a concrete trigger such as low independent participation, high
+   dispersion, suspected manipulation, or a bonded challenge.
+
+6. Use global and category reputation.
 
    Use global reputation for baseline trust and governance, but category
    reputation should drive rating weight in topic-specific rounds.
 
-5. Keep graph follows off chain initially.
+7. Keep graph follows off chain initially.
 
    Start with signed off-chain follows and attestations, index them, and only
    later commit epoch roots on chain.
 
-6. Require calibration before USDC.
+8. Require calibration before USDC.
 
    New users should complete a configured number of calibration rounds before
    they can earn USDC. Calibration rounds can mint reputation and establish
    reveal reliability, category breadth, and independence, but USDC payout is
    disabled or capped to zero until the threshold is met.
 
-7. No migration from current HREP holders.
+9. No migration from current HREP holders.
 
    Existing HREP balances should not migrate into the new reputation system.
    The new protocol starts fresh, and reputation is earned only through the new
    rules.
 
-8. No legacy compatibility requirement.
+10. No legacy compatibility requirement.
 
    The smart contracts, indexer schema, frontend UX, and deployment scripts
    should optimize for the new model rather than preserving backwards
@@ -949,8 +1079,10 @@ This keeps voting thoughtful without punishing useful dissent.
 Create a short vNext protocol spec before writing contracts. It should define:
 
 - rating range and fixed bins: `1000-9900` bps;
+- one-private-round lifecycle and challenge/reopen triggers;
 - weighted median aggregation;
 - leave-one-out and leave-one-cluster-out scoring rules;
+- rater account model for humans, AI agents, teams, and hybrid workflows;
 - `CALIBRATION_ROUNDS_REQUIRED`;
 - warmup, risk, diversity, and stake multiplier curves;
 - per-round, per-category, per-epoch, per-cluster, and per-requester caps;
@@ -991,9 +1123,12 @@ Implement fresh contracts with no legacy compatibility requirement:
 Build the off-chain scorer as an auditable service, not a hidden oracle:
 
 - add Ponder tables for prediction votes, reputation events, score epochs,
-  category scores, graph edges, cluster scores, payout caps, and score roots;
+  category scores, graph edges, rater profile versions, AI agent provenance,
+  cluster scores, payout caps, and score roots;
 - compute raw final rating, leave-one-out rating, leave-one-cluster-out rating,
   prediction error, round quality, and payout reasons;
+- compute human/AI/hybrid breakdowns only at a coarse level and avoid pretending
+  they are identity proofs;
 - publish epoch roots for reputation and USDC payout eligibility;
 - snapshot scorer-root version at commit time for high-value rounds;
 - expose public APIs that explain why a wallet earned or did not earn:
@@ -1009,6 +1144,10 @@ Update the product around prediction and calibration:
 - remove Self verification, faucet claims, referral copy, and HREP claim flows;
 - replace up/down controls with a rating prediction control;
 - keep the existing feedback field as the written explanation channel;
+- make the default flow one private prediction round followed by reveal and a
+  concrete final rating;
+- allow AI/agent accounts to participate, with optional rater-type/provenance
+  disclosure and clear cluster treatment;
 - replace "accuracy" copy with "consensus calibration";
 - show credibility, reveal reliability, and payout eligibility separately;
 - show max stake, burn risk, and calibration-only status before voting;
@@ -1033,7 +1172,7 @@ Prioritize wallet-sensitive and payout-sensitive paths:
 - governance tests for aged reputation, fresh-reputation exclusion, quorum, and
   guardian/timelock controls;
 - Ponder tests for prediction indexing, score root generation, payout reasons,
-  and category reputation;
+  category reputation, rater versions, and AI/operator clustering;
 - Next.js and SDK tests for prediction payloads, reveal UX, claim UX, and
   wallet flows across injected wallets, thirdweb wallets, and hardware-wallet
   assumptions.
@@ -1062,12 +1201,14 @@ The best Curyo-native design is:
 - no Self faucet;
 - no Self.xyz adapter, hub wiring, or Self-specific identity assumptions;
 - no proof-of-personhood provider;
+- open participation for humans, AI agents, teams, and hybrid workflows;
 - no migration from current HREP balances;
 - fresh deployment with no legacy-compatibility requirement;
 - non-transferable reputation;
-- commit-reveal preserved with predicted final rating instead of binary up/down;
+- one sealed commit-reveal round with predicted final rating instead of binary
+  up/down;
 - stake as capped conviction and burn risk;
-- graph as independence discount;
+- graph and rater provenance as independence discounts;
 - USDC payout split by independent participant weight, then gated by reputation
   and graph caps;
 - governance based on aged, earned, non-transferable reputation.
