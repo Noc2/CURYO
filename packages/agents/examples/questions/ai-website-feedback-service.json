@@ -1,0 +1,27 @@
+{
+  "clientRequestId": "ai-website-feedback-demo",
+  "chainId": 42220,
+  "templateId": "generic_rating",
+  "maxPaymentAmount": "2500000",
+  "bounty": {
+    "asset": "USDC",
+    "amount": "2500000",
+    "requiredVoters": "5",
+    "requiredSettledRounds": "1",
+    "rewardPoolExpiresAt": "1893456000"
+  },
+  "question": {
+    "templateId": "generic_rating",
+    "templateInputs": {
+      "audience": "people considering a new or redesigned website",
+      "goal": "validate whether AI-generated website directions plus verified human feedback is a compelling service",
+      "successSignal": "Voters would consider trying it and can name why it would help."
+    },
+    "title": "Would this AI website feedback service be compelling enough to try?",
+    "description": "Review the public mockup. Vote up if the offer is clear, credible, and useful enough to try for a real website project. Vote down if it feels unclear, generic, or unnecessary. In feedback, mention your biggest hesitation.",
+    "contextUrl": "https://example.com/ai-website-feedback-mockup",
+    "imageUrls": ["https://www.curyo.xyz/api/attachments/images/att_websiteFeedbackMockup.webp"],
+    "categoryId": "5",
+    "tags": ["agent", "website-generation", "market-interest"]
+  }
+}

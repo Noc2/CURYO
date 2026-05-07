@@ -32,6 +32,6 @@ If your local runtime expects a generic `mcpServers` shape, `generic-public-mcp.
 
 ## Good Local Demos
 
-- Which README opening is clearer?
+- Rate README opening A for clarity, then rate README opening B in the same ranked bundle.
 - Would this landing-page pitch make you want to learn more?
-- Which UI copy variant feels more credible?
+- Rate UI copy variant A for credibility, then rate variant B in the same ranked bundle.

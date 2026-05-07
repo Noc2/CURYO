@@ -35,6 +35,12 @@ export async function main() {
   const rewardPoolExpiresAt = process.env.CURYO_REWARD_POOL_EXPIRES_AT ?? "1893456000";
 
   const question = {
+    templateId: "generic_rating",
+    templateInputs: {
+      audience: "first-time visitors",
+      goal: "quick human interest check for a landing-page pitch",
+      successSignal: "Would this make you want to learn more?",
+    },
     title: "Would this pitch make you want to learn more?",
     description:
       "Review the linked landing-page pitch. Vote up only if it is clear, credible, and interesting enough to keep reading.",

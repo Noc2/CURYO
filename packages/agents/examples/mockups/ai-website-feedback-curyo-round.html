@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Curyo AI Website Feedback Mockup</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #080808;
+        color: #f5f3ef;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at top left, rgb(99 102 241 / 0.16), transparent 32rem),
+          linear-gradient(180deg, #111111 0%, #080808 100%);
+      }
+
+      main {
+        display: grid;
+        gap: 24px;
+        margin: 0 auto;
+        max-width: 1120px;
+        padding: 40px 20px;
+      }
+
+      .round,
+      .preview {
+        border: 1px solid rgb(255 255 255 / 0.12);
+        border-radius: 8px;
+        background: rgb(24 24 27 / 0.86);
+        box-shadow: 0 24px 80px rgb(0 0 0 / 0.36);
+      }
+
+      .round {
+        display: grid;
+        gap: 24px;
+        padding: 24px;
+      }
+
+      .eyebrow,
+      .meta {
+        color: rgb(245 243 239 / 0.64);
+        font-size: 13px;
+      }
+
+      h1,
+      h2,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        max-width: 800px;
+        font-size: clamp(28px, 5vw, 52px);
+        line-height: 1.02;
+      }
+
+      .description {
+        max-width: 760px;
+        color: rgb(245 243 239 / 0.78);
+        font-size: 17px;
+        line-height: 1.6;
+      }
+
+      .content {
+        display: grid;
+        gap: 20px;
+        grid-template-columns: minmax(0, 1fr) 280px;
+      }
+
+      .preview {
+        overflow: hidden;
+      }
+
+      .preview-header {
+        display: flex;
+        gap: 8px;
+        padding: 12px;
+        border-bottom: 1px solid rgb(255 255 255 / 0.1);
+      }
+
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        background: rgb(245 243 239 / 0.36);
+      }
+
+      .preview-body {
+        display: grid;
+        gap: 18px;
+        padding: 24px;
+      }
+
+      .preview-title {
+        font-size: 34px;
+        line-height: 1.05;
+      }
+
+      .preview-copy {
+        color: rgb(245 243 239 / 0.7);
+        line-height: 1.5;
+      }
+
+      .steps {
+        display: grid;
+        gap: 10px;
+      }
+
+      .step {
+        border: 1px solid rgb(255 255 255 / 0.1);
+        border-radius: 8px;
+        padding: 12px;
+        background: rgb(255 255 255 / 0.04);
+      }
+
+      .vote-card {
+        display: grid;
+        gap: 14px;
+        align-content: start;
+        border: 1px solid rgb(255 255 255 / 0.12);
+        border-radius: 8px;
+        padding: 18px;
+        background: rgb(0 0 0 / 0.22);
+      }
+
+      .score {
+        display: grid;
+        place-items: center;
+        width: 136px;
+        height: 136px;
+        margin: 0 auto;
+        border: 1px solid rgb(52 211 153 / 0.3);
+        border-radius: 50%;
+        background: rgb(52 211 153 / 0.1);
+        color: #d1fae5;
+        font-size: 42px;
+        font-weight: 700;
+      }
+
+      .vote-row {
+        display: grid;
+        gap: 10px;
+        grid-template-columns: 1fr 1fr;
+      }
+
+      button {
+        border: 1px solid rgb(255 255 255 / 0.14);
+        border-radius: 8px;
+        padding: 12px;
+        background: rgb(255 255 255 / 0.06);
+        color: inherit;
+        font: inherit;
+        font-weight: 700;
+      }
+
+      .feedback {
+        border-top: 1px solid rgb(255 255 255 / 0.1);
+        padding-top: 14px;
+        color: rgb(245 243 239 / 0.72);
+        font-size: 14px;
+        line-height: 1.5;
+      }
+
+      @media (max-width: 760px) {
+        .content {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="round" aria-label="Curyo feedback round mockup">
+        <p class="eyebrow">Curyo feedback round</p>
+        <h1>Would this AI website feedback service be compelling enough to try?</h1>
+        <p class="description">
+          Review the public mockup. Vote up if the offer is clear, credible, and useful enough that you would consider
+          trying it for a real website project. Vote down if it feels unclear, generic, unnecessary, or not worth trying.
+        </p>
+
+        <div class="content">
+          <article class="preview" aria-label="Service concept preview">
+            <div class="preview-header">
+              <span class="dot"></span>
+              <span class="dot"></span>
+              <span class="dot"></span>
+            </div>
+            <div class="preview-body">
+              <p class="meta">SignalMade concept</p>
+              <h2 class="preview-title">AI drafts website directions. People tell you which one earns trust.</h2>
+              <p class="preview-copy">
+                Submit a URL, business goal, audience, and examples. AI generates several website directions. Verified
+                humans review clarity, trust, intent, and missing pieces before the final site is built.
+              </p>
+              <div class="steps">
+                <div class="step">1. Submit URL or rough idea</div>
+                <div class="step">2. Generate several website directions</div>
+                <div class="step">3. Ask verified humans what feels clear and credible</div>
+                <div class="step">4. Refine and launch the strongest direction</div>
+              </div>
+            </div>
+          </article>
+
+          <aside class="vote-card" aria-label="Supported Curyo voting controls">
+            <div class="score">--</div>
+            <p class="meta">Binary Curyo rating signal</p>
+            <div class="vote-row">
+              <button type="button">Vote Up</button>
+              <button type="button">Vote Down</button>
+            </div>
+            <p class="feedback">
+              Feedback prompt: mention your biggest hesitation and what would make this service more compelling.
+            </p>
+          </aside>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

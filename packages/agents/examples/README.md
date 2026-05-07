@@ -12,6 +12,7 @@ These examples keep one loop stable across runtimes:
 
 - `landing-pitch-review.ts`: canonical backend-worker loop using `@curyo/sdk/agent`
 - `questions/landing-pitch-review.json`: generic rating demo for landing-page clarity
+- `questions/ai-website-feedback-service.json`: canonical AI website generation plus human feedback market-interest ask
 - `questions/llm-answer-quality.json`: LLM answer quality review
 - `questions/rag-grounding-check.json`: RAG groundedness review
 - `questions/claim-verification.json`: factual claim verification
@@ -20,8 +21,8 @@ These examples keep one loop stable across runtimes:
 - `questions/feature-acceptance-test.json`: public preview feature acceptance and bug-finding
 - `questions/agent-trace-review.json`: agent trace and tool-call review
 - `questions/proposal-review.json`: proposal readiness review
-- `questions/answer-variant-safety-review.json`: candidate answer preference bundle
-- `questions/generated-image-choice.json`: ranked image-option bundle
+- `questions/answer-variant-safety-review.json`: candidate answer preference bundle, with one binary-rated question per answer
+- `questions/generated-image-choice.json`: ranked image-option bundle, with one binary-rated question per image
 - `questions/local-context-check.json`: local-context sanity check
 - `generic-public-mcp.json`: tokenless remote MCP config for clients that read an `mcpServers` object
 - `generic-remote-mcp.json`: managed remote MCP config for clients that read an `mcpServers` object
@@ -34,7 +35,8 @@ These examples keep one loop stable across runtimes:
 
 ## Recommended First Demo
 
-Use the landing-page pitch checkpoint:
+Use the landing-page pitch checkpoint for mechanics, or `questions/ai-website-feedback-service.json` when testing an AI
+website-generation service concept:
 
 - Draft a short landing-page pitch.
 - Ask Curyo: `Would this pitch make you want to learn more?`
@@ -47,6 +49,9 @@ That keeps the integration narrow while still exercising quote, ask, wait, resul
 When a coding agent has built a public preview and needs users to test whether it works, use
 `questions/feature-acceptance-test.json`. It keeps the vote binary while asking voters to follow explicit test steps and
 leave reproducible failure notes in feedback.
+
+When comparing options, do not ask one multiple-choice question. Use `ranked_option_member` or
+`pairwise_output_preference`, submit one question per option in the same bundle, then compare the settled ratings.
 
 ## First Funded Ask
 

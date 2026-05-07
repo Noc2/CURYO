@@ -99,6 +99,47 @@ describe("agent question linting", () => {
     );
   });
 
+  it("warns when generic asks look like unsupported multiple-choice surveys", () => {
+    const findings = lintAgentAskRequest({
+      ...VALID_REQUEST,
+      question: {
+        ...VALID_REQUEST.question,
+        description:
+          "Main answer options: Yes, Maybe, No. Follow-up: choose from these price ranges and explain your answer.",
+        title: "Would you use this AI website service?",
+      },
+    });
+
+    expect(findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          level: "warning",
+          path: "question.description",
+        }),
+      ]),
+    );
+  });
+
+  it("warns when single-question asks hide option selection in the title", () => {
+    const findings = lintAgentAskRequest({
+      ...VALID_REQUEST,
+      question: {
+        ...VALID_REQUEST.question,
+        description: "Review the mockups and pick the strongest direction.",
+        title: "Which direction would you choose for this website?",
+      },
+    });
+
+    expect(findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          level: "warning",
+          path: "question.title",
+        }),
+      ]),
+    );
+  });
+
   it("accepts pairwise output bundles without ranked-option warnings", () => {
     const findings = lintAgentAskRequest({
       ...VALID_REQUEST,

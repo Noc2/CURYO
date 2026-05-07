@@ -8,6 +8,7 @@ import { CuryoConnectButton } from "~~/components/scaffold-eth";
 import { NotificationSettingsPanel } from "~~/components/settings/NotificationSettingsPanel";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
 import { SETTINGS_FRONTEND_HASH, SETTINGS_ROUTE } from "~~/constants/routes";
+import { replaceUrlPreservingHistoryState } from "~~/lib/ui/browserHistory";
 
 type SettingsTab = "delegation" | "notifications" | "wallet" | typeof SETTINGS_FRONTEND_HASH;
 
@@ -79,7 +80,7 @@ function SettingsPageInner() {
       const nextUrl = buildSettingsTabUrl(window.location.pathname, params, nextTab);
       const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
       if (currentUrl !== nextUrl) {
-        history.replaceState(null, "", nextUrl);
+        replaceUrlPreservingHistoryState(nextUrl);
       }
     };
 
@@ -92,7 +93,7 @@ function SettingsPageInner() {
     (tab: SettingsTab) => {
       setActiveTab(tab);
       const params = new URLSearchParams(searchParams?.toString() ?? "");
-      history.replaceState(null, "", buildSettingsTabUrl(pathname, params, tab));
+      replaceUrlPreservingHistoryState(buildSettingsTabUrl(pathname, params, tab));
     },
     [pathname, searchParams],
   );

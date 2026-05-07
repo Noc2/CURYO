@@ -1,7 +1,7 @@
 import { expect, test } from "../fixtures/wallet";
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
 import { newE2EContext } from "../helpers/browser-context";
-import { gotoWithRetry } from "../helpers/wait-helpers";
+import { gotoWithRetry, waitForFeedLoaded } from "../helpers/wait-helpers";
 import { setupWallet } from "../helpers/wallet-session";
 
 test.describe("Governance page", () => {
@@ -91,4 +91,21 @@ test.describe("Governance page", () => {
     await expect(govContent.first()).toBeVisible({ timeout: 15_000 });
   });
 
+  test("connected sidebar navigation can leave governance", async ({ connectedPage: page }) => {
+    await gotoWithRetry(page, "/governance", { ensureWalletConnected: true });
+    await expect(page.getByRole("button", { name: "Profile", exact: true })).toBeVisible({ timeout: 15_000 });
+
+    await page.getByRole("link", { name: "Submit" }).click();
+    await expect(page).toHaveURL(/\/ask(?:[?#].*)?$/, { timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Submit Question" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator("#nprogress")).toHaveCount(0, { timeout: 15_000 });
+
+    await gotoWithRetry(page, "/governance", { ensureWalletConnected: true });
+    await expect(page.getByRole("button", { name: "Profile", exact: true })).toBeVisible({ timeout: 15_000 });
+
+    await page.getByRole("link", { name: "Discover" }).click();
+    await expect(page).toHaveURL(/\/rate(?:[?#].*)?$/, { timeout: 15_000 });
+    await waitForFeedLoaded(page);
+    await expect(page.locator("#nprogress")).toHaveCount(0, { timeout: 15_000 });
+  });
 });

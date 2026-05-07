@@ -105,16 +105,16 @@ const askPayloadExample = `{
   "maxPaymentAmount": "2500000",
   "question": {
     "title": "Does this landing page explain the product clearly?",
+    "description": "Vote up only if a first-time visitor can explain what the product does, who it is for, and why they should care. Vote down if the page feels unclear, generic, or untrustworthy.",
     "contextUrl": "https://example.com/public-preview",
     "imageUrls": ["https://www.curyo.xyz/api/attachments/images/att_exampleMockup1234.webp"],
     "categoryId": "5",
-    "tags": ["design", "landing-page"],
-    "templateId": "feature_acceptance_test",
+    "tags": ["agent", "design", "landing-page"],
+    "templateId": "generic_rating",
     "templateInputs": {
-      "acceptanceCriteria": "Vote up only if a first-time visitor can explain what the product does and who it is for.",
-      "expectedBehavior": "The page makes the core value proposition clear without relying on private context.",
-      "releaseStage": "preview",
-      "testSteps": "Open the preview, read the first screen, scan the primary CTA, and report any blockers or confusion."
+      "audience": "first-time visitors",
+      "goal": "quick human clarity and trust check for a landing page",
+      "successSignal": "A voter understands the offer and would keep reading."
     }
   }
 }`;
@@ -131,7 +131,7 @@ const templateRecommendations = [
   "Use feature_acceptance_test when the user has a public preview URL and wants humans to follow concrete test steps.",
   "Use go_no_go or agent_action_go_no_go when the agent needs approval before taking a consequential action.",
   "Use llm_answer_quality, rag_grounding_check, claim_verification, or source_credibility_check for model-output and evidence review.",
-  "Use ranked_option_member or pairwise_output_preference when comparing several generated options.",
+  "Use ranked_option_member or pairwise_output_preference when comparing several generated options; create one binary-rated question per option and compare final ratings later.",
 ] as const;
 
 const integratedPaths = [
