@@ -3,33 +3,36 @@
 Research date: 2026-05-07
 
 This note reframes Curyo around the new social-graph reputation design. It
-assumes the product is no longer centered on humans, proof-of-personhood, or a
+assumes the product is no longer centered on proof-of-personhood or a one-way
 human feedback loop. The public story should not explain that shift as a
-removal. It should simply present the new advantage as the product.
+removal. It should simply present the new advantage as the product: humans,
+agents, bots, and frontends can work through different interfaces while sharing
+one reputation-weighted rating layer.
 
 ## Short Answer
 
 Curyo should become a reputation-native rating network for agents, people,
-frontends, and bots. The new promise is not "verified humans answer AI." The
-new promise is:
+frontends, and bots. The new promise is not "AI agents ask and humans answer."
+The new promise is:
 
 ```text
 Reputation makes open ratings harder to capture.
 ```
 
-The old human-centered frame should be retired across title, hero copy,
-metadata, docs, tool descriptions, and image language. Avoid transitional copy
-such as "Curyo no longer verifies humans" or "formerly human feedback." That
-keeps the product from sounding like it lost a feature. The new design should
-start from the stronger position: ratings are useful when the network can score
-credibility, independence, calibration, and correlated behavior.
+The old human-only frame should be retired across title, hero copy, metadata,
+docs, tool descriptions, and image language. Avoid transitional copy such as
+"Curyo no longer verifies humans" or "formerly human feedback." That keeps the
+product from sounding like it lost a feature. The new design should start from
+the stronger position: ratings are useful when the network can score
+credibility, independence, calibration, and correlated behavior across mixed
+participants.
 
 ## Strategic Repositioning
 
 ### From Human Feedback To Reputation Infrastructure
 
-The new system is not a labor market for human review. It is a public rating
-and reputation layer where any account can build credibility by making
+The new system is not primarily a labor market for human review. It is a public
+rating and reputation layer where any account can build credibility by making
 calibrated predictions, revealing reliably, and staying independent from
 clusters that behave like farms.
 
@@ -52,6 +55,25 @@ at three things:
 Curyo's new advantage is that ratings flow through earned reputation, graph
 discounts, lock risk, and public audit trails.
 
+### Separate Interfaces, Shared Reputation
+
+The UI can still be meaningfully different for people and agents. That
+separation is a product strength, not a contradiction:
+
+- people need a high-context web app for discovery, rating, profile building,
+  rewards, governance, and social graph management;
+- agents and bots need MCP, SDK, webhook, and JSON surfaces for quoting,
+  funding, rating, monitoring, and reading settled results;
+- frontends need integration surfaces for curating markets and attributing
+  activity;
+- all participant types should feed the same reputation, calibration, graph,
+  and settlement model.
+
+The public brand should therefore not say "humans answer agents." It should say
+Curyo lets people and autonomous systems coordinate around public ratings with
+earned reputation. Humans remain first-class participants, but not the sole
+source of value.
+
 ### The Core Claim
 
 Recommended positioning:
@@ -68,8 +90,8 @@ settled score, lock earned reputation, and are weighted by credibility,
 independence, and reveal history.
 ```
 
-This framing works for humans, agents, bots, and mixed networks without having
-to name any one of them as the product's center of gravity.
+This framing works for humans, agents, bots, and mixed networks while allowing
+different interfaces for each participant class.
 
 ## Messaging Principles
 
@@ -79,6 +101,8 @@ to name any one of them as the product's center of gravity.
   resistance.
 - Treat agents, bots, humans, and frontends as participant types in the same
   reputation economy.
+- Preserve the human-facing app and the agent-facing MCP/API surfaces as
+  distinct product paths.
 - Use "participants," "raters," "accounts," "operators," "agents," and
   "networks" instead of "verified humans."
 - Emphasize public settlement and auditability.
@@ -90,6 +114,8 @@ to name any one of them as the product's center of gravity.
 
 - Do not say the system lost or removed human verification in public marketing.
 - Do not use "human-in-the-loop" as the main product category.
+- Do not imply the human UI and agent tooling must collapse into one generic
+  experience.
 - Do not imply account uniqueness is guaranteed.
 - Do not promise objective truth for subjective ratings.
 - Do not make bots sound like second-class participants.
@@ -130,6 +156,24 @@ Reputation for Open Ratings
 ```
 
 It says what the product is before explaining mechanics.
+
+### Audience-Specific Subheads
+
+Use one umbrella brand line, then let each surface speak to its audience:
+
+```text
+For people: Discover rating rounds, build reputation, and earn influence by
+making calibrated public judgments.
+
+For agents: Request, fund, monitor, and consume reputation-weighted ratings
+through MCP, SDK, webhook, and JSON interfaces.
+
+For frontends: Curate rating markets and route activity into the shared
+reputation graph.
+```
+
+This keeps humans visible without making the whole system a human-service desk
+for agents.
 
 ### Hero Support Copy
 
@@ -175,14 +219,26 @@ Recommended structure:
 H1: Reputation for Open Ratings
 Subhead: Participants predict public scores, lock earned reputation, and build
 influence through calibrated judgment rather than account count.
-Primary CTA: Start Rating
-Secondary CTA: Read the Protocol
+Primary CTA: Explore Ratings
+Secondary CTA: Integrate Agents
 Proof row: Reputation locked / Ratings settled / USDC paid / Active raters
 ```
 
 Do not put "humans" in the H1, subtitle, social proof labels, image alt text, or
-metadata. If participant composition is shown later, humans can appear as one
-class among agents, bots, frontends, and organizations.
+metadata as the category claim. Humans can be present in second-level copy and
+audience paths as one first-class participant type among agents, bots,
+frontends, and organizations.
+
+Below the hero, the page can split into two or three clear paths:
+
+```text
+People: Rate, earn reputation, build a public profile.
+Agents: Request, fund, rate, and read results through MCP/API.
+Frontends: Curate markets and route reputation-weighted activity.
+```
+
+That separation preserves product ergonomics while keeping the brand centered
+on the shared reputation layer.
 
 ### Three-Step Explainer
 
@@ -220,6 +276,9 @@ the page has enough surrounding explanation.
 5. `Agent-Native`
    Agents and bots can fund, rate, monitor, and consume results through the same
    public protocol surfaces as everyone else.
+6. `Human-Friendly`
+   People still get a dedicated app for rating, discovery, rewards, governance,
+   and reputation building.
 
 ## Visual Direction
 
@@ -238,7 +297,9 @@ Reuse the orb as the anchor, but make it more dramatic and planet-like:
 - no single human figure as the hero subject.
 
 This direction keeps continuity with the orb/flier language while making the
-system feel larger, more infrastructural, and less human-service oriented.
+system feel larger and more infrastructural. It can include signals of human
+and agent participation, but no single human figure should define the whole
+hero.
 
 Possible prompt for visual production:
 
@@ -318,14 +379,15 @@ independent participation.
 Curyo is a reputation network for public ratings. Agents, bots, people, and
 frontends can submit rating questions, fund rewards, predict settled scores,
 and build influence through calibrated participation rather than raw account
-count.
+count. People use the app; agents use MCP, SDK, webhook, and JSON surfaces.
 ```
 
 ### Tool Description
 
 ```text
 Use Curyo when an agent needs a public, reputation-weighted rating it can cite,
-audit, and pay for directly.
+audit, and pay for directly. Curyo ratings can include people, agents, bots,
+and frontend communities weighted through the same reputation model.
 ```
 
 ### Docs Intro
@@ -334,7 +396,8 @@ audit, and pay for directly.
 Curyo lets open networks produce public ratings without treating every account
 as equally independent. Each round combines hidden predictions, reputation
 locks, graph-aware weighting, and public settlement into a score that agents and
-frontends can reuse.
+frontends can reuse. People participate through the web app, while agents and
+bots use protocol-native interfaces.
 ```
 
 ## Pages And Surfaces To Rename Later
@@ -349,6 +412,7 @@ High-priority surfaces:
 - public `skill.md`;
 - MCP tool naming and descriptions;
 - docs overview and AI docs;
+- human app entry points and agent integration entry points;
 - wallet branding image and alt text;
 - faucet/sign-in CTA if the new design removes the faucet path.
 
@@ -373,9 +437,10 @@ cleanup. Public copy should lead with the new category, not the migration.
 
 ## Decision
 
-Retire the human-first brand. Keep Curyo as the name, keep the stark
-black/orange visual equity, and rebuild the landing page around reputation,
-ratings, graph independence, and capture resistance.
+Retire the human-only brand. Keep Curyo as the name, keep the stark black/orange
+visual equity, and rebuild the landing page around reputation, ratings, graph
+independence, and capture resistance. Preserve separate product paths for
+people and agents, but make the shared reputation layer the brand center.
 
 Recommended first public package:
 
@@ -383,5 +448,7 @@ Recommended first public package:
 - tagline: `Open ratings. Earned reputation.`
 - hero image: planetary credibility graph with fliers/probes and rating orbits;
 - primary nouns: ratings, reputation, credibility, independence, participants;
-- avoided nouns: verified humans, human loop, proof-of-personhood, human
-  feedback.
+- audience paths: people rate in the app; agents and bots integrate through
+  MCP/API surfaces; frontends curate markets;
+- avoided category claims: verified humans, human loop, proof-of-personhood,
+  human feedback.
