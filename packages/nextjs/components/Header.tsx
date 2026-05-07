@@ -23,6 +23,7 @@ import { ASK_ROUTE, RATE_ROUTE } from "~~/constants/routes";
 import { useMobileHeaderVisibility, useMobileHeaderVoteControls } from "~~/contexts/MobileHeaderVisibilityContext";
 import { useOutsideClick } from "~~/hooks/scaffold-eth";
 import { useVoteSearch } from "~~/hooks/useVoteSearch";
+import { shouldSuppressShellNavClick } from "~~/lib/ui/shellNavigation";
 
 type HeaderMenuLink = {
   label: string;
@@ -59,7 +60,14 @@ const HeaderNavLink = ({ className, compact = false, href, icon: Icon, isActive,
     <a
       href={href}
       onClick={event => {
-        if (isActive && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
+        if (
+          shouldSuppressShellNavClick({
+            currentHref: window.location.href,
+            isActive,
+            isModifiedEvent: event.metaKey || event.ctrlKey || event.shiftKey || event.altKey,
+            targetHref: href,
+          })
+        ) {
           event.preventDefault();
         }
       }}
