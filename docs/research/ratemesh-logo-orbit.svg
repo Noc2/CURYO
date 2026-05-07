@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">RateMesh orbit logo concept</title>
+  <desc id="desc">A transparent-background orange mesh mark with a central hexagon and six small connected nodes.</desc>
+  <g fill="none" stroke="#CC490F" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M256 144L353 200V312L256 368L159 312V200Z" stroke-width="34" />
+    <path d="M256 144V90M353 200L400 172M353 312L400 340M256 368V422M159 312L112 340M159 200L112 172" stroke-width="30" />
+  </g>
+  <g fill="#CC490F">
+    <circle cx="256" cy="90" r="32" />
+    <circle cx="400" cy="172" r="32" />
+    <circle cx="400" cy="340" r="32" />
+    <circle cx="256" cy="422" r="32" />
+    <circle cx="112" cy="340" r="32" />
+    <circle cx="112" cy="172" r="32" />
+  </g>
+</svg>

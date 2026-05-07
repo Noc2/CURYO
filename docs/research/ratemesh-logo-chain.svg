@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">RateMesh chain logo concept</title>
+  <desc id="desc">A transparent-background orange mesh mark made from four connected hexagons.</desc>
+  <defs>
+    <path id="mesh-cell" d="M0 -70L61 -35L61 35L0 70L-61 35L-61 -35Z" />
+  </defs>
+  <g fill="#CC490F">
+    <use href="#mesh-cell" x="156" y="256" />
+    <use href="#mesh-cell" x="256" y="180" />
+    <use href="#mesh-cell" x="256" y="332" />
+    <use href="#mesh-cell" x="356" y="256" />
+  </g>
+</svg>

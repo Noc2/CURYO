@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">RateMesh hex ring logo concept</title>
+  <desc id="desc">A transparent-background orange mesh ring made from six connected hexagons.</desc>
+  <defs>
+    <path id="mesh-cell" d="M0 -72L62 -36L62 36L0 72L-62 36L-62 -36Z" />
+  </defs>
+  <g fill="#CC490F">
+    <use href="#mesh-cell" x="256" y="126" />
+    <use href="#mesh-cell" x="356" y="198" />
+    <use href="#mesh-cell" x="356" y="314" />
+    <use href="#mesh-cell" x="256" y="386" />
+    <use href="#mesh-cell" x="156" y="314" />
+    <use href="#mesh-cell" x="156" y="198" />
+  </g>
+</svg>
