@@ -174,28 +174,6 @@ cluster-risky rounds, score each account against the final rating excluding its
 correlated cluster. That prevents a coordinated group from making itself look
 accurate simply by pulling the final rating toward its own prediction.
 
-### Privacy And Anti-Collusion
-
-MACI is relevant because it focuses on private on-chain voting with reduced
-bribery and collusion risk through encryption and zero-knowledge tally proofs.
-Curyo's current tlock commit-reveal already hides votes during the blind phase,
-but after reveal each vote is public. That is appropriate for public ratings,
-but bribery and vote-copy markets remain possible once votes are revealed.
-
-Source: MACI docs:
-https://maci.pse.dev/
-
-Semaphore is relevant if Curyo wants optional anonymous one-person-one-vote
-proofs, group membership proofs, or nullifier-based duplicate prevention without
-revealing identity.
-
-Source: Semaphore docs:
-https://docs.semaphore.pse.dev/
-
-Product lesson: keep public commit-reveal for normal content ratings. Consider
-MACI only for high-stakes governance/funding events where vote privacy and
-receipt-freeness matter more than Curyo's public audit trail.
-
 ### Token Standards
 
 Current `HumanReputation` is an ERC20Votes token with transfer restrictions only
@@ -214,6 +192,14 @@ Product lesson: keep ERC20Votes-style checkpoints if Curyo wants on-chain
 governance, but replace economic staking transfers with protocol-native locks
 and burns. Use a separate ERC-5192-style identity/profile badge only if wallet
 composability matters.
+
+### Public Auditability
+
+The redesigned rating loop should remain public after reveal. Predicted ratings,
+effective weights, leave-one-out or cluster-excluded scoring inputs, reputation
+deltas, and USDC payout allocation should be indexable and auditable. This keeps
+the reputation system legible and avoids an opaque scoring layer where users
+must trust an operator to update reputation or bounty eligibility correctly.
 
 ## Current Curyo Baseline
 
