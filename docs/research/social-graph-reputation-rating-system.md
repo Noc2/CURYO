@@ -26,8 +26,8 @@ The better design is:
 - Replace transferable HREP staking with reputation locks and bounded burn risk.
 - Use reputation for governance, but with slower thresholds, caps, decay, and
   emergency controls.
-- Remove the Self.xyz `HumanFaucet` path in a redeploy, but keep optional
-  proof-of-personhood adapters available for high-value or bootstrap periods.
+- Remove Self.xyz completely in a redeploy: no faucet, no Self hub wiring, no
+  Self UI, no Self adapter, and no Self-specific nullifier assumptions.
 
 The main recommendation is a two-score model:
 
@@ -46,6 +46,11 @@ effectiveVotingPower =
 
 Where all three terms have caps, and where the graph term can reduce power but
 should rarely increase it beyond the earned reputation baseline.
+
+USDC bounty payout should be based on effective independent participants, not
+wallet count. If one operator farms many medium-reputation accounts that vote
+and reveal together, those accounts should share a cluster-capped allocation
+rather than each receiving a full independent payout.
 
 ## Research Notes
 
@@ -258,7 +263,7 @@ Implementation direction:
   - `atRiskReputation(account)`
   - `governanceVotes(account)`
 
-### 2. Remove Self.xyz Faucet From The Default Flow
+### 2. Remove Self.xyz Completely
 
 Remove or retire:
 
@@ -267,16 +272,25 @@ Remove or retire:
 - `SelfVerifyButton` and faucet claim UI.
 - `human_faucet_claim` and referral-specific indexer surfaces for the new
   deployment.
-
-Keep, if desired:
-
-- a generic `ProofAdapterRegistry` that can accept Human Passport, World ID,
-  Semaphore group roots, or a future Self adapter as optional score signals.
+- Self-specific nullifier assumptions in comments, events, schemas, docs,
+  generated ABIs, test names, deployment verification, and frontend copy.
 
 Important caveat: removing Self means Curyo no longer has a hard uniqueness
 proof at onboarding. Sybil resistance must then come from slow reputation
-earning, graph independence, bot checks, payout caps, and optional high-assurance
-proofs for high-value voting.
+earning, graph independence, bot checks, payout caps, and optional
+non-Self high-assurance proofs for high-value voting.
+
+If optional proofs are desired later, add a generic provider-neutral registry
+that explicitly excludes Self.xyz from the redeploy scope:
+
+```text
+ProofSignalRegistry
+  recordProof(account, provider, nullifierHash, score, expiresAt)
+  revokeProof(account, provider)
+```
+
+Provider-specific verification should live in separate adapters, but Self.xyz
+should not be one of those adapters in this redesign.
 
 ### 3. Replace Voter ID With Reputation Identity
 
@@ -438,13 +452,35 @@ Recommended USDC payout model:
 
 - USDC bounties pay only revealed voters who pass minimum credibility and
   independence thresholds.
+- Payouts are split by effective independent participants, not raw wallet count.
 - Payouts are capped per identity, per cluster, per epoch, and per category.
-- Reputation is a multiplier and eligibility gate, not a direct claim on USDC.
+- Reputation is primarily an eligibility gate, not a direct claim on USDC.
+- Higher reputation may create a small bounded multiplier, but never a linear
+  payout curve.
 - Dense clusters share a capped payout pool rather than multiplying it.
+- Medium-reputation account farms should collapse into a smaller effective
+  participant count when their graph, timing, voting, reveal, or session
+  behavior is correlated.
 - New accounts can earn reputation in calibration rounds before receiving large
   USDC.
-- High-value USDC bounties can require optional external proof or curator
-  approval during early launch.
+- High-value USDC bounties can require optional non-Self external proof or
+  curator approval during early launch.
+
+Concrete split example:
+
+```text
+raw eligible wallets = 20
+cluster-adjusted effective participants = 12
+usdcPerEffectiveParticipant = bountyPool / 12
+
+cluster A has 8 correlated wallets and counts as 2 effective participants.
+cluster A receives 2 * usdcPerEffectiveParticipant, split internally across
+its 8 wallets by revealed participation and any bounded reputation multiplier.
+```
+
+This closes the obvious "farm many medium-reputation wallets" loop. The protocol
+can still show all revealed votes, but payout allocation should reward
+independent signal, not account multiplication.
 
 ### 9. Use Reputation For Governance, But Slow It Down
 
@@ -660,8 +696,8 @@ This keeps voting thoughtful without punishing useful dissent.
 
 1. Do we want any hard proof-of-personhood at launch?
 
-   Recommendation: no hard proof for normal ratings, optional proof for high
-   USDC payouts or governance bootstrap.
+   Recommendation: no hard proof for normal ratings, optional non-Self proof for
+   high USDC payouts or governance bootstrap.
 
 2. Should reputation be transferable at all?
 
@@ -711,7 +747,8 @@ This keeps voting thoughtful without punishing useful dissent.
 - Fresh `RoundVotingEngine` proxy with lock/burn stake semantics.
 - Revised reward distributor.
 - No `HumanFaucet`.
-- Optional proof adapter registry left unconfigured at launch.
+- No Self.xyz adapter or Self-specific deployment wiring.
+- Optional non-Self proof signal registry left unconfigured at launch.
 
 ### Phase 3: Indexer And App
 
@@ -719,7 +756,7 @@ This keeps voting thoughtful without punishing useful dissent.
 - Rename public "accuracy" to "consensus alignment".
 - Add profile-level reputation breakdown.
 - Add staking slider with burn-risk display.
-- Add payout eligibility and cluster caps.
+- Add payout eligibility, effective participant counts, and cluster caps.
 
 ### Phase 4: Governance Migration
 
@@ -736,12 +773,14 @@ truth.
 The best Curyo-native design is:
 
 - no Self faucet by default;
+- no Self.xyz adapter, hub wiring, or Self-specific identity assumptions;
 - non-transferable reputation;
-- optional proof adapters for high-risk cases;
+- optional non-Self proof signals for high-risk cases;
 - commit-reveal preserved;
 - stake as capped conviction and burn risk;
 - graph as independence discount;
-- USDC payout gated by reputation and graph caps;
+- USDC payout split by independent participant weight, then gated by reputation
+  and graph caps;
 - governance based on aged, earned, non-transferable reputation.
 
 This would make the protocol more user-friendly than passport-based onboarding
