@@ -68,113 +68,117 @@ the compact prediction payload.
 This should be a fresh deployment, not a legacy-compatible migration. Existing
 HREP balances should not migrate into the new reputation system.
 
-## Research Notes
+## Research Findings For A Fresh Design
 
-### Reputation And Trust Algorithms
+The relevant research points in one direction: without proof-of-personhood,
+Curyo cannot prove "one human, one account." The redesign should therefore make
+Sybil farms expensive to mature, easy to cluster, slow to exploit, capped in
+payout, and reversible after detection.
 
-EigenTrust is the closest conceptual ancestor. It computes a global trust score
-from local trust values, weighted by the trust of the raters. The important
-lesson is not "copy EigenTrust on chain"; it is that local observations become
-safer when normalized, seeded, and recursively weighted. It also shows why raw
-peer endorsements are dangerous if malicious users can assign arbitrary trust to
-each other.
+Because this is a new deployment with no valuable historical data, the next step
+should not be a historical backtest phase. The useful work now is specification,
+adversarial review, bounded parameters, testnet telemetry, and public
+auditability.
 
-Source: EigenTrust paper, "The EigenTrust Algorithm for Reputation Management in
-P2P Networks" by Kamvar, Schlosser, and Garcia-Molina:
-https://www.iw3c2.org/papers/2019-EigenTrust/index.html
+### Consensus Is Useful But Dangerous
 
-Social-network Sybil defenses such as SybilGuard, SybilLimit, SybilRank, and
-later surveys generally rely on a social graph having a well-connected honest
-region and relatively few attack edges into Sybil regions. The research is
-useful, but the assumptions are brittle. Real attackers can farm edges, exploit
-temporal graph dynamics, or create dense communities that look legitimate.
+Curyo's incentive is already "predict the Curyo crowd." Switching from binary
+`up/down` to a predicted final rating makes that honest. The danger is that it
+also makes the beauty-contest dynamic clearer: users can learn to predict the
+majority rather than evaluate content, and a coalition with enough weight can
+move the final rating, score itself as calibrated, and compound influence.
 
-Sources:
+Research on proper scoring rules is a useful contrast. If Curyo were asking
+about an objective future event, a capped Brier or log score would be the clean
+way to reward honest probabilistic forecasts. Curyo ratings are often subjective
+and endogenous, so a pure proper-scoring-rule design does not apply directly.
+Peer prediction and Bayesian Truth Serum are closer conceptually because they
+handle subjective questions, but they come with equilibrium and collusion risks.
 
-- "SoK: The Evolution of Sybil Defense via Social Networks":
-  https://research.google/pubs/sok-the-evolution-of-sybil-defense-via-social-networks/
-- "Exploiting Temporal Dynamics in Sybil Defenses":
-  https://collaborate.princeton.edu/en/publications/exploiting-temporal-dynamics-in-sybil-defenses
-
-Product lesson: the graph should be a risk model and independence discount, not
-the sole source of voting power.
-
-### Majority-Coherence Incentives
-
-Kleros and Augur show that coherence with a final outcome can be a workable
-economic incentive when combined with stake, escalation, appeals, and high costs
-for persistent manipulation.
-
-Kleros uses PNK staking for juror selection and Sybil resistance. Jurors who vote
-incoherently with the majority risk losing tokens, and coherent jurors earn.
-Kleros explicitly frames the token as both an incentive and a Sybil defense.
+Product lesson: use predicted final ratings, but never reward raw majority
+matching. Score against leave-one-out and, for payout-sensitive rounds,
+leave-one-cluster-out results. Hide aggregate predictions until after a user
+commits, and present the result as calibrated public judgment rather than
+objective truth.
 
 Sources:
 
-- Kleros introduction:
-  https://docs.kleros.io/
-- Kleros PNK token docs:
-  https://docs.kleros.io/pnk-token
-- Kleros FAQ:
-  https://docs.kleros.io/kleros-faq
-
-Augur uses reputation stake, escalating dispute bonds, and forks as last-resort
-social resolution. The useful lesson for Curyo is that "stake on the truth" can
-work only when the cost of manipulating truth is high and the system has a path
-for disputes. Curyo content ratings are usually lower-stakes and more
-subjective, so copying Augur-style hard finality would be too heavy.
-
-Sources:
-
-- Augur market resolution:
-  https://augur.gitbook.io/help-center/disputing-explained
-- Augur fork explanation:
-  https://augur.gitbook.io/help-center/forking-explained
-
-Product lesson: reward coherence, but avoid treating coherence as objective
-truth. Add caps, category separation, decay, and challenge paths.
-
-### Peer Prediction And Rating Forecasts
-
-Bayesian Truth Serum and peer prediction are relevant because Curyo often
-evaluates subjective questions where there may be no external ground truth. BTS
-rewards "surprisingly common" answers, not merely majority answers, and asks
-respondents to predict how others will answer. This is a strong warning against
-simple majority agreement, but it also clarifies what Curyo's incentive already
-is: participants are rewarded for anticipating where the independent Curyo crowd
-will converge.
-
-Sources:
-
+- Gneiting and Raftery, "Strictly Proper Scoring Rules, Prediction, and
+  Estimation":
+  https://sites.stat.washington.edu/people/raftery/Research/PDF/Gneiting2007jasa.pdf
+- Brier, "Verification of Forecasts Expressed in Terms of Probability":
+  https://cir.nii.ac.jp/crid/1361981468554183168
 - Prelec, "A Bayesian Truth Serum for Subjective Data":
   https://www.science.org/doi/10.1126/science.1102081
-- Weaver and Prelec, "Creating Truth-Telling Incentives with the Bayesian Truth
-  Serum":
-  https://journals.sagepub.com/doi/10.1509/jmr.09.0039
-- Witkowski and Parkes, "A Robust Bayesian Truth Serum for Small Populations":
-  https://dash.harvard.edu/handle/1/11882034
+- Prelec, Seung, and McCoy, "A Solution to the Single-Question Crowd Wisdom
+  Problem":
+  https://www.nature.com/articles/nature21054
+- Lorenz et al., "How Social Influence Can Undermine the Wisdom of Crowd
+  Effect":
+  https://pmc.ncbi.nlm.nih.gov/articles/PMC3107299/
+- Metaculus scoring FAQ:
+  https://www.metaculus.com/help/scores-faq
 
-Product lesson: make the implicit Schelling game explicit. Instead of asking for
-`up/down`, ask voters to predict the final rating directly:
+### Social Graph Sybil Defense Is A Discount Model
 
-```text
-predictedFinalRating: 1.0-9.9
-```
+Douceur's Sybil result remains the hard constraint: without a trusted identity
+authority, Sybils are always possible under realistic assumptions. Social-graph
+defenses can still help, but they depend on a limited-attack-edge assumption:
+attackers can create many fake-to-fake relationships but only limited
+fake-to-real trust relationships.
 
-Stake becomes the conviction/confidence signal, so a separate confidence field
-is not required for the first redeploy. Existing feedback fields remain the
-place for written reasoning. This makes reputation easier to define:
+EigenTrust, SybilRank, SybilBelief, and malicious-account clustering work all
+point to the same product lesson: graph edges are evidence, not identity. Cheap
+follows, reciprocal endorsements, and same-cluster co-votes should not increase
+power much. Harder-to-fake signals such as long-lived participation, accepted
+submissions, diverse category history, reveal reliability, and support from
+established uncorrelated users are more useful.
 
-```text
-calibrationError =
-  abs(predictedFinalRating - finalRatingExcludingVoterOrCluster)
-```
+Product lesson: use the graph primarily to reduce influence and payouts. A
+social graph should almost never boost a new account beyond its earned
+reputation baseline.
 
-The important guardrail is leave-one-out scoring. A voter should be scored
-against the final rating computed without that voter. For USDC bounties and
-cluster-risky rounds, score each account against the final rating excluding its
-correlated cluster. That prevents a coordinated group from making itself look
-accurate simply by pulling the final rating toward its own prediction.
+Sources:
+
+- Douceur, "The Sybil Attack":
+  https://www.microsoft.com/en-us/research/publication/the-sybil-attack/
+- Viswanath et al., "An Analysis of Social Network-Based Sybil Defenses":
+  https://research.google/pubs/an-analysis-of-social-network-based-sybil-defenses/
+- Gong, Frank, and Mittal, "SybilBelief":
+  https://collaborate.princeton.edu/en/publications/sybilbelief-a-semi-supervised-learning-approach-for-structure-bas/
+- Kamvar, Schlosser, and Garcia-Molina, "The EigenTrust Algorithm":
+  https://www.iw3c2.org/papers/2019-EigenTrust/index.html
+- Cao et al., "Uncovering Large Groups of Active Malicious Accounts in Online
+  Social Networks":
+  https://www.researchgate.net/publication/288236021_Uncovering_Large_Groups_of_Active_Malicious_Accounts_in_Online_Social_Networks
+- Ohlhaver, Weyl, and Buterin, "Decentralized Society":
+  https://www.microsoft.com/en-us/research/publication/decentralized-society-finding-web3s-soul/
+
+### USDC Makes The System Adversarial
+
+Non-transferable reputation reduces token buying, but it does not stop account
+rental, managed voting services, social engineering, or farms that slowly mature
+many wallets. Once USDC is attached, rational attackers optimize for expected
+cash extraction.
+
+Quadratic funding and plural funding research is relevant because it treats
+identity multiplication and collusion as first-order design problems. The lesson
+for Curyo is not to pay each wallet equally. Pay effective independent
+participation, cap clusters, cap epochs, and keep any reputation-based payout
+multiplier small.
+
+Product lesson: USDC should be mostly a flat reward for eligible independent
+signal, not a linear reward for reputation. Reputation should mainly determine
+eligibility, max stake, and small bounded payout multipliers.
+
+Sources:
+
+- Buterin, Hitzig, and Weyl, "Liberal Radicalism":
+  https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3243656
+- Miller, Weyl, and Erichsen, "Plural Funding":
+  https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4311507
+- Cheng and Friedman, "Sybilproof Reputation Mechanisms":
+  https://www.researchgate.net/publication/228367243_Sybilproof_reputation_mechanisms
 
 ### Token Standards
 
@@ -202,6 +206,183 @@ effective weights, leave-one-out or cluster-excluded scoring inputs, reputation
 deltas, and USDC payout allocation should be indexable and auditable. This keeps
 the reputation system legible and avoids an opaque scoring layer where users
 must trust an operator to update reputation or bounty eligibility correctly.
+
+## Concrete Mechanism Specification
+
+### Rating Input
+
+Replace binary voting with one compact prediction payload:
+
+```text
+predictedFinalRatingBps: uint16  // 1000-9900, representing 1.0-9.9
+stakeAmount: uint96              // reputation locked as conviction
+salt: bytes32
+```
+
+The commit hash should domain-separate every field that matters:
+
+```text
+chainId
+roundVotingEngine
+contentId
+roundId
+voter
+predictedFinalRatingBps
+stakeAmount
+scorerEpochRoot
+tlock metadata
+salt
+```
+
+Aggregate predictions should remain hidden until a user commits or the reveal
+phase begins. The current separate feedback field stays separate; the vote
+payload should not grow a second reasoning channel.
+
+### Final Rating Aggregation
+
+For the first redeploy, use a cluster-adjusted weighted median over fixed rating
+bins. The fixed-bin approach keeps contract gas bounded and avoids a fragile
+floating-point style implementation.
+
+Recommended launch shape:
+
+```text
+rating bins: 1000, 1100, ..., 9900
+rawWeight = sqrt(categoryReputation + calibrationFloor)
+usableWeight =
+  rawWeight
+  * warmupMultiplier
+  * independenceMultiplier
+  * stakeConvictionMultiplier
+  * roundEligibilityMultiplier
+```
+
+Display:
+
+- final weighted median rating;
+- weighted mean as an analytics-only secondary number;
+- revealed voter count;
+- effective independent participant count;
+- cluster-adjusted participant count;
+- dispersion/confidence;
+- dissent share.
+
+The median is deliberately conservative. It reduces the impact of one large
+outlier, makes bounded-bin settlement auditable, and fits subjective ratings
+better than a pure mean.
+
+### Reputation Scoring
+
+Score a voter against the result they could not directly control:
+
+```text
+predictionErrorBps =
+  abs(predictedFinalRatingBps - finalRatingBpsExcludingVoter)
+```
+
+For USDC rounds, high-value rounds, or rounds with suspicious correlation, use:
+
+```text
+predictionErrorBps =
+  abs(predictedFinalRatingBps - finalRatingBpsExcludingCluster)
+```
+
+Reputation changes should be small, capped, category-specific, and epoch-limited:
+
+```text
+roundQuality =
+  min(1, revealedCount / targetReveals)
+  * min(1, independentClusterCount / targetClusters)
+  * confidenceMultiplier
+
+calibrationCredit =
+  max(0, 1 - predictionErrorBps / maxRewardedErrorBps)
+  * roundQuality
+
+reputationDelta =
+  baseRevealCredit
+  + calibrationCredit * categoryEmissionRate
+  - nonRevealPenalty
+  - extremeMissPenalty
+```
+
+Do not heavily burn reputation for ordinary disagreement. Burn risk should be
+meaningful for non-reveal, spam, clear manipulation, or extreme misses in
+high-confidence rounds. This protects useful dissent and avoids turning Curyo
+into a pure consensus-following game.
+
+### Calibration Before USDC
+
+New accounts start with zero usable payout weight. They can participate in
+calibration rounds immediately, but they should not earn USDC until they satisfy
+all launch thresholds:
+
+```text
+CALIBRATION_ROUNDS_REQUIRED
+MIN_REVEAL_RELIABILITY
+MIN_CATEGORY_BREADTH
+MIN_ACCOUNT_AGE_EPOCHS
+MAX_RISK_SCORE
+```
+
+Calibration should include hidden seeded tasks, duplicated prompts, category
+breadth, delayed scoring, and reveal reliability. It should establish "not
+obviously farmed or careless," not confer high earning power.
+
+### USDC Payout Formula
+
+USDC payouts should pay independent signal rather than wallets:
+
+```text
+effectiveParticipantUnits =
+  sum(clusterEffectiveUnits)
+
+baseUnitReward =
+  min(bountyPool, epochRemainingCap, requesterRemainingCap)
+  / effectiveParticipantUnits
+```
+
+Each cluster receives at most:
+
+```text
+clusterPayout =
+  baseUnitReward
+  * clusterEffectiveUnits
+  * min(1, clusterEpochCapRemaining)
+```
+
+Inside a cluster, split by revealed eligible participation and, at most, a small
+bounded reputation multiplier. A useful launch range is `0.75x` to `1.25x`.
+Higher reputation should not linearly earn more USDC, because that creates an
+incentive to farm many medium-reputation accounts or rent high-reputation
+wallets.
+
+### Social-Graph And Risk Score
+
+Use a layered usable-weight model:
+
+```text
+usableWeight =
+  sqrt(reputationScore)
+  * warmupMultiplier
+  * independenceMultiplier
+  * diversityMultiplier
+  * stakeConvictionMultiplier
+```
+
+Where:
+
+- `warmupMultiplier` ramps from near zero across account age and completed
+  epochs;
+- `independenceMultiplier` discounts correlated clusters;
+- `diversityMultiplier` rewards category breadth and uncorrelated participation
+  only after enough history exists;
+- `stakeConvictionMultiplier` is square-root or log-shaped and capped.
+
+Graph computation should remain off chain in Ponder or a dedicated scorer at
+first. Publish epoch roots for scores used in payouts, snapshot the active root
+at commit time, and keep enough source events public for independent
+recomputation.
 
 ## Current Curyo Baseline
 
@@ -504,6 +685,25 @@ Recommended governance rules:
 This avoids a same-week farming campaign turning into immediate protocol
 control.
 
+## Threat Model And Mitigations
+
+The safest version of this design assumes reputation is farmable and then makes
+farming slow, capped, and publicly inspectable.
+
+| Risk | Why It Matters | Recommended Mitigation |
+| --- | --- | --- |
+| Bootstrap Sybil capture | Early attackers can become the initial "independent crowd" before honest density exists. | Start all accounts at near-zero usable weight, require calibration before USDC, use low initial emissions, low bounty caps, category-specific reputation, and no early governance control. |
+| Consensus capture loop | A coalition can pull the final rating toward itself, score itself as calibrated, and gain more influence. | Use leave-one-out scoring for normal rounds, leave-one-cluster-out scoring for payout-sensitive rounds, stake caps, reputation decay, and round-quality thresholds. |
+| Calibration farming | Attackers can farm visible or predictable warm-up tasks. | Mix hidden seeded tasks, duplicated prompts, delayed scoring, category breadth, reveal reliability, and manual review for high-value earning eligibility. |
+| Social-graph false positives | Teams, households, coworking spaces, and local communities may look like a farm. | Use graph scores for payout caps and risk labels, not moral judgments. Show coarse explanations, avoid public device/IP labels, and provide an appeal or review path for high-value users. |
+| Graph scorer gaming | Farms will optimize timing, funding paths, voting jitter, device separation, and referral diversity. | Keep graph signals multi-factor, rotate features, cap clusters conservatively, and avoid publishing exact thresholds that can be reverse-engineered. |
+| Account rental and key markets | Non-transferable reputation can still be rented or delegated off protocol. | Require fresh signatures for high-value actions, cap sudden category expansion, monitor abrupt behavior shifts, and limit per-epoch withdrawals. |
+| USDC farming | Cash rewards attract low-effort consensus followers and wallet farms. | Pay effective independent participant units, not wallet count. Add per-account, per-cluster, per-category, per-requester, and per-epoch caps. Keep reputation multipliers small. |
+| Requester manipulation | A requester can fund leading or ambiguous questions and cite weak consensus as strong evidence. | Require question quality checks, display confidence and independence metrics beside results, and label rounds weak when participation or independence is low. |
+| Commit-reveal liveness griefing | Pending or unrevealed commits can consume slots, block settlement, or confuse users. | Settlement, rating, quorum, reputation, and bounty eligibility should use revealed eligible votes only. Add reveal deadlines, slashable expiry, cleanup batching, and pending-vs-revealed caps. |
+| Governance capture | Newly farmed reputation could govern the protocol before the system is mature. | Use aged reputation for proposal thresholds and quorum, exclude fresh reputation from governance weight, and keep a bootstrap timelock/guardian. |
+| Opaque payout decisions | "The scorer says you are not independent" will feel arbitrary if users cannot inspect why. | Publish score roots, public inputs, round-level payout reasons, and user-facing labels such as calibration-only, cluster cap, low round quality, payout cap, or prediction error. |
+
 ## Contract Integration Plan
 
 ### Replace `HumanReputation.sol`
@@ -530,7 +730,7 @@ Redeploy without:
 - config ID setup;
 - migration bootstrap claims;
 - tier/referral faucet allocation;
-- Self telemetry and QR claim UX.
+- Self telemetry and QR claim UX;
 - any replacement proof-of-personhood adapter.
 
 ### Replace Or Simplify `VoterIdNFT.sol`
@@ -587,7 +787,7 @@ voting engine. In the new model:
 
 - reputation rewards are minted/burned by prediction-calibration rules;
 - stake refunds are unlocks, not ERC20 transfers;
-- USDC/HREP bounty rewards still use escrowed assets;
+- USDC bounty rewards still use escrowed assets;
 - "loser rebate" becomes "prediction-error burn rate" or "stake unlock rate";
 - non-reveal penalties can burn more and/or apply cooldown.
 
@@ -742,45 +942,115 @@ This keeps voting thoughtful without punishing useful dissent.
    should optimize for the new model rather than preserving backwards
    compatibility with the current HREP faucet/staking/governance design.
 
-## Suggested Build Phases
+## Implementation And Update Plan
 
-### Phase 1: Design And Simulation
+### Milestone 1: Mechanism Spec And Parameter Sheet
 
-- Build an off-chain simulator from historical Ponder data.
-- Compare binary majority agreement with continuous predicted-rating settlement,
-  leave-one-out scoring, cluster-excluded scoring, graph discounts, and decay.
-- Model Sybil farms with dense reciprocal edges and coordinated voting.
-- Pick conservative caps before writing contracts.
+Create a short vNext protocol spec before writing contracts. It should define:
 
-### Phase 2: Redeploy Contracts
+- rating range and fixed bins: `1000-9900` bps;
+- weighted median aggregation;
+- leave-one-out and leave-one-cluster-out scoring rules;
+- `CALIBRATION_ROUNDS_REQUIRED`;
+- warmup, risk, diversity, and stake multiplier curves;
+- per-round, per-category, per-epoch, per-cluster, and per-requester caps;
+- reputation mint, burn, decay, and emission budgets;
+- USDC eligibility and payout formula;
+- score-root schema and challenge/review process for payout roots;
+- exact commit hash domain separation.
 
-- New non-transferable reputation token.
-- New or revised identity contract.
-- Fresh `RoundVotingEngine` proxy with predicted-rating commits and lock/burn
-  stake semantics.
-- Revised reward distributor.
-- No `HumanFaucet`.
-- No Self.xyz adapter or Self-specific deployment wiring.
-- No proof-of-personhood registry or adapter.
-- No migration from current HREP balances.
-- No legacy-compatibility constraints.
+Deliverable: one spec file that product, contracts, Ponder, SDK, and frontend
+can implement against. Because there is no useful historical data, use this
+milestone for adversarial review and parameter bounds, not retrospective model
+fitting.
 
-### Phase 3: Indexer And App
+### Milestone 2: Fresh Contract Deployment
 
-- Add reputation and graph tables.
-- Rename public "accuracy" to "consensus calibration".
-- Add profile-level reputation breakdown.
-- Add staking slider with burn-risk display.
-- Add predicted-rating controls and prediction-error displays.
-- Add payout eligibility, effective participant counts, and cluster caps.
-- Add calibration-round status before USDC eligibility.
+Implement fresh contracts with no legacy compatibility requirement:
 
-### Phase 4: Governance Migration
+- replace `HumanReputation.sol` with a non-transferable reputation token that
+  supports mint, burn, lock, unlock, and `IVotes`;
+- remove `HumanFaucet.sol`, faucet allocations, referral logic, Self hub config,
+  Self remappings, and Self verification tests;
+- replace `VoterIdNFT.sol` with `ReputationIdentity`, or simplify identity into
+  the reputation token plus a delegation registry;
+- rewrite `RoundVotingEngine.sol` around `predictedFinalRatingBps`,
+  reputation locks, fixed-bin weighted median aggregation, and revealed-only
+  settlement;
+- rewrite `RoundRewardDistributor.sol` around reputation deltas and stake
+  unlock/burn logic instead of winner/loser HREP transfers;
+- keep `QuestionRewardPoolEscrow.sol` for USDC, but make eligibility depend on
+  calibration, public scoring roots, effective participant units, and caps;
+- update `CuryoGovernor.sol` to use aged non-transferable reputation and keep a
+  bootstrap guardian/timelock;
+- regenerate ABIs, deployments, required deployment guards, and contract SDK
+  types.
 
-- Move governance to the non-transferable reputation token.
-- Use active/aged reputation quorum.
-- Keep bootstrap timelock/guardian until the graph has enough independent
-  participation.
+### Milestone 3: Scorer, Indexer, And Public Roots
+
+Build the off-chain scorer as an auditable service, not a hidden oracle:
+
+- add Ponder tables for prediction votes, reputation events, score epochs,
+  category scores, graph edges, cluster scores, payout caps, and score roots;
+- compute raw final rating, leave-one-out rating, leave-one-cluster-out rating,
+  prediction error, round quality, and payout reasons;
+- publish epoch roots for reputation and USDC payout eligibility;
+- snapshot scorer-root version at commit time for high-value rounds;
+- expose public APIs that explain why a wallet earned or did not earn:
+  calibration-only, non-reveal, prediction error, low round quality, cluster
+  cap, payout cap, requester cap, or category cap;
+- keep device/session/routing signals private or coarse-grained, never as
+  public identity labels.
+
+### Milestone 4: App, SDK, And User Experience
+
+Update the product around prediction and calibration:
+
+- remove Self verification, faucet claims, referral copy, and HREP claim flows;
+- replace up/down controls with a rating prediction control;
+- keep the existing feedback field as the written explanation channel;
+- replace "accuracy" copy with "consensus calibration";
+- show credibility, reveal reliability, and payout eligibility separately;
+- show max stake, burn risk, and calibration-only status before voting;
+- show final rating, effective independent participants, confidence, dissent,
+  and payout reasons after settlement;
+- update SDK vote encoding, reveal helpers, claim helpers, and generated types;
+- update Playwright flows for onboarding, predict, reveal, settle, claim, and
+  governance.
+
+### Milestone 5: Security And Test Coverage
+
+Prioritize wallet-sensitive and payout-sensitive paths:
+
+- Foundry tests for prediction commit/reveal, range checks, duplicate reveal,
+  expired commits, malformed payloads, revealed-only settlement, low-reveal
+  rounds, non-reveal penalties, stake locks, stake burns, and cleanup gas
+  bounds;
+- invariant tests for reputation conservation across lock/unlock/burn/mint;
+- tests that scorer-root changes cannot retroactively alter an existing commit;
+- escrow tests for cluster caps, epoch caps, requester caps, calibration gates,
+  and repeated claim prevention;
+- governance tests for aged reputation, fresh-reputation exclusion, quorum, and
+  guardian/timelock controls;
+- Ponder tests for prediction indexing, score root generation, payout reasons,
+  and category reputation;
+- Next.js and SDK tests for prediction payloads, reveal UX, claim UX, and
+  wallet flows across injected wallets, thirdweb wallets, and hardware-wallet
+  assumptions.
+
+### Milestone 6: Capped Launch Controls
+
+Launch conservatively:
+
+- calibration-only onboarding first;
+- no USDC for uncalibrated users;
+- low epoch emissions;
+- low bounty caps;
+- strict cluster caps;
+- no immediate reputation governance over treasury or protocol parameters;
+- public monitoring of effective participants, cluster concentration, reveal
+  reliability, payout concentration, and rating dispersion;
+- gradual cap increases only after enough independent settled history exists.
 
 ## Final Recommendation
 
@@ -789,7 +1059,7 @@ truth.
 
 The best Curyo-native design is:
 
-- no Self faucet by default;
+- no Self faucet;
 - no Self.xyz adapter, hub wiring, or Self-specific identity assumptions;
 - no proof-of-personhood provider;
 - no migration from current HREP balances;
