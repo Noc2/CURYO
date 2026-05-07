@@ -17,6 +17,9 @@ future capture easier.
 The better design is:
 
 - Use commit-reveal voting as the base signal.
+- Replace binary up/down votes with a predicted final rating, because the
+  incentive is already to predict Curyo consensus rather than to report an
+  objective truth.
 - Make reputation non-transferable and earned from revealed, settled
   participation.
 - Score users with a conservative signal-quality model, not raw majority
@@ -51,6 +54,17 @@ USDC bounty payout should be based on effective independent participants, not
 wallet count. If one operator farms many medium-reputation accounts that vote
 and reveal together, those accounts should share a cluster-capped allocation
 rather than each receiving a full independent payout.
+
+The primary vote payload should be simple:
+
+```text
+predictedFinalRatingBps: 1000-9900
+stakeAmount: capped reputation at risk
+```
+
+Do not add a new reasoning field to the vote. Curyo already has separate
+feedback fields for written explanation, and those should remain separate from
+the compact prediction payload.
 
 ## Research Notes
 
@@ -118,14 +132,15 @@ Sources:
 Product lesson: reward coherence, but avoid treating coherence as objective
 truth. Add caps, category separation, decay, and challenge paths.
 
-### Peer Prediction And Truth Serum Mechanisms
+### Peer Prediction And Rating Forecasts
 
 Bayesian Truth Serum and peer prediction are relevant because Curyo often
 evaluates subjective questions where there may be no external ground truth. BTS
 rewards "surprisingly common" answers, not merely majority answers, and asks
 respondents to predict how others will answer. This is a strong warning against
-simple majority agreement. It can over-reward conformity and under-reward
-correct minority insight.
+simple majority agreement, but it also clarifies what Curyo's incentive already
+is: participants are rewarded for anticipating where the independent Curyo crowd
+will converge.
 
 Sources:
 
@@ -137,16 +152,27 @@ Sources:
 - Witkowski and Parkes, "A Robust Bayesian Truth Serum for Small Populations":
   https://dash.harvard.edu/handle/1/11882034
 
-Product lesson: a future Curyo v2 can add a prediction field:
+Product lesson: make the implicit Schelling game explicit. Instead of asking for
+`up/down`, ask voters to predict the final rating directly:
 
 ```text
-vote direction: up/down
-confidence: 0-100
-prediction: expected percent of revealed weighted stake that will vote up
+predictedFinalRating: 1.0-9.9
 ```
 
-This enables a "surprisingly good signal" score, but it is probably v2.5, not
-the first redeploy.
+Stake becomes the conviction/confidence signal, so a separate confidence field
+is not required for the first redeploy. Existing feedback fields remain the
+place for written reasoning. This makes reputation easier to define:
+
+```text
+calibrationError =
+  abs(predictedFinalRating - finalRatingExcludingVoterOrCluster)
+```
+
+The important guardrail is leave-one-out scoring. A voter should be scored
+against the final rating computed without that voter. For USDC bounties and
+cluster-risky rounds, score each account against the final rating excluding its
+correlated cluster. That prevents a coordinated group from making itself look
+accurate simply by pulling the final rating toward its own prediction.
 
 ### Privacy And Anti-Collusion
 
@@ -205,7 +231,7 @@ design:
     stake caps, and stake recorder hooks.
 - `packages/foundry/contracts/RoundVotingEngine.sol`
   - tlock commit-reveal, HREP staking, voter ID gating, cooldowns, epoch
-    weighting, settlement, and reward accounting.
+    weighting, binary settlement, and reward accounting.
 - `packages/foundry/contracts/RoundRewardDistributor.sol`
   - Winner reward claims, loser rebates, participation reward claims, frontend
     fees, and SBT-holder reward routing.
@@ -351,8 +377,8 @@ Recommended rule:
 - Cap stake per content/round at a fraction of available reputation.
 - Cap stake per category per epoch.
 - Apply diminishing returns to stake.
-- Burn only a bounded fraction on wrong votes.
-- Burn more for non-reveal than for coherent minority votes.
+- Burn only a bounded fraction for ordinary prediction error.
+- Burn more for non-reveal than for ordinary prediction error.
 
 Example:
 
@@ -382,9 +408,10 @@ Recommended reputation scoring inputs:
 - reveal reliability;
 - settled participation count;
 - category-specific track record;
-- agreement with final outcome;
-- agreement with high-independence consensus;
-- calibrated confidence, if added later;
+- rating prediction error against leave-one-out consensus;
+- rating prediction error against cluster-excluded consensus for payout-sensitive
+  rounds;
+- proximity to high-independence consensus;
 - feedback quality and bounty completion;
 - penalty for non-reveals;
 - penalty for dense correlated clusters;
@@ -398,18 +425,19 @@ roundQuality =
   * min(1, independentClusterCount / targetClusters)
   * highConfidenceRoundMultiplier
 
-agreementCredit =
-  if voterSide == finalSide then roundQuality else -minorityPenalty
+calibrationCredit =
+  max(0, 1 - predictionErrorBps / maxRewardedErrorBps) * roundQuality
 
 reputationDelta =
   baseParticipationMint
-  + agreementCredit * categoryLearningRate
+  + calibrationCredit * categoryLearningRate
   - nonRevealPenalty
 ```
 
-Minority votes should not be punished heavily. On subjective or low-confidence
-content, a coherent minority can be useful. Wrong-side burn should be small
-unless the system has strong external evidence or dispute resolution.
+Outlier predictions should not be punished heavily by default. On subjective or
+low-confidence content, a minority forecast can be useful. Prediction-error burn
+should be small unless the miss is extreme, the round has high independent
+participation, or the system has strong external evidence or dispute resolution.
 
 ### 7. Add Graph Independence, Not Friend-Based Power
 
@@ -426,7 +454,7 @@ Recommended graph signals:
 - cluster density;
 - repeated same-side voting within the same cluster;
 - shared wallet/session/device/routing risk where available off-chain;
-- optional proof-of-personhood or attestation signals.
+- optional non-Self proof-of-personhood or attestation signals.
 
 Use the graph primarily to discount:
 
@@ -529,15 +557,17 @@ Redeploy without:
 - tier/referral faucet allocation;
 - Self telemetry and QR claim UX.
 
-If optional proofs are desired, add a smaller adapter registry:
+If optional proofs are desired later, add a smaller provider-neutral signal
+registry that explicitly excludes Self.xyz:
 
 ```text
-ProofAdapterRegistry
+ProofSignalRegistry
   recordProof(account, provider, nullifierHash, score, expiresAt)
   revokeProof(account, provider)
 ```
 
-Provider-specific proof verification can live in separate adapters.
+Provider-specific proof verification can live in separate adapters, but Self.xyz
+should not be one of those adapters in this redesign.
 
 ### Replace Or Simplify `VoterIdNFT.sol`
 
@@ -565,18 +595,21 @@ Current:
 - requires Voter ID if configured;
 - accepts 1 to 100 HREP stake;
 - transfers HREP to engine;
-- weighted pools decide side;
+- weighted pools decide the binary side;
 - losing HREP funds rewards, consensus reserve, treasury, and frontend fees.
 
 Recommended:
 
+- replace `isUp` with `predictedFinalRatingBps` in the committed payload and
+  reveal hash;
 - snapshot `baseReputation`, `availableReputation`, `graphScore`, and
   `categoryWeight` at commit;
 - lock chosen stake in the reputation token;
 - compute `effectiveWeight`, not raw HREP transfer stake;
-- use `effectiveWeight` for winner and rating movement;
+- use `effectiveWeight` for rating aggregation and calibration scoring;
 - use `stakeAmount` only as conviction/risk;
 - burn/penalize through reputation token on terminal outcomes;
+- score reputation against leave-one-out or cluster-excluded final ratings;
 - route USDC bounty rewards through `QuestionRewardPoolEscrow`, not from losing
   reputation.
 
@@ -589,10 +622,10 @@ existing deploy-script warning.
 Current HREP winner-pool accounting depends on losing stake being held by the
 voting engine. In the new model:
 
-- reputation rewards are minted/burned by protocol rules;
+- reputation rewards are minted/burned by prediction-calibration rules;
 - stake refunds are unlocks, not ERC20 transfers;
 - USDC/HREP bounty rewards still use escrowed assets;
-- "loser rebate" becomes "loser burn rate" or "loser unlock rate";
+- "loser rebate" becomes "prediction-error burn rate" or "stake unlock rate";
 - non-reveal penalties can burn more and/or apply cooldown.
 
 ### Rework `ParticipationPool.sol`
@@ -639,14 +672,17 @@ Add tables:
 - `cluster_score`
 - `identity_proof_signal`
 - `usdc_payout_cap`
+- `rating_prediction`
+- `prediction_score`
 
 Update existing stats:
 
 - keep `voter_stats` but rename display from "accuracy" to "consensus
-  alignment";
+  calibration";
 - add "reveal reliability";
 - add "independence score";
 - add "category credibility";
+- add "prediction error";
 - add "payout eligibility".
 
 ### Update Next.js
@@ -665,6 +701,8 @@ Add:
 - graph/independence explanation;
 - bot/graph risk labels for ratings;
 - staking slider with clear max and burn risk;
+- predicted-rating vote control replacing binary up/down for the redesigned
+  protocol;
 - payout eligibility panel;
 - follow/attestation UI if the graph becomes explicit.
 
@@ -685,9 +723,10 @@ Recommended settings for a first implementation:
 
 - `minStake`: 1 reputation unit once the user has enough available reputation.
 - `maxStake`: min(100 units, 10% of available reputation, category budget).
-- `wrongSideBurn`: 0% to 5%, depending on round confidence.
+- `predictionErrorBurn`: 0% to 5% for ordinary misses, higher only for extreme
+  misses in high-confidence rounds.
 - `nonRevealBurn`: 25% to 100% of stake.
-- `minorityNoBurn`: true for low-confidence or close rounds.
+- `outlierNoBurn`: true for low-confidence or tightly clustered rounds.
 - `stakeWeightCurve`: square root or log, never linear.
 
 This keeps voting thoughtful without punishing useful dissent.
@@ -714,10 +753,12 @@ This keeps voting thoughtful without punishing useful dissent.
    Recommendation: not initially. Start with signed off-chain follows and
    attestations, index them, and only later commit epoch roots on chain.
 
-5. Should Curyo add BTS-style prediction fields?
+5. Should Curyo switch from binary votes to predicted final ratings?
 
-   Recommendation: yes later. It is valuable but adds UX complexity. Start with
-   hidden direction, optional confidence, and graph-adjusted consensus.
+   Recommendation: yes. This makes the existing "predict the crowd" incentive
+   explicit. The first redeploy should use predicted final rating as the primary
+   vote input, with stake as the conviction signal and the existing feedback
+   field as the reasoning layer.
 
 6. How does a new user get reputation without a faucet?
 
@@ -735,8 +776,8 @@ This keeps voting thoughtful without punishing useful dissent.
 ### Phase 1: Design And Simulation
 
 - Build an off-chain simulator from historical Ponder data.
-- Compare raw majority agreement, category agreement, graph-discounted
-  agreement, and decay.
+- Compare binary majority agreement with continuous predicted-rating settlement,
+  leave-one-out scoring, cluster-excluded scoring, graph discounts, and decay.
 - Model Sybil farms with dense reciprocal edges and coordinated voting.
 - Pick conservative caps before writing contracts.
 
@@ -744,7 +785,8 @@ This keeps voting thoughtful without punishing useful dissent.
 
 - New non-transferable reputation token.
 - New or revised identity contract.
-- Fresh `RoundVotingEngine` proxy with lock/burn stake semantics.
+- Fresh `RoundVotingEngine` proxy with predicted-rating commits and lock/burn
+  stake semantics.
 - Revised reward distributor.
 - No `HumanFaucet`.
 - No Self.xyz adapter or Self-specific deployment wiring.
@@ -753,9 +795,10 @@ This keeps voting thoughtful without punishing useful dissent.
 ### Phase 3: Indexer And App
 
 - Add reputation and graph tables.
-- Rename public "accuracy" to "consensus alignment".
+- Rename public "accuracy" to "consensus calibration".
 - Add profile-level reputation breakdown.
 - Add staking slider with burn-risk display.
+- Add predicted-rating controls and prediction-error displays.
 - Add payout eligibility, effective participant counts, and cluster caps.
 
 ### Phase 4: Governance Migration
@@ -776,7 +819,7 @@ The best Curyo-native design is:
 - no Self.xyz adapter, hub wiring, or Self-specific identity assumptions;
 - non-transferable reputation;
 - optional non-Self proof signals for high-risk cases;
-- commit-reveal preserved;
+- commit-reveal preserved with predicted final rating instead of binary up/down;
 - stake as capped conviction and burn risk;
 - graph as independence discount;
 - USDC payout split by independent participant weight, then gated by reputation
