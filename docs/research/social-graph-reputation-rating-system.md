@@ -37,8 +37,7 @@ The main recommendation is a two-score model:
 1. `credibility`: earned from useful voting history, reveal reliability,
    category-specific performance, and feedback quality.
 2. `independence`: derived from social graph structure, attestation quality,
-   correlated voting patterns, wallet/device/session risk, and optional external
-   proof signals.
+   correlated voting patterns, and wallet/device/session risk.
 
 Voting weight and USDC payout eligibility should use both:
 
@@ -65,6 +64,9 @@ stakeAmount: capped reputation at risk
 Do not add a new reasoning field to the vote. Curyo already has separate
 feedback fields for written explanation, and those should remain separate from
 the compact prediction payload.
+
+This should be a fresh deployment, not a legacy-compatible migration. Existing
+HREP balances should not migrate into the new reputation system.
 
 ## Research Notes
 
@@ -253,7 +255,7 @@ around earned reputation rather than early identity claims.
 
 Rename or redefine `HumanReputation` as non-transferable reputation:
 
-- Minted only by protocol reward logic and governance-approved migrations.
+- Minted only by protocol reward logic in the fresh deployment.
 - Burned/slashed only by protocol rules or governance sanctions.
 - Not transferable between users.
 - Still checkpointed for governance with ERC20Votes-style history.
@@ -289,20 +291,9 @@ Remove or retire:
 
 Important caveat: removing Self means Curyo no longer has a hard uniqueness
 proof at onboarding. Sybil resistance must then come from slow reputation
-earning, graph independence, bot checks, payout caps, and optional
-non-Self high-assurance proofs for high-value voting.
-
-If optional proofs are desired later, add a generic provider-neutral registry
-that explicitly excludes Self.xyz from the redeploy scope:
-
-```text
-ProofSignalRegistry
-  recordProof(account, provider, nullifierHash, score, expiresAt)
-  revokeProof(account, provider)
-```
-
-Provider-specific verification should live in separate adapters, but Self.xyz
-should not be one of those adapters in this redesign.
+earning, graph independence, bot checks, payout caps, calibration rounds, and
+cluster discounts. This redesign should not include any proof-of-personhood
+provider.
 
 ### 3. Replace Voter ID With Reputation Identity
 
@@ -322,16 +313,15 @@ Recommended redeploy contract:
 ```text
 ReputationIdentity
   - soulbound account/profile identity
-  - optional external proof nullifiers
   - optional delegation
   - graph attestation records
   - per-round participation caps
   - submitter identity snapshots
 ```
 
-Do not require an identity proof to mint this object. Instead, it can be created
-when a wallet first participates, but it starts with near-zero weight until it
-earns credibility and independence.
+Do not require an identity proof to mint this object. It can be created when a
+wallet first participates, but it starts with near-zero weight until it earns
+credibility and independence.
 
 ### 4. Move Staking From Token Transfer To Reputation Locking
 
@@ -440,7 +430,7 @@ Recommended graph signals:
 - cluster density;
 - repeated same-side voting within the same cluster;
 - shared wallet/session/device/routing risk where available off-chain;
-- optional non-Self proof-of-personhood or attestation signals.
+- attestation signals.
 
 Use the graph primarily to discount:
 
@@ -475,10 +465,9 @@ Recommended USDC payout model:
 - Medium-reputation account farms should collapse into a smaller effective
   participant count when their graph, timing, voting, reveal, or session
   behavior is correlated.
-- New accounts can earn reputation in calibration rounds before receiving large
-  USDC.
-- High-value USDC bounties can require optional non-Self external proof or
-  curator approval during early launch.
+- New accounts must complete calibration rounds before receiving USDC payouts.
+- High-value USDC bounties should use stricter reputation, calibration, cluster,
+  and epoch caps rather than proof-of-personhood gates.
 
 Concrete split example:
 
@@ -542,18 +531,7 @@ Redeploy without:
 - migration bootstrap claims;
 - tier/referral faucet allocation;
 - Self telemetry and QR claim UX.
-
-If optional proofs are desired later, add a smaller provider-neutral signal
-registry that explicitly excludes Self.xyz:
-
-```text
-ProofSignalRegistry
-  recordProof(account, provider, nullifierHash, score, expiresAt)
-  revokeProof(account, provider)
-```
-
-Provider-specific proof verification can live in separate adapters, but Self.xyz
-should not be one of those adapters in this redesign.
+- any replacement proof-of-personhood adapter.
 
 ### Replace Or Simplify `VoterIdNFT.sol`
 
@@ -561,14 +539,13 @@ Option A: keep a soulbound identity NFT:
 
 - rename to `ReputationIdentity`;
 - remove Self-specific nullifier language;
-- support optional proof nullifiers;
 - keep delegation if still needed for Ledger/MetaMask or agent wallets;
 - keep per-round cap hooks.
 
 Option B: remove the NFT:
 
 - let `HumanReputation` be the identity surface;
-- store submitter identity as wallet address plus optional proof nullifier;
+- store submitter identity as wallet address;
 - implement delegation in a separate `DelegationRegistry`.
 
 Option A is less invasive because current contracts already expect a voter
@@ -656,7 +633,6 @@ Add tables:
 - `social_attestation`
 - `social_graph_epoch`
 - `cluster_score`
-- `identity_proof_signal`
 - `usdc_payout_cap`
 - `rating_prediction`
 - `prediction_score`
@@ -717,45 +693,54 @@ Recommended settings for a first implementation:
 
 This keeps voting thoughtful without punishing useful dissent.
 
-## Open Questions
+## Design Decisions
 
-1. Do we want any hard proof-of-personhood at launch?
+1. No proof-of-personhood.
 
-   Recommendation: no hard proof for normal ratings, optional non-Self proof for
-   high USDC payouts or governance bootstrap.
+   Curyo should not integrate Self.xyz, Human Passport, World ID, Semaphore, or
+   any other proof-of-personhood provider in this redesign. Sybil resistance
+   comes from slow reputation earning, calibration rounds, graph independence,
+   bot/risk signals, cluster payout caps, and epoch/category caps.
 
-2. Should reputation be transferable at all?
+2. No transfer of reputation.
 
-   Recommendation: no. Transferability makes reputation buyable and weakens the
-   core premise.
+   Reputation must be non-transferable. Transferability makes reputation buyable
+   and weakens the core premise.
 
-3. Should reputation be one global score or per-category?
+3. Use predicted final ratings.
 
-   Recommendation: both. Use global reputation for baseline trust and governance,
-   but category reputation should drive rating weight in topic-specific rounds.
+   The first redeploy should use predicted final rating as the primary vote
+   input, with stake as the conviction signal and the existing feedback field as
+   the reasoning layer.
 
-4. Should graph follows be on chain?
+4. Use global and category reputation.
 
-   Recommendation: not initially. Start with signed off-chain follows and
-   attestations, index them, and only later commit epoch roots on chain.
+   Use global reputation for baseline trust and governance, but category
+   reputation should drive rating weight in topic-specific rounds.
 
-5. Should Curyo switch from binary votes to predicted final ratings?
+5. Keep graph follows off chain initially.
 
-   Recommendation: yes. This makes the existing "predict the crowd" incentive
-   explicit. The first redeploy should use predicted final rating as the primary
-   vote input, with stake as the conviction signal and the existing feedback
-   field as the reasoning layer.
+   Start with signed off-chain follows and attestations, index them, and only
+   later commit epoch roots on chain.
 
-6. How does a new user get reputation without a faucet?
+6. Require calibration before USDC.
 
-   Recommendation: calibration rounds with tiny weight, no or capped USDC payout,
-   and higher emission for reliable reveal behavior across diverse categories.
+   New users should complete a configured number of calibration rounds before
+   they can earn USDC. Calibration rounds can mint reputation and establish
+   reveal reliability, category breadth, and independence, but USDC payout is
+   disabled or capped to zero until the threshold is met.
 
-7. What happens to current HREP holders?
+7. No migration from current HREP holders.
 
-   Recommendation: if redeploying from the existing deployment, migrate only
-   earned/vested reputation-like balances, not liquid faucet balances blindly.
-   Use a governance-approved migration snapshot with caps and vesting.
+   Existing HREP balances should not migrate into the new reputation system.
+   The new protocol starts fresh, and reputation is earned only through the new
+   rules.
+
+8. No legacy compatibility requirement.
+
+   The smart contracts, indexer schema, frontend UX, and deployment scripts
+   should optimize for the new model rather than preserving backwards
+   compatibility with the current HREP faucet/staking/governance design.
 
 ## Suggested Build Phases
 
@@ -776,7 +761,9 @@ This keeps voting thoughtful without punishing useful dissent.
 - Revised reward distributor.
 - No `HumanFaucet`.
 - No Self.xyz adapter or Self-specific deployment wiring.
-- Optional non-Self proof signal registry left unconfigured at launch.
+- No proof-of-personhood registry or adapter.
+- No migration from current HREP balances.
+- No legacy-compatibility constraints.
 
 ### Phase 3: Indexer And App
 
@@ -786,6 +773,7 @@ This keeps voting thoughtful without punishing useful dissent.
 - Add staking slider with burn-risk display.
 - Add predicted-rating controls and prediction-error displays.
 - Add payout eligibility, effective participant counts, and cluster caps.
+- Add calibration-round status before USDC eligibility.
 
 ### Phase 4: Governance Migration
 
@@ -803,8 +791,10 @@ The best Curyo-native design is:
 
 - no Self faucet by default;
 - no Self.xyz adapter, hub wiring, or Self-specific identity assumptions;
+- no proof-of-personhood provider;
+- no migration from current HREP balances;
+- fresh deployment with no legacy-compatibility requirement;
 - non-transferable reputation;
-- optional non-Self proof signals for high-risk cases;
 - commit-reveal preserved with predicted final rating instead of binary up/down;
 - stake as capped conviction and burn risk;
 - graph as independence discount;
