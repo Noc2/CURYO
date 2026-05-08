@@ -60,3 +60,14 @@ test("resolveSelfVerificationErrorMessage falls back to the provided reason", ()
     "Verification service unavailable",
   );
 });
+
+test("resolveSelfVerificationErrorMessage explains generic proof generation failures", () => {
+  assert.equal(
+    resolveSelfVerificationErrorMessage({
+      error_code: "error",
+      reason: "error",
+      status: "proof_generation_failed",
+    }),
+    "Self could not generate the proof. Update or reopen the Self app, then try again with a supported real document. If it repeats, send us the attempt ID.",
+  );
+});

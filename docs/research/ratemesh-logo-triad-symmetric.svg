@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">RateMesh symmetric triad logo concept</title>
+  <desc id="desc">A transparent-background orange symmetric mesh mark made from three connected hexagons.</desc>
+  <defs>
+    <path id="mesh-cell" d="M0 -76L66 -38L66 38L0 76L-66 38L-66 -38Z" />
+  </defs>
+  <g fill="#CC490F">
+    <use href="#mesh-cell" x="256" y="138" />
+    <use href="#mesh-cell" x="358" y="314" />
+    <use href="#mesh-cell" x="154" y="314" />
+    <path d="M256 212L324 278L294 313L256 274L218 313L188 278Z" />
+  </g>
+</svg>
