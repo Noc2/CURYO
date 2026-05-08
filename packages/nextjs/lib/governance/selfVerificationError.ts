@@ -1,10 +1,11 @@
 type SelfVerificationError = {
   error_code?: string;
   reason?: string;
+  status?: string;
 };
 
 function getSelfVerificationErrorCode(error: SelfVerificationError | null | undefined): string {
-  return error?.error_code || error?.reason || "";
+  return [error?.error_code, error?.reason, error?.status].filter(Boolean).join(" ");
 }
 
 export function resolveSelfVerificationErrorMessage(error: SelfVerificationError | null | undefined): string {
@@ -38,5 +39,9 @@ export function resolveSelfVerificationErrorMessage(error: SelfVerificationError
     return "The faucet is currently empty. Please try again later.";
   }
 
-  return error?.reason || "Verification failed. Please try again.";
+  if (code.includes("proof_generation_failed")) {
+    return "Self could not generate the proof. Update or reopen the Self app, then try again with a supported real document. If it repeats, send us the attempt ID.";
+  }
+
+  return error?.reason && error.reason !== "error" ? error.reason : "Verification failed. Please try again.";
 }
