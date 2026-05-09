@@ -514,7 +514,7 @@ __metadata:
   dependencies:
     "@curyo/contracts": "workspace:*"
     "@curyo/node-utils": "workspace:*"
-    hono: ~4.12.17
+    hono: ~4.12.18
     ponder: ^1.0.0
     typescript: ~5.8.2
     viem: 2.39.0
@@ -12122,10 +12122,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"hono@npm:4.12.17, hono@npm:~4.12.17":
+"hono@npm:4.12.17":
   version: 4.12.17
   resolution: "hono@npm:4.12.17"
   checksum: 6ad6036e900f00f1f89e4379a91aaa56797967fc7d381681be839ce91e6f129e938313243b86d4f313a8c67fdc0d17b1ac736e209591d40513f401029426fd2b
+  languageName: node
+  linkType: hard
+
+"hono@npm:~4.12.18":
+  version: 4.12.18
+  resolution: "hono@npm:4.12.18"
+  checksum: 8b1d82b9409229542e4ecc50641ce9dc88522a187615db387b114c3e352ff48a12b838b17bdbc8f8d1fd338dfee587b3a3df1955c6a92d62ec0405888ac6e89d
   languageName: node
   linkType: hard
 
