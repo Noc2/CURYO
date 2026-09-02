@@ -79,7 +79,7 @@
     "@types/node": "^20.10.7",
     "@types/pg": "^8.15.6",
     "@types/react": "~19.0.7",
-    "@xmldom/xmldom": "^0.9.10",
+    "@xmldom/xmldom": "^0.9.12",
     "abitype": "1.0.6",
     "drizzle-kit": "^0.31.10",
     "eslint": "~9.38.0",
