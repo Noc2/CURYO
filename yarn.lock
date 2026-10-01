@@ -514,7 +514,7 @@ __metadata:
   dependencies:
     "@curyo/contracts": "workspace:*"
     "@curyo/node-utils": "workspace:*"
-    hono: ~4.13.5
+    hono: ~4.13.7
     ponder: ^1.0.0
     typescript: ~5.8.2
     viem: 2.39.0
@@ -12666,10 +12666,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"hono@npm:~4.13.5":
-  version: 4.13.5
-  resolution: "hono@npm:4.13.5"
-  checksum: 46d4096d49dcdffd60e3ad987fae170f71e36e451827d7acd11a4193ffd784ff7c356292181e275563d6c89c3a03c6beccd7dc60628423a6cb9d2da55cfa3159
+"hono@npm:~4.13.7":
+  version: 4.13.7
+  resolution: "hono@npm:4.13.7"
+  checksum: 562d3917ea0d96d6b58c6ebbe6a9df05823979215bad986d8a01d33f6617300c5e91dfa3e4aff07d96b31e3cec57d16f85ae6d82180041bc3e47e186407603c2
   languageName: node
   linkType: hard
 
@@ -14616,16 +14616,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"nanoid@npm:^3.3.11, nanoid@npm:^3.3.12":
-  version: 3.3.18
-  resolution: "nanoid@npm:3.3.18"
-  bin:
-    nanoid: bin/nanoid.cjs
-  checksum: db804317d337b41602666f23014e399d1263033d13a903955c246378256fd4e002519e87199ca40b19aff52274965ac7cc6e70c13a63e194e15c4664724602d3
-  languageName: node
-  linkType: hard
-
-"nanoid@npm:^3.3.16":
+"nanoid@npm:^3.3.11, nanoid@npm:^3.3.12, nanoid@npm:^3.3.16":
   version: 3.3.18
   resolution: "nanoid@npm:3.3.18"
   bin:
