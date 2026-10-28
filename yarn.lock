@@ -415,7 +415,7 @@ __metadata:
     qrcode: ~1.5.3
     shx: ^0.3.4
     tlock-js: ^0.9.0
-    toml: ~4.2.0
+    toml: ~5.0.1
     viem: 2.39.0
   languageName: unknown
   linkType: soft
@@ -18761,10 +18761,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"toml@npm:~4.2.0":
-  version: 4.2.0
-  resolution: "toml@npm:4.2.0"
-  checksum: b13915fc80ddbfa498c9d538292846350f94bf4c2f80e21d14db17370abf0470c65ea925d321c26188cd83395753a88da0c498f203ac9077dea4e53f1694cf4e
+"toml@npm:~5.0.1":
+  version: 5.0.1
+  resolution: "toml@npm:5.0.1"
+  checksum: 2fbeb10e6c9f6e3a49ada70677824c6e74e771d325c6f714c58d585233766641bf0590f19bbb944f5fb9af38e4b1c3ce8f11e2b7eb8359689ff1b3103ee723d2
   languageName: node
   linkType: hard
 
